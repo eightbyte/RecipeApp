@@ -1,0 +1,13 @@
+# Normalise line endings to LF in the repo; Git converts on checkout for Windows
+* text=auto eol=lf
+
+# Force binary treatment for these types
+*.png  binary
+*.jpg  binary
+*.jpeg binary
+*.webp binary
+*.woff binary
+*.woff2 binary
+*.ttf  binary
+*.eot  binary
+*.ico  binary

@@ -1,0 +1,46 @@
+# ========================
+# .NET Backend
+# ========================
+backend/**/bin/
+backend/**/obj/
+backend/**/*.user
+backend/**/.vs/
+backend/**/appsettings.Development.json
+backend/**/*.db
+backend/**/*.db-shm
+backend/**/*.db-wal
+
+# NuGet packages
+*.nupkg
+*.snupkg
+.nuget/
+
+# ========================
+# Vue / Node Frontend
+# ========================
+frontend/node_modules/
+frontend/dist/
+frontend/.env.local
+frontend/.env.*.local
+frontend/.vite/
+
+# ========================
+# Docker
+# ========================
+.env
+!.env.example
+
+# ========================
+# OS / IDE
+# ========================
+.DS_Store
+Thumbs.db
+*.swp
+*.swo
+.vscode/settings.json
+.idea/
+
+# ========================
+# Uploads / Media
+# ========================
+backend/**/uploads/

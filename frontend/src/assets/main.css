@@ -1,0 +1,35 @@
+/*
+ * RecipeApp — global styles
+ *
+ * Vuetify handles component styling; Bootstrap provides utility classes.
+ * This file contains only app-specific overrides and helpers.
+ */
+
+/* ── Mobile viewport ─────────────────────────────────────────────────────── */
+html, body {
+  height: 100%;
+  /* Prevent address-bar resize bounce on mobile */
+  overscroll-behavior-y: none;
+}
+
+/* ── Ensure Vuetify app fills full viewport ──────────────────────────────── */
+.v-application {
+  min-height: 100dvh;  /* dynamic viewport height — accounts for mobile bars */
+}
+
+/* ── Main content: add bottom padding so content isn't behind the nav bar ── */
+.v-main {
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+}
+
+/* ── Recipe image grayscale helper ──────────────────────────────────────── */
+.grayscale {
+  filter: grayscale(100%);
+  transition: filter 0.3s ease;
+}
+
+/* ── Utility: gap helpers not in Vuetify ─────────────────────────────────── */
+.gap-1 { gap: 4px;  }
+.gap-2 { gap: 8px;  }
+.gap-3 { gap: 12px; }
+.gap-4 { gap: 16px; }

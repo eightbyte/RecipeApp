@@ -1,0 +1,72 @@
+version: "3.9"
+
+# ── RecipeApp — Development Docker Compose ────────────────────────────────────
+#
+# Services:
+#   postgres  — PostgreSQL 16 database
+#   api       — .NET 10 Web API  (http://localhost:5000)
+#   frontend  — Vue 3 / Vite dev server  (http://localhost:3000)
+#
+# Quick start:
+#   docker compose up -d postgres
+#   cd backend/RecipeApp.API && dotnet run    # or: docker compose up api
+#   cd frontend && npm run dev                # or: docker compose up frontend
+
+services:
+
+  # ── PostgreSQL ───────────────────────────────────────────────────────────────
+  postgres:
+    image: postgres:16-alpine
+    container_name: recipeapp-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB:       recipeapp
+      POSTGRES_USER:     recipeapp
+      POSTGRES_PASSWORD: devpassword
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U recipeapp -d recipeapp"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  # ── .NET 10 Web API ──────────────────────────────────────────────────────────
+  api:
+    build:
+      context: ./backend/RecipeApp.API
+      dockerfile: Dockerfile
+    container_name: recipeapp-api
+    restart: unless-stopped
+    environment:
+      ASPNETCORE_ENVIRONMENT: Development
+      ASPNETCORE_URLS: http://+:8080
+      ConnectionStrings__DefaultConnection: >-
+        Host=postgres;Port=5432;Database=recipeapp;
+        Username=recipeapp;Password=devpassword
+    ports:
+      - "5000:8080"
+    volumes:
+      # Persist uploaded recipe images outside the container
+      - recipe_uploads:/app/uploads
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  # ── Vue 3 Frontend (production build served via Nginx) ───────────────────────
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: recipeapp-frontend
+    restart: unless-stopped
+    ports:
+      - "80:80"
+    depends_on:
+      - api
+
+volumes:
+  postgres_data:
+  recipe_uploads:

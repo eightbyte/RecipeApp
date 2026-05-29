@@ -4,7 +4,7 @@
 Mobile-first web app for storing recipes, building meal plans, and generating shopping lists.
 
 - **Spec:** `SPEC.md` — read this for feature requirements and data model definitions.
-- **Current phase:** Phase 1 complete (infrastructure scaffold). Working on Phase 2 (Recipe CRUD).
+- **Current phase:** Phase 2 complete (Recipe CRUD). Working on Phase 3 (Recipe Scraping via Claude AI).
 
 ## Repository structure
 ```
@@ -44,7 +44,7 @@ RecipeApp/
 | Backend       | .NET 10 Minimal API                   | Endpoint groups, not MVC controllers           |
 | ORM           | EF Core 10 + Npgsql                   | Code-first; run migrations with `dotnet ef`    |
 | Validation    | FluentValidation                      | One validator class per request DTO            |
-| Mapping       | AutoMapper                            | Profiles in `Profiles/` directory              |
+| Mapping       | Manual (extension methods)            | `DTOs/Mappings.cs` — static `ToResponse()` / `ToDetail()` / `ToListItem()` |
 | Database      | PostgreSQL 16                         | All timestamps stored as UTC                   |
 
 ## Running locally
@@ -105,8 +105,8 @@ Readiness check: `http://localhost:5000/health/ready`
 | `ConnectionStrings:DefaultConnection` | PostgreSQL connection string |
 | `ImageStorage:BasePath` | Local path for uploaded recipe images |
 
-## Notes for future phases
-- Phase 2 adds `DTOs/`, `Services/`, and `Profiles/` directories to the backend.
-- AutoMapper `AddAutoMapper(typeof(Program).Assembly)` will discover profiles automatically.
+## Notes
+- **No AutoMapper** — manual mapping in `DTOs/Mappings.cs` (extension methods on entity types). Simpler to trace, no reflection.
 - FluentValidation validators are registered automatically via `AddValidatorsFromAssemblyContaining<Program>()`.
-- The `uploads/images/` directory is served as static files and gitignored. Mount as a Docker volume in production.
+- The `uploads/images/` directory is served as static files at `/uploads/images/`. Gitignored; mount as a Docker volume in production.
+- Phase 3 will add `Services/RecipeScrapeService.cs` and integrate the Anthropic Claude SDK.

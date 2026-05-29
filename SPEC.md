@@ -435,19 +435,19 @@ Development is structured into 7 iterative phases. Each phase produces a working
 **Goal:** Get a running skeleton that developers can build on.
 
 **Tasks:**
-- [ ] Initialise Git repository with monorepo structure (`/frontend`, `/backend`, `/docker`)
-- [ ] Create `docker-compose.yml` with PostgreSQL and .NET API services
-- [ ] Scaffold .NET 10 Web API project (minimal API pattern)
+- [x] Initialise Git repository with monorepo structure (`/frontend`, `/backend`, `/docker`)
+- [x] Create `docker-compose.yml` with PostgreSQL and .NET API services
+- [x] Scaffold .NET 10 Web API project (minimal API pattern)
   - Configure EF Core with Npgsql provider
   - Configure Swagger/OpenAPI
   - Add `appsettings.Development.json` with DB connection string
   - Add health check endpoint `GET /health`
-- [ ] Scaffold Vue 3 project (Vite + Pinia + Vue Router + bootstrap + vuetify)
+- [x] Scaffold Vue 3 project (Vite + Pinia + Vue Router + bootstrap + vuetify)
   - Establish mobile-first viewport and base layout shell (bottom nav, top bar)
   - Set up Axios instance with base URL from env
-- [ ] Design initial database schema; create EF Core entities and first migration
+- [x] Design initial database schema; create EF Core entities and first migration
   - `ingredients`, `recipes`, `recipe_ingredients`, `recipe_steps`, `recipe_step_ingredients`
-- [ ] Set up CLAUDE.md with project conventions
+- [x] Set up CLAUDE.md with project conventions
 
 **Deliverable:** Running app shell; database created; Swagger accessible; Vue app loads from Docker.
 

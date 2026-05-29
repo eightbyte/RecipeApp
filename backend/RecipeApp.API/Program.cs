@@ -1,7 +1,9 @@
 using FluentValidation;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.FileProviders;
 using RecipeApp.API.Data;
 using RecipeApp.API.Endpoints;
+using RecipeApp.API.Services;
 using Scalar.AspNetCore;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -17,22 +19,19 @@ builder.Services.AddDbContext<AppDbContext>(options =>
     )
 );
 
-// ── AutoMapper ────────────────────────────────────────────────────────────────
-builder.Services.AddAutoMapper(typeof(Program).Assembly);
-
-// ── FluentValidation ──────────────────────────────────────────────────────────
+// ── FluentValidation (discovers all validators in this assembly) ──────────────
 builder.Services.AddValidatorsFromAssemblyContaining<Program>();
 
+// ── Application services ──────────────────────────────────────────────────────
+builder.Services.AddScoped<RecipeService>();
+builder.Services.AddScoped<ImageService>();
+
 // ── CORS ──────────────────────────────────────────────────────────────────────
-// Allow Vue dev servers (Vite default 5173, our configured port 3000)
 builder.Services.AddCors(options =>
 {
     options.AddPolicy("VueDev", policy =>
         policy
-            .WithOrigins(
-                "http://localhost:3000",
-                "http://localhost:5173"
-            )
+            .WithOrigins("http://localhost:3000", "http://localhost:5173")
             .AllowAnyHeader()
             .AllowAnyMethod()
     );
@@ -46,17 +45,13 @@ builder.Services.AddHealthChecks()
         tags: ["ready"]
     );
 
-// ── Image / Static Files ──────────────────────────────────────────────────────
-builder.Services.AddDirectoryBrowser();
-
 // ─────────────────────────────────────────────────────────────────────────────
 var app = builder.Build();
 
-// ── Development middleware ────────────────────────────────────────────────────
+// ── Development tooling ───────────────────────────────────────────────────────
 if (app.Environment.IsDevelopment())
 {
     app.MapOpenApi();
-    // Scalar provides a clean interactive API UI at /scalar/v1
     app.MapScalarApiReference(opts =>
     {
         opts.Title = "RecipeApp API";
@@ -64,21 +59,32 @@ if (app.Environment.IsDevelopment())
     });
 }
 
-// ── Static files (recipe images) ─────────────────────────────────────────────
-app.UseStaticFiles();
+// ── Static files — serve uploaded recipe images at /uploads ──────────────────
+var uploadsPath = Path.Combine(app.Environment.ContentRootPath, "uploads");
+Directory.CreateDirectory(uploadsPath);
+app.UseStaticFiles(new StaticFileOptions
+{
+    FileProvider = new PhysicalFileProvider(uploadsPath),
+    RequestPath  = "/uploads",
+});
 
-// ── CORS ──────────────────────────────────────────────────────────────────────
+// ── CORS (before routing) ─────────────────────────────────────────────────────
 app.UseCors("VueDev");
 
-// ── Endpoints ─────────────────────────────────────────────────────────────────
+// ── API Endpoints ─────────────────────────────────────────────────────────────
 app.MapHealthEndpoints();
 
-// Apply any pending EF migrations on startup (development convenience)
+var api = app.MapGroup("/api/v1");
+api.MapIngredientsEndpoints();
+api.MapRecipesEndpoints();
+
+// ── Startup tasks (development) ───────────────────────────────────────────────
 if (app.Environment.IsDevelopment())
 {
     using var scope = app.Services.CreateScope();
     var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
     await db.Database.MigrateAsync();
+    await DataSeeder.SeedAsync(db);
 }
 
 app.Run();

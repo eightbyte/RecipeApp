@@ -14,6 +14,26 @@ const routes = [
     meta: { title: 'Recipes' },
   },
   {
+    path: '/recipes/new',
+    name: 'recipe-create',
+    component: () => import('@/views/RecipeFormView.vue'),
+    meta: { title: 'New Recipe' },
+  },
+  {
+    path: '/recipes/:id',
+    name: 'recipe-detail',
+    component: () => import('@/views/RecipeDetailView.vue'),
+    meta: { title: 'Recipe' },
+    props: true,
+  },
+  {
+    path: '/recipes/:id/edit',
+    name: 'recipe-edit',
+    component: () => import('@/views/RecipeFormView.vue'),
+    meta: { title: 'Edit Recipe' },
+    props: true,
+  },
+  {
     path: '/meal-plan',
     name: 'meal-plan',
     component: () => import('@/views/MealPlanView.vue'),
@@ -30,9 +50,9 @@ const routes = [
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
   routes,
+  scrollBehavior: () => ({ top: 0 }),
 })
 
-// Update document title on navigation
 router.afterEach((to) => {
   const appTitle = import.meta.env.VITE_APP_TITLE ?? 'RecipeApp'
   document.title = to.meta.title ? `${to.meta.title} — ${appTitle}` : appTitle

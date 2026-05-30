@@ -26,4 +26,18 @@ export default defineConfig({
       },
     },
   },
+
+  test: {
+    environment: 'jsdom',
+    globals: true,
+    setupFiles: ['./src/test/setup.js'],
+    env: {
+      VITE_API_BASE_URL: 'http://localhost:5000/api/v1',
+    },
+    server: {
+      deps: {
+        inline: ['vuetify'],
+      },
+    },
+  },
 })

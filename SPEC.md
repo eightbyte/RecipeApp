@@ -15,7 +15,8 @@
 5. [API Design](#5-api-design)
 6. [Feature Specifications](#6-feature-specifications)
 7. [Development Phases](#7-development-phases)
-8. [Future Functionality](#8-future-functionality)
+8. [Testing](#8-testing)
+9. [Future Functionality](#9-future-functionality)
 
 ---
 
@@ -39,23 +40,24 @@ A mobile-first web application for managing personal recipes, building meal plan
 ### Frontend
 | Concern | Choice | Notes |
 |---|---|---|
-| Framework | **Vue 3** (Composition API) | Mobile-first SPA |
-| State Management | **Pinia** | Lightweight; pairs well with Vue 3 Composition API |
-| Routing | **Vue Router 4** | SPA navigation |
-| HTTP Client | **Axios** | API communication |
-| UI / Styling | **Tailwind CSS** + **DaisyUI** | Rapid mobile-first styling; DaisyUI provides accessible components |
+| Framework | **Vue 3** (Composition API, `<script setup>` only) | Mobile-first SPA |
+| State Management | **Pinia** | One store file per domain |
+| Routing | **Vue Router 4** | Lazy-loaded views |
+| HTTP Client | **Axios** | Pre-configured instance in `src/services/api.js` |
+| UI Components | **Vuetify 3** | Primary component library |
+| CSS Utilities | **Bootstrap 5** | Grid + utility classes only (no Bootstrap JS) |
 | Build Tool | **Vite** | Fast dev server and builds |
 
 ### Backend
 | Concern | Choice | Notes |
 |---|---|---|
-| Framework | **.NET 10 Web API** | Minimal API or controller-based |
-| ORM | **Entity Framework Core 10** | Code-first with migrations |
-| Validation | **FluentValidation** | Request DTO validation |
+| Framework | **.NET 10 Web API** | Minimal API (endpoint groups, not MVC controllers) |
+| ORM | **Entity Framework Core 10** | Code-first with migrations (Npgsql provider) |
+| Validation | **FluentValidation** | One validator class per request DTO |
 | AI Integration | **Anthropic Claude API** (claude-sonnet-4-6) | Recipe scraping and extraction |
 | Web Scraping | **HtmlAgilityPack** or **AngleSharp** | Raw HTML retrieval before passing to Claude |
-| Image Storage | **Local filesystem / Azure Blob / S3** | Configurable; local for dev |
-| Mapping | **AutoMapper** | Entity ↔ DTO mapping |
+| Image Storage | **Local filesystem** | Configurable; served as static files at `/uploads/images/` |
+| Mapping | **Manual extension methods** | `DTOs/Mappings.cs` — `ToResponse()` / `ToDetail()` / `ToListItem()` |
 
 ### Database
 | Concern | Choice |
@@ -460,7 +462,7 @@ Development is structured into 7 iterative phases. Each phase produces a working
 - [x] **Backend:**
   - Implement `IngredientsController`: GET list, POST, PUT, GET categories
   - Implement `RecipesController`: GET list, GET by ID, POST, PUT, DELETE
-  - DTO + AutoMapper mappings for Recipe with nested steps and ingredients
+  - DTO + manual mapping (extension methods in `DTOs/Mappings.cs`) for Recipe with nested steps and ingredients
   - Seed a small set of ingredient categories and a few sample ingredients
 - [x] **Frontend:**
   - Recipe list page (cards with name, image placeholder, last cooked)
@@ -586,7 +588,99 @@ Development is structured into 7 iterative phases. Each phase produces a working
 
 ---
 
-## 8. Future Functionality
+## 8. Testing
+
+The project includes automated tests for both the backend (.NET) and frontend (Vue) layers.
+
+---
+
+### 8.1 Backend Tests
+
+**Location:** `backend/RecipeApp.Tests/`
+
+**Stack:**
+| Concern | Choice |
+|---|---|
+| Test framework | xunit.v3 |
+| Assertions | FluentAssertions |
+| Integration host | Microsoft.AspNetCore.Mvc.Testing |
+| Database isolation | Testcontainers.PostgreSql (real PostgreSQL container per test run) |
+| Validation helpers | FluentValidation.TestHelper (bundled in FluentValidation 11+) |
+
+**Test structure:**
+```
+backend/RecipeApp.Tests/
+├── Infrastructure/
+│   ├── RecipeAppFactory.cs       WebApplicationFactory override; wires Testcontainers DB
+│   └── DatabaseFixture.cs        Shared container fixture; runs one PG instance per collection
+├── Helpers/
+│   └── TestDataBuilder.cs        Fluent builders for seeding test entities
+├── Validators/
+│   ├── IngredientValidatorTests.cs
+│   └── RecipeValidatorTests.cs
+├── DTOs/
+│   └── MappingsTests.cs
+├── Services/
+│   ├── RecipeServiceTests.cs
+│   └── ImageServiceTests.cs
+└── Endpoints/
+    ├── HealthEndpointTests.cs
+    ├── IngredientsEndpointTests.cs
+    └── RecipesEndpointTests.cs
+```
+
+**Running backend tests:**
+```bash
+cd backend
+dotnet test RecipeApp.Tests/RecipeApp.Tests.csproj
+```
+
+> **Note:** Integration tests spin up a real PostgreSQL container via Testcontainers. Docker must be running.
+
+---
+
+### 8.2 Frontend Tests
+
+**Location:** `frontend/src/` (co-located `.spec.js` files) and `frontend/src/test/` (shared setup)
+
+**Stack:**
+| Concern | Choice |
+|---|---|
+| Test runner | Vitest 4 |
+| DOM environment | jsdom |
+| Component utilities | @vue/test-utils |
+| HTTP mocking | msw 2 (Mock Service Worker) |
+| Coverage | @vitest/coverage-v8 |
+
+**Test structure:**
+```
+frontend/src/
+├── test/
+│   └── setup.js                   Global setup: ResizeObserver stub, MSW server lifecycle
+├── services/
+│   └── api.spec.js                Axios instance configuration tests
+├── stores/
+│   ├── recipes.spec.js            Pinia recipes store actions and state
+│   └── ingredients.spec.js        Pinia ingredients store actions and state
+├── components/layout/
+│   └── AppBottomNav.spec.js       Bottom navigation component tests
+└── views/
+    ├── RecipesView.spec.js        Recipe list page tests
+    ├── RecipeDetailView.spec.js   Recipe detail page tests
+    └── RecipeFormView.spec.js     Recipe create/edit form tests
+```
+
+**Running frontend tests:**
+```bash
+cd frontend
+npm test                   # run once
+npm run test:watch         # watch mode
+npm run test:coverage      # with coverage report
+```
+
+---
+
+## 9. Future Functionality
 
 These items are **out of scope for v1** but represent natural extensions.
 

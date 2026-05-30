@@ -110,3 +110,11 @@ Readiness check: `http://localhost:5000/health/ready`
 - FluentValidation validators are registered automatically via `AddValidatorsFromAssemblyContaining<Program>()`.
 - The `uploads/images/` directory is served as static files at `/uploads/images/`. Gitignored; mount as a Docker volume in production.
 - Phase 3 will add `Services/RecipeScrapeService.cs` and integrate the Anthropic Claude SDK.
+
+---
+## Project Notes
+- Always ensure type safety
+- Avoid hard coded values
+- ensure naming is clear 
+- Test your changes
+- never assume, ask for clarity.

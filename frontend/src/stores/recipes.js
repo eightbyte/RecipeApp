@@ -1,6 +1,11 @@
 import { defineStore } from 'pinia'
 import { ref } from 'vue'
-import api from '@/services/api'
+import api, { assetUrl } from '@/services/api'
+
+function normalizeImageUrl(recipe) {
+  if (!recipe) return recipe
+  return { ...recipe, imageUrl: assetUrl(recipe.imageUrl) }
+}
 
 export const useRecipeStore = defineStore('recipes', () => {
   const recipes      = ref([])   // RecipeListItemResponse[]
@@ -15,7 +20,7 @@ export const useRecipeStore = defineStore('recipes', () => {
     error.value   = null
     try {
       const { data } = await api.get('/recipes', { params })
-      recipes.value = data
+      recipes.value = data.map(normalizeImageUrl)
     } catch (e) {
       error.value = e.message
     } finally {
@@ -29,8 +34,8 @@ export const useRecipeStore = defineStore('recipes', () => {
     currentRecipe.value = null
     try {
       const { data } = await api.get(`/recipes/${id}`)
-      currentRecipe.value = data
-      return data
+      currentRecipe.value = normalizeImageUrl(data)
+      return currentRecipe.value
     } catch (e) {
       error.value = e.message
       return null
@@ -43,16 +48,18 @@ export const useRecipeStore = defineStore('recipes', () => {
 
   async function createRecipe(payload) {
     const { data } = await api.post('/recipes', payload)
-    recipes.value.unshift(data)
-    return data
+    const normalized = normalizeImageUrl(data)
+    recipes.value.unshift(normalized)
+    return normalized
   }
 
   async function updateRecipe(id, payload) {
     const { data } = await api.put(`/recipes/${id}`, payload)
+    const normalized = normalizeImageUrl(data)
     const idx = recipes.value.findIndex(r => r.id === id)
-    if (idx !== -1) recipes.value[idx] = data
-    if (currentRecipe.value?.id === id) currentRecipe.value = data
-    return data
+    if (idx !== -1) recipes.value[idx] = normalized
+    if (currentRecipe.value?.id === id) currentRecipe.value = normalized
+    return normalized
   }
 
   async function deleteRecipe(id) {
@@ -68,18 +75,20 @@ export const useRecipeStore = defineStore('recipes', () => {
       headers: { 'Content-Type': 'multipart/form-data' },
     })
     // Update imageUrl on the cached list item and detail
+    const absUrl = assetUrl(data.imageUrl)
     const listItem = recipes.value.find(r => r.id === id)
-    if (listItem) listItem.imageUrl = data.imageUrl
-    if (currentRecipe.value?.id === id) currentRecipe.value.imageUrl = data.imageUrl
-    return data.imageUrl
+    if (listItem) listItem.imageUrl = absUrl
+    if (currentRecipe.value?.id === id) currentRecipe.value.imageUrl = absUrl
+    return absUrl
   }
 
   async function markCooked(id) {
     const { data } = await api.post(`/recipes/${id}/cook`)
+    const normalized = normalizeImageUrl(data)
     const idx = recipes.value.findIndex(r => r.id === id)
     if (idx !== -1) recipes.value[idx].lastCookedAt = data.lastCookedAt
-    if (currentRecipe.value?.id === id) currentRecipe.value = data
-    return data
+    if (currentRecipe.value?.id === id) currentRecipe.value = normalized
+    return normalized
   }
 
   // ── Helpers ────────────────────────────────────────────────────────────────

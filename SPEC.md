@@ -457,12 +457,12 @@ Development is structured into 7 iterative phases. Each phase produces a working
 **Goal:** Users can create, view, edit, and delete recipes manually.
 
 **Tasks:**
-- [ ] **Backend:**
+- [x] **Backend:**
   - Implement `IngredientsController`: GET list, POST, PUT, GET categories
   - Implement `RecipesController`: GET list, GET by ID, POST, PUT, DELETE
   - DTO + AutoMapper mappings for Recipe with nested steps and ingredients
   - Seed a small set of ingredient categories and a few sample ingredients
-- [ ] **Frontend:**
+- [x] **Frontend:**
   - Recipe list page (cards with name, image placeholder, last cooked)
   - Recipe detail page — ingredient list, numbered steps
   - Recipe create/edit form
@@ -471,7 +471,7 @@ Development is structured into 7 iterative phases. Each phase produces a working
     - Step-ingredient assignment (checkbox overlay per step)
   - Portion selector (½ / Regular / Double) on detail page — local multiplier only
   - Image upload on recipe form
-- [ ] Ingredient auto-complete backed by `GET /ingredients?search=`
+- [x] Ingredient auto-complete backed by `GET /ingredients?search=`
 
 **Deliverable:** Full recipe CRUD in the UI; portion adjustment works; images upload and display.
 

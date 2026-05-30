@@ -7,6 +7,15 @@
  */
 import axios from 'axios'
 
+// Strip the /api/v1 path so we have just the origin for static asset URLs
+const _apiHost = (import.meta.env.VITE_API_BASE_URL ?? '').replace(/\/api\/v\d+\/?$/, '')
+
+export function assetUrl(path) {
+  if (!path) return ''
+  if (/^https?:\/\//.test(path)) return path
+  return `${_apiHost}${path}`
+}
+
 const api = axios.create({
   baseURL: import.meta.env.VITE_API_BASE_URL ?? '/api/v1',
   headers: {

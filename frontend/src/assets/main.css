@@ -18,8 +18,9 @@ html, body {
 }
 
 /* ── Main content: add bottom padding so content isn't behind the nav bar ── */
+/* Combine Vuetify's layout-bottom (bottom nav height) with device safe-area */
 .v-main {
-  padding-bottom: env(safe-area-inset-bottom, 0px);
+  padding-bottom: calc(var(--v-layout-bottom, 0px) + env(safe-area-inset-bottom, 0px));
 }
 
 /* ── Recipe image grayscale helper ──────────────────────────────────────── */

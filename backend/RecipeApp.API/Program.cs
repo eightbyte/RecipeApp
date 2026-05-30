@@ -88,3 +88,6 @@ if (app.Environment.IsDevelopment())
 }
 
 app.Run();
+
+// Expose the implicit Program class to the test project
+public partial class Program { }

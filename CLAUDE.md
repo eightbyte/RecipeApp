@@ -26,6 +26,7 @@ RecipeApp/
 │       ├── services/        api.js — Axios instance
 │       ├── stores/          Pinia stores (one file per domain)
 │       └── views/           Top-level page components
+├── specs/                   Phase detail specification documents
 ├── docker-compose.yml       Local dev environment
 ├── SPEC.md                  Full feature specification
 └── CLAUDE.md                This file
@@ -46,6 +47,7 @@ RecipeApp/
 | Validation    | FluentValidation                      | One validator class per request DTO            |
 | Mapping       | Manual (extension methods)            | `DTOs/Mappings.cs` — static `ToResponse()` / `ToDetail()` / `ToListItem()` |
 | Database      | PostgreSQL 16                         | All timestamps stored as UTC                   |
+| Claude SDK    | Official Anthropic C# SDK             | Documentation at `https://platform.claude.com/docs/en/api/sdks/csharp` |
 
 ## Running locally
 

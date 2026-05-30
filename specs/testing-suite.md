@@ -123,6 +123,18 @@ These run in-process with no I/O. Use `FluentValidation.TestHelper` (`TestValida
 | Step references negative index | `IngredientIndexes: [-1]` | Error on step |
 | Step with empty ingredient indexes | `IngredientIndexes: []` | No errors (steps don't require ingredients) |
 
+#### UpdateRecipeValidator
+
+Same rule set as `CreateRecipeValidator` — minimal smoke tests sufficient; the cross-field index logic is shared code and fully exercised above.
+
+| Test | Input | Expected |
+|---|---|---|
+| Valid minimal update | 1 ingredient, 1 step, valid name and servings | No errors |
+| Name empty | `{ Name: "" }` | Error on `Name` |
+| Servings zero | `{ Servings: 0 }` | Error on `Servings` |
+| No ingredients | `{ Ingredients: [] }` | Error on `Ingredients` |
+| Step references out-of-bounds index | `IngredientIndexes: [1]` with 1 ingredient | Error on step |
+
 ### 3.3 Unit Tests — Mappings
 
 File: `backend/RecipeApp.Tests/DTOs/MappingsTests.cs`
@@ -230,7 +242,7 @@ These hit the real database through the service layer (no HTTP).
 | Steps persisted | 2 steps in request | 2 RecipeSteps in DB |
 | Step-ingredient links | Step references ingredient index 0 | RecipeStepIngredient row created |
 | Timestamps set | On creation | CreatedAt and UpdatedAt both set to UTC |
-| Invalid IngredientId | Non-existent ingredient GUID | Throws (FK violation) or returns error |
+| Invalid IngredientId | Non-existent ingredient GUID | Throws `DbUpdateException` (FK violation from `SaveChangesAsync`) |
 
 #### UpdateAsync
 
@@ -307,8 +319,8 @@ Use the `RecipeAppFactory` HTTP client. Assert HTTP status codes, response body 
 | Delete valid | `DELETE /api/v1/recipes/{id}` | 204 | Subsequent GET returns 404 |
 | Delete not found | `DELETE /api/v1/recipes/{unknownId}` | 404 | — |
 | Upload image valid | `POST /api/v1/recipes/{id}/image` multipart | 200 | imageUrl in response |
-| Upload image too large | File > 10 MB | 422 | Error message |
-| Upload image bad type | `.gif` file | 422 | Error message |
+| Upload image too large | File > 10 MB | 400 | Error message |
+| Upload image bad type | `.gif` file | 400 | Error message |
 | Mark cooked | `POST /api/v1/recipes/{id}/cook` | 200 | lastCookedAt set in response |
 | Mark cooked not found | `POST /api/v1/recipes/{unknownId}/cook` | 404 | — |
 
@@ -360,9 +372,9 @@ Use `setActivePinia(createPinia())` before each test. Mock `api.js` using `vi.mo
 | isRecentlyCooked — outside 7 days | `lastCookedAt` = 8 days ago | — | Returns false |
 | isRecentlyCooked — never cooked | `lastCookedAt` = null | — | Returns false |
 | isRecentlyCooked — custom window | `lastCookedAt` = 3 days ago, `days=2` | — | Returns false |
-| normalizeImageUrl — relative path | `/uploads/images/foo.jpg` | — | Prepends API base URL |
-| normalizeImageUrl — already absolute | `http://...` | — | Unchanged |
-| normalizeImageUrl — null | recipe without image | — | imageUrl remains null |
+| fetchRecipes normalises relative imageUrl | `fetchRecipes()` returns recipe with `imageUrl: '/uploads/images/foo.jpg'` | — | `store.recipes[0].imageUrl` equals `${apiBaseUrl}/uploads/images/foo.jpg` |
+| fetchRecipes leaves absolute imageUrl unchanged | API returns recipe with `imageUrl: 'http://cdn.example.com/img.jpg'` | — | `store.recipes[0].imageUrl` unchanged |
+| fetchRecipes leaves null imageUrl as empty string | API returns recipe with `imageUrl: null` | — | `store.recipes[0].imageUrl` is `''` (see `assetUrl` in `api.spec.js`) |
 
 #### ingredients store
 
@@ -383,7 +395,7 @@ File: `frontend/src/services/api.spec.js`
 |---|---|---|
 | assetUrl with relative path | `/uploads/images/foo.jpg` | Returns `${VITE_API_BASE_URL_root}/uploads/images/foo.jpg` |
 | assetUrl with http URL | `http://example.com/image.jpg` | Returned unchanged |
-| assetUrl with null | `null` | Returns null or empty string (document current behavior) |
+| assetUrl with null | `null` | Returns `''` (falsy input short-circuits to empty string) |
 | Error interceptor — response error | Axios error with `response.data.message` | Rejects with `{ status, message, original }` |
 | Error interceptor — network error | Axios error without response | Rejects with message from `error.message` |
 
@@ -409,8 +421,8 @@ Mount components with `@vue/test-utils`. Stub Vuetify and Vue Router as needed, 
 | Shows recipe list | `store.recipes` has 2 items | 2 recipe cards rendered |
 | Shows empty state | `store.recipes = []` | Empty-state message visible |
 | Search input debounced | Type in search box | `fetchRecipes` called with search param |
-| Navigate to detail | Click recipe card | Router push to `recipe-detail` with correct id |
-| Navigate to create | Click new recipe button | Router push to `recipe-create` |
+| Navigate to detail | Click recipe card | Card `:to` prop equals `{ name: 'recipe-detail', params: { id: recipe.id } }` |
+| Navigate to create | Click new recipe FAB button | Button `:to` prop equals `{ name: 'recipe-create' }` |
 
 #### RecipeDetailView
 

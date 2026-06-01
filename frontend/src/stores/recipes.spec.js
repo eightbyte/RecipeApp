@@ -187,3 +187,92 @@ describe('isRecentlyCooked', () => {
     expect(store.isRecentlyCooked(recipe, 2)).toBe(false)
   })
 })
+
+// ── scrapeRecipe ──────────────────────────────────────────────────────────────
+
+const makeScrapePreview = (overrides = {}) => ({
+  name: 'Pasta Bolognese',
+  description: 'A classic dish',
+  servings: 4,
+  sourceUrl: 'https://example.com/bolognese',
+  ingredients: [],
+  steps: [],
+  ...overrides,
+})
+
+describe('scrapeRecipe', () => {
+  it('sets scrapeLoading true during fetch, false after', async () => {
+    let resolve
+    api.post.mockReturnValue(new Promise(r => { resolve = r }))
+
+    const store = useRecipeStore()
+    const promise = store.scrapeRecipe('https://example.com')
+    expect(store.scrapeLoading).toBe(true)
+
+    resolve({ data: makeScrapePreview() })
+    await promise
+    expect(store.scrapeLoading).toBe(false)
+  })
+
+  it('stores response in scrapePreview on success', async () => {
+    const preview = makeScrapePreview({ name: 'My Recipe' })
+    api.post.mockResolvedValue({ data: preview })
+
+    const store = useRecipeStore()
+    await store.scrapeRecipe('https://example.com')
+
+    expect(store.scrapePreview).toMatchObject({ name: 'My Recipe' })
+    expect(store.scrapeError).toBeNull()
+  })
+
+  it('sets scrapeError on API failure', async () => {
+    api.post.mockRejectedValue({ response: { data: { detail: 'URL unreachable' } } })
+
+    const store = useRecipeStore()
+    await store.scrapeRecipe('https://bad-url.com')
+
+    expect(store.scrapeError).toBe('URL unreachable')
+    expect(store.scrapePreview).toBeNull()
+  })
+})
+
+// ── confirmScrape ─────────────────────────────────────────────────────────────
+
+describe('confirmScrape', () => {
+  it('calls POST /recipes/scrape/confirm and returns new recipe ID', async () => {
+    const detail = makeRecipeDetail({ id: 'new-recipe-id' })
+    api.post.mockResolvedValue({ data: detail })
+
+    const store = useRecipeStore()
+    const id = await store.confirmScrape({ name: 'Bolognese' })
+
+    expect(api.post).toHaveBeenCalledWith('/recipes/scrape/confirm', { name: 'Bolognese' })
+    expect(id).toBe('new-recipe-id')
+  })
+
+  it('adds confirmed recipe to recipes list', async () => {
+    const detail = makeRecipeDetail({ id: 'r-new' })
+    api.post.mockResolvedValue({ data: detail })
+
+    const store = useRecipeStore()
+    await store.confirmScrape({})
+
+    expect(store.recipes.some(r => r.id === 'r-new')).toBe(true)
+  })
+})
+
+// ── clearScrapePreview ────────────────────────────────────────────────────────
+
+describe('clearScrapePreview', () => {
+  it('resets scrapePreview and scrapeError to null', async () => {
+    api.post.mockResolvedValue({ data: makeScrapePreview() })
+
+    const store = useRecipeStore()
+    await store.scrapeRecipe('https://example.com')
+    expect(store.scrapePreview).not.toBeNull()
+
+    store.clearScrapePreview()
+    expect(store.scrapePreview).toBeNull()
+    expect(store.scrapeError).toBeNull()
+  })
+})

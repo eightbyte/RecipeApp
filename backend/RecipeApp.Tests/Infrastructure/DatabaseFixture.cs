@@ -16,6 +16,8 @@ public class DatabaseFixture : IAsyncLifetime
 
     public string ConnectionString => _container.GetConnectionString();
 
+    public RecipeAppFactory Factory => _factory!;
+
     public HttpClient CreateClient() => _factory!.CreateClient();
 
     public AppDbContext CreateDbContext()

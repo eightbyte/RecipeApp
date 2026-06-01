@@ -20,6 +20,16 @@ export const makeIngredient = (overrides = {}) => ({
   ...overrides,
 })
 
+export const makeScrapePreview = (overrides = {}) => ({
+  name:        'Test Imported Recipe',
+  description: 'Imported from the web',
+  servings:    4,
+  sourceUrl:   'https://example.com/recipe',
+  ingredients: [],
+  steps:       [],
+  ...overrides,
+})
+
 export const makeRecipeDetail = (overrides = {}) => ({
   id: 'test-recipe-1',
   name: 'Test Recipe',

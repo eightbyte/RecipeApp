@@ -4,7 +4,7 @@
 Mobile-first web app for storing recipes, building meal plans, and generating shopping lists.
 
 - **Spec:** `SPEC.md` — read this for feature requirements and data model definitions.
-- **Current phase:** Phase 2 complete (Recipe CRUD). Working on Phase 3 (Recipe Scraping via Claude AI).
+- **Current phase:** Phase 3 complete (Recipe Scraping via Claude AI).
 
 ## Repository structure
 ```
@@ -47,7 +47,7 @@ RecipeApp/
 | Validation    | FluentValidation                      | One validator class per request DTO            |
 | Mapping       | Manual (extension methods)            | `DTOs/Mappings.cs` — static `ToResponse()` / `ToDetail()` / `ToListItem()` |
 | Database      | PostgreSQL 16                         | All timestamps stored as UTC                   |
-| Claude SDK    | Official Anthropic C# SDK             | Documentation at `https://platform.claude.com/docs/en/api/sdks/csharp` |
+| Claude SDK    | Anthropic.SDK v5.10.0 (community, by tghamm) | NuGet package `Anthropic.SDK`; documentation at `https://platform.claude.com/docs/en/api/sdks/csharp` |
 
 ## Running locally
 
@@ -69,6 +69,11 @@ API is at `http://localhost:5000`
 Scalar API docs: `http://localhost:5000/scalar/v1`
 Health check: `http://localhost:5000/health`
 Readiness check: `http://localhost:5000/health/ready`
+
+## Git workflow
+
+- **Branching model:** `master` (stable releases) → `develop` (integration) → `phase-N-*` (feature branches off `develop`).
+- **Never merge "down" into `master`.** `master` only receives merges from `develop` at release time. Do not merge feature branches or arbitrary work directly into `master`, and never merge `master` back into a downstream branch as a routine flow.
 
 ## Key conventions
 
@@ -111,7 +116,7 @@ Readiness check: `http://localhost:5000/health/ready`
 - **No AutoMapper** — manual mapping in `DTOs/Mappings.cs` (extension methods on entity types). Simpler to trace, no reflection.
 - FluentValidation validators are registered automatically via `AddValidatorsFromAssemblyContaining<Program>()`.
 - The `uploads/images/` directory is served as static files at `/uploads/images/`. Gitignored; mount as a Docker volume in production.
-- Phase 3 will add `Services/RecipeScrapeService.cs` and integrate the Anthropic Claude SDK.
+- Phase 3 added `Services/RecipeScrapeService.cs`, `Services/IRecipeScrapeService.cs`, `Endpoints/RecipeScrapeEndpoints.cs`, `DTOs/Scrape/`, `Validators/ScrapeValidators.cs`, and integrates `Anthropic.SDK` (NuGet) for AI-powered recipe extraction.
 
 ---
 ## Project Notes

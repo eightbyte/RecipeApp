@@ -8,10 +8,16 @@ function normalizeImageUrl(recipe) {
 }
 
 export const useRecipeStore = defineStore('recipes', () => {
-  const recipes      = ref([])   // RecipeListItemResponse[]
+  const recipes       = ref([])   // RecipeListItemResponse[]
   const currentRecipe = ref(null) // RecipeDetailResponse | null
-  const loading      = ref(false)
-  const error        = ref(null)
+  const loading       = ref(false)
+  const error         = ref(null)
+
+  // ── Scrape state ───────────────────────────────────────────────────────────
+  const scrapePreview  = ref(null)  // ScrapePreviewResponse | null
+  const scrapeError    = ref(null)  // string | null
+  const scrapeLoading  = ref(false)
+  const confirmLoading = ref(false)
 
   // ── Queries ────────────────────────────────────────────────────────────────
 
@@ -91,6 +97,38 @@ export const useRecipeStore = defineStore('recipes', () => {
     return normalized
   }
 
+  // ── Scrape actions ─────────────────────────────────────────────────────────
+
+  async function scrapeRecipe(url) {
+    scrapeLoading.value = true
+    scrapeError.value   = null
+    try {
+      const { data } = await api.post('/recipes/scrape', { url })
+      scrapePreview.value = data
+    } catch (e) {
+      scrapeError.value = e.response?.data?.detail ?? e.message ?? 'Failed to extract recipe.'
+    } finally {
+      scrapeLoading.value = false
+    }
+  }
+
+  async function confirmScrape(payload) {
+    confirmLoading.value = true
+    try {
+      const { data } = await api.post('/recipes/scrape/confirm', payload)
+      const normalized = normalizeImageUrl(data)
+      recipes.value.unshift(normalized)
+      return normalized.id
+    } finally {
+      confirmLoading.value = false
+    }
+  }
+
+  function clearScrapePreview() {
+    scrapePreview.value = null
+    scrapeError.value   = null
+  }
+
   // ── Helpers ────────────────────────────────────────────────────────────────
 
   function isRecentlyCooked(recipe, days = 7) {
@@ -104,5 +142,7 @@ export const useRecipeStore = defineStore('recipes', () => {
     fetchRecipes, fetchRecipe,
     createRecipe, updateRecipe, deleteRecipe,
     uploadImage, markCooked, isRecentlyCooked,
+    scrapePreview, scrapeError, scrapeLoading, confirmLoading,
+    scrapeRecipe, confirmScrape, clearScrapePreview,
   }
 })

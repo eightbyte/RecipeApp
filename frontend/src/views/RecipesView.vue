@@ -123,6 +123,15 @@
       </template>
 
       <v-btn
+        prepend-icon="mdi-link"
+        text="Import from URL"
+        color="secondary"
+        variant="tonal"
+        rounded="xl"
+        @click="showImportSheet = true"
+      />
+
+      <v-btn
         prepend-icon="mdi-pencil-outline"
         text="Add manually"
         color="primary"
@@ -132,15 +141,20 @@
       />
     </v-speed-dial>
 
+    <!-- ── Import from URL sheet ───────────────────────────────────────── -->
+    <RecipeUrlBottomSheet v-model="showImportSheet" />
+
   </v-container>
 </template>
 
 <script setup>
 import { ref, onMounted } from 'vue'
 import { useRecipeStore } from '@/stores/recipes'
+import RecipeUrlBottomSheet from '@/components/RecipeUrlBottomSheet.vue'
 
 const store  = useRecipeStore()
 const search = ref('')
+const showImportSheet = ref(false)
 let searchTimer = null
 
 onMounted(() => store.fetchRecipes())

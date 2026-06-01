@@ -34,6 +34,12 @@ const routes = [
     props: true,
   },
   {
+    path: '/recipes/scrape/preview',
+    name: 'scrape-preview',
+    component: () => import('@/views/RecipeScrapePreviewView.vue'),
+    meta: { title: 'Review Imported Recipe' },
+  },
+  {
     path: '/meal-plan',
     name: 'meal-plan',
     component: () => import('@/views/MealPlanView.vue'),

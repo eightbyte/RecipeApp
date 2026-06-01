@@ -25,6 +25,16 @@ builder.Services.AddValidatorsFromAssemblyContaining<Program>();
 // ── Application services ──────────────────────────────────────────────────────
 builder.Services.AddScoped<RecipeService>();
 builder.Services.AddScoped<ImageService>();
+builder.Services.AddScoped<IRecipeScrapeService, RecipeScrapeService>();
+
+// ── Recipe scraping ────────────────────────────────────────────────────────────
+builder.Services.Configure<RecipeScrapingOptions>(
+    builder.Configuration.GetSection(RecipeScrapingOptions.SectionName));
+
+builder.Services.AddHttpClient("RecipeScraper", client =>
+{
+    client.DefaultRequestHeaders.UserAgent.ParseAdd("RecipeApp/1.0 (+https://github.com/your-repo)");
+});
 
 // ── CORS ──────────────────────────────────────────────────────────────────────
 builder.Services.AddCors(options =>
@@ -77,6 +87,7 @@ app.MapHealthEndpoints();
 var api = app.MapGroup("/api/v1");
 api.MapIngredientsEndpoints();
 api.MapRecipesEndpoints();
+api.MapRecipeScrapeEndpoints();
 
 // ── Startup tasks (development) ───────────────────────────────────────────────
 if (app.Environment.IsDevelopment())

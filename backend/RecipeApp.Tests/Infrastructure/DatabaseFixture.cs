@@ -36,6 +36,8 @@ public class DatabaseFixture : IAsyncLifetime
                 ""RecipeStepIngredients"",
                 ""RecipeSteps"",
                 ""RecipeIngredients"",
+                ""MealPlanRecipes"",
+                ""MealPlans"",
                 ""Recipes"",
                 ""Ingredients""
             RESTART IDENTITY CASCADE;

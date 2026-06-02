@@ -46,6 +46,25 @@ const routes = [
     meta: { title: 'Meal Plan' },
   },
   {
+    path: '/meal-plan/new',
+    name: 'meal-plan-create',
+    component: () => import('@/views/MealPlanBuilderView.vue'),
+    meta: { title: 'New Meal Plan' },
+  },
+  {
+    path: '/meal-plan/past',
+    name: 'meal-plan-past',
+    component: () => import('@/views/PastPlansView.vue'),
+    meta: { title: 'Past Plans' },
+  },
+  {
+    path: '/meal-plan/:id',
+    name: 'meal-plan-detail',
+    component: () => import('@/views/MealPlanDetailView.vue'),
+    meta: { title: 'Meal Plan' },
+    props: true,
+  },
+  {
     path: '/shopping',
     name: 'shopping',
     component: () => import('@/views/ShoppingView.vue'),

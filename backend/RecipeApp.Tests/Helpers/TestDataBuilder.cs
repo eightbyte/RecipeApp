@@ -1,3 +1,4 @@
+using RecipeApp.API.DTOs.MealPlans;
 using RecipeApp.API.DTOs.Recipes;
 using RecipeApp.API.Enums;
 using RecipeApp.API.Models;
@@ -68,4 +69,37 @@ public static class TestDataBuilder
             .Select(i => new RecipeStepRequest(i + 1, $"Updated step {i + 1}", []))
             .ToList()
     );
+
+    public static MealPlan MealPlan(
+        string name = "Test Plan",
+        bool isActive = false,
+        DateTime? createdAt = null) => new()
+    {
+        Id        = Guid.NewGuid(),
+        Name      = name,
+        IsActive  = isActive,
+        CreatedAt = createdAt ?? DateTime.UtcNow,
+    };
+
+    public static MealPlanRecipe MealPlanRecipe(
+        Guid mealPlanId,
+        Guid recipeId,
+        DateOnly? scheduledDate = null,
+        string portionSize = PortionSize.Regular,
+        int displayOrder = 1) => new()
+    {
+        Id            = Guid.NewGuid(),
+        MealPlanId    = mealPlanId,
+        RecipeId      = recipeId,
+        ScheduledDate = scheduledDate,
+        PortionSize   = portionSize,
+        DisplayOrder  = displayOrder,
+    };
+
+    public static CreateMealPlanRequest CreateMealPlanRequest(string name = "Test Plan") => new(name);
+
+    public static AddMealPlanRecipeRequest AddMealPlanRecipeRequest(
+        Guid recipeId,
+        DateOnly? scheduledDate = null,
+        string? portionSize = null) => new(recipeId, scheduledDate, portionSize);
 }

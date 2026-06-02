@@ -26,6 +26,7 @@ builder.Services.AddValidatorsFromAssemblyContaining<Program>();
 builder.Services.AddScoped<RecipeService>();
 builder.Services.AddScoped<ImageService>();
 builder.Services.AddScoped<IRecipeScrapeService, RecipeScrapeService>();
+builder.Services.AddScoped<MealPlanService>();
 
 // ── Recipe scraping ────────────────────────────────────────────────────────────
 builder.Services.Configure<RecipeScrapingOptions>(
@@ -88,6 +89,7 @@ var api = app.MapGroup("/api/v1");
 api.MapIngredientsEndpoints();
 api.MapRecipesEndpoints();
 api.MapRecipeScrapeEndpoints();
+api.MapMealPlanEndpoints();
 
 // ── Startup tasks (development) ───────────────────────────────────────────────
 if (app.Environment.IsDevelopment())

@@ -30,6 +30,50 @@ export const makeScrapePreview = (overrides = {}) => ({
   ...overrides,
 })
 
+export const makeMealPlanListItem = (overrides = {}) => ({
+  id: 'plan-1',
+  name: 'Week of 2 June',
+  isActive: false,
+  recipeCount: 2,
+  firstScheduledDate: '2026-06-02',
+  lastScheduledDate: '2026-06-05',
+  createdAt: '2026-06-01T00:00:00Z',
+  closedAt: null,
+  ...overrides,
+})
+
+export const makeMealPlanRecipe = (overrides = {}) => ({
+  id: 'mpr-1',
+  recipeId: 'test-recipe-1',
+  recipeName: 'Test Recipe',
+  recipeImageUrl: null,
+  recipeLastCookedAt: null,
+  scheduledDate: null,
+  portionSize: 'REGULAR',
+  displayOrder: 1,
+  ...overrides,
+})
+
+export const makeMealPlanDetail = (overrides = {}) => ({
+  id: 'plan-1',
+  name: 'Week of 2 June',
+  isActive: true,
+  createdAt: '2026-06-01T00:00:00Z',
+  closedAt: null,
+  recipes: [makeMealPlanRecipe()],
+  ...overrides,
+})
+
+export const makeSuggestion = (overrides = {}) => ({
+  recipeId: 'suggested-recipe-1',
+  recipeName: 'Suggested Recipe',
+  recipeImageUrl: null,
+  recipeLastCookedAt: null,
+  overlapCount: 2,
+  overlappingIngredients: ['onion', 'carrot'],
+  ...overrides,
+})
+
 export const makeRecipeDetail = (overrides = {}) => ({
   id: 'test-recipe-1',
   name: 'Test Recipe',

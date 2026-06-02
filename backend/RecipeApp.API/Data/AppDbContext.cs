@@ -1,4 +1,5 @@
 using Microsoft.EntityFrameworkCore;
+using RecipeApp.API.Enums;
 using RecipeApp.API.Models;
 
 namespace RecipeApp.API.Data;
@@ -10,6 +11,8 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
     public DbSet<RecipeIngredient> RecipeIngredients => Set<RecipeIngredient>();
     public DbSet<RecipeStep> RecipeSteps => Set<RecipeStep>();
     public DbSet<RecipeStepIngredient> RecipeStepIngredients => Set<RecipeStepIngredient>();
+    public DbSet<MealPlan> MealPlans => Set<MealPlan>();
+    public DbSet<MealPlanRecipe> MealPlanRecipes => Set<MealPlanRecipe>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -70,6 +73,33 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
                 .WithMany(ri => ri.StepIngredients)
                 .HasForeignKey(rsi => rsi.RecipeIngredientId)
                 .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        // ── MealPlan ──────────────────────────────────────────────────────────
+        modelBuilder.Entity<MealPlan>(e =>
+        {
+            e.Property(p => p.CreatedAt).HasDefaultValueSql("NOW()");
+
+            // Enforce a single active plan via a partial unique index.
+            e.HasIndex(p => p.IsActive)
+                .IsUnique()
+                .HasFilter("\"IsActive\" = true");
+        });
+
+        // ── MealPlanRecipe ────────────────────────────────────────────────────
+        modelBuilder.Entity<MealPlanRecipe>(e =>
+        {
+            e.Property(mpr => mpr.PortionSize).HasDefaultValue(PortionSize.Regular);
+
+            e.HasOne(mpr => mpr.MealPlan)
+                .WithMany(p => p.Recipes)
+                .HasForeignKey(mpr => mpr.MealPlanId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            e.HasOne(mpr => mpr.Recipe)
+                .WithMany()
+                .HasForeignKey(mpr => mpr.RecipeId)
+                .OnDelete(DeleteBehavior.Restrict);
         });
     }
 }

@@ -5,6 +5,42 @@ using RecipeApp.API.Models;
 
 namespace RecipeApp.Tests.DTOs;
 
+// Meal plan mapping helpers
+file static class MealPlanTestHelpers
+{
+    public static MealPlan MakeMealPlan(string name = "Test Plan", bool isActive = true) => new()
+    {
+        Id        = Guid.NewGuid(),
+        Name      = name,
+        IsActive  = isActive,
+        CreatedAt = DateTime.UtcNow,
+        Recipes   = [],
+    };
+
+    public static Recipe MakeRecipe(string name = "Test Recipe") => new()
+    {
+        Id        = Guid.NewGuid(),
+        Name      = name,
+        Servings  = 4,
+        CreatedAt = DateTime.UtcNow,
+        UpdatedAt = DateTime.UtcNow,
+        Ingredients = [],
+        Steps       = [],
+    };
+
+    public static MealPlanRecipe MakeMealPlanRecipe(MealPlan plan, Recipe recipe, DateOnly? scheduledDate = null, int displayOrder = 1) => new()
+    {
+        Id            = Guid.NewGuid(),
+        MealPlanId    = plan.Id,
+        MealPlan      = plan,
+        RecipeId      = recipe.Id,
+        Recipe        = recipe,
+        ScheduledDate = scheduledDate,
+        PortionSize   = PortionSize.Regular,
+        DisplayOrder  = displayOrder,
+    };
+}
+
 public class MappingsTests
 {
     private static Ingredient MakeIngredient(string name = "flour", string displayName = "Flour") => new()
@@ -172,5 +208,91 @@ public class MappingsTests
         result.RecipeIngredientIds.Should().Contain(ri1);
         result.RecipeIngredientIds.Should().Contain(ri2);
         result.RecipeIngredientIds.Should().HaveCount(2);
+    }
+
+    // ── MealPlan.ToListItem ───────────────────────────────────────────────────
+
+    [Fact]
+    public void MealPlan_ToListItem_MapsScalarFields()
+    {
+        var plan = MealPlanTestHelpers.MakeMealPlan("Week Plan");
+        var result = plan.ToListItem();
+
+        result.Id.Should().Be(plan.Id);
+        result.Name.Should().Be("Week Plan");
+        result.IsActive.Should().BeTrue();
+        result.RecipeCount.Should().Be(0);
+        result.FirstScheduledDate.Should().BeNull();
+        result.LastScheduledDate.Should().BeNull();
+    }
+
+    [Fact]
+    public void MealPlan_ToListItem_ComputesDateRange()
+    {
+        var plan = MealPlanTestHelpers.MakeMealPlan();
+        var recipe = MealPlanTestHelpers.MakeRecipe();
+        plan.Recipes = [
+            MealPlanTestHelpers.MakeMealPlanRecipe(plan, recipe, new DateOnly(2026, 6, 2)),
+            MealPlanTestHelpers.MakeMealPlanRecipe(plan, recipe, new DateOnly(2026, 6, 5)),
+            MealPlanTestHelpers.MakeMealPlanRecipe(plan, recipe, null),
+        ];
+
+        var result = plan.ToListItem();
+
+        result.FirstScheduledDate.Should().Be(new DateOnly(2026, 6, 2));
+        result.LastScheduledDate.Should().Be(new DateOnly(2026, 6, 5));
+        result.RecipeCount.Should().Be(3);
+    }
+
+    // ── MealPlan.ToDetail ─────────────────────────────────────────────────────
+
+    [Fact]
+    public void MealPlan_ToDetail_DatedRecipesBeforeUndated()
+    {
+        var plan   = MealPlanTestHelpers.MakeMealPlan();
+        var recipe = MealPlanTestHelpers.MakeRecipe();
+        var undated = MealPlanTestHelpers.MakeMealPlanRecipe(plan, recipe, null, displayOrder: 1);
+        var dated   = MealPlanTestHelpers.MakeMealPlanRecipe(plan, recipe, new DateOnly(2026, 6, 5), displayOrder: 2);
+        plan.Recipes = [undated, dated];
+
+        var result = plan.ToDetail();
+
+        result.Recipes[0].ScheduledDate.Should().Be(new DateOnly(2026, 6, 5));
+        result.Recipes[1].ScheduledDate.Should().BeNull();
+    }
+
+    [Fact]
+    public void MealPlan_ToDetail_DatedRecipesSortedAscending()
+    {
+        var plan   = MealPlanTestHelpers.MakeMealPlan();
+        var recipe = MealPlanTestHelpers.MakeRecipe();
+        var later  = MealPlanTestHelpers.MakeMealPlanRecipe(plan, recipe, new DateOnly(2026, 6, 10), displayOrder: 1);
+        var earlier = MealPlanTestHelpers.MakeMealPlanRecipe(plan, recipe, new DateOnly(2026, 6, 2), displayOrder: 2);
+        plan.Recipes = [later, earlier];
+
+        var result = plan.ToDetail();
+
+        result.Recipes[0].ScheduledDate.Should().Be(new DateOnly(2026, 6, 2));
+        result.Recipes[1].ScheduledDate.Should().Be(new DateOnly(2026, 6, 10));
+    }
+
+    // ── MealPlanRecipe.ToResponse ─────────────────────────────────────────────
+
+    [Fact]
+    public void MealPlanRecipe_ToResponse_FlattensRecipeFields()
+    {
+        var plan   = MealPlanTestHelpers.MakeMealPlan();
+        var recipe = MealPlanTestHelpers.MakeRecipe("Pasta");
+        recipe.ImageUrl     = "/uploads/pasta.jpg";
+        recipe.LastCookedAt = DateTime.UtcNow;
+        var mpr = MealPlanTestHelpers.MakeMealPlanRecipe(plan, recipe, new DateOnly(2026, 6, 5));
+
+        var result = mpr.ToResponse();
+
+        result.RecipeName.Should().Be("Pasta");
+        result.RecipeImageUrl.Should().Be("/uploads/pasta.jpg");
+        result.RecipeLastCookedAt.Should().Be(recipe.LastCookedAt);
+        result.ScheduledDate.Should().Be(new DateOnly(2026, 6, 5));
+        result.PortionSize.Should().Be(PortionSize.Regular);
     }
 }

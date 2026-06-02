@@ -483,14 +483,14 @@ Development is structured into 7 iterative phases. Each phase produces a working
 **Goal:** Users can import a recipe by pasting a URL.
 
 **Tasks:**
-- [ ] **Backend:**
+- [x] **Backend:**
   - Add Anthropic SDK (Claude API) to .NET project
   - `RecipeScrapeService`: fetch URL HTML → strip to text → prompt Claude → parse structured JSON response
   - Define Claude prompt template (structured output: recipe schema)
   - `POST /recipes/scrape` endpoint returning a preview DTO
   - Ingredient normalisation: match scraped names against catalogue, suggest new entries with auto-categorisation
   - Unit conversion: convert any imperial units detected by Claude into metric
-- [ ] **Frontend:**
+- [x] **Frontend:**
   - "Import from URL" button on recipe list page
   - URL input bottom sheet → loading state → preview/edit screen
   - Preview screen shows editable version of scraped recipe before save
@@ -504,22 +504,22 @@ Development is structured into 7 iterative phases. Each phase produces a working
 **Goal:** Users can build and manage meal plans; home screen shows active plan.
 
 **Tasks:**
-- [ ] **Backend:**
-  - `MealPlansController`: GET list, GET active, GET by ID, POST, PUT, DELETE
-  - `MealPlanRecipesController`: POST, PUT (portion/date), DELETE
-  - Business logic: deactivate existing plan when new one is created
-  - `GET /meal-plans/{id}/suggestions` — partial ingredient overlap algorithm
-  - Recently cooked query (recipes with `last_cooked_at` within 7 days)
-- [ ] **Frontend:**
-  - Home screen: active meal plan widget (recipe cards sorted by date)
-  - New meal plan flow:
-    - Name entry
-    - Recipe browser with search (name, ingredient) and recently-cooked greyscale
-    - Add-recipe confirmation for recently cooked items
-    - Per-recipe: date picker, portion selector
-  - Waste-reduction suggestions panel during recipe browsing
-  - Past meal plans list (read-only)
-  - Meal plan detail view (read-only, sorted)
+- [x] **Backend:**
+  - `MealPlanEndpoints`: GET list, GET active, GET by ID, POST, PUT, DELETE, suggestions
+  - `MealPlanRecipeEndpoints`: POST, PUT (portion/date), DELETE (within MealPlanEndpoints.cs)
+  - Business logic: deactivate existing plan when new one is created (single SaveChanges)
+  - `GET /meal-plans/{id}/suggestions` — ingredient overlap algorithm
+  - `MealPlanService`, `MealPlanValidators`, `PortionSize` enum, EF migration `AddMealPlans`
+- [x] **Frontend:**
+  - Home screen: active meal plan widget (recipe cards sorted by date, greyscale rule)
+  - New meal plan flow: `MealPlanBuilderView` (name entry → recipe browser → date/portion controls)
+  - Recipe browser (`RecipeBrowser.vue`) with name search, recently-cooked greyscale and confirmation
+  - `RecentlyCookedDialog.vue` — bottom-sheet confirmation
+  - `SuggestionsPanel.vue` — waste-reduction suggestions with ingredient labels
+  - `MealPlanView.vue` — active plan with per-recipe overflow menu (date, portion, remove)
+  - `PastPlansView.vue` — read-only closed plans list
+  - `MealPlanDetailView.vue` — read-only plan detail (sorted recipes)
+  - `mealPlans.js` Pinia store; routes added
 
 **Deliverable:** Full meal planning flow; active plan on home; suggestions surface; greyscale + warning on recent recipes.
 

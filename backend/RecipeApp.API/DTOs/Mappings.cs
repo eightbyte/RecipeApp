@@ -1,4 +1,5 @@
 using RecipeApp.API.DTOs.Ingredients;
+using RecipeApp.API.DTOs.MealPlans;
 using RecipeApp.API.DTOs.Recipes;
 using RecipeApp.API.Models;
 
@@ -71,5 +72,43 @@ public static class Mappings
         rs.StepNumber,
         rs.Instruction,
         rs.StepIngredients.Select(si => si.RecipeIngredientId).ToList()
+    );
+
+    // ── MealPlan ──────────────────────────────────────────────────────────────
+
+    public static MealPlanListItemResponse ToListItem(this MealPlan p) => new(
+        p.Id,
+        p.Name,
+        p.IsActive,
+        p.Recipes.Count,
+        p.Recipes.Where(r => r.ScheduledDate.HasValue).Min(r => (DateOnly?)r.ScheduledDate),
+        p.Recipes.Where(r => r.ScheduledDate.HasValue).Max(r => (DateOnly?)r.ScheduledDate),
+        p.CreatedAt,
+        p.ClosedAt
+    );
+
+    public static MealPlanDetailResponse ToDetail(this MealPlan p) => new(
+        p.Id,
+        p.Name,
+        p.IsActive,
+        p.CreatedAt,
+        p.ClosedAt,
+        p.Recipes
+            .OrderBy(r => r.ScheduledDate.HasValue ? 0 : 1)
+            .ThenBy(r => r.ScheduledDate)
+            .ThenBy(r => r.DisplayOrder)
+            .Select(ToResponse)
+            .ToList()
+    );
+
+    public static MealPlanRecipeResponse ToResponse(this MealPlanRecipe mpr) => new(
+        mpr.Id,
+        mpr.RecipeId,
+        mpr.Recipe.Name,
+        mpr.Recipe.ImageUrl,
+        mpr.Recipe.LastCookedAt,
+        mpr.ScheduledDate,
+        mpr.PortionSize,
+        mpr.DisplayOrder
     );
 }

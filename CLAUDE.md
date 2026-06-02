@@ -4,7 +4,7 @@
 Mobile-first web app for storing recipes, building meal plans, and generating shopping lists.
 
 - **Spec:** `SPEC.md` — read this for feature requirements and data model definitions.
-- **Current phase:** Phase 3 complete (Recipe Scraping via Claude AI).
+- **Current phase:** Phase 4 complete (Meal Planning).
 
 ## Repository structure
 ```
@@ -20,7 +20,10 @@ RecipeApp/
 │   └── src/
 │       ├── assets/          Global CSS (main.css)
 │       ├── components/      Shared components
-│       │   └── layout/      AppTopBar.vue, AppBottomNav.vue
+│       │   ├── layout/      AppTopBar.vue, AppBottomNav.vue
+│       │   ├── RecipeBrowser.vue          (Phase 4) searchable recipe picker
+│       │   ├── RecentlyCookedDialog.vue   (Phase 4) bottom-sheet confirmation
+│       │   └── SuggestionsPanel.vue       (Phase 4) waste-reduction suggestions
 │       ├── plugins/         vuetify.js
 │       ├── router/          index.js — all routes defined here
 │       ├── services/        api.js — Axios instance
@@ -117,6 +120,7 @@ Readiness check: `http://localhost:5000/health/ready`
 - FluentValidation validators are registered automatically via `AddValidatorsFromAssemblyContaining<Program>()`.
 - The `uploads/images/` directory is served as static files at `/uploads/images/`. Gitignored; mount as a Docker volume in production.
 - Phase 3 added `Services/RecipeScrapeService.cs`, `Services/IRecipeScrapeService.cs`, `Endpoints/RecipeScrapeEndpoints.cs`, `DTOs/Scrape/`, `Validators/ScrapeValidators.cs`, and integrates `Anthropic.SDK` (NuGet) for AI-powered recipe extraction.
+- Phase 4 added `Models/MealPlan.cs`, `Models/MealPlanRecipe.cs`, `Enums/PortionSize.cs`, `Services/MealPlanService.cs`, `Endpoints/MealPlanEndpoints.cs`, `DTOs/MealPlans/`, `Validators/MealPlanValidators.cs`, and migration `AddMealPlans`. Frontend: `stores/mealPlans.js`, `components/RecipeBrowser.vue`, `components/RecentlyCookedDialog.vue`, `components/SuggestionsPanel.vue`, `views/MealPlanBuilderView.vue`, `views/MealPlanDetailView.vue`, `views/PastPlansView.vue`.
 
 ---
 ## Project Notes

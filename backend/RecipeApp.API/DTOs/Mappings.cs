@@ -1,6 +1,7 @@
 using RecipeApp.API.DTOs.Ingredients;
 using RecipeApp.API.DTOs.MealPlans;
 using RecipeApp.API.DTOs.Recipes;
+using RecipeApp.API.DTOs.ShoppingLists;
 using RecipeApp.API.Models;
 
 namespace RecipeApp.API.DTOs;
@@ -110,5 +111,32 @@ public static class Mappings
         mpr.ScheduledDate,
         mpr.PortionSize,
         mpr.DisplayOrder
+    );
+
+    // ── ShoppingList ──────────────────────────────────────────────────────────
+
+    public static ShoppingListItemResponse ToResponse(this ShoppingListItem i) => new(
+        i.Id,
+        i.IngredientId,
+        i.IsCustom ? (i.CustomName ?? string.Empty) : i.Ingredient!.DisplayName,
+        i.Category,
+        i.Amount,
+        i.Unit,
+        i.IsChecked,
+        i.IsCustom,
+        i.NeedsReview,
+        i.DisplayOrder
+    );
+
+    public static ShoppingListResponse ToResponse(this ShoppingList s, bool isStale) => new(
+        s.Id,
+        s.MealPlanId,
+        s.MealPlan.Name,
+        s.GeneratedAt,
+        isStale,
+        s.Items
+            .OrderBy(i => i.DisplayOrder)
+            .Select(ToResponse)
+            .ToList()
     );
 }

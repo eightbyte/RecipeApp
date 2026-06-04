@@ -13,6 +13,8 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
     public DbSet<RecipeStepIngredient> RecipeStepIngredients => Set<RecipeStepIngredient>();
     public DbSet<MealPlan> MealPlans => Set<MealPlan>();
     public DbSet<MealPlanRecipe> MealPlanRecipes => Set<MealPlanRecipe>();
+    public DbSet<ShoppingList> ShoppingLists => Set<ShoppingList>();
+    public DbSet<ShoppingListItem> ShoppingListItems => Set<ShoppingListItem>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -79,6 +81,7 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
         modelBuilder.Entity<MealPlan>(e =>
         {
             e.Property(p => p.CreatedAt).HasDefaultValueSql("NOW()");
+            e.Property(p => p.UpdatedAt).HasDefaultValueSql("NOW()");
 
             // Enforce a single active plan via a partial unique index.
             e.HasIndex(p => p.IsActive)
@@ -99,6 +102,37 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
             e.HasOne(mpr => mpr.Recipe)
                 .WithMany()
                 .HasForeignKey(mpr => mpr.RecipeId)
+                .OnDelete(DeleteBehavior.Restrict);
+        });
+
+        // ── ShoppingList ──────────────────────────────────────────────────────
+        modelBuilder.Entity<ShoppingList>(e =>
+        {
+            e.Property(s => s.GeneratedAt).HasDefaultValueSql("NOW()");
+            e.Property(s => s.UpdatedAt).HasDefaultValueSql("NOW()");
+
+            e.HasIndex(s => s.MealPlanId).IsUnique();
+
+            e.HasOne(s => s.MealPlan)
+                .WithMany()
+                .HasForeignKey(s => s.MealPlanId)
+                .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        // ── ShoppingListItem ──────────────────────────────────────────────────
+        modelBuilder.Entity<ShoppingListItem>(e =>
+        {
+            e.Property(i => i.Amount).HasPrecision(10, 3);
+            e.Property(i => i.Category).HasDefaultValue(IngredientCategory.Other);
+
+            e.HasOne(i => i.ShoppingList)
+                .WithMany(s => s.Items)
+                .HasForeignKey(i => i.ShoppingListId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            e.HasOne(i => i.Ingredient)
+                .WithMany()
+                .HasForeignKey(i => i.IngredientId)
                 .OnDelete(DeleteBehavior.Restrict);
         });
     }

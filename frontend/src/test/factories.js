@@ -74,6 +74,30 @@ export const makeSuggestion = (overrides = {}) => ({
   ...overrides,
 })
 
+export const makeShoppingListItem = (overrides = {}) => ({
+  id: 'item-1',
+  ingredientId: 'ing-1',
+  displayName: 'Flour',
+  category: 'DRY_GOODS',
+  amount: 200,
+  unit: 'g',
+  isChecked: false,
+  isCustom: false,
+  needsReview: false,
+  displayOrder: 1,
+  ...overrides,
+})
+
+export const makeShoppingList = (overrides = {}) => ({
+  id: 'list-1',
+  mealPlanId: 'plan-1',
+  mealPlanName: 'Week of 2 June',
+  generatedAt: '2026-06-01T00:00:00Z',
+  isStale: false,
+  items: [makeShoppingListItem()],
+  ...overrides,
+})
+
 export const makeRecipeDetail = (overrides = {}) => ({
   id: 'test-recipe-1',
   name: 'Test Recipe',

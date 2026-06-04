@@ -107,6 +107,7 @@ public class MealPlanService(AppDbContext db)
             Name      = request.Name.Trim(),
             IsActive  = true,
             CreatedAt = DateTime.UtcNow,
+            UpdatedAt = DateTime.UtcNow,
         };
         db.MealPlans.Add(newPlan);
 
@@ -160,6 +161,10 @@ public class MealPlanService(AppDbContext db)
             DisplayOrder  = maxOrder + 1,
         };
         db.MealPlanRecipes.Add(mpr);
+
+        var plan = await db.MealPlans.FindAsync(planId);
+        if (plan is not null) plan.UpdatedAt = DateTime.UtcNow;
+
         await db.SaveChangesAsync();
 
         var loaded = await db.MealPlanRecipes
@@ -180,6 +185,10 @@ public class MealPlanService(AppDbContext db)
 
         mpr.ScheduledDate = request.ScheduledDate;
         mpr.PortionSize   = request.PortionSize;
+
+        var plan = await db.MealPlans.FindAsync(planId);
+        if (plan is not null) plan.UpdatedAt = DateTime.UtcNow;
+
         await db.SaveChangesAsync();
 
         return mpr.ToResponse();
@@ -193,6 +202,10 @@ public class MealPlanService(AppDbContext db)
         if (mpr is null) return false;
 
         db.MealPlanRecipes.Remove(mpr);
+
+        var plan = await db.MealPlans.FindAsync(planId);
+        if (plan is not null) plan.UpdatedAt = DateTime.UtcNow;
+
         await db.SaveChangesAsync();
         return true;
     }

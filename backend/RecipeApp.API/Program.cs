@@ -27,6 +27,7 @@ builder.Services.AddScoped<RecipeService>();
 builder.Services.AddScoped<ImageService>();
 builder.Services.AddScoped<IRecipeScrapeService, RecipeScrapeService>();
 builder.Services.AddScoped<MealPlanService>();
+builder.Services.AddScoped<ShoppingListService>();
 
 // ── Recipe scraping ────────────────────────────────────────────────────────────
 builder.Services.Configure<RecipeScrapingOptions>(
@@ -90,6 +91,7 @@ api.MapIngredientsEndpoints();
 api.MapRecipesEndpoints();
 api.MapRecipeScrapeEndpoints();
 api.MapMealPlanEndpoints();
+api.MapShoppingListEndpoints();
 
 // ── Startup tasks (development) ───────────────────────────────────────────────
 if (app.Environment.IsDevelopment())

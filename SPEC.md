@@ -529,18 +529,18 @@ Development is structured into 7 iterative phases. Each phase produces a working
 **Goal:** Shopping list is auto-generated from the active meal plan and is functional for in-store use.
 
 **Tasks:**
-- [ ] **Backend:**
+- [x] **Backend:**
   - `ShoppingListsController`: GET active, GET by ID, POST generate, item CRUD
   - Aggregation logic: combine recipe ingredients by `ingredient_id`, apply portion multipliers, attempt unit consolidation (ml/L, g/kg)
   - Flag items for unit mismatch review
   - Custom item management (preserve on regeneration)
   - Stale-list detection (return flag if meal plan was modified after list was generated)
-- [ ] **Frontend:**
+- [x] **Frontend:**
   - Shopping list page accessible from bottom nav and from active meal plan
   - Items grouped by category with sticky category headers
   - Tap to check off item; checked items hidden by default
   - "Show purchased (N)" toggle reveals checked items in strikethrough style
-  - Custom item FAB (+): name, amount, unit, category
+  - Custom item FAB (+): name (Required), amount, unit, category (default 'Other')
   - Stale-list banner with "Regenerate" action
   - Clear visual distinction for custom items
 

@@ -548,17 +548,25 @@ Development is structured into 7 iterative phases. Each phase produces a working
 
 ---
 
-### Phase 6 — Food Waste Tracking
+### Phase 6 — Food Waste Tracking *(Deferred — see §9 Future Functionality)*
+
+> **Status: Deferred.** Meaningful waste tracking requires per-ingredient standard package sizes
+> (an ingredient-admin capability) which introduces scope that warrants a dedicated future
+> iteration. The data model (`food_waste_log`, §4.10) and detailed specification
+> (`specs/phase-6-food-waste-tracking.md`) are preserved for that iteration. Phase 7 is the next
+> active development phase.
+
 **Goal:** App tracks and surfaces food waste savings.
 
-**Tasks:**
+**Tasks:** *(deferred to future iteration)*
+- [ ] **Ingredient admin** — allow users to set a standard package size per ingredient to enable waste tracking
 - [ ] **Backend:**
-  - Waste calculation service: runs on shopping list generation
-  - Determine partial-use ingredients; compare against full plan to identify rescued remainder
+  - Waste calculation service: runs on shopping list generation; amount-based using package sizes
   - Persist to `food_waste_log`
   - `GET /food-waste/summary` — lifetime stats
   - `GET /food-waste/meal-plan/{id}` — per-plan breakdown
 - [ ] **Frontend:**
+  - Manage Ingredients screen for setting standard package sizes
   - Home screen widget: waste saved summary stat
   - Waste detail page per meal plan (accessible from Past Plans)
   - Highlight suggestions that "rescue" a leftover ingredient
@@ -700,6 +708,7 @@ These items are **out of scope for v1** but represent natural extensions.
 | **Pantry / Inventory Tracking** | Track what ingredients are already on hand and automatically deduct them from the shopping list. |
 | **Meal Plan Templates** | Save a meal plan as a reusable template to quickly spin up a similar plan next time. |
 | **Smart Shopping List Order** | Allow the user to define a custom store aisle order that the shopping list respects. |
+| **Food Waste Tracking** | Per-ingredient standard package sizes (admin capability) drive amount-based waste calculation on shopping list generation. Surfaces fully-used vs leftover counts on the home screen and per-plan detail. Detailed specification in `specs/phase-6-food-waste-tracking.md`. |
 | **Waste Benchmark Comparisons** | Compare personal food waste stats against an average household benchmark. |
 | **Recipe Version History** | Track changes to a recipe over time; revert to a previous version. |
 | **Offline-First Mode** | Full offline support with background sync, not just read-only PWA cache. |

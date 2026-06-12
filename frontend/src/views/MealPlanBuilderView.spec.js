@@ -71,4 +71,26 @@ describe('MealPlanBuilderView', () => {
     expect(wrapper.text()).toContain('My Plan')
     expect(wrapper.find('.stub-browser').exists()).toBe(true)
   })
+
+  it('resets a stale currentPlan to start at name entry', async () => {
+    const { useMealPlanStore } = await import('@/stores/mealPlans')
+    const store = useMealPlanStore()
+    store.currentPlan = makeMealPlanDetail({ name: 'Stale Plan' })
+
+    const { wrapper } = await mountView()
+
+    expect(store.currentPlan).toBeNull()
+    expect(wrapper.text()).toContain('Plan name')
+  })
+
+  it('warns that creating a new plan closes the current active plan', async () => {
+    const { useMealPlanStore } = await import('@/stores/mealPlans')
+    const store = useMealPlanStore()
+    store.activePlan = makeMealPlanDetail({ name: 'Current Week' })
+
+    const { wrapper } = await mountView()
+
+    expect(wrapper.text()).toContain('closes your current active plan')
+    expect(wrapper.text()).toContain('Current Week')
+  })
 })

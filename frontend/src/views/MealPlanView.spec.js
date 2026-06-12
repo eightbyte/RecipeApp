@@ -72,6 +72,19 @@ describe('MealPlanView', () => {
     expect(wrapper.html()).toContain('aria-label="Meal options"')
   })
 
+  it('exposes a Plan options menu when a plan is active', async () => {
+    const { wrapper, mealPlanStore } = await mountView()
+    mealPlanStore.activePlan = makeMealPlanDetail({ recipes: [makeMealPlanRecipe()] })
+    await wrapper.vm.$nextTick()
+    expect(wrapper.html()).toContain('aria-label="Plan options"')
+  })
+
+  it('Start new plan navigates to the meal-plan builder', async () => {
+    const { wrapper } = await mountView()
+    wrapper.vm.startNewPlan()
+    expect(pushMock).toHaveBeenCalledWith({ name: 'meal-plan-create' })
+  })
+
   it('Start cooking navigates to the cooking route carrying the meal portion', async () => {
     const { wrapper } = await mountView()
     wrapper.vm.startCooking({ recipeId: 'r9', portionSize: 'DOUBLE' })

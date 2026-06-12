@@ -5,6 +5,17 @@
     <div v-if="!mealPlanStore.currentPlan">
       <h2 class="text-h6 font-weight-bold mb-4">New Meal Plan</h2>
 
+      <v-alert
+        v-if="mealPlanStore.activePlan"
+        type="info"
+        variant="tonal"
+        density="compact"
+        class="mb-4"
+      >
+        Creating a new plan closes your current active plan
+        “{{ mealPlanStore.activePlan.name }}” and starts a fresh shopping list.
+      </v-alert>
+
       <v-text-field
         v-model="planName"
         label="Plan name"
@@ -102,7 +113,7 @@
 </template>
 
 <script setup>
-import { ref } from 'vue'
+import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useMealPlanStore } from '@/stores/mealPlans'
 import RecipeBrowser from '@/components/RecipeBrowser.vue'
@@ -114,6 +125,12 @@ const mealPlanStore = useMealPlanStore()
 const planName  = ref('')
 const nameError = ref('')
 const creating  = ref(false)
+
+// Always open the builder at the name-entry step for a brand-new plan,
+// discarding any plan left in the store from a previously viewed plan.
+onMounted(() => {
+  mealPlanStore.currentPlan = null
+})
 
 async function createPlan() {
   if (!planName.value.trim()) {

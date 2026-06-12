@@ -21,15 +21,37 @@
           <h1 class="text-h6 font-weight-bold">{{ mealPlanStore.activePlan.name }}</h1>
           <div class="text-caption text-medium-emphasis">Active plan</div>
         </div>
-        <v-btn
-          color="primary"
-          variant="tonal"
-          prepend-icon="mdi-cart-outline"
-          size="small"
-          :to="{ name: 'shopping' }"
-        >
-          Shopping list
-        </v-btn>
+        <div class="d-flex align-center gap-1">
+          <v-btn
+            color="primary"
+            variant="tonal"
+            prepend-icon="mdi-cart-outline"
+            size="small"
+            :to="{ name: 'shopping' }"
+          >
+            Shopping list
+          </v-btn>
+
+          <!-- Plan-level overflow menu -->
+          <v-menu>
+            <template #activator="{ props: menuProps }">
+              <v-btn
+                icon="mdi-dots-vertical"
+                variant="text"
+                size="small"
+                aria-label="Plan options"
+                v-bind="menuProps"
+              />
+            </template>
+            <v-list>
+              <v-list-item
+                prepend-icon="mdi-calendar-plus"
+                title="Start new plan"
+                @click="startNewPlan"
+              />
+            </v-list>
+          </v-menu>
+        </div>
       </div>
 
       <!-- Meal list (pre-sorted by API: dated first ascending, then undated by order) -->
@@ -199,6 +221,12 @@ onMounted(() => mealPlanStore.fetchActivePlan())
 
 function isRecentlyCookedMeal(meal) {
   return recipesStore.isRecentlyCooked({ lastCookedAt: meal.recipeLastCookedAt })
+}
+
+function startNewPlan() {
+  // The builder creates a new active plan; the backend closes the current one
+  // and the shopping list regenerates from the new plan on next visit.
+  router.push({ name: 'meal-plan-create' })
 }
 
 function startCooking(meal) {

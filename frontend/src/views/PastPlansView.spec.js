@@ -65,4 +65,11 @@ describe('PastPlansView', () => {
     await wrapper.vm.$nextTick()
     expect(wrapper.text()).toContain('4 recipes')
   })
+
+  it('shows a loading skeleton while loading', async () => {
+    const { wrapper, store } = await mountView()
+    store.loading = true
+    await wrapper.vm.$nextTick()
+    expect(wrapper.find('.v-skeleton-loader').exists()).toBe(true)
+  })
 })

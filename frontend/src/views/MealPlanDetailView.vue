@@ -1,15 +1,24 @@
 <template>
   <v-container class="pa-4" max-width="600">
 
-    <div v-if="mealPlanStore.loading" class="d-flex justify-center py-8">
-      <v-progress-circular indeterminate color="primary" />
-    </div>
+    <!-- ── Loading skeleton ─────────────────────────────────────────────── -->
+    <template v-if="mealPlanStore.loading">
+      <v-skeleton-loader type="heading" class="mb-4" />
+      <v-skeleton-loader v-for="n in 3" :key="n" type="list-item-avatar-two-line" class="mb-2" />
+    </template>
+
+    <!-- ── Fetch error (network/5xx) — distinct from "not found" below ───── -->
+    <ErrorState
+      v-else-if="mealPlanStore.error"
+      :message="mealPlanStore.error"
+      @retry="reload"
+    />
 
     <div v-else-if="mealPlanStore.currentPlan">
       <!-- Header -->
       <div class="mb-4">
         <div class="d-flex align-center gap-2 mb-1">
-          <h2 class="text-h6 font-weight-bold">{{ mealPlanStore.currentPlan.name }}</h2>
+          <h1 class="text-h6 font-weight-bold">{{ mealPlanStore.currentPlan.name }}</h1>
           <v-chip size="x-small" :color="mealPlanStore.currentPlan.isActive ? 'success' : 'default'">
             {{ mealPlanStore.currentPlan.isActive ? 'Active' : 'Closed' }}
           </v-chip>
@@ -41,7 +50,7 @@
           <v-divider vertical class="mx-1" />
 
           <v-avatar size="40" rounded="lg" color="grey-lighten-3">
-            <v-img v-if="meal.recipeImageUrl" :src="meal.recipeImageUrl" cover />
+            <v-img v-if="meal.recipeImageUrl" :src="meal.recipeImageUrl" :alt="meal.recipeName" cover />
             <v-icon v-else color="grey" size="16">mdi-food</v-icon>
           </v-avatar>
 
@@ -59,9 +68,14 @@
       </div>
     </div>
 
-    <div v-else class="text-center py-8 text-medium-emphasis">
-      Plan not found
-    </div>
+    <!-- ── Not found (404) ──────────────────────────────────────────────── -->
+    <EmptyState
+      v-else
+      icon="mdi-calendar-remove-outline"
+      title="Plan not found"
+      action-label="Back to meal plans"
+      :action-to="{ name: 'meal-plan' }"
+    />
 
   </v-container>
 </template>
@@ -69,12 +83,18 @@
 <script setup>
 import { onMounted } from 'vue'
 import { useMealPlanStore } from '@/stores/mealPlans'
+import EmptyState from '@/components/EmptyState.vue'
+import ErrorState from '@/components/ErrorState.vue'
 
 const props = defineProps({ id: { type: String, required: true } })
 
 const mealPlanStore = useMealPlanStore()
 
-onMounted(() => mealPlanStore.fetchPlan(props.id))
+function reload() {
+  mealPlanStore.fetchPlan(props.id)
+}
+
+onMounted(reload)
 
 const portionLabel = (size) =>
   ({ HALF: '½ portion', REGULAR: 'Regular', DOUBLE: 'Double' })[size] ?? size

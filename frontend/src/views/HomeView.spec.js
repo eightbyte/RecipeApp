@@ -88,4 +88,34 @@ describe('HomeView', () => {
     const img = wrapper.find('.v-img')
     expect(img.classes()).not.toContain('grayscale')
   })
+
+  it('shows a loading skeleton while the active plan is loading', async () => {
+    const { wrapper, store } = await mountView()
+    store.loading = true
+    store.activePlan = null
+    await wrapper.vm.$nextTick()
+    expect(wrapper.find('.v-skeleton-loader').exists()).toBe(true)
+  })
+
+  it('notifies after marking a meal recipe as cooked', async () => {
+    const { wrapper, store } = await mountView()
+    store.activePlan = makeMealPlanDetail({
+      recipes: [makeMealPlanRecipe({ recipeId: 'r5', recipeName: 'Stew' })],
+    })
+    await wrapper.vm.$nextTick()
+
+    const { useRecipeStore } = await import('@/stores/recipes')
+    const { useUiStore } = await import('@/stores/ui')
+    const recipesStore = useRecipeStore()
+    const ui = useUiStore()
+    vi.spyOn(recipesStore, 'markCooked').mockResolvedValue({})
+
+    const cookBtn = wrapper.findAll('button')
+      .find(b => (b.attributes('aria-label') || '').includes('Mark Stew as cooked'))
+    await cookBtn.trigger('click')
+    await flushPromises()
+
+    expect(recipesStore.markCooked).toHaveBeenCalledWith('r5')
+    expect(ui.snackbar.show).toBe(true)
+  })
 })

@@ -23,10 +23,31 @@ html, body {
   padding-bottom: calc(var(--v-layout-bottom, 0px) + env(safe-area-inset-bottom, 0px));
 }
 
+/* ── iOS safe-area helpers ───────────────────────────────────────────────── */
+/* Pad controls clear of the iOS home indicator / notch. Pair with
+   viewport-fit=cover (index.html) so the env() insets resolve to non-zero. */
+.safe-area-bottom {
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+}
+.safe-area-top {
+  padding-top: env(safe-area-inset-top, 0px);
+}
+/* A FAB that coexists with the bottom nav: clear the nav AND the home indicator. */
+.fab-above-nav {
+  bottom: calc(80px + env(safe-area-inset-bottom, 0px)) !important;
+}
+
 /* ── Recipe image grayscale helper ──────────────────────────────────────── */
 .grayscale {
   filter: grayscale(100%);
   transition: filter 0.3s ease;
+}
+
+/* Respect reduced-motion: disable non-essential transitions/animations. */
+@media (prefers-reduced-motion: reduce) {
+  .grayscale {
+    transition: none;
+  }
 }
 
 /* ── Utility: gap helpers not in Vuetify ─────────────────────────────────── */

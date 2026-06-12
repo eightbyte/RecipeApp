@@ -579,18 +579,18 @@ Development is structured into 7 iterative phases. Each phase produces a working
 **Goal:** App is pleasant and efficient to use while cooking.
 
 **Tasks:**
-- [ ] **Cooking mode** — full-screen clean view of a recipe's steps:
-  - Large typography, minimal chrome
-  - Swipe or tap-next between steps
-  - Current step's ingredients highlighted
-  - Screen keep-awake (Wake Lock API where supported)
-- [ ] "Mark as Cooked" action accessible from meal plan recipe card — updates `last_cooked_at`
-- [ ] Empty states and loading skeletons throughout
-- [ ] Error handling and retry patterns on API failures
-- [ ] PWA manifest + service worker for offline viewing of current recipe (read-only cache)
-- [ ] Responsive polish: test on iPhone SE, iPhone 15, and common Android sizes
-- [ ] Accessibility audit: focus order, ARIA labels, contrast ratios
-- [ ] Docker production build with Nginx serving Vue dist and proxying API
+- [x] **Cooking mode** — full-screen clean view of a recipe's steps:
+  - [x] Large typography, minimal chrome
+  - [x] Swipe or tap-next between steps
+  - [x] Current step's ingredients highlighted
+  - [x] Screen keep-awake (Wake Lock API where supported)
+- [x] "Mark as Cooked" action accessible from meal plan recipe card — updates `last_cooked_at`
+- [x] Empty states and loading skeletons throughout
+- [x] Error handling and retry patterns on API failures
+- [x] PWA manifest + service worker for offline viewing of current recipe (read-only cache)
+- [x] Responsive polish: test on iPhone SE, iPhone 15, and common Android sizes
+- [x] Accessibility audit: focus order, ARIA labels, contrast ratios
+- [x] Docker production build with Nginx serving Vue dist and proxying API
 
 **Deliverable:** Production-quality, polished mobile experience.
 

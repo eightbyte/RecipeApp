@@ -22,6 +22,13 @@
       />
     </div>
 
+    <!-- ── Fetch error (only when there's nothing to show) ──────────────── -->
+    <ErrorState
+      v-else-if="store.error && !store.recipes.length"
+      :message="store.error"
+      @retry="reload"
+    />
+
     <!-- ── Recipe list ──────────────────────────────────────────────────── -->
     <div v-else-if="store.recipes.length">
       <v-card
@@ -34,6 +41,7 @@
         <div class="d-flex">
           <v-img
             :src="recipe.imageUrl || ''"
+            :alt="recipe.name"
             :class="{ grayscale: store.isRecentlyCooked(recipe) }"
             width="110"
             height="110"
@@ -92,26 +100,12 @@
     </div>
 
     <!-- ── Empty state ──────────────────────────────────────────────────── -->
-    <div v-else class="text-center py-12">
-      <v-icon size="64" color="grey-lighten-2">mdi-chef-hat</v-icon>
-      <div class="text-h6 mt-3 mb-1">
-        {{ search ? 'No recipes match your search' : 'No recipes yet' }}
-      </div>
-      <div class="text-body-2 text-medium-emphasis mb-4">
-        {{ search ? 'Try a different search term' : 'Add your first recipe below' }}
-      </div>
-    </div>
-
-    <!-- ── Error state ──────────────────────────────────────────────────── -->
-    <v-alert
-      v-if="store.error"
-      type="error"
-      class="mt-4"
-      closable
-      @click:close="store.error = null"
-    >
-      {{ store.error }}
-    </v-alert>
+    <EmptyState
+      v-else
+      :icon="search ? 'mdi-magnify' : 'mdi-chef-hat'"
+      :title="search ? 'No recipes match your search' : 'No recipes yet'"
+      :text="search ? 'Try a different search term' : 'Add your first recipe below'"
+    />
 
     <!-- ── FAB ─────────────────────────────────────────────────────────── -->
     <v-speed-dial
@@ -151,6 +145,8 @@
 import { ref, onMounted } from 'vue'
 import { useRecipeStore } from '@/stores/recipes'
 import RecipeUrlBottomSheet from '@/components/RecipeUrlBottomSheet.vue'
+import EmptyState from '@/components/EmptyState.vue'
+import ErrorState from '@/components/ErrorState.vue'
 
 const store  = useRecipeStore()
 const search = ref('')
@@ -158,6 +154,10 @@ const showImportSheet = ref(false)
 let searchTimer = null
 
 onMounted(() => store.fetchRecipes())
+
+function reload() {
+  store.fetchRecipes(search.value ? { search: search.value } : {})
+}
 
 function onSearch(val) {
   clearTimeout(searchTimer)

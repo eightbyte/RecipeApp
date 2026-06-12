@@ -117,17 +117,18 @@ public class RecipesEndpointTests(DatabaseFixture db) : IAsyncLifetime
     }
 
     [Fact]
-    public async Task Create_NoIngredients_Returns422()
+    public async Task Create_NoIngredients_Returns400()
     {
         var ingId = await SeedIngredientAsync();
         var request = new CreateRecipeRequest("Test", null, null, 4, [], []);
 
         var response = await Client.PostAsJsonAsync("/api/v1/recipes", request);
-        response.StatusCode.Should().Be(HttpStatusCode.UnprocessableEntity);
+        // Results.ValidationProblem emits RFC 7807 ValidationProblemDetails with status 400.
+        response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
     }
 
     [Fact]
-    public async Task Create_OutOfBoundsStepIndex_Returns422()
+    public async Task Create_OutOfBoundsStepIndex_Returns400()
     {
         var ingId = await SeedIngredientAsync();
         var request = new CreateRecipeRequest(
@@ -136,7 +137,8 @@ public class RecipesEndpointTests(DatabaseFixture db) : IAsyncLifetime
             [new RecipeStepRequest(1, "Step", [1])]);
 
         var response = await Client.PostAsJsonAsync("/api/v1/recipes", request);
-        response.StatusCode.Should().Be(HttpStatusCode.UnprocessableEntity);
+        // Results.ValidationProblem emits RFC 7807 ValidationProblemDetails with status 400.
+        response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
     }
 
     // ── Update ────────────────────────────────────────────────────────────────

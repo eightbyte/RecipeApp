@@ -1,12 +1,21 @@
 <template>
   <v-container class="pa-4" max-width="600">
 
+    <h1 class="visually-hidden">Shopping list</h1>
+
     <!-- ── Loading skeleton ───────────────────────────────────────────────── -->
     <template v-if="store.loading && !store.list">
       <v-skeleton-loader type="list-item-two-line" class="mb-2" />
       <v-skeleton-loader type="list-item-two-line" class="mb-2" />
       <v-skeleton-loader type="list-item-two-line" class="mb-2" />
     </template>
+
+    <!-- ── Fetch error ──────────────────────────────────────────────────── -->
+    <ErrorState
+      v-else-if="store.error && !store.list"
+      :message="store.error"
+      @retry="store.fetchActive()"
+    />
 
     <template v-else>
       <!-- ── Stale banner ────────────────────────────────────────────────── -->
@@ -24,7 +33,7 @@
             variant="flat"
             color="warning"
             :loading="store.loading"
-            @click="store.regenerate()"
+            @click="onRegenerate"
           >
             Regenerate
           </v-btn>
@@ -113,7 +122,8 @@
                         size="x-small"
                         variant="text"
                         color="error"
-                        @click.stop="store.deleteItem(item.id)"
+                        :aria-label="`Remove ${item.displayName}`"
+                        @click.stop="onDeleteItem(item)"
                       />
                     </div>
                   </template>
@@ -126,34 +136,33 @@
       </div>
 
       <!-- ── Empty state — has list but no items ────────────────────────── -->
-      <div v-else-if="store.list" class="text-center py-12">
-        <v-icon size="64" color="grey-lighten-2">mdi-cart-outline</v-icon>
-        <div class="text-h6 mt-3 mb-1">Shopping list is empty</div>
-        <div class="text-body-2 text-medium-emphasis">
-          Add recipes to your meal plan to populate the list.
-        </div>
-      </div>
+      <EmptyState
+        v-else-if="store.list"
+        icon="mdi-cart-outline"
+        title="Shopping list is empty"
+        text="Add recipes to your meal plan to populate the list."
+      />
 
       <!-- ── Empty state — no active plan ──────────────────────────────── -->
-      <div v-else class="text-center py-12">
-        <v-icon size="64" color="grey-lighten-2">mdi-cart-outline</v-icon>
-        <div class="text-h6 mt-3 mb-1">Shopping list is empty</div>
-        <div class="text-body-2 text-medium-emphasis mb-4">
-          Create a meal plan to generate your list
-        </div>
-        <v-btn color="primary" :to="{ name: 'meal-plan' }">
-          Go to meal plan
-        </v-btn>
-      </div>
+      <EmptyState
+        v-else
+        icon="mdi-cart-outline"
+        title="Shopping list is empty"
+        text="Create a meal plan to generate your list"
+        action-label="Go to meal plan"
+        :action-to="{ name: 'meal-plan' }"
+      />
     </template>
 
     <!-- ── FAB — add custom item ────────────────────────────────────────── -->
     <v-btn
       v-if="store.list"
+      class="fab-above-nav"
       color="primary"
       icon="mdi-plus"
       size="large"
-      style="position: fixed; bottom: 80px; right: 16px"
+      aria-label="Add custom item"
+      style="position: fixed; right: 16px"
       elevation="4"
       @click="addItemDialog = true"
     />
@@ -170,9 +179,13 @@
 <script setup>
 import { ref, computed, onMounted } from 'vue'
 import { useShoppingListStore } from '@/stores/shoppingList'
+import { useUiStore } from '@/stores/ui'
 import AddCustomItemDialog from '@/components/AddCustomItemDialog.vue'
+import EmptyState from '@/components/EmptyState.vue'
+import ErrorState from '@/components/ErrorState.vue'
 
 const store         = useShoppingListStore()
+const ui            = useUiStore()
 const showChecked   = ref(false)
 const addItemDialog = ref(false)
 
@@ -200,7 +213,30 @@ const visibleGroups = computed(() => {
 })
 
 async function onAddCustomItem(payload) {
-  await store.addCustomItem(payload)
+  try {
+    await store.addCustomItem(payload)
+    ui.notify({ message: `Added “${payload.displayName ?? payload.name ?? 'item'}”`, color: 'success' })
+  } catch (e) {
+    ui.notify({ message: e?.message ?? 'Could not add item.', color: 'error' })
+  }
+}
+
+async function onDeleteItem(item) {
+  try {
+    await store.deleteItem(item.id)
+    ui.notify({ message: `Removed “${item.displayName}”`, color: 'success' })
+  } catch (e) {
+    ui.notify({ message: e?.message ?? 'Could not remove item.', color: 'error' })
+  }
+}
+
+async function onRegenerate() {
+  try {
+    await store.regenerate()
+    ui.notify({ message: 'Shopping list updated', color: 'success' })
+  } catch (e) {
+    ui.notify({ message: e?.message ?? 'Could not regenerate list.', color: 'error' })
+  }
 }
 
 function formatAmount(amount, unit) {

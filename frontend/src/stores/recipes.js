@@ -43,7 +43,8 @@ export const useRecipeStore = defineStore('recipes', () => {
       currentRecipe.value = normalizeImageUrl(data)
       return currentRecipe.value
     } catch (e) {
-      error.value = e.message
+      // 404 → genuine "not found" (empty state); other failures → error state.
+      if (e.status !== 404) error.value = e.message
       return null
     } finally {
       loading.value = false

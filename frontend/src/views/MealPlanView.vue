@@ -1,11 +1,24 @@
 <template>
   <v-container class="pa-4" max-width="600">
 
+    <!-- ── Loading skeleton (initial active-plan fetch) ─────────────────── -->
+    <template v-if="mealPlanStore.loading && !mealPlanStore.activePlan">
+      <v-skeleton-loader type="heading" class="mb-4" />
+      <v-skeleton-loader v-for="n in 3" :key="n" type="list-item-avatar-two-line" class="mb-2" />
+    </template>
+
+    <!-- ── Fetch error ──────────────────────────────────────────────────── -->
+    <ErrorState
+      v-else-if="mealPlanStore.error"
+      :message="mealPlanStore.error"
+      @retry="mealPlanStore.fetchActivePlan()"
+    />
+
     <!-- ── Active plan header ───────────────────────────────────────────── -->
-    <div v-if="mealPlanStore.activePlan">
+    <div v-else-if="mealPlanStore.activePlan">
       <div class="d-flex align-center justify-space-between mb-4">
         <div>
-          <h2 class="text-h6 font-weight-bold">{{ mealPlanStore.activePlan.name }}</h2>
+          <h1 class="text-h6 font-weight-bold">{{ mealPlanStore.activePlan.name }}</h1>
           <div class="text-caption text-medium-emphasis">Active plan</div>
         </div>
         <v-btn
@@ -42,6 +55,7 @@
             <v-img
               v-if="meal.recipeImageUrl"
               :src="meal.recipeImageUrl"
+              :alt="meal.recipeName"
               cover
               :class="{ grayscale: isRecentlyCookedMeal(meal) }"
             />
@@ -58,9 +72,18 @@
           <!-- Per-meal overflow menu -->
           <v-menu>
             <template #activator="{ props: menuProps }">
-              <v-btn icon="mdi-dots-vertical" variant="text" size="small" v-bind="menuProps" />
+              <v-btn
+                icon="mdi-dots-vertical"
+                variant="text"
+                size="small"
+                aria-label="Meal options"
+                v-bind="menuProps"
+              />
             </template>
             <v-list>
+              <v-list-item prepend-icon="mdi-play-circle-outline" title="Start cooking" @click="startCooking(meal)" />
+              <v-list-item prepend-icon="mdi-chef-hat" title="Mark as cooked" @click="markMealCooked(meal)" />
+              <v-divider />
               <v-list-item prepend-icon="mdi-calendar" title="Change date" @click="openDatePicker(meal)" />
               <v-list-item prepend-icon="mdi-silverware" title="Change portion" @click="openPortionPicker(meal)" />
               <v-list-item prepend-icon="mdi-delete" title="Remove" @click="removeRecipe(meal.id)" />
@@ -83,16 +106,14 @@
     </div>
 
     <!-- ── No active plan ──────────────────────────────────────────────── -->
-    <div v-else class="text-center py-12">
-      <v-icon size="64" color="grey-lighten-2">mdi-calendar-week-outline</v-icon>
-      <div class="text-h6 mt-3 mb-1">No active meal plan</div>
-      <div class="text-body-2 text-medium-emphasis mb-4">
-        Create a meal plan to organise your week
-      </div>
-      <v-btn color="primary" prepend-icon="mdi-plus" :to="{ name: 'meal-plan-create' }">
-        New meal plan
-      </v-btn>
-    </div>
+    <EmptyState
+      v-else
+      icon="mdi-calendar-week-outline"
+      title="No active meal plan"
+      text="Create a meal plan to organise your week"
+      action-label="New meal plan"
+      :action-to="{ name: 'meal-plan-create' }"
+    />
 
     <!-- ── Past plans link ─────────────────────────────────────────────── -->
     <div class="mt-8 text-center">
@@ -157,12 +178,18 @@
 
 <script setup>
 import { ref, onMounted } from 'vue'
+import { useRouter } from 'vue-router'
 import { useMealPlanStore } from '@/stores/mealPlans'
 import { useRecipeStore } from '@/stores/recipes'
+import { useUiStore } from '@/stores/ui'
 import RecipeBrowser from '@/components/RecipeBrowser.vue'
+import EmptyState from '@/components/EmptyState.vue'
+import ErrorState from '@/components/ErrorState.vue'
 
+const router        = useRouter()
 const mealPlanStore = useMealPlanStore()
 const recipesStore  = useRecipeStore()
+const ui            = useUiStore()
 
 const browserOpen = ref(false)
 const datePicker  = ref({ open: false, mprId: null, date: null })
@@ -174,14 +201,37 @@ function isRecentlyCookedMeal(meal) {
   return recipesStore.isRecentlyCooked({ lastCookedAt: meal.recipeLastCookedAt })
 }
 
+function startCooking(meal) {
+  router.push({
+    name: 'recipe-cooking',
+    params: { id: meal.recipeId },
+    query: { portion: meal.portionSize },
+  })
+}
+
+async function markMealCooked(meal) {
+  try {
+    await recipesStore.markCooked(meal.recipeId)
+    await mealPlanStore.fetchActivePlan()   // refresh greyscale / recently-cooked
+    ui.notify({ message: `Marked “${meal.recipeName}” as cooked`, color: 'success' })
+  } catch (e) {
+    ui.notify({ message: e?.message ?? 'Could not mark as cooked.', color: 'error' })
+  }
+}
+
 async function onAddRecipe(recipe) {
   if (!mealPlanStore.activePlan) return
   browserOpen.value = false
-  await mealPlanStore.addRecipe(mealPlanStore.activePlan.id, {
-    recipeId: recipe.id,
-    scheduledDate: null,
-    portionSize: 'REGULAR',
-  })
+  try {
+    await mealPlanStore.addRecipe(mealPlanStore.activePlan.id, {
+      recipeId: recipe.id,
+      scheduledDate: null,
+      portionSize: 'REGULAR',
+    })
+    ui.notify({ message: `Added “${recipe.name}” to your plan`, color: 'success' })
+  } catch (e) {
+    ui.notify({ message: e?.message ?? 'Could not add recipe.', color: 'error' })
+  }
 }
 
 function openDatePicker(meal) {

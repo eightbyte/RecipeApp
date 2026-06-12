@@ -34,6 +34,14 @@ const routes = [
     props: true,
   },
   {
+    // `/cooking` (not `/cook`) avoids confusion with the POST .../cook action.
+    path: '/recipes/:id/cooking',
+    name: 'recipe-cooking',
+    component: () => import('@/views/CookingModeView.vue'),
+    meta: { title: 'Cooking', fullscreen: true },
+    props: true,
+  },
+  {
     path: '/recipes/scrape/preview',
     name: 'scrape-preview',
     component: () => import('@/views/RecipeScrapePreviewView.vue'),

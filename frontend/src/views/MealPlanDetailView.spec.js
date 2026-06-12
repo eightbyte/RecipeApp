@@ -60,4 +60,25 @@ describe('MealPlanDetailView', () => {
     const { store } = await mountView('test-id-123')
     expect(store.fetchPlan).toHaveBeenCalledWith('test-id-123')
   })
+
+  it('shows a loading skeleton while loading', async () => {
+    const { wrapper, store } = await mountView()
+    store.loading = true
+    await wrapper.vm.$nextTick()
+    expect(wrapper.find('.v-skeleton-loader').exists()).toBe(true)
+  })
+
+  it('shows an ErrorState with retry on fetch error', async () => {
+    const { wrapper, store } = await mountView()
+    store.loading = false
+    store.error = 'Boom'
+    store.currentPlan = null
+    await wrapper.vm.$nextTick()
+
+    expect(wrapper.text()).toContain('Boom')
+    const retry = wrapper.findAll('button').find(b => b.text().includes('Try again'))
+    store.fetchPlan.mockClear()
+    await retry.trigger('click')
+    expect(store.fetchPlan).toHaveBeenCalledWith('plan-1')
+  })
 })

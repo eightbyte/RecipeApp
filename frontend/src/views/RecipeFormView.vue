@@ -356,17 +356,20 @@ function populateForm(recipe) {
   form.sourceUrl   = recipe.sourceUrl ?? ''
   imagePreview.value = recipe.imageUrl ?? null
 
-  form.ingredients = recipe.ingredients.map(i => ({
+  const ingredients = recipe.ingredients ?? []
+  const steps       = recipe.steps ?? []
+
+  form.ingredients = ingredients.map(i => ({
     ingredientId: i.ingredientId,
     amount:       i.amount,
     unit:         i.unit,
     notes:        i.notes ?? '',
   }))
 
-  form.steps = recipe.steps.map(s => ({
+  form.steps = steps.map(s => ({
     instruction:      s.instruction,
-    ingredientIndexes: s.recipeIngredientIds
-      .map(riId => recipe.ingredients.findIndex(i => i.id === riId))
+    ingredientIndexes: (s.recipeIngredientIds ?? [])
+      .map(riId => ingredients.findIndex(i => i.id === riId))
       .filter(idx => idx !== -1),
   }))
 }

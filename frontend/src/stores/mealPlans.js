@@ -44,6 +44,8 @@ export const useMealPlanStore = defineStore('mealPlans', () => {
   }
 
   async function fetchActivePlan() {
+    loading.value = true
+    error.value   = null
     try {
       const { data } = await api.get('/meal-plans/active')
       activePlan.value = normalizePlanDetail(data)
@@ -54,17 +56,21 @@ export const useMealPlanStore = defineStore('mealPlans', () => {
       } else {
         error.value = e.message
       }
+    } finally {
+      loading.value = false
     }
   }
 
   async function fetchPlan(id) {
     loading.value = true
     error.value   = null
+    currentPlan.value = null
     try {
       const { data } = await api.get(`/meal-plans/${id}`)
       currentPlan.value = normalizePlanDetail(data)
     } catch (e) {
-      error.value = e.message
+      // 404 → genuine "not found" (empty state); other failures → error state.
+      if (e.status !== 404) error.value = e.message
     } finally {
       loading.value = false
     }

@@ -3,11 +3,15 @@
     <v-skeleton-loader type="image, article" />
   </div>
 
+  <!-- ── Fetch error (network/5xx) — distinct from "not found" below ───── -->
+  <ErrorState v-else-if="store.error" :message="store.error" @retry="reload" />
+
   <div v-else-if="recipe">
 
     <!-- ── Hero image ───────────────────────────────────────────────────── -->
     <v-img
       :src="recipe.imageUrl || ''"
+      :alt="recipe.name"
       :class="{ grayscale: store.isRecentlyCooked(recipe) }"
       height="240"
       cover
@@ -25,6 +29,7 @@
           size="small"
           color="white"
           variant="tonal"
+          aria-label="Edit recipe"
           :to="{ name: 'recipe-edit', params: { id: recipe.id } }"
         />
       </div>
@@ -67,6 +72,18 @@
           Source
         </v-chip>
       </div>
+
+      <!-- ── Start cooking CTA ─────────────────────────────────────────── -->
+      <v-btn
+        block
+        color="primary"
+        size="large"
+        prepend-icon="mdi-chef-hat"
+        class="mb-4"
+        :to="{ name: 'recipe-cooking', params: { id: recipe.id }, query: { portion: portionSize } }"
+      >
+        Start cooking
+      </v-btn>
 
       <!-- ── Portion selector ──────────────────────────────────────────── -->
       <v-card class="mb-5 pa-3" variant="outlined">
@@ -156,23 +173,29 @@
     </v-container>
   </div>
 
-  <!-- ── Not found ──────────────────────────────────────────────────────── -->
-  <div v-else class="text-center py-12">
-    <v-icon size="64" color="grey-lighten-2">mdi-help-circle-outline</v-icon>
-    <div class="text-h6 mt-3">Recipe not found</div>
-    <v-btn class="mt-4" :to="{ name: 'recipes' }">Back to recipes</v-btn>
-  </div>
+  <!-- ── Not found (404 — distinct from the fetch error above) ──────────── -->
+  <EmptyState
+    v-else
+    icon="mdi-help-circle-outline"
+    title="Recipe not found"
+    action-label="Back to recipes"
+    :action-to="{ name: 'recipes' }"
+  />
 </template>
 
 <script setup>
 import { ref, computed, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useRecipeStore } from '@/stores/recipes'
+import { useUiStore } from '@/stores/ui'
+import EmptyState from '@/components/EmptyState.vue'
+import ErrorState from '@/components/ErrorState.vue'
 
 const props = defineProps({ id: String })
 const route  = useRoute()
 const router = useRouter()
 const store  = useRecipeStore()
+const ui     = useUiStore()
 
 const portionSize            = ref('REGULAR')
 const highlightedIngredientId = ref(null)
@@ -188,10 +211,11 @@ const scaledServings = computed(() =>
   Math.round(recipe.value?.servings * portionMultiplier.value) || 0
 )
 
-onMounted(() => {
-  const id = props.id ?? route.params.id
-  store.fetchRecipe(id)
-})
+function reload() {
+  store.fetchRecipe(props.id ?? route.params.id)
+}
+
+onMounted(reload)
 
 function formatAmount(baseAmount, unit) {
   const scaled = baseAmount * portionMultiplier.value
@@ -216,8 +240,14 @@ function highlightIngredient(recipeIngredientId) {
 
 async function markCooked() {
   markingCooked.value = true
-  await store.markCooked(recipe.value.id)
-  markingCooked.value = false
+  try {
+    await store.markCooked(recipe.value.id)
+    ui.notify({ message: `Marked “${recipe.value.name}” as cooked`, color: 'success' })
+  } catch (e) {
+    ui.notify({ message: e?.message ?? 'Could not mark as cooked.', color: 'error' })
+  } finally {
+    markingCooked.value = false
+  }
 }
 </script>
 

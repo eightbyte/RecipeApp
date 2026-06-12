@@ -117,3 +117,67 @@ describe('RecipeDetailView', () => {
     expect(secondIdx).toBeLessThan(thirdIdx)
   })
 })
+
+describe('RecipeDetailView — Phase 7', () => {
+  function mountRaw() {
+    return mount(RecipeDetailView, {
+      props: { id: 'r1' },
+      global: {
+        plugins: [vuetify, pinia],
+        stubs: {
+          RouterLink: { template: '<a><slot/></a>' },
+          'router-link': { template: '<a><slot/></a>' },
+          teleport: true,
+        },
+      },
+    })
+  }
+
+  it('renders a Start cooking CTA linking to the cooking route', async () => {
+    const wrapper = await mountView()
+    const startBtn = wrapper.findAllComponents({ name: 'VBtn' })
+      .find(b => b.text().includes('Start cooking'))
+    expect(startBtn).toBeTruthy()
+    expect(startBtn.props('to')).toMatchObject({
+      name: 'recipe-cooking',
+      params: { id: 'test-recipe-1' },
+    })
+  })
+
+  it('shows a "Recipe not found" empty state when missing and there is no error', async () => {
+    store.currentRecipe = null
+    store.loading = false
+    store.error = null
+    const wrapper = mountRaw()
+    await flushPromises()
+    expect(wrapper.text()).toContain('Recipe not found')
+  })
+
+  it('shows an ErrorState (not "not found") on fetch error, and retry refetches', async () => {
+    store.currentRecipe = null
+    store.loading = false
+    store.error = 'Server unavailable'
+    const wrapper = mountRaw()
+    await flushPromises()
+
+    expect(wrapper.text()).toContain('Server unavailable')
+    expect(wrapper.text()).toContain('Try again')
+    expect(wrapper.text()).not.toContain('Recipe not found')
+
+    store.fetchRecipe.mockClear()
+    const retry = wrapper.findAll('button').find(b => b.text().includes('Try again'))
+    await retry.trigger('click')
+    expect(store.fetchRecipe).toHaveBeenCalledWith('r1')
+  })
+
+  it('notifies on successful mark-as-cooked', async () => {
+    vi.spyOn(store, 'markCooked').mockResolvedValue(makeRecipeDetail())
+    const wrapper = await mountView()
+    const { useUiStore } = await import('@/stores/ui')
+    const ui = useUiStore()
+
+    await wrapper.vm.markCooked()
+    expect(ui.snackbar.show).toBe(true)
+    expect(ui.snackbar.color).toBe('success')
+  })
+})

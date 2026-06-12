@@ -4,7 +4,7 @@
 Mobile-first web app for storing recipes, building meal plans, and generating shopping lists.
 
 - **Spec:** `SPEC.md` — read this for feature requirements and data model definitions.
-- **Current phase:** Phase 5 complete (Shopping List).
+- **Current phase:** Phase 7 complete (Polish, UX & Cooking Mode) — **v1 feature-complete**.
 
 ## Repository structure
 ```
@@ -23,12 +23,16 @@ RecipeApp/
 │       │   ├── layout/      AppTopBar.vue, AppBottomNav.vue
 │       │   ├── RecipeBrowser.vue          (Phase 4) searchable recipe picker
 │       │   ├── RecentlyCookedDialog.vue   (Phase 4) bottom-sheet confirmation
-│       │   └── SuggestionsPanel.vue       (Phase 4) waste-reduction suggestions
+│       │   ├── SuggestionsPanel.vue       (Phase 4) waste-reduction suggestions
+│       │   ├── EmptyState.vue             (Phase 7) reusable empty state
+│       │   ├── ErrorState.vue             (Phase 7) reusable error + Try again
+│       │   └── AppSnackbar.vue            (Phase 7) global feedback snackbar
+│       ├── composables/     (Phase 7) useWakeLock.js — Screen Wake Lock wrapper
 │       ├── plugins/         vuetify.js
 │       ├── router/          index.js — all routes defined here
 │       ├── services/        api.js — Axios instance
-│       ├── stores/          Pinia stores (one file per domain)
-│       └── views/           Top-level page components
+│       ├── stores/          Pinia stores (one file per domain; incl. ui.js — Phase 7)
+│       └── views/           Top-level page components (incl. CookingModeView.vue — Phase 7)
 ├── specs/                   Phase detail specification documents
 ├── docker-compose.yml       Local dev environment
 ├── SPEC.md                  Full feature specification
@@ -122,6 +126,7 @@ Readiness check: `http://localhost:5000/health/ready`
 - Phase 3 added `Services/RecipeScrapeService.cs`, `Services/IRecipeScrapeService.cs`, `Endpoints/RecipeScrapeEndpoints.cs`, `DTOs/Scrape/`, `Validators/ScrapeValidators.cs`, and integrates `Anthropic.SDK` (NuGet) for AI-powered recipe extraction.
 - Phase 4 added `Models/MealPlan.cs`, `Models/MealPlanRecipe.cs`, `Enums/PortionSize.cs`, `Services/MealPlanService.cs`, `Endpoints/MealPlanEndpoints.cs`, `DTOs/MealPlans/`, `Validators/MealPlanValidators.cs`, and migration `AddMealPlans`. Frontend: `stores/mealPlans.js`, `components/RecipeBrowser.vue`, `components/RecentlyCookedDialog.vue`, `components/SuggestionsPanel.vue`, `views/MealPlanBuilderView.vue`, `views/MealPlanDetailView.vue`, `views/PastPlansView.vue`.
 - Phase 5 added `Models/ShoppingList.cs` (ShoppingList + ShoppingListItem), `Services/ShoppingListService.cs`, `Endpoints/ShoppingListEndpoints.cs`, `DTOs/ShoppingLists/`, `Validators/ShoppingListValidators.cs`, and migration `AddShoppingLists`. Also added `MealPlan.UpdatedAt` column for stale-list detection. Frontend: `stores/shoppingList.js`, `components/AddCustomItemDialog.vue`, updated `views/ShoppingView.vue`.
+- Phase 7 (frontend-only; **no backend product code** — only pre-existing backend *test* fixes: validation endpoints return RFC 7807 `400` so those tests now assert 400, and a DbContext-sharing timestamp test was corrected) added **Cooking Mode** (`views/CookingModeView.vue`, `composables/useWakeLock.js`, `recipe-cooking` route, `fullscreen` route meta gated in `App.vue`), reusable states (`components/EmptyState.vue`, `components/ErrorState.vue`, `components/AppSnackbar.vue`, `stores/ui.js` global snackbar), and a **PWA** via `vite-plugin-pwa` (manifest + service worker + runtime caching of `/api/v1/recipes` and `/uploads/images/`; launcher icons in `public/icons/`). `nginx.conf` now proxies `/uploads/`, serves `sw.js`/`manifest.webmanifest` with `no-cache`, and gzips the manifest. Store `fetchRecipe`/`fetchPlan` treat 404 as "not found" (empty state) vs. error; `fetchActivePlan` now toggles `loading` for skeletons. Cooking step "done" state is ephemeral (component-local, not persisted).
 
 ---
 ## Project Notes

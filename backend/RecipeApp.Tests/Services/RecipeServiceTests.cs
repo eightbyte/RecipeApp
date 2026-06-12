@@ -410,12 +410,19 @@ public class RecipeServiceTests(DatabaseFixture db) : IAsyncLifetime
         ctx.Recipes.Add(recipe);
         await ctx.SaveChangesAsync();
 
+        // `ctx` tracks `recipe`, so the entity MarkCooked mutates is the same instance —
+        // reading recipe.UpdatedAt after the call would see the already-refreshed value.
+        // Copy the original (DateTime is a struct) and verify via a fresh context so the
+        // assertion reflects the persisted value, not the tracked in-memory one.
+        var originalUpdatedAt = recipe.UpdatedAt;
+
         await Task.Delay(10);
         var svc = new RecipeService(ctx);
         await svc.MarkCookedAsync(recipe.Id);
 
-        var raw = await ctx.Recipes.FindAsync(recipe.Id);
-        raw!.UpdatedAt.Should().BeAfter(recipe.UpdatedAt);
+        await using var verifyCtx = db.CreateDbContext();
+        var raw = await verifyCtx.Recipes.FindAsync(recipe.Id);
+        raw!.UpdatedAt.Should().BeAfter(originalUpdatedAt);
     }
 
     [Fact]

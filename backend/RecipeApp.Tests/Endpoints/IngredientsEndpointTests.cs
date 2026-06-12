@@ -123,12 +123,13 @@ public class IngredientsEndpointTests(DatabaseFixture db) : IAsyncLifetime
     }
 
     [Fact]
-    public async Task Create_InvalidBody_Returns422()
+    public async Task Create_InvalidBody_Returns400()
     {
         var request = new CreateIngredientRequest("", "Flour", IngredientCategory.DryGoods, null);
         var response = await Client.PostAsJsonAsync("/api/v1/ingredients", request);
 
-        response.StatusCode.Should().Be(HttpStatusCode.UnprocessableEntity);
+        // Results.ValidationProblem emits RFC 7807 ValidationProblemDetails with status 400.
+        response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
     }
 
     [Fact]
@@ -154,12 +155,13 @@ public class IngredientsEndpointTests(DatabaseFixture db) : IAsyncLifetime
     }
 
     [Fact]
-    public async Task Update_InvalidBody_Returns422()
+    public async Task Update_InvalidBody_Returns400()
     {
         var seeded = await SeedIngredient();
         var request = new UpdateIngredientRequest("", IngredientCategory.DryGoods, null);
 
         var response = await Client.PutAsJsonAsync($"/api/v1/ingredients/{seeded.Id}", request);
-        response.StatusCode.Should().Be(HttpStatusCode.UnprocessableEntity);
+        // Results.ValidationProblem emits RFC 7807 ValidationProblemDetails with status 400.
+        response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
     }
 }

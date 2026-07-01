@@ -89,7 +89,7 @@ public class IngredientCatalogueSeeder(
             try
             {
                 batchJson = await llm.CompleteStructuredAsync(
-                    systemPrompt, userContent, schema, maxTokens: 2048, ct);
+                    systemPrompt, userContent, schema, maxTokens: 4096, ct);
             }
             catch (Exception ex)
             {

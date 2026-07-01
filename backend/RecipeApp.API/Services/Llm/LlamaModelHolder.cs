@@ -50,6 +50,11 @@ public sealed class LlamaModelHolder : IDisposable
                 $"<|eot_id|><|start_header_id|>user<|end_header_id|>\n\n{user}" +
                 $"<|eot_id|><|start_header_id|>assistant<|end_header_id|>\n\n",
 
+            "gemma" =>
+                $"<start_of_turn>system\n{system}<end_of_turn>\n" +
+                $"<start_of_turn>user\n{user}<end_of_turn>\n" +
+                $"<start_of_turn>model\n",
+
             _ => // ChatML — default (Qwen, Mistral, etc.)
                 $"<|im_start|>system\n{system}<|im_end|>\n" +
                 $"<|im_start|>user\n{user}<|im_end|>\n" +

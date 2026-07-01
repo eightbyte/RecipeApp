@@ -226,7 +226,7 @@ describe('scrapeRecipe', () => {
   })
 
   it('sets scrapeError on API failure', async () => {
-    api.post.mockRejectedValue({ response: { data: { detail: 'URL unreachable' } } })
+    api.post.mockRejectedValue({ message: 'URL unreachable' })
 
     const store = useRecipeStore()
     await store.scrapeRecipe('https://bad-url.com')

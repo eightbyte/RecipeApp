@@ -2,6 +2,7 @@ using System.Text.Json;
 using System.Text.Json.Nodes;
 using System.Text.Json.Serialization;
 using System.Text.RegularExpressions;
+using AngleSharp.Dom;
 using AngleSharp.Html.Parser;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
@@ -19,7 +20,9 @@ public class RecipeScrapeService(
     IHttpClientFactory httpClientFactory,
     IOptions<RecipeScrapingOptions> options,
     ILlmStructuredClient llm,
-    AppDbContext db) : IRecipeScrapeService
+    AppDbContext db,
+    IHeadlessRenderer headlessRenderer,
+    ILogger<RecipeScrapeService> logger) : IRecipeScrapeService
 {
     private readonly RecipeScrapingOptions _options = options.Value;
 
@@ -278,6 +281,33 @@ public class RecipeScrapeService(
 
     public async Task<string> FetchAndStripHtmlAsync(string url, CancellationToken ct)
     {
+        var html = await FetchHtmlAsync(url, ct);
+        var (text, sufficient) = await ExtractCandidateTextAsync(html);
+        if (sufficient) return text;
+
+        if (!_options.EnableHeadlessFallback) return text;
+
+        try
+        {
+            var renderedHtml = await headlessRenderer.RenderAsync(
+                url, TimeSpan.FromSeconds(_options.HeadlessRenderTimeoutSeconds), ct);
+            var (renderedText, renderedSufficient) = await ExtractCandidateTextAsync(renderedHtml);
+
+            // Prefer the rendered result if it cleared the bar, or is simply more substantial
+            // than what the static fetch produced (e.g. JSON-LD injected only after hydration).
+            if (renderedSufficient || renderedText.Length > text.Length)
+                return renderedText;
+        }
+        catch (Exception ex) when (ex is not OperationCanceledException)
+        {
+            logger.LogWarning(ex, "Headless render fallback failed for {Url}; using static fetch result.", url);
+        }
+
+        return text;
+    }
+
+    private async Task<string> FetchHtmlAsync(string url, CancellationToken ct)
+    {
         var client = httpClientFactory.CreateClient("RecipeScraper");
 
         using var fetchCts  = new CancellationTokenSource(TimeSpan.FromSeconds(_options.HtmlFetchTimeoutSeconds));
@@ -300,18 +330,47 @@ public class RecipeScrapeService(
         }
 
         if (!response.IsSuccessStatusCode)
-            throw new RecipeScrapeException(RecipeScrapeError.FetchNonSuccess,
-                $"The recipe page returned HTTP {(int)response.StatusCode}.");
+        {
+            if (response.Headers.TryGetValues("cf-mitigated", out _) ||
+                response.Headers.Server.Any(s => s.Product?.Name == "cloudflare"))
+                throw new RecipeScrapeException(RecipeScrapeError.FetchNonSuccess,
+                    $"The recipe page returned HTTP {(int)response.StatusCode}. " +
+                    "This site is protected by a Cloudflare bot-detection challenge that cannot be solved automatically. " +
+                    "Try a different recipe source, or add the recipe manually.");
 
-        var html = await response.Content.ReadAsStringAsync(ct);
-        return await StripHtmlAsync(html);
+            var errorBody = await response.Content.ReadAsStringAsync(ct);
+            var snippet    = errorBody.Length > 300 ? errorBody[..300] : errorBody;
+            throw new RecipeScrapeException(RecipeScrapeError.FetchNonSuccess,
+                $"The recipe page returned HTTP {(int)response.StatusCode}. Response: {snippet}");
+        }
+
+        return await response.Content.ReadAsStringAsync(ct);
+    }
+
+    /// <summary>Tries JSON-LD recipe markup first (clean, structured, and unaffected by the
+    /// script-stripping below); falls back to stripped visible body text. "Sufficient" means the
+    /// caller doesn't need to try harder (JSON-LD found, or stripped text clears the length bar).</summary>
+    private async Task<(string Text, bool Sufficient)> ExtractCandidateTextAsync(string html)
+    {
+        var parser = new HtmlParser();
+        var doc    = await parser.ParseDocumentAsync(html);
+
+        var jsonLdText = RecipeJsonLdExtractor.TryBuildRecipeText(doc);
+        if (jsonLdText is not null) return (jsonLdText, true);
+
+        var strippedText = StripBodyText(doc);
+        return (strippedText, strippedText.Length >= _options.MinStaticContentLength);
     }
 
     public static async Task<string> StripHtmlAsync(string html)
     {
         var parser = new HtmlParser();
         var doc    = await parser.ParseDocumentAsync(html);
+        return StripBodyText(doc);
+    }
 
+    private static string StripBodyText(IDocument doc)
+    {
         string[] removeSelectors =
         [
             "script", "style", "noscript",

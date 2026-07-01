@@ -1,5 +1,6 @@
 using System.Text.Json.Nodes;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
 using RecipeApp.API.Enums;
 using RecipeApp.API.Services;
@@ -23,10 +24,12 @@ public class RecipeScrapeServiceMatchingTests(DatabaseFixture db) : IAsyncLifeti
         var opts    = Options.Create(new RecipeScrapingOptions { MatchConfidenceThreshold = 0.8 });
         var fakeLlm = new FakeLlmStructuredClient(llmResponses);
         return new RecipeScrapeService(
-            httpClientFactory: null!,   // not used in NormaliseAsync
+            httpClientFactory: null!,     // not used in NormaliseAsync
             options: opts,
             llm: fakeLlm,
-            db: db.CreateDbContext());
+            db: db.CreateDbContext(),
+            headlessRenderer: null!,      // not used in NormaliseAsync
+            logger: NullLogger<RecipeScrapeService>.Instance);
     }
 
     private static RecipeApp.API.Services.RecipeScrapeService.ExtractedRecipe MakeRecipe(

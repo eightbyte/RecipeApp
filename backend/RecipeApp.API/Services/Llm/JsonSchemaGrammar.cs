@@ -10,7 +10,7 @@ namespace RecipeApp.API.Services.Llm;
 public static class JsonSchemaGrammar
 {
     private const string PrimitiveRules = """
-        ws      ::= [ \t\n]*
+        ws      ::= " "?
         string  ::= "\"" ([^"\\\x7F\x00-\x1F] | "\\" (["\\/bfnrt] | "u" [0-9a-fA-F] [0-9a-fA-F] [0-9a-fA-F] [0-9a-fA-F]))* "\""
         integer ::= "-"? [0-9]+
         number  ::= "-"? [0-9]+ ("." [0-9]+)? ([eE] [+-]? [0-9]+)?

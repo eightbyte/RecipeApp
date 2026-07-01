@@ -107,7 +107,7 @@ export const useRecipeStore = defineStore('recipes', () => {
       const { data } = await api.post('/recipes/scrape', { url })
       scrapePreview.value = data
     } catch (e) {
-      scrapeError.value = e.response?.data?.detail ?? e.message ?? 'Failed to extract recipe.'
+      scrapeError.value = e.message ?? 'Failed to extract recipe.'
     } finally {
       scrapeLoading.value = false
     }

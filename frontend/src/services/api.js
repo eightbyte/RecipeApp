@@ -36,7 +36,7 @@ api.interceptors.response.use(
   (response) => response,
   (error) => {
     const status = error.response?.status
-    const message = error.response?.data?.message ?? error.message ?? 'Unknown error'
+    const message = error.response?.data?.detail ?? error.response?.data?.message ?? error.message ?? 'Unknown error'
 
     // Surface a simple error object so callers don't have to dig into Axios internals
     return Promise.reject({ status, message, original: error })

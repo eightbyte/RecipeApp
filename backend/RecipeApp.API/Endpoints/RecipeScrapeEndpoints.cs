@@ -37,8 +37,8 @@ public static class RecipeScrapeEndpoints
                     RecipeScrapeError.FetchTimeout or
                     RecipeScrapeError.FetchFailed or
                     RecipeScrapeError.FetchNonSuccess or
-                    RecipeScrapeError.ClaudeTimeout or
-                    RecipeScrapeError.ClaudeFailed or
+                    RecipeScrapeError.LlmTimeout or
+                    RecipeScrapeError.LlmFailed or
                     RecipeScrapeError.NoContent =>
                         Results.Problem(detail: ex.Message, statusCode: StatusCodes.Status422UnprocessableEntity),
                     _ => Results.Problem(detail: ex.Message, statusCode: StatusCodes.Status422UnprocessableEntity),

@@ -2,10 +2,8 @@ using System.Text.Json;
 using System.Text.Json.Nodes;
 using System.Text.Json.Serialization;
 using System.Text.RegularExpressions;
+using AngleSharp.Dom;
 using AngleSharp.Html.Parser;
-using Anthropic.SDK;
-using Anthropic.SDK.Common;
-using Anthropic.SDK.Messaging;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
 using RecipeApp.API.Data;
@@ -14,19 +12,23 @@ using RecipeApp.API.DTOs.Recipes;
 using RecipeApp.API.DTOs.Scrape;
 using RecipeApp.API.Enums;
 using RecipeApp.API.Models;
+using RecipeApp.API.Services.Llm;
 
 namespace RecipeApp.API.Services;
 
 public class RecipeScrapeService(
     IHttpClientFactory httpClientFactory,
     IOptions<RecipeScrapingOptions> options,
-    AppDbContext db) : IRecipeScrapeService
+    ILlmStructuredClient llm,
+    AppDbContext db,
+    IHeadlessRenderer headlessRenderer,
+    ILogger<RecipeScrapeService> logger) : IRecipeScrapeService
 {
     private readonly RecipeScrapingOptions _options = options.Value;
 
-    // ── Tool schema ───────────────────────────────────────────────────────────
+    // ── Recipe extraction schema ──────────────────────────────────────────────
 
-    private const string ToolSchemaJson = """
+    private const string RecipeSchemaJson = """
         {
           "type": "object",
           "properties": {
@@ -89,7 +91,7 @@ public class RecipeScrapeService(
                   "ingredient_indexes": {
                     "type": "array",
                     "items": { "type": "integer" },
-                    "description": "0-based indexes into the ingredients array for ingredients used in this step. Empty array if no specific ingredients apply."
+                    "description": "0-based indexes into the ingredients array for ingredients used in this step."
                   }
                 },
                 "required": ["step_number", "instruction", "ingredient_indexes"]
@@ -100,11 +102,35 @@ public class RecipeScrapeService(
         }
         """;
 
-    private const string SystemPrompt =
+    // Semantic matching schema for unmatched scraped ingredients
+    private const string MatchingSchemaJson = """
+        {
+          "type": "object",
+          "properties": {
+            "results": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "scraped_index":          { "type": "integer" },
+                  "candidate_index":        { "type": ["integer", "null"] },
+                  "confidence":             { "type": "number" },
+                  "suggested_category":     { "type": "string" },
+                  "suggested_default_unit": { "type": ["string", "null"] }
+                },
+                "required": ["scraped_index", "candidate_index", "confidence", "suggested_category"]
+              }
+            }
+          },
+          "required": ["results"]
+        }
+        """;
+
+    private const string ExtractionSystemPrompt =
         "You are a recipe data extraction assistant. " +
         "Extract the complete recipe from the web page text provided by the user. " +
         "If any information is missing or ambiguous, make a reasonable best-guess rather than omitting it. " +
-        "Return all data using the extract_recipe tool — do not include any explanation outside the tool call.";
+        "Respond with a single JSON object conforming to the schema and nothing else.";
 
     // ── Ingredient category heuristic ─────────────────────────────────────────
 
@@ -161,13 +187,12 @@ public class RecipeScrapeService(
     public async Task<ScrapePreviewResponse> ScrapeAsync(string url, CancellationToken ct = default)
     {
         var strippedText = await FetchAndStripHtmlAsync(url, ct);
-        var extracted    = await CallClaudeAsync(strippedText, ct);
+        var extracted    = await ExtractRecipeAsync(strippedText, ct);
         return await NormaliseAsync(extracted, url, ct);
     }
 
     public async Task<RecipeDetailResponse> ConfirmAsync(ScrapeConfirmRequest request, CancellationToken ct = default)
     {
-        // Resolve ingredient IDs — create new ones as needed
         var resolvedIngredientIds = new List<Guid>();
         foreach (var ing in request.Ingredients.OrderBy(i => i.DisplayOrder))
         {
@@ -187,7 +212,6 @@ public class RecipeScrapeService(
             }
         }
 
-        // Create the recipe
         var recipe = new Recipe
         {
             Id          = Guid.NewGuid(),
@@ -200,7 +224,6 @@ public class RecipeScrapeService(
         };
         db.Recipes.Add(recipe);
 
-        // Create recipe ingredients
         var recipeIngredients = new List<RecipeIngredient>();
         var orderedIngredients = request.Ingredients.OrderBy(i => i.DisplayOrder).ToList();
         for (int i = 0; i < orderedIngredients.Count; i++)
@@ -220,7 +243,6 @@ public class RecipeScrapeService(
             recipeIngredients.Add(ri);
         }
 
-        // Create steps and step-ingredient links
         foreach (var stepReq in request.Steps.OrderBy(s => s.StepNumber))
         {
             var step = new RecipeStep
@@ -259,6 +281,33 @@ public class RecipeScrapeService(
 
     public async Task<string> FetchAndStripHtmlAsync(string url, CancellationToken ct)
     {
+        var html = await FetchHtmlAsync(url, ct);
+        var (text, sufficient) = await ExtractCandidateTextAsync(html);
+        if (sufficient) return text;
+
+        if (!_options.EnableHeadlessFallback) return text;
+
+        try
+        {
+            var renderedHtml = await headlessRenderer.RenderAsync(
+                url, TimeSpan.FromSeconds(_options.HeadlessRenderTimeoutSeconds), ct);
+            var (renderedText, renderedSufficient) = await ExtractCandidateTextAsync(renderedHtml);
+
+            // Prefer the rendered result if it cleared the bar, or is simply more substantial
+            // than what the static fetch produced (e.g. JSON-LD injected only after hydration).
+            if (renderedSufficient || renderedText.Length > text.Length)
+                return renderedText;
+        }
+        catch (Exception ex) when (ex is not OperationCanceledException)
+        {
+            logger.LogWarning(ex, "Headless render fallback failed for {Url}; using static fetch result.", url);
+        }
+
+        return text;
+    }
+
+    private async Task<string> FetchHtmlAsync(string url, CancellationToken ct)
+    {
         var client = httpClientFactory.CreateClient("RecipeScraper");
 
         using var fetchCts  = new CancellationTokenSource(TimeSpan.FromSeconds(_options.HtmlFetchTimeoutSeconds));
@@ -281,19 +330,47 @@ public class RecipeScrapeService(
         }
 
         if (!response.IsSuccessStatusCode)
-            throw new RecipeScrapeException(RecipeScrapeError.FetchNonSuccess,
-                $"The recipe page returned HTTP {(int)response.StatusCode}.");
+        {
+            if (response.Headers.TryGetValues("cf-mitigated", out _) ||
+                response.Headers.Server.Any(s => s.Product?.Name == "cloudflare"))
+                throw new RecipeScrapeException(RecipeScrapeError.FetchNonSuccess,
+                    $"The recipe page returned HTTP {(int)response.StatusCode}. " +
+                    "This site is protected by a Cloudflare bot-detection challenge that cannot be solved automatically. " +
+                    "Try a different recipe source, or add the recipe manually.");
 
-        var html = await response.Content.ReadAsStringAsync(ct);
-        return await StripHtmlAsync(html);
+            var errorBody = await response.Content.ReadAsStringAsync(ct);
+            var snippet    = errorBody.Length > 300 ? errorBody[..300] : errorBody;
+            throw new RecipeScrapeException(RecipeScrapeError.FetchNonSuccess,
+                $"The recipe page returned HTTP {(int)response.StatusCode}. Response: {snippet}");
+        }
+
+        return await response.Content.ReadAsStringAsync(ct);
+    }
+
+    /// <summary>Tries JSON-LD recipe markup first (clean, structured, and unaffected by the
+    /// script-stripping below); falls back to stripped visible body text. "Sufficient" means the
+    /// caller doesn't need to try harder (JSON-LD found, or stripped text clears the length bar).</summary>
+    private async Task<(string Text, bool Sufficient)> ExtractCandidateTextAsync(string html)
+    {
+        var parser = new HtmlParser();
+        var doc    = await parser.ParseDocumentAsync(html);
+
+        var jsonLdText = RecipeJsonLdExtractor.TryBuildRecipeText(doc);
+        if (jsonLdText is not null) return (jsonLdText, true);
+
+        var strippedText = StripBodyText(doc);
+        return (strippedText, strippedText.Length >= _options.MinStaticContentLength);
     }
 
     public static async Task<string> StripHtmlAsync(string html)
     {
         var parser = new HtmlParser();
         var doc    = await parser.ParseDocumentAsync(html);
+        return StripBodyText(doc);
+    }
 
-        // Remove noise elements
+    private static string StripBodyText(IDocument doc)
+    {
         string[] removeSelectors =
         [
             "script", "style", "noscript",
@@ -305,7 +382,6 @@ public class RecipeScrapeService(
             foreach (var el in doc.QuerySelectorAll(selector).ToArray())
                 el.Remove();
 
-        // Remove display:none and visibility:hidden elements
         foreach (var el in doc.QuerySelectorAll("[style]").ToArray())
         {
             var style = (el.GetAttribute("style") ?? "").Replace(" ", "");
@@ -319,71 +395,46 @@ public class RecipeScrapeService(
         return text;
     }
 
-    // ── Claude API call ───────────────────────────────────────────────────────
+    // ── LLM extraction ────────────────────────────────────────────────────────
 
-    private async Task<ClaudeExtractedRecipe> CallClaudeAsync(string strippedText, CancellationToken ct)
+    private async Task<ExtractedRecipe> ExtractRecipeAsync(string strippedText, CancellationToken ct)
     {
-        var client = new AnthropicClient(_options.AnthropicApiKey);
-
-        using var claudeCts = new CancellationTokenSource(TimeSpan.FromSeconds(_options.ClaudeTimeoutSeconds));
-        using var linked    = CancellationTokenSource.CreateLinkedTokenSource(ct, claudeCts.Token);
-
-        var tool = new Function(
-            "extract_recipe",
-            "Extract a recipe from the given web page text and return it as structured data.",
-            JsonNode.Parse(ToolSchemaJson));
-
         if (_options.MaxHtmlCharacters > 0 && strippedText.Length > _options.MaxHtmlCharacters)
             strippedText = strippedText[.._options.MaxHtmlCharacters];
 
         var userMessage = $"Extract the recipe from the following web page text:\n\n---\n{strippedText}\n---";
+        var schema      = JsonNode.Parse(RecipeSchemaJson)!;
 
-        var parameters = new MessageParameters
-        {
-            Model    = _options.Model,
-            MaxTokens = 4096,
-            System   = [new SystemMessage(SystemPrompt)],
-            Messages =
-            [
-                new Message(RoleType.User, userMessage)
-            ],
-            Tools      = [tool],
-            ToolChoice = new ToolChoice { Type = ToolChoiceType.Tool, Name = "extract_recipe" },
-            Stream     = false,
-        };
+        using var llmCts    = new CancellationTokenSource(TimeSpan.FromSeconds(_options.LlmTimeoutSeconds));
+        using var linkedCts = CancellationTokenSource.CreateLinkedTokenSource(ct, llmCts.Token);
 
-        MessageResponse response;
+        JsonNode json;
         try
         {
-            response = await client.Messages.GetClaudeMessageAsync(parameters, linked.Token);
+            json = await llm.CompleteStructuredAsync(ExtractionSystemPrompt, userMessage, schema, maxTokens: 4096, linkedCts.Token);
         }
-        catch (OperationCanceledException) when (claudeCts.IsCancellationRequested)
+        catch (OperationCanceledException) when (llmCts.IsCancellationRequested)
         {
-            throw new RecipeScrapeException(RecipeScrapeError.ClaudeTimeout,
+            throw new RecipeScrapeException(RecipeScrapeError.LlmTimeout,
                 "Recipe extraction timed out. Please try again.");
         }
         catch (Exception ex) when (ex is not RecipeScrapeException)
         {
-            throw new RecipeScrapeException(RecipeScrapeError.ClaudeFailed,
+            throw new RecipeScrapeException(RecipeScrapeError.LlmFailed,
                 "Recipe extraction failed. Please try again or create the recipe manually.");
         }
 
-        var toolUse = response.Content.OfType<ToolUseContent>().FirstOrDefault()
-            ?? throw new RecipeScrapeException(RecipeScrapeError.NoContent,
-                "No recipe content could be extracted from this page.");
-
-        var json = toolUse.Input.ToJsonString();
-        var extracted = JsonSerializer.Deserialize<ClaudeExtractedRecipe>(json, JsonOptions)
+        var extracted = json.Deserialize<ExtractedRecipe>(JsonOptions)
             ?? throw new RecipeScrapeException(RecipeScrapeError.NoContent,
                 "No recipe content could be extracted from this page.");
 
         return extracted;
     }
 
-    // ── Normalisation ─────────────────────────────────────────────────────────
+    // ── Normalisation with semantic matching ──────────────────────────────────
 
-    private async Task<ScrapePreviewResponse> NormaliseAsync(
-        ClaudeExtractedRecipe extracted, string url, CancellationToken ct)
+    internal async Task<ScrapePreviewResponse> NormaliseAsync(
+        ExtractedRecipe extracted, string url, CancellationToken ct)
     {
         if (string.IsNullOrWhiteSpace(extracted.Name) ||
             extracted.Ingredients.Count == 0 ||
@@ -391,36 +442,36 @@ public class RecipeScrapeService(
             throw new RecipeScrapeException(RecipeScrapeError.NoContent,
                 "No recipe content could be extracted from this page.");
 
-        // Load all ingredient names for matching (case-insensitive)
         var dbIngredients = await db.Ingredients
             .AsNoTracking()
-            .Select(i => new { i.Id, i.Name })
+            .Select(i => new { i.Id, i.Name, i.DisplayName, i.Category })
             .ToListAsync(ct);
 
-        var ingredientLookup = dbIngredients
+        var exactLookup = dbIngredients
             .ToDictionary(i => i.Name, i => i.Id, StringComparer.OrdinalIgnoreCase);
 
+        // Pass 1: exact match
         var previewIngredients = new List<ScrapePreviewIngredient>();
+        var unmatchedIndexes   = new List<int>();
+
         for (int i = 0; i < extracted.Ingredients.Count; i++)
         {
-            var ing = extracted.Ingredients[i];
+            var ing            = extracted.Ingredients[i];
             var normalisedName = ing.Name.Trim().ToLowerInvariant();
+            var (amount, unit) = ConvertUnit(ing.Amount, ing.Unit);
 
-            var (convertedAmount, convertedUnit) = ConvertUnit(ing.Amount, ing.Unit);
-
-            if (ingredientLookup.TryGetValue(normalisedName, out var existingId))
+            if (exactLookup.TryGetValue(normalisedName, out var existingId))
             {
                 previewIngredients.Add(new ScrapePreviewIngredient(
                     IngredientId:      existingId,
                     Name:              normalisedName,
                     DisplayName:       ing.DisplayName,
-                    Amount:            convertedAmount,
-                    Unit:              convertedUnit,
+                    Amount:            amount,
+                    Unit:              unit,
                     Notes:             string.IsNullOrWhiteSpace(ing.Notes) ? null : ing.Notes,
                     IsNew:             false,
                     SuggestedCategory: IngredientCategory.Other,
-                    DisplayOrder:      i
-                ));
+                    DisplayOrder:      i));
             }
             else
             {
@@ -428,22 +479,98 @@ public class RecipeScrapeService(
                     IngredientId:      null,
                     Name:              normalisedName,
                     DisplayName:       ing.DisplayName,
-                    Amount:            convertedAmount,
-                    Unit:              convertedUnit,
+                    Amount:            amount,
+                    Unit:              unit,
                     Notes:             string.IsNullOrWhiteSpace(ing.Notes) ? null : ing.Notes,
                     IsNew:             true,
                     SuggestedCategory: CategoriseIngredient(normalisedName),
-                    DisplayOrder:      i
-                ));
+                    DisplayOrder:      i));
+                unmatchedIndexes.Add(i);
+            }
+        }
+
+        // Pass 2: semantic match for unmatched ingredients (one batched LLM call)
+        if (unmatchedIndexes.Count > 0 && dbIngredients.Count > 0)
+        {
+            var candidates = dbIngredients
+                .Select((ing, idx) => (idx, ing))
+                .ToList();
+
+            var unmatchedNames = unmatchedIndexes
+                .Select((origIdx, pos) => $"{pos}: {extracted.Ingredients[origIdx].Name.Trim().ToLowerInvariant()}")
+                .ToList();
+
+            var candidateList = candidates
+                .Select(c => $"{c.idx}: {c.ing.DisplayName} ({c.ing.Category})")
+                .ToList();
+
+            var categoriesStr = string.Join(", ", IngredientCategory.All);
+            var systemPrompt  =
+                $"You are an ingredient matching assistant. Match each scraped ingredient to the closest catalogue entry, or null if no good match exists.\n" +
+                $"Be conservative — only match when confident (synonyms, alternate spellings). Do not match if the ingredient is genuinely different.\n" +
+                $"Allowed categories: {categoriesStr}.\n" +
+                "Respond with a single JSON object conforming to the schema and nothing else.";
+
+            var userContent =
+                $"Scraped ingredients (index: name):\n{string.Join("\n", unmatchedNames)}\n\n" +
+                $"Catalogue candidates (index: name (category)):\n{string.Join("\n", candidateList)}";
+
+            var matchSchema = JsonNode.Parse(MatchingSchemaJson)!;
+
+            try
+            {
+                var matchJson = await llm.CompleteStructuredAsync(
+                    systemPrompt, userContent, matchSchema, maxTokens: 2048, ct);
+
+                var matchResponse = matchJson.Deserialize<MatchingResponse>(JsonOptions);
+                if (matchResponse?.Results != null)
+                {
+                    foreach (var result in matchResponse.Results)
+                    {
+                        if (result.ScrapedIndex < 0 || result.ScrapedIndex >= unmatchedIndexes.Count)
+                            continue;
+
+                        var origIdx    = unmatchedIndexes[result.ScrapedIndex];
+                        var prevIngred = previewIngredients[origIdx];
+
+                        if (result.CandidateIndex.HasValue
+                            && result.CandidateIndex.Value >= 0
+                            && result.CandidateIndex.Value < candidates.Count
+                            && result.Confidence >= _options.MatchConfidenceThreshold)
+                        {
+                            // Matched to existing catalogue entry
+                            var matchedId = candidates[result.CandidateIndex.Value].ing.Id;
+                            previewIngredients[origIdx] = prevIngred with
+                            {
+                                IngredientId      = matchedId,
+                                IsNew             = false,
+                                SuggestedCategory = IngredientCategory.Other,
+                            };
+                        }
+                        else
+                        {
+                            // New ingredient — apply LLM-suggested category/unit
+                            var suggestedCategory = IngredientCategory.IsValid(result.SuggestedCategory)
+                                ? result.SuggestedCategory
+                                : CategoriseIngredient(prevIngred.Name);
+
+                            previewIngredients[origIdx] = prevIngred with
+                            {
+                                SuggestedCategory = suggestedCategory,
+                            };
+                        }
+                    }
+                }
+            }
+            catch (Exception)
+            {
+                // Semantic matching is best-effort — fall back to keyword categorisation already set
             }
         }
 
         var previewSteps = extracted.Steps
             .OrderBy(s => s.StepNumber)
-            .Select(s => new ScrapePreviewStep(
-                s.StepNumber,
-                s.Instruction,
-                s.IngredientIndexes))
+            .Select(s => new ScrapePreviewStep(s.StepNumber, s.Instruction, s.IngredientIndexes))
             .ToList();
 
         return new ScrapePreviewResponse(
@@ -458,7 +585,7 @@ public class RecipeScrapeService(
 
     // ── Helpers ───────────────────────────────────────────────────────────────
 
-    private async Task<Guid> ResolveOrCreateIngredientAsync(
+    public async Task<Guid> ResolveOrCreateIngredientAsync(
         string normalised, string displayName, string category, CancellationToken ct)
     {
         var existing = await db.Ingredients
@@ -482,7 +609,6 @@ public class RecipeScrapeService(
         }
         catch (DbUpdateException)
         {
-            // Race condition: another concurrent request created the same ingredient
             db.Entry(newIng).State = EntityState.Detached;
             var raceExisting = await db.Ingredients.FirstAsync(i => i.Name == normalised, ct);
             return raceExisting.Id;
@@ -510,17 +636,17 @@ public class RecipeScrapeService(
         return (Math.Round((decimal)rawAmount, 3), unit);
     }
 
-    // ── Internal DTOs for Claude response ────────────────────────────────────
+    // ── Internal DTOs for LLM responses ──────────────────────────────────────
 
-    internal record ClaudeExtractedRecipe(
+    internal record ExtractedRecipe(
         string Name,
         string? Description,
         int Servings,
-        List<ClaudeIngredient> Ingredients,
-        List<ClaudeStep> Steps
+        List<ExtractedIngredient> Ingredients,
+        List<ExtractedStep> Steps
     );
 
-    internal record ClaudeIngredient(
+    internal record ExtractedIngredient(
         string Name,
         [property: JsonPropertyName("display_name")] string DisplayName,
         double Amount,
@@ -528,10 +654,20 @@ public class RecipeScrapeService(
         string? Notes
     );
 
-    internal record ClaudeStep(
-        [property: JsonPropertyName("step_number")] int StepNumber,
+    internal record ExtractedStep(
+        [property: JsonPropertyName("step_number")]       int StepNumber,
         string Instruction,
         [property: JsonPropertyName("ingredient_indexes")] List<int> IngredientIndexes
+    );
+
+    internal record MatchingResponse(List<MatchResult> Results);
+
+    internal record MatchResult(
+        [property: JsonPropertyName("scraped_index")]           int ScrapedIndex,
+        [property: JsonPropertyName("candidate_index")]         int? CandidateIndex,
+        [property: JsonPropertyName("confidence")]              double Confidence,
+        [property: JsonPropertyName("suggested_category")]      string SuggestedCategory,
+        [property: JsonPropertyName("suggested_default_unit")]  string? SuggestedDefaultUnit
     );
 }
 
@@ -542,8 +678,8 @@ public enum RecipeScrapeError
     FetchTimeout,
     FetchFailed,
     FetchNonSuccess,
-    ClaudeTimeout,
-    ClaudeFailed,
+    LlmTimeout,
+    LlmFailed,
     NoContent,
 }
 

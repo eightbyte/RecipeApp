@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using RecipeApp.API.Data;
 
@@ -12,6 +13,16 @@ public class RecipeAppFactory(string connectionString) : WebApplicationFactory<P
     {
         // Prevent the development auto-migrate + seed block from running
         builder.UseEnvironment("Testing");
+
+        // Inject the Testcontainers connection string into configuration so the NpgSql
+        // health check (which resolves IConfiguration lazily) uses the right database.
+        builder.ConfigureAppConfiguration(config =>
+        {
+            config.AddInMemoryCollection(new Dictionary<string, string?>
+            {
+                ["ConnectionStrings:DefaultConnection"] = connectionString
+            });
+        });
 
         builder.ConfigureServices(services =>
         {

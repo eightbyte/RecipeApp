@@ -4,7 +4,7 @@
 Mobile-first web app for storing recipes, building meal plans, and generating shopping lists.
 
 - **Spec:** `SPEC.md` — read this for feature requirements and data model definitions.
-- **Current phase:** Phase 7 complete (Polish, UX & Cooking Mode) — **v1 feature-complete**.
+- **Current phase:** Phase 8 complete (Local LLM) — **v1 feature-complete**.
 
 ## Repository structure
 ```
@@ -54,7 +54,7 @@ RecipeApp/
 | Validation    | FluentValidation                      | One validator class per request DTO            |
 | Mapping       | Manual (extension methods)            | `DTOs/Mappings.cs` — static `ToResponse()` / `ToDetail()` / `ToListItem()` |
 | Database      | PostgreSQL 16                         | All timestamps stored as UTC                   |
-| Claude SDK    | Anthropic.SDK v5.10.0 (community, by tghamm) | NuGet package `Anthropic.SDK`; documentation at `https://platform.claude.com/docs/en/api/sdks/csharp` |
+| Local LLM     | LLamaSharp 0.27.0 + CUDA12 backend    | NuGet packages `LLamaSharp` + `LLamaSharp.Backend.Cuda12`; GGUF model via `Llm:Local:ModelPath` |
 
 ## Running locally
 
@@ -118,15 +118,18 @@ Readiness check: `http://localhost:5000/health/ready`
 |---|---|
 | `ConnectionStrings:DefaultConnection` | PostgreSQL connection string |
 | `ImageStorage:BasePath` | Local path for uploaded recipe images |
+| `Llm:Local:ModelPath` | Absolute path to a GGUF model file (e.g. `qwen2.5-7b-instruct-q4_k_m.gguf`) |
+| `Llm:Local:GpuLayerCount` | GPU layers to offload (default 999 = all); set 0 for CPU-only |
 
 ## Notes
 - **No AutoMapper** — manual mapping in `DTOs/Mappings.cs` (extension methods on entity types). Simpler to trace, no reflection.
 - FluentValidation validators are registered automatically via `AddValidatorsFromAssemblyContaining<Program>()`.
 - The `uploads/images/` directory is served as static files at `/uploads/images/`. Gitignored; mount as a Docker volume in production.
-- Phase 3 added `Services/RecipeScrapeService.cs`, `Services/IRecipeScrapeService.cs`, `Endpoints/RecipeScrapeEndpoints.cs`, `DTOs/Scrape/`, `Validators/ScrapeValidators.cs`, and integrates `Anthropic.SDK` (NuGet) for AI-powered recipe extraction.
+- Phase 3 added `Services/RecipeScrapeService.cs`, `Services/IRecipeScrapeService.cs`, `Endpoints/RecipeScrapeEndpoints.cs`, `DTOs/Scrape/`, `Validators/ScrapeValidators.cs`. Originally used `Anthropic.SDK`; replaced by LLamaSharp in Phase 8.
 - Phase 4 added `Models/MealPlan.cs`, `Models/MealPlanRecipe.cs`, `Enums/PortionSize.cs`, `Services/MealPlanService.cs`, `Endpoints/MealPlanEndpoints.cs`, `DTOs/MealPlans/`, `Validators/MealPlanValidators.cs`, and migration `AddMealPlans`. Frontend: `stores/mealPlans.js`, `components/RecipeBrowser.vue`, `components/RecentlyCookedDialog.vue`, `components/SuggestionsPanel.vue`, `views/MealPlanBuilderView.vue`, `views/MealPlanDetailView.vue`, `views/PastPlansView.vue`.
 - Phase 5 added `Models/ShoppingList.cs` (ShoppingList + ShoppingListItem), `Services/ShoppingListService.cs`, `Endpoints/ShoppingListEndpoints.cs`, `DTOs/ShoppingLists/`, `Validators/ShoppingListValidators.cs`, and migration `AddShoppingLists`. Also added `MealPlan.UpdatedAt` column for stale-list detection. Frontend: `stores/shoppingList.js`, `components/AddCustomItemDialog.vue`, updated `views/ShoppingView.vue`.
 - Phase 7 (frontend-only; **no backend product code** — only pre-existing backend *test* fixes: validation endpoints return RFC 7807 `400` so those tests now assert 400, and a DbContext-sharing timestamp test was corrected) added **Cooking Mode** (`views/CookingModeView.vue`, `composables/useWakeLock.js`, `recipe-cooking` route, `fullscreen` route meta gated in `App.vue`), reusable states (`components/EmptyState.vue`, `components/ErrorState.vue`, `components/AppSnackbar.vue`, `stores/ui.js` global snackbar), and a **PWA** via `vite-plugin-pwa` (manifest + service worker + runtime caching of `/api/v1/recipes` and `/uploads/images/`; launcher icons in `public/icons/`). `nginx.conf` now proxies `/uploads/`, serves `sw.js`/`manifest.webmanifest` with `no-cache`, and gzips the manifest. Store `fetchRecipe`/`fetchPlan` treat 404 as "not found" (empty state) vs. error; `fetchActivePlan` now toggles `loading` for skeletons. Cooking step "done" state is ephemeral (component-local, not persisted).
+- Phase 8 (backend-only) replaced `Anthropic.SDK` with **LLamaSharp 0.27.0** (llama.cpp .NET bindings, CUDA12 backend). Added `Services/Llm/` abstraction layer: `ILlmStructuredClient`, `LlmOptions`, `LlamaModelHolder` (singleton, owns GGUF model weights + `SemaphoreSlim` gate), `LLamaSharpStructuredClient` (GBNF grammar-constrained decoding), `JsonSchemaGrammar` (JSON Schema → GBNF converter). `RecipeScrapeService.NormaliseAsync` extended with two-pass semantic ingredient matching (exact lookup then batched LLM). Added `IngredientCatalogueSeeder` and `seed-catalogue` CLI command. Config: `Llm:Provider` (`"Local"`), `Llm:Local:ModelPath` (path to `.gguf`), `Llm:Local:ChatTemplate` (`"chatml"` or `"llama3"`). `RecipeScrapingOptions` lost Anthropic keys; gained `LlmTimeoutSeconds` (120) and `MatchConfidenceThreshold` (0.8). NpgSql health check changed to lazy `Func<IServiceProvider,string>` resolution; `RecipeAppFactory` injects Testcontainers connection string via `ConfigureAppConfiguration` so the health check uses the right DB in tests.
 
 ---
 ## Project Notes

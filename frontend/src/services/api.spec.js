@@ -56,6 +56,19 @@ describe('error interceptor', () => {
     })
   })
 
+  it('prefers response.data.detail (RFC 7807 ProblemDetails) over data.message', async () => {
+    const rejected = getResponseRejectionHandler()
+    const axiosError = {
+      response: { status: 422, data: { detail: 'Recipe extraction timed out. Please try again.' } },
+      message: 'Request failed with status code 422',
+    }
+
+    await expect(rejected(axiosError)).rejects.toMatchObject({
+      status: 422,
+      message: 'Recipe extraction timed out. Please try again.',
+    })
+  })
+
   it('uses error.message when there is no response body message', async () => {
     const rejected = getResponseRejectionHandler()
     const axiosError = {

@@ -9,7 +9,8 @@
   <ItemGroup>
     <PackageReference Include="AngleSharp" Version="1.8.0" />
     <PackageReference Include="AspNetCore.HealthChecks.NpgSql" Version="9.0.0" />
-    <PackageReference Include="FluentValidation.AspNetCore" Version="11.3.1" />
+    <PackageReference Include="FluentValidation" Version="12.1.1" />
+    <PackageReference Include="FluentValidation.DependencyInjectionExtensions" Version="12.1.1" />
     <PackageReference Include="LLamaSharp" Version="0.27.0" />
     <PackageReference Include="LLamaSharp.Backend.Cuda12" Version="0.27.0" />
     <PackageReference Include="Microsoft.AspNetCore.OpenApi" Version="10.0.11" />

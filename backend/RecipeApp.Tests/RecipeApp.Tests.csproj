@@ -21,9 +21,9 @@
     <PackageReference Include="Microsoft.Testing.Extensions.CodeCoverage" Version="18.11.0" />
     <!-- Assertions and validation helpers -->
     <PackageReference Include="FluentAssertions" Version="8.10.0" />
-    <!-- FluentValidation.TestHelper is bundled in the main FluentValidation package (v11+).
-         FluentValidation 11.x is already provided transitively via FluentValidation.AspNetCore
-         in the API project reference; we reference it explicitly to lock the major version. -->
+    <!-- FluentValidation.TestHelper is bundled in the main FluentValidation package.
+         Kept explicit and pinned to the same version as RecipeApp.API so the suite
+         tests the assembly that actually ships. -->
     <PackageReference Include="FluentValidation" Version="12.1.1" />
     <!-- Integration test infrastructure -->
     <PackageReference Include="Microsoft.AspNetCore.Mvc.Testing" Version="10.0.11" />

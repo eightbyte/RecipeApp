@@ -54,11 +54,45 @@ public class RecipeValidatorTests
     [InlineData("pcs")]
     [InlineData("tsp")]
     [InlineData("tbsp")]
+    [InlineData("cup")]
     public void Ingredient_EachValidUnit_HasNoError(string unit)
     {
         var result = _ingredientValidator.TestValidate(
             new RecipeIngredientRequest(Guid.NewGuid(), 100m, unit, null, 0));
         result.ShouldNotHaveValidationErrorFor(x => x.Unit);
+    }
+
+    [Theory]
+    [InlineData("Cup")]
+    [InlineData("CUP")]
+    [InlineData("Tbsp")]
+    [InlineData("cups")]
+    [InlineData("teaspoon")]
+    public void Ingredient_NonCanonicalUnitSpelling_HasErrorOnUnit(string unit)
+    {
+        // MeasurementUnit.IsValid is deliberately strict: stored units are always the canonical
+        // spelling, which is what lets shopping-list consolidation group by plain equality.
+        var result = _ingredientValidator.TestValidate(
+            new RecipeIngredientRequest(Guid.NewGuid(), 100m, unit, null, 0));
+        result.ShouldHaveValidationErrorFor(x => x.Unit);
+    }
+
+    [Fact]
+    public void Ingredient_SourceMeasurement_IsOptionalAndRoundTrips()
+    {
+        var result = _ingredientValidator.TestValidate(
+            new RecipeIngredientRequest(Guid.NewGuid(), 240m, "g", null, 0,
+                SourceAmount: 2m, SourceUnit: "cups"));
+        result.ShouldNotHaveAnyValidationErrors();
+    }
+
+    [Fact]
+    public void Ingredient_NonPositiveSourceAmount_HasErrorOnSourceAmount()
+    {
+        var result = _ingredientValidator.TestValidate(
+            new RecipeIngredientRequest(Guid.NewGuid(), 240m, "g", null, 0,
+                SourceAmount: 0m, SourceUnit: "cups"));
+        result.ShouldHaveValidationErrorFor(x => x.SourceAmount);
     }
 
     [Fact]

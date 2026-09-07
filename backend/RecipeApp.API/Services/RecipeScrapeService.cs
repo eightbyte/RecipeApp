@@ -22,6 +22,7 @@ public class RecipeScrapeService(
     ILlmStructuredClient llm,
     AppDbContext db,
     IHeadlessRenderer headlessRenderer,
+    MeasurementConverter measurementConverter,
     ILogger<RecipeScrapeService> logger) : IRecipeScrapeService
 {
     private readonly RecipeScrapingOptions _options = options.Value;
@@ -147,34 +148,6 @@ public class RecipeScrapeService(
         (IngredientCategory.Produce,     ["onion", "garlic", "carrot", "celery", "tomato", "potato", "lettuce", "spinach", "kale", "broccoli", "pepper", "capsicum", "zucchini", "cucumber", "avocado", "lemon", "lime", "orange", "apple", "banana", "mushroom", "corn", "asparagus", "pea", "parsley", "basil", "coriander", "thyme", "rosemary", "mint", "dill", "chive", "scallion", "leek", "shallot", "ginger", "chilli", "eggplant", "beetroot", "pumpkin", "squash", "berry"]),
     ];
 
-    // ── Imperial-to-metric unit conversion ────────────────────────────────────
-
-    private static readonly Dictionary<string, (string MetricUnit, double Factor)> UnitConversions =
-        new(StringComparer.OrdinalIgnoreCase)
-        {
-            ["oz"]           = ("g",  28.3495),
-            ["ounce"]        = ("g",  28.3495),
-            ["ounces"]       = ("g",  28.3495),
-            ["lb"]           = ("g",  453.592),
-            ["lbs"]          = ("g",  453.592),
-            ["pound"]        = ("g",  453.592),
-            ["pounds"]       = ("g",  453.592),
-            ["fl oz"]        = ("ml", 29.5735),
-            ["fluid oz"]     = ("ml", 29.5735),
-            ["fluid ounce"]  = ("ml", 29.5735),
-            ["cup"]          = ("ml", 240.0),
-            ["cups"]         = ("ml", 240.0),
-            ["pt"]           = ("ml", 473.176),
-            ["pint"]         = ("ml", 473.176),
-            ["pints"]        = ("ml", 473.176),
-            ["qt"]           = ("ml", 946.353),
-            ["quart"]        = ("ml", 946.353),
-            ["quarts"]       = ("ml", 946.353),
-            ["gal"]          = ("L",  3.78541),
-            ["gallon"]       = ("L",  3.78541),
-            ["gallons"]      = ("L",  3.78541),
-        };
-
     private static readonly JsonSerializerOptions JsonOptions = new()
     {
         PropertyNamingPolicy        = JsonNamingPolicy.SnakeCaseLower,
@@ -236,6 +209,8 @@ public class RecipeScrapeService(
                 IngredientId = resolvedIngredientIds[i],
                 Amount       = ing.Amount,
                 Unit         = ing.Unit,
+                SourceAmount = ing.SourceAmount,
+                SourceUnit   = ing.SourceUnit?.Trim(),
                 Notes        = ing.Notes?.Trim(),
                 DisplayOrder = ing.DisplayOrder,
             };
@@ -444,11 +419,26 @@ public class RecipeScrapeService(
 
         var dbIngredients = await db.Ingredients
             .AsNoTracking()
-            .Select(i => new { i.Id, i.Name, i.DisplayName, i.Category })
+            .Select(i => new { i.Id, i.Name, i.DisplayName, i.Category, i.GramsPerMillilitre })
             .ToListAsync(ct);
 
         var exactLookup = dbIngredients
             .ToDictionary(i => i.Name, i => i.Id, StringComparer.OrdinalIgnoreCase);
+
+        var densityById = dbIngredients
+            .Where(i => i.GramsPerMillilitre.HasValue)
+            .ToDictionary(i => i.Id, i => i.GramsPerMillilitre);
+
+        // Stage B: resolve an import-resolvable unit (cup) against the matched ingredient's
+        // density. An ingredient with no catalogue row has no density by construction, so it
+        // keeps its measurement as stated.
+        ScrapePreviewIngredient ResolveAgainstCatalogue(ScrapePreviewIngredient row, Guid ingredientId)
+        {
+            densityById.TryGetValue(ingredientId, out var density);
+            var (resolvedAmount, resolvedUnit) =
+                measurementConverter.ResolveForImport(row.Amount, row.Unit, density);
+            return row with { Amount = resolvedAmount, Unit = resolvedUnit };
+        }
 
         // Pass 1: exact match
         var previewIngredients = new List<ScrapePreviewIngredient>();
@@ -458,35 +448,40 @@ public class RecipeScrapeService(
         {
             var ing            = extracted.Ingredients[i];
             var normalisedName = ing.Name.Trim().ToLowerInvariant();
-            var (amount, unit) = ConvertUnit(ing.Amount, ing.Unit);
+
+            // Stage A. The source measurement is recorded verbatim first, so a conversion can
+            // always be audited or recomputed later (Phase 8.5.1 §6.2).
+            var (amount, unit) = MeasurementConverter.ToCanonical(ing.Amount, ing.Unit);
+
+            var row = new ScrapePreviewIngredient(
+                IngredientId:      null,
+                Name:              normalisedName,
+                DisplayName:       ing.DisplayName,
+                Amount:            amount,
+                Unit:              unit,
+                SourceAmount:      Math.Round((decimal)ing.Amount, 3),
+                SourceUnit:        ing.Unit?.Trim(),
+                Notes:             string.IsNullOrWhiteSpace(ing.Notes) ? null : ing.Notes,
+                IsNew:             true,
+                SuggestedCategory: CategoriseIngredient(normalisedName),
+                DisplayOrder:      i);
 
             if (exactLookup.TryGetValue(normalisedName, out var existingId))
             {
-                previewIngredients.Add(new ScrapePreviewIngredient(
-                    IngredientId:      existingId,
-                    Name:              normalisedName,
-                    DisplayName:       ing.DisplayName,
-                    Amount:            amount,
-                    Unit:              unit,
-                    Notes:             string.IsNullOrWhiteSpace(ing.Notes) ? null : ing.Notes,
-                    IsNew:             false,
-                    SuggestedCategory: IngredientCategory.Other,
-                    DisplayOrder:      i));
+                row = row with
+                {
+                    IngredientId      = existingId,
+                    IsNew             = false,
+                    SuggestedCategory = IngredientCategory.Other,
+                };
+                row = ResolveAgainstCatalogue(row, existingId);
             }
             else
             {
-                previewIngredients.Add(new ScrapePreviewIngredient(
-                    IngredientId:      null,
-                    Name:              normalisedName,
-                    DisplayName:       ing.DisplayName,
-                    Amount:            amount,
-                    Unit:              unit,
-                    Notes:             string.IsNullOrWhiteSpace(ing.Notes) ? null : ing.Notes,
-                    IsNew:             true,
-                    SuggestedCategory: CategoriseIngredient(normalisedName),
-                    DisplayOrder:      i));
                 unmatchedIndexes.Add(i);
             }
+
+            previewIngredients.Add(row);
         }
 
         // Pass 2: semantic match for unmatched ingredients (one batched LLM call)
@@ -540,12 +535,14 @@ public class RecipeScrapeService(
                         {
                             // Matched to existing catalogue entry
                             var matchedId = candidates[result.CandidateIndex.Value].ing.Id;
-                            previewIngredients[origIdx] = prevIngred with
-                            {
-                                IngredientId      = matchedId,
-                                IsNew             = false,
-                                SuggestedCategory = IngredientCategory.Other,
-                            };
+                            previewIngredients[origIdx] = ResolveAgainstCatalogue(
+                                prevIngred with
+                                {
+                                    IngredientId      = matchedId,
+                                    IsNew             = false,
+                                    SuggestedCategory = IngredientCategory.Other,
+                                },
+                                matchedId);
                         }
                         else
                         {
@@ -623,17 +620,6 @@ public class RecipeScrapeService(
                 return category;
         }
         return IngredientCategory.Other;
-    }
-
-    public static (decimal Amount, string Unit) ConvertUnit(double rawAmount, string unit)
-    {
-        var trimmed = unit.Trim();
-        if (UnitConversions.TryGetValue(trimmed, out var conversion))
-        {
-            var converted = Math.Round((decimal)(rawAmount * conversion.Factor), 3);
-            return (converted, conversion.MetricUnit);
-        }
-        return (Math.Round((decimal)rawAmount, 3), unit);
     }
 
     // ── Internal DTOs for LLM responses ──────────────────────────────────────

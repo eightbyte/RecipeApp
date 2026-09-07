@@ -10,6 +10,7 @@ using RecipeApp.API.Services.Llm;
 using Scalar.AspNetCore;
 
 var isSeedCatalogue = args.Contains("seed-catalogue");
+var isSeedDensities = args.Contains("seed-densities");
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -34,6 +35,11 @@ builder.Services.AddScoped<IRecipeScrapeService, RecipeScrapeService>();
 builder.Services.AddScoped<MealPlanService>();
 builder.Services.AddScoped<ShoppingListService>();
 builder.Services.AddScoped<IngredientCatalogueSeeder>();
+builder.Services.AddSingleton<MeasurementConverter>();
+
+// ── Measurement handling ──────────────────────────────────────────────────────
+builder.Services.Configure<MeasurementOptions>(
+    builder.Configuration.GetSection(MeasurementOptions.SectionName));
 
 // ── Recipe scraping ────────────────────────────────────────────────────────────
 builder.Services.Configure<RecipeScrapingOptions>(
@@ -93,6 +99,17 @@ builder.Services.AddHealthChecks()
 
 // ─────────────────────────────────────────────────────────────────────────────
 var app = builder.Build();
+
+// ── seed-densities command — assigns curated densities then exits ─────────────
+// Idempotent and inference-free, so it is safe to re-run whenever the catalogue grows.
+if (isSeedDensities)
+{
+    using var scope = app.Services.CreateScope();
+    var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+    await db.Database.MigrateAsync();
+    await IngredientDensitySeeder.SeedAsync(db, app.Logger);
+    return;
+}
 
 // ── seed-catalogue command — runs inference then exits ────────────────────────
 if (isSeedCatalogue)
@@ -156,6 +173,7 @@ if (app.Environment.IsDevelopment())
     var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
     await db.Database.MigrateAsync();
     await DataSeeder.SeedAsync(db);
+    await IngredientDensitySeeder.SeedAsync(db, app.Logger);
 }
 
 // Eagerly resolve the model holder (non-test environments) so a bad path surfaces at startup

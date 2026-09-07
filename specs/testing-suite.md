@@ -586,8 +586,16 @@ cd backend
 dotnet test RecipeApp.Tests/RecipeApp.Tests.csproj
 
 # With coverage
-dotnet test --collect:"XPlat Code Coverage"
+dotnet test RecipeApp.Tests/RecipeApp.Tests.csproj --coverage --coverage-output-format cobertura
 ```
+
+The suite runs on **Microsoft.Testing.Platform** (MTP), not VSTest — xunit.v3 4.0 dropped the
+VSTest bridge, and the .NET 10 SDK refuses to run MTP test projects through the VSTest target.
+The repository-root `global.json` opts `dotnet test` into the MTP runner; without it every
+backend test run fails with *"Testing with VSTest target is no longer supported"*. Coverage
+comes from `Microsoft.Testing.Extensions.CodeCoverage` and is written to
+`RecipeApp.Tests/TestResults/`, so the old VSTest `--collect:"XPlat Code Coverage"` collector
+no longer applies.
 
 Requires Docker (for Testcontainers). The PostgreSQL container is pulled automatically on first run.
 

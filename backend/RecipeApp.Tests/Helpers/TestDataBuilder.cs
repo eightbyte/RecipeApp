@@ -11,13 +11,15 @@ public static class TestDataBuilder
         string name = "test-ingredient",
         string displayName = "Test Ingredient",
         string category = IngredientCategory.Other,
-        string? defaultUnit = "g") => new()
+        string? defaultUnit = "g",
+        decimal? gramsPerMillilitre = null) => new()
     {
         Id = Guid.NewGuid(),
         Name = name,
         DisplayName = displayName,
         Category = category,
         DefaultUnit = defaultUnit,
+        GramsPerMillilitre = gramsPerMillilitre,
         CreatedAt = DateTime.UtcNow,
     };
 

@@ -114,6 +114,10 @@
                 <span class="font-weight-medium">
                   {{ formatAmount(ing.amount, ing.unit) }}
                 </span>
+                <span
+                  v-if="formatSource(ing)"
+                  class="text-caption text-medium-emphasis mr-1"
+                >{{ formatSource(ing) }}</span>
                 {{ ing.ingredientDisplayName }}
               </v-list-item-title>
               <v-list-item-subtitle v-if="ing.notes">{{ ing.notes }}</v-list-item-subtitle>
@@ -187,6 +191,7 @@
 import { ref, computed, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useRecipeStore } from '@/stores/recipes'
+import { formatMeasurement, formatSourceMeasurement } from '@/constants/units'
 import { useUiStore } from '@/stores/ui'
 import EmptyState from '@/components/EmptyState.vue'
 import ErrorState from '@/components/ErrorState.vue'
@@ -218,10 +223,17 @@ function reload() {
 onMounted(reload)
 
 function formatAmount(baseAmount, unit) {
-  const scaled = baseAmount * portionMultiplier.value
-  // Show clean decimals: 0.5 → "½", 1.5 → "1½", etc.
-  const n = Math.round(scaled * 100) / 100
-  return `${n} ${unit}`
+  return formatMeasurement(baseAmount * portionMultiplier.value, unit)
+}
+
+/**
+ * The measurement as the source recipe stated it, shown alongside the canonical amount
+ * so the recipe reads as written while the shopping list still sums grams. Null when the
+ * row was hand-entered or nothing was converted.
+ */
+function formatSource(ing) {
+  return formatSourceMeasurement(
+    ing.sourceAmount, ing.sourceUnit, ing.unit, portionMultiplier.value)
 }
 
 function stepIngredients(step) {

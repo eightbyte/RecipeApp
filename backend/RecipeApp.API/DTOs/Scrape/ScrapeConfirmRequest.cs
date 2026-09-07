@@ -17,7 +17,9 @@ public record ScrapeConfirmIngredient(
     decimal Amount,
     string Unit,
     string? Notes,
-    int DisplayOrder
+    int DisplayOrder,
+    decimal? SourceAmount = null,
+    string? SourceUnit = null
 );
 
 public record ScrapeConfirmStep(

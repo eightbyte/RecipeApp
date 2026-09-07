@@ -13,8 +13,14 @@ public class RecipeIngredient
     /// <summary>Amount at base (regular) portion size, in metric units.</summary>
     public decimal Amount { get; set; }
 
-    /// <summary>Metric unit: g, kg, ml, L, pcs, tsp, tbsp.</summary>
+    /// <summary>Canonical storable unit — see <see cref="Enums.MeasurementUnit"/>.</summary>
     public string Unit { get; set; } = string.Empty;
+
+    /// <summary>Amount exactly as stated by the source recipe, before conversion. Null for hand-entered rows.</summary>
+    public decimal? SourceAmount { get; set; }
+
+    /// <summary>Unit exactly as stated by the source recipe (e.g. "cups", "ounce"). Null for hand-entered rows.</summary>
+    public string? SourceUnit { get; set; }
 
     /// <summary>Optional prep note shown with the ingredient (e.g. "finely chopped").</summary>
     public string? Notes { get; set; }

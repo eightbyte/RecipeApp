@@ -76,7 +76,17 @@ public class MappingsTests
         result.DisplayName.Should().Be(ing.DisplayName);
         result.Category.Should().Be(ing.Category);
         result.DefaultUnit.Should().Be(ing.DefaultUnit);
+        result.GramsPerMillilitre.Should().Be(ing.GramsPerMillilitre);
         result.CreatedAt.Should().Be(ing.CreatedAt);
+    }
+
+    [Fact]
+    public void Ingredient_ToResponse_CarriesDensity()
+    {
+        var ing = MakeIngredient();
+        ing.GramsPerMillilitre = 0.5m;
+
+        ing.ToResponse().GramsPerMillilitre.Should().Be(0.5m);
     }
 
     // ── Recipe.ToListItem ──────────────────────────────────────────────────────
@@ -183,6 +193,24 @@ public class MappingsTests
         result.Category.Should().Be(IngredientCategory.DryGoods);
         result.Amount.Should().Be(100m);
         result.Unit.Should().Be("g");
+        result.SourceAmount.Should().BeNull();
+        result.SourceUnit.Should().BeNull();
+    }
+
+    [Fact]
+    public void RecipeIngredient_ToResponse_CarriesSourceMeasurement()
+    {
+        // Provenance travels with the row so the detail view can show "240 g (2 cups)".
+        var ri = MakeRecipeIngredient(MakeIngredient());
+        ri.Amount       = 240m;
+        ri.SourceAmount = 2m;
+        ri.SourceUnit   = "cups";
+
+        var result = ri.ToResponse();
+
+        result.Amount.Should().Be(240m);
+        result.SourceAmount.Should().Be(2m);
+        result.SourceUnit.Should().Be("cups");
     }
 
     // ── RecipeStep.ToResponse ─────────────────────────────────────────────────

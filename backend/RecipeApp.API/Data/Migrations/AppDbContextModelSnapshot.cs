@@ -46,6 +46,10 @@ namespace RecipeApp.API.Data.Migrations
                         .IsRequired()
                         .HasColumnType("text");
 
+                    b.Property<decimal?>("GramsPerMillilitre")
+                        .HasPrecision(8, 4)
+                        .HasColumnType("numeric(8,4)");
+
                     b.Property<string>("Name")
                         .IsRequired()
                         .HasColumnType("text");
@@ -189,6 +193,14 @@ namespace RecipeApp.API.Data.Migrations
 
                     b.Property<Guid>("RecipeId")
                         .HasColumnType("uuid");
+
+                    b.Property<decimal?>("SourceAmount")
+                        .HasPrecision(10, 3)
+                        .HasColumnType("numeric(10,3)");
+
+                    b.Property<string>("SourceUnit")
+                        .HasMaxLength(32)
+                        .HasColumnType("character varying(32)");
 
                     b.Property<string>("Unit")
                         .IsRequired()

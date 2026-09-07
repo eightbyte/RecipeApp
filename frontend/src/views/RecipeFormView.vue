@@ -283,6 +283,16 @@
             v-model="newIng.defaultUnit"
             :items="units"
             label="Default unit"
+            class="mb-2"
+          />
+          <v-text-field
+            v-model.number="newIng.gramsPerMillilitre"
+            label="Density (g/ml)"
+            type="number"
+            min="0"
+            step="0.01"
+            hint="Leave blank to keep volume measurements as stated."
+            persistent-hint
           />
         </v-card-text>
         <v-card-actions>
@@ -303,6 +313,7 @@ import { ref, reactive, computed, onMounted, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useRecipeStore }     from '@/stores/recipes'
 import { useIngredientStore } from '@/stores/ingredients'
+import { MEASUREMENT_UNITS, DEFAULT_UNIT } from '@/constants/units'
 
 const props = defineProps({ id: String })
 const route  = useRoute()
@@ -313,7 +324,7 @@ const ingredientStore = useIngredientStore()
 
 const isEdit = computed(() => !!(props.id || route.params.id))
 
-const units = ['g', 'kg', 'ml', 'L', 'pcs', 'tsp', 'tbsp']
+const units = MEASUREMENT_UNITS
 
 // ── Form state ─────────────────────────────────────────────────────────────
 const formRef    = ref(null)
@@ -335,7 +346,12 @@ const form = reactive({
 const createIngDialog   = ref(false)
 const creatingIng       = ref(false)
 const pendingIngIdx     = ref(null)
-const newIng = reactive({ displayName: '', category: 'OTHER', defaultUnit: 'g' })
+const newIng = reactive({
+  displayName: '',
+  category: 'OTHER',
+  defaultUnit: DEFAULT_UNIT,
+  gramsPerMillilitre: null,
+})
 
 // ── Load data ───────────────────────────────────────────────────────────────
 onMounted(async () => {
@@ -364,6 +380,10 @@ function populateForm(recipe) {
     amount:       i.amount,
     unit:         i.unit,
     notes:        i.notes ?? '',
+    // Provenance is carried through untouched: UpdateAsync deletes and recreates every
+    // ingredient row, so dropping these here would silently destroy an import's history.
+    sourceAmount: i.sourceAmount ?? null,
+    sourceUnit:   i.sourceUnit ?? null,
   }))
 
   form.steps = steps.map(s => ({
@@ -376,7 +396,15 @@ function populateForm(recipe) {
 
 // ── Ingredient management ───────────────────────────────────────────────────
 function addIngredient() {
-  form.ingredients.push({ ingredientId: null, amount: 1, unit: 'g', notes: '' })
+  // Hand-entered rows have no source measurement — the unit chosen here IS the source.
+  form.ingredients.push({
+    ingredientId: null,
+    amount:       1,
+    unit:         DEFAULT_UNIT,
+    notes:        '',
+    sourceAmount: null,
+    sourceUnit:   null,
+  })
 }
 
 function removeIngredient(idx) {
@@ -409,10 +437,11 @@ function ingredientLabel(ing) {
 
 function openCreateIngredient(idx) {
   pendingIngIdx.value = idx
-  newIng.displayName  = ''
-  newIng.category     = 'OTHER'
-  newIng.defaultUnit  = 'g'
-  createIngDialog.value = true
+  newIng.displayName        = ''
+  newIng.category           = 'OTHER'
+  newIng.defaultUnit        = DEFAULT_UNIT
+  newIng.gramsPerMillilitre = null
+  createIngDialog.value     = true
 }
 
 async function confirmCreateIngredient() {
@@ -420,13 +449,14 @@ async function confirmCreateIngredient() {
   const name = newIng.displayName.trim().toLowerCase()
   const created = await ingredientStore.createIngredient({
     name,
-    displayName: newIng.displayName.trim(),
-    category:    newIng.category,
-    defaultUnit: newIng.defaultUnit,
+    displayName:        newIng.displayName.trim(),
+    category:           newIng.category,
+    defaultUnit:        newIng.defaultUnit,
+    gramsPerMillilitre: newIng.gramsPerMillilitre || null,
   })
   if (pendingIngIdx.value !== null) {
     form.ingredients[pendingIngIdx.value].ingredientId = created.id
-    form.ingredients[pendingIngIdx.value].unit = created.defaultUnit ?? 'g'
+    form.ingredients[pendingIngIdx.value].unit = created.defaultUnit ?? DEFAULT_UNIT
   }
   creatingIng.value     = false
   createIngDialog.value = false
@@ -482,6 +512,8 @@ async function submit() {
         unit:         ing.unit,
         notes:        ing.notes?.trim() || null,
         displayOrder: i,
+        sourceAmount: ing.sourceAmount ?? null,
+        sourceUnit:   ing.sourceUnit ?? null,
       })),
       steps: form.steps.map((s, i) => ({
         stepNumber:       i + 1,

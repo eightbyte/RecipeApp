@@ -81,12 +81,13 @@
               hide-details
               style="max-width: 110px"
             />
-            <v-text-field
+            <v-select
               v-model="ing.unit"
+              :items="units"
               label="Unit"
               density="compact"
               hide-details
-              style="max-width: 90px"
+              style="max-width: 100px"
             />
             <v-text-field
               v-model="ing.notes"
@@ -182,9 +183,12 @@
 import { reactive, ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useRecipeStore } from '@/stores/recipes'
+import { MEASUREMENT_UNITS } from '@/constants/units'
 
 const router = useRouter()
 const store  = useRecipeStore()
+
+const units = MEASUREMENT_UNITS
 
 const categories = [
   'PRODUCE', 'MEAT_SEAFOOD', 'DAIRY', 'CANNED',
@@ -216,7 +220,11 @@ onMounted(() => {
     name:          ing.name,
     displayName:   ing.displayName,
     amount:        ing.amount,
-    unit:          ing.unit,
+    // A scraped unit outside the storable set (e.g. "clove") shows unselected and has to be
+    // picked before the recipe can be saved.
+    unit:          units.includes(ing.unit) ? ing.unit : null,
+    sourceAmount:  ing.sourceAmount ?? null,
+    sourceUnit:    ing.sourceUnit ?? null,
     notes:         ing.notes ?? '',
     isNew:         ing.isNew,
     category:      ing.suggestedCategory,
@@ -248,6 +256,11 @@ async function saveRecipe() {
     submitError.value = 'At least one ingredient is required.'
     return
   }
+  const missingUnit = form.ingredients.find(ing => !ing.unit)
+  if (missingUnit) {
+    submitError.value = `Pick a unit for "${missingUnit.displayName}" — the source used one this app cannot store.`
+    return
+  }
 
   const payload = {
     name:        form.name.trim(),
@@ -261,6 +274,8 @@ async function saveRecipe() {
       category:               ing.isNew ? ing.category : null,
       amount:                 Number(ing.amount),
       unit:                   ing.unit,
+      sourceAmount:           ing.sourceAmount ?? null,
+      sourceUnit:             ing.sourceUnit ?? null,
       notes:                  ing.notes?.trim() || null,
       displayOrder:           i,
     })),

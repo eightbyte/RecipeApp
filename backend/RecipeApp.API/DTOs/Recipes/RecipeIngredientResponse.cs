@@ -8,6 +8,8 @@ public record RecipeIngredientResponse(
     string Category,
     decimal Amount,
     string Unit,
+    decimal? SourceAmount,
+    string? SourceUnit,
     string? Notes,
     int DisplayOrder
 );

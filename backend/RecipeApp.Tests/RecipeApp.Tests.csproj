@@ -2,32 +2,35 @@
 
   <PropertyGroup>
     <TargetFramework>net10.0</TargetFramework>
+    <!-- xunit v3 test projects are self-hosting executables. Previously supplied
+         implicitly by Microsoft.NET.Test.Sdk; that package is no longer referenced. -->
+    <OutputType>Exe</OutputType>
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
     <IsPackable>false</IsPackable>
   </PropertyGroup>
 
   <ItemGroup>
-    <!-- xunit v3 — includes the test framework and built-in runner -->
-    <PackageReference Include="xunit.v3" Version="3.2.2" />
-    <!-- VSTest / dotnet test adapter -->
-    <PackageReference Include="xunit.runner.visualstudio" Version="3.1.5">
-      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
-      <PrivateAssets>all</PrivateAssets>
-    </PackageReference>
-    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="18.6.0" />
+    <!-- xunit v3 — test framework plus the built-in Microsoft.Testing.Platform runner.
+         From 4.0.0 this is MTP-only: the VSTest bridge (Microsoft.NET.Test.Sdk +
+         xunit.runner.visualstudio) is gone, and `dotnet test` reaches it via the
+         runner opt-in in global.json at the repository root. -->
+    <PackageReference Include="xunit.v3" Version="4.0.0" />
+    <!-- Code coverage for Microsoft.Testing.Platform, via the `dotnet test` coverage
+         switch. Replaces the VSTest-only "XPlat Code Coverage" collector. -->
+    <PackageReference Include="Microsoft.Testing.Extensions.CodeCoverage" Version="18.11.0" />
     <!-- Assertions and validation helpers -->
     <PackageReference Include="FluentAssertions" Version="8.10.0" />
-    <!-- FluentValidation.TestHelper is bundled in the main FluentValidation package (v11+).
-         FluentValidation 11.x is already provided transitively via FluentValidation.AspNetCore
-         in the API project reference; we reference it explicitly to lock the major version. -->
-    <PackageReference Include="FluentValidation" Version="11.*" />
+    <!-- FluentValidation.TestHelper is bundled in the main FluentValidation package.
+         Kept explicit and pinned to the same version as RecipeApp.API so the suite
+         tests the assembly that actually ships. -->
+    <PackageReference Include="FluentValidation" Version="12.1.1" />
     <!-- Integration test infrastructure -->
-    <PackageReference Include="Microsoft.AspNetCore.Mvc.Testing" Version="10.0.8" />
-    <PackageReference Include="Testcontainers.PostgreSql" Version="4.12.0" />
+    <PackageReference Include="Microsoft.AspNetCore.Mvc.Testing" Version="10.0.11" />
+    <PackageReference Include="Testcontainers.PostgreSql" Version="4.15.0" />
     <!-- Pin EF Core to match the version used by Npgsql.EntityFrameworkCore.PostgreSQL in the API project -->
-    <PackageReference Include="Microsoft.EntityFrameworkCore" Version="10.0.8" />
-    <PackageReference Include="Microsoft.EntityFrameworkCore.Relational" Version="10.0.8" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore" Version="10.0.11" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Relational" Version="10.0.11" />
   </ItemGroup>
 
   <ItemGroup>

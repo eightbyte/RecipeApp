@@ -18,8 +18,15 @@ public class Ingredient
     /// <summary>Shopping list group — see <see cref="Enums.IngredientCategory"/>.</summary>
     public string Category { get; set; } = "OTHER";
 
-    /// <summary>Suggested default unit (e.g. "g", "ml", "pcs").</summary>
+    /// <summary>Suggested default unit — see <see cref="Enums.MeasurementUnit"/>.</summary>
     public string? DefaultUnit { get; set; }
+
+    /// <summary>
+    /// Bulk density in grams per millilitre, used to convert volume measurements
+    /// (notably cups) to mass. Null means no reliable density is known for this
+    /// ingredient — volume measurements are then kept as stated. See Phase 8.5.1 §5.3.
+    /// </summary>
+    public decimal? GramsPerMillilitre { get; set; }
 
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 

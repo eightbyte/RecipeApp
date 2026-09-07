@@ -29,6 +29,7 @@ public class RecipeScrapeServiceMatchingTests(DatabaseFixture db) : IAsyncLifeti
             llm: fakeLlm,
             db: db.CreateDbContext(),
             headlessRenderer: null!,      // not used in NormaliseAsync
+            measurementConverter: new MeasurementConverter(Options.Create(new MeasurementOptions())),
             logger: NullLogger<RecipeScrapeService>.Instance);
     }
 
@@ -47,6 +48,38 @@ public class RecipeScrapeServiceMatchingTests(DatabaseFixture db) : IAsyncLifeti
                 new RecipeApp.API.Services.RecipeScrapeService.ExtractedStep(1, "Cook.", [])
             ]
         );
+
+    /// <summary>A one-ingredient recipe stating a specific measurement, as a source page would.</summary>
+    private static RecipeApp.API.Services.RecipeScrapeService.ExtractedRecipe MakeRecipeMeasured(
+        string name, string display, double amount, string unit) =>
+        new(
+            Name: "Test Recipe",
+            Description: null,
+            Servings: 4,
+            Ingredients:
+            [
+                new RecipeApp.API.Services.RecipeScrapeService.ExtractedIngredient(
+                    name, display, amount, unit, null)
+            ],
+            Steps:
+            [
+                new RecipeApp.API.Services.RecipeScrapeService.ExtractedStep(1, "Cook.", [])
+            ]
+        );
+
+    private static JsonNode ConfidentMatchTo(int candidateIndex) => JsonNode.Parse($$"""
+        {
+          "results": [
+            {
+              "scraped_index": 0,
+              "candidate_index": {{candidateIndex}},
+              "confidence": 0.95,
+              "suggested_category": "DRY_GOODS",
+              "suggested_default_unit": "g"
+            }
+          ]
+        }
+        """)!;
 
     // ── Tests ─────────────────────────────────────────────────────────────────
 
@@ -195,5 +228,132 @@ public class RecipeScrapeServiceMatchingTests(DatabaseFixture db) : IAsyncLifeti
         var preview = await svc.NormaliseAsync(MakeRecipe(("spring onion", "Spring Onion")), "https://x", default);
 
         preview.Ingredients[0].IsNew.Should().BeTrue();
+    }
+
+    // ── Source measurement and cup resolution (Phase 8.5.1 §5.5, §6) ──────────
+
+    [Fact]
+    public async Task NormaliseAsync_RecordsTheSourceMeasurementVerbatim()
+    {
+        await using var ctx = db.CreateDbContext();
+        ctx.Ingredients.Add(TestDataBuilder.Ingredient("plain flour", "Plain Flour", IngredientCategory.DryGoods));
+        await ctx.SaveChangesAsync();
+
+        var svc     = BuildService();
+        var preview = await svc.NormaliseAsync(
+            MakeRecipeMeasured("plain flour", "Plain Flour", 2.0, "cups"), "https://x", default);
+
+        var ing = preview.Ingredients.Single();
+        ing.SourceAmount.Should().Be(2m);
+        ing.SourceUnit.Should().Be("cups");
+    }
+
+    [Fact]
+    public async Task NormaliseAsync_RecordsSourceEvenWhenNothingIsConverted()
+    {
+        await using var ctx = db.CreateDbContext();
+        ctx.Ingredients.Add(TestDataBuilder.Ingredient("plain flour", "Plain Flour", IngredientCategory.DryGoods));
+        await ctx.SaveChangesAsync();
+
+        var svc     = BuildService();
+        var preview = await svc.NormaliseAsync(
+            MakeRecipeMeasured("plain flour", "Plain Flour", 500.0, "g"), "https://x", default);
+
+        var ing = preview.Ingredients.Single();
+        ing.Amount.Should().Be(500m);
+        ing.Unit.Should().Be("g");
+        ing.SourceAmount.Should().Be(500m);
+        ing.SourceUnit.Should().Be("g");
+    }
+
+    [Fact]
+    public async Task NormaliseAsync_ExactMatchWithDensity_ResolvesCupsToGrams()
+    {
+        await using var ctx = db.CreateDbContext();
+        ctx.Ingredients.Add(TestDataBuilder.Ingredient(
+            "plain flour", "Plain Flour", IngredientCategory.DryGoods, "g", gramsPerMillilitre: 0.5m));
+        await ctx.SaveChangesAsync();
+
+        var svc     = BuildService();
+        var preview = await svc.NormaliseAsync(
+            MakeRecipeMeasured("plain flour", "Plain Flour", 2.0, "cups"), "https://x", default);
+
+        var ing = preview.Ingredients.Single();
+        ing.Amount.Should().Be(240m);        // 2 x 240 ml x 0.5 g/ml
+        ing.Unit.Should().Be("g");
+        ing.SourceUnit.Should().Be("cups");  // the conversion stays auditable
+    }
+
+    [Fact]
+    public async Task NormaliseAsync_ExactMatchWithoutDensity_KeepsTheCup()
+    {
+        await using var ctx = db.CreateDbContext();
+        ctx.Ingredients.Add(TestDataBuilder.Ingredient(
+            "spinach", "Spinach", IngredientCategory.Produce, "g"));
+        await ctx.SaveChangesAsync();
+
+        var svc     = BuildService();
+        var preview = await svc.NormaliseAsync(
+            MakeRecipeMeasured("spinach", "Spinach", 2.0, "cups"), "https://x", default);
+
+        var ing = preview.Ingredients.Single();
+        ing.Amount.Should().Be(2m);
+        ing.Unit.Should().Be("cup");   // canonicalised, not converted
+    }
+
+    [Fact]
+    public async Task NormaliseAsync_SemanticMatchWithDensity_ResolvesCupsToGrams()
+    {
+        // Pass 2 resolves the IngredientId after the LLM call, so cup resolution has to run
+        // there too — not only inline with the pass-1 exact match.
+        await using var ctx = db.CreateDbContext();
+        ctx.Ingredients.Add(TestDataBuilder.Ingredient(
+            "plain flour", "Plain Flour", IngredientCategory.DryGoods, "g", gramsPerMillilitre: 0.5m));
+        await ctx.SaveChangesAsync();
+
+        var svc     = BuildService(ConfidentMatchTo(0));
+        var preview = await svc.NormaliseAsync(
+            MakeRecipeMeasured("all-purpose flour", "All-Purpose Flour", 2.0, "cups"), "https://x", default);
+
+        var ing = preview.Ingredients.Single();
+        ing.IsNew.Should().BeFalse();
+        ing.Amount.Should().Be(240m);
+        ing.Unit.Should().Be("g");
+    }
+
+    [Fact]
+    public async Task NormaliseAsync_UnmatchedIngredient_KeepsTheCup()
+    {
+        // An ingredient with no catalogue row has no density by construction.
+        await using var ctx = db.CreateDbContext();
+        ctx.Ingredients.Add(TestDataBuilder.Ingredient("rice", "Rice", IngredientCategory.DryGoods));
+        await ctx.SaveChangesAsync();
+
+        var svc     = BuildService();   // no LLM response: semantic matching falls back
+        var preview = await svc.NormaliseAsync(
+            MakeRecipeMeasured("mixed salad greens", "Mixed Salad Greens", 3.0, "cups"), "https://x", default);
+
+        var ing = preview.Ingredients.Single();
+        ing.IsNew.Should().BeTrue();
+        ing.Amount.Should().Be(3m);
+        ing.Unit.Should().Be("cup");
+    }
+
+    [Fact]
+    public async Task NormaliseAsync_DoesNotThrowOnAnUnrecognisedUnit()
+    {
+        // The interactive preview lets a human fix "clove" before confirming; failing the whole
+        // scrape over one unit would be a regression (Phase 8.5.1 §5.5).
+        await using var ctx = db.CreateDbContext();
+        ctx.Ingredients.Add(TestDataBuilder.Ingredient("garlic", "Garlic", IngredientCategory.Produce));
+        await ctx.SaveChangesAsync();
+
+        var svc     = BuildService();
+        var preview = await svc.NormaliseAsync(
+            MakeRecipeMeasured("garlic", "Garlic", 3.0, "cloves"), "https://x", default);
+
+        var ing = preview.Ingredients.Single();
+        ing.Unit.Should().Be("cloves");
+        ing.SourceUnit.Should().Be("cloves");
     }
 }

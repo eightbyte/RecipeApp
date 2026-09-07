@@ -19,10 +19,17 @@ public record RecipeStepRequest(
     List<int> IngredientIndexes
 );
 
+/// <param name="SourceAmount">
+/// Amount as originally stated by an imported source. Null for hand-entered rows.
+/// Round-tripped by the recipe form so editing an imported recipe keeps its provenance.
+/// </param>
+/// <param name="SourceUnit">Unit as originally stated by an imported source. Null for hand-entered rows.</param>
 public record RecipeIngredientRequest(
     Guid IngredientId,
     decimal Amount,
     string Unit,
     string? Notes,
-    int DisplayOrder
+    int DisplayOrder,
+    decimal? SourceAmount = null,
+    string? SourceUnit = null
 );

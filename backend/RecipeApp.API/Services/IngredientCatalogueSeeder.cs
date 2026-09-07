@@ -36,9 +36,6 @@ public class IngredientCatalogueSeeder(
         }
         """;
 
-    private static readonly string[] AllowedUnits =
-        ["g", "kg", "ml", "L", "pcs", "tsp", "tbsp"];
-
     private static readonly JsonSerializerOptions JsonOpts = new()
     {
         PropertyNamingPolicy   = JsonNamingPolicy.SnakeCaseLower,
@@ -48,7 +45,7 @@ public class IngredientCatalogueSeeder(
     public async Task SeedAsync(int targetCount = 200, CancellationToken ct = default)
     {
         var categoriesStr = string.Join(", ", IngredientCategory.All);
-        var unitsStr      = string.Join(", ", AllowedUnits);
+        var unitsStr      = string.Join(", ", MeasurementUnit.All);
 
         const int batchSize = 50;
         var namesProducedSoFar = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
@@ -116,9 +113,11 @@ public class IngredientCatalogueSeeder(
                     ? item.Category
                     : RecipeScrapeService.CategoriseIngredient(normName);
 
-                var unit = AllowedUnits.Contains(item.DefaultUnit, StringComparer.OrdinalIgnoreCase)
-                    ? item.DefaultUnit
-                    : "pcs";
+                // The model is free to answer "teaspoons" or "ML"; canonicalise before storing so
+                // every catalogue row holds a spelling MeasurementUnit.IsValid accepts.
+                var unit = MeasurementUnit.TryCanonicalise(item.DefaultUnit, out var canonicalUnit)
+                    ? canonicalUnit
+                    : MeasurementUnit.Piece;
 
                 var existing = await db.Ingredients
                     .FirstOrDefaultAsync(i => i.Name == normName, ct);

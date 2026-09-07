@@ -106,7 +106,7 @@ A mobile-first web application for managing personal recipes, building meal plan
 
 - **REST API** — standard JSON endpoints; no GraphQL in v1 for simplicity.
 - **Single-user** — no authentication layer in v1 (single household use). Authentication noted in Future Functionality.
-- **Metric-only measurements** — all ingredient amounts stored in metric units (g, kg, ml, L, units/pcs). No imperial conversion in v1.
+- **Metric-only measurements** — all ingredient amounts stored in metric units (g, kg, ml, L, pcs, tsp, tbsp), plus `cup`. Cups are storable rather than converted blindly: an ingredient carrying a bulk density (`grams_per_millilitre`) has its cups resolved to grams by arithmetic on import, and one without keeps the cup exactly as stated. No imperial output in v1 — customary input (oz, lb, fl oz, pt, qt, gal) is converted to metric on the way in.
 - **Portion multipliers** — stored as an enum: `HALF (0.5)`, `REGULAR (1.0)`, `DOUBLE (2.0)`. Applied at query/display time; base recipe quantities are always stored as-is.
 - **Single active meal plan** — enforced at the API layer; creating a new plan marks the previous one as closed.
 
@@ -125,6 +125,9 @@ ingredients
                                            CANNED, FROZEN, DRY_GOODS, BAKERY, CONDIMENTS,
                                            BEVERAGES, OTHER)
   default_unit     TEXT                   (e.g. "g", "ml", "pcs")
+  grams_per_millilitre  DECIMAL(8,4)      (bulk density; NULL means no reliable density is
+                                           known — volume measurements are then kept as
+                                           stated rather than converted to a fabricated mass)
   created_at       TIMESTAMPTZ
 ```
 
@@ -152,7 +155,10 @@ recipe_ingredients
   recipe_id        UUID  FK → recipes
   ingredient_id    UUID  FK → ingredients
   amount           DECIMAL(10,3)  NOT NULL   (base portion amount)
-  unit             TEXT  NOT NULL            (metric: g, kg, ml, L, pcs, tsp, tbsp)
+  unit             TEXT  NOT NULL            (g, kg, ml, L, pcs, tsp, tbsp, cup)
+  source_amount    DECIMAL(10,3)             (amount as stated by the source recipe, before
+                                              conversion; NULL for hand-entered rows)
+  source_unit      VARCHAR(32)               (unit as stated by the source, e.g. "cups")
   notes            TEXT                      (e.g. "finely chopped", "optional")
   display_order    INTEGER
 ```

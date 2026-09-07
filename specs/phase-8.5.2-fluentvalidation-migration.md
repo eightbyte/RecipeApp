@@ -2,7 +2,7 @@
 
 **Version:** 1.0
 **Date:** 2026-09-06
-**Status:** Draft — for review
+**Status:** Complete — shipped 2026-09-06
 **Depends on:** Phase 8.5.1 (measurement handling) complete
 **Blocks:** Phase 9 (Seed Recipe Library)
 
@@ -15,8 +15,10 @@
 > dependency and nothing else. So this is a package swap, not a rewrite — confirmed by the
 > verification spike in §4, which built clean and passed all 523 tests.
 >
-> The open question for review is whether to also collapse the twelve hand-copied validation
-> blocks into a single endpoint filter (§6) while we are in here, or to leave them alone.
+> The open question at review was whether to also collapse the twelve hand-copied validation
+> blocks into a single endpoint filter (§6) while we were in here. It was answered yes (§13.1),
+> and both optional workstreams shipped — see §14 for the outcome and §15 for what implementing
+> them turned up.
 
 ---
 
@@ -87,10 +89,10 @@ API uses. Three reasons to do this first:
    `FluentValidation.DependencyInjectionExtensions` 12.1.1 in, declared explicitly on
    `RecipeApp.API`. Both projects unify on 12.1.1.
 2. **A FluentValidation 12 compatibility audit** of all five validator files (§7).
-3. *(Proposed — §6, needs a decision)* **`Filters/ValidationFilter.cs`** — one endpoint filter
+3. *(Adopted — §6, §13.1)* **`Filters/ValidationFilter.cs`** — one endpoint filter
    replacing the twelve copies of the same three-line validation block, and declaring the 400
    response to OpenAPI, which no endpoint currently does.
-4. *(Proposed — §9.2, needs a decision)* **`ScrapeValidatorTests.cs`** — closing a test gap left by
+4. *(Adopted — §9.2, §13.2)* **`ScrapeValidatorTests.cs`** — closing a test gap left by
    Phase 8.5.1.
 
 **No database migration. No frontend change. No change to any HTTP response shape.**
@@ -503,22 +505,77 @@ be unwound independently.
 
 ## 14. Definition of Done
 
-- [ ] `FluentValidation.AspNetCore` removed from `RecipeApp.API.csproj`
-- [ ] `FluentValidation` 12.1.1 and `FluentValidation.DependencyInjectionExtensions` 12.1.1
+- [x] `FluentValidation.AspNetCore` removed from `RecipeApp.API.csproj`
+- [x] `FluentValidation` 12.1.1 and `FluentValidation.DependencyInjectionExtensions` 12.1.1
       referenced explicitly by `RecipeApp.API`
-- [ ] `dotnet list package --deprecated` clean on **both** projects
-- [ ] `dotnet list package --vulnerable --include-transitive` clean on both projects
-- [ ] Both projects resolve `FluentValidation` to the **same** version (§3.3 skew closed);
-      `FluentValidation.dll` in the test output is that version
-- [ ] Stale comment in `RecipeApp.Tests.csproj` corrected (§5.2)
-- [ ] `dotnet build -t:Rebuild` on the API: 0 errors, **0 warnings**
-- [ ] Full backend suite green with **no edits** to the five assertions listed in §8
-- [ ] *(if §6 accepted)* `Filters/ValidationFilter.cs` added; all twelve endpoints converted;
+- [x] `dotnet list package --deprecated` clean on **both** projects
+- [x] `dotnet list package --vulnerable --include-transitive` clean on both projects
+- [x] Both projects resolve `FluentValidation` to the **same** version (§3.3 skew closed);
+      `FluentValidation.dll` in the test output is 12.1.1 — verified in both output directories
+- [x] Stale comment in `RecipeApp.Tests.csproj` corrected (§5.2)
+- [x] `dotnet build -t:Rebuild` on the API: 0 errors, **0 warnings**
+- [x] Full backend suite green with **no edits** to the five assertions listed in §8 —
+      523 passed on the package swap alone, before any endpoint was touched
+- [x] `Filters/ValidationFilter.cs` added; all twelve endpoints converted;
       `using FluentValidation;` removed from all five endpoint files
-- [ ] *(if §6 accepted)* Integration test proves scoped validator resolution through the filter
-      (§6.4) and that valid requests still reach their handler
-- [ ] *(if §6 accepted)* `/scalar/v1` documents the 400 validation response on all twelve endpoints
-- [ ] *(if §6 accepted)* Package swap and filter refactor are **separate commits**
-- [ ] *(if §9.2 accepted)* `Validators/ScrapeValidatorTests.cs` added with the coverage listed
-- [ ] `CLAUDE.md` tech stack row and Notes updated (§10)
-- [ ] Frontend suite untouched and green
+- [x] Integration test proves scoped validator resolution through the filter (§6.4) and that
+      valid requests still reach their handler — the constructor injection in §6.2 worked; the
+      §6.4 fallback was not needed
+- [x] `/scalar/v1` documents the 400 validation response on all twelve endpoints — asserted
+      against the generated OpenAPI document, not just endpoint metadata (see §15.1)
+- [x] Package swap and filter refactor are **separate commits**
+- [x] `Validators/ScrapeValidatorTests.cs` added with the coverage listed
+- [x] `CLAUDE.md` tech stack row and Notes updated (§10)
+- [x] Frontend suite untouched and green
+
+**Result:** 594 tests passed, 0 failed (523 pre-existing + 7 filter + 64 scrape validator).
+Three commits, in the order §12 requires for independent rollback.
+
+---
+
+## 15. Recorded during implementation
+
+### 15.1 Declaring the 400 removes the inferred 200 *(follow-up, deliberately not fixed here)*
+
+`.ProducesValidationProblem()` gives the twelve endpoints the 400 they never documented — and
+costs them the `200` they used to show. ASP.NET Core infers a default response only for endpoints
+carrying *no* response metadata at all; the first explicit declaration switches inference off.
+Measured before and after on the generated document:
+
+| | Before | After |
+|---|---|---|
+| `POST /api/v1/ingredients` | `200` | `400` |
+| `PUT /api/v1/ingredients/{id}` | `200` | `400` |
+
+The lost `200` was untyped and wrong — those POSTs return `201 Created`, and no endpoint's `404`
+or `409` path was documented either. So the document trades an inaccurate response for an
+accurate one rather than regressing.
+
+**Not fixed here.** Documenting each endpoint's real responses (`201` + `409` on create, `200` +
+`404` on update, the scrape endpoints' `422`) is a documentation pass across all five endpoint
+files, unrelated to validation and to this phase's package swap — the same reasoning §11 applies
+to the `xUnit1051` warnings. Worth its own scope.
+
+### 15.2 The OpenAPI assertion discovers its own subject
+
+§9.3 asked for a test that the filter documents its 400. Listing twelve route patterns in a test
+would go stale the moment Phase 9 adds an endpoint, so
+`GeneratedOpenApiDocumentDeclaresThe400OnExactlyTheValidatedEndpoints` instead derives the
+expected set: any endpoint whose handler takes a parameter type with a registered
+`IValidator<T>` must document a 400, and nothing else may.
+
+This makes the test fail for a *future* endpoint that forgets `.WithValidation<T>()` — the exact
+mistake removing the twelve hand-copied blocks makes newly possible. It asserts against the
+document `IOpenApiDocumentProvider` generates (what Scalar renders), resolved as a keyed service
+under the document name `"v1"`, which works in the `Testing` environment even though
+`MapOpenApi()` itself is Development-only.
+
+### 15.3 `SourceUnit` is deliberately outside the unit whitelist
+
+Noted while writing §9.2's tests, and pinned by one of them.
+`ScrapeConfirmIngredientValidator` whitelists `Unit` against `MeasurementUnit.All` but validates
+`SourceUnit` only as non-empty and ≤ 32 characters. That asymmetry is correct and load-bearing:
+per CLAUDE.md, `SourceUnit` records what the source page said, verbatim — `"cups"`, `"cloves"`,
+`"a pinch"` — and is provenance only, never summed and never consolidated. Whitelisting it would
+destroy the input the measurement rules exist to preserve. Same class of deliberate asymmetry as
+the free-text shopping-list `Unit` flagged in §11.

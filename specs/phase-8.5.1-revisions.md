@@ -761,7 +761,15 @@ from three to two), and a trial run that can actually be audited.
 
 ## 12. Further revisions
 
-*None were added. The phase shipped with the four workstreams in §2.*
+*None were added to this phase. The phase shipped with the four workstreams in §2.*
+
+A follow-on corrective phase was run before Phase 9 began:
+**[Phase 8.5.2 — FluentValidation 12 Migration](phase-8.5.2-fluentvalidation-migration.md)**.
+It touches this phase's work in two places: `ScrapeConfirmIngredientValidator`, which gained the
+measurement unit whitelist here, finally got direct test coverage
+(`Validators/ScrapeValidatorTests.cs`); and the validators added here now run through
+`Filters/ValidationFilter.cs` rather than a hand-copied block in each endpoint. No rule added by
+this phase changed.
 
 ---
 

@@ -1,5 +1,5 @@
-using FluentValidation;
 using RecipeApp.API.DTOs.MealPlans;
+using RecipeApp.API.Filters;
 using RecipeApp.API.Services;
 
 namespace RecipeApp.API.Endpoints;
@@ -45,16 +45,12 @@ public static class MealPlanEndpoints
         // POST /meal-plans
         group.MapPost("/", async (
             CreateMealPlanRequest request,
-            MealPlanService svc,
-            IValidator<CreateMealPlanRequest> validator) =>
+            MealPlanService svc) =>
         {
-            var validation = await validator.ValidateAsync(request);
-            if (!validation.IsValid)
-                return Results.ValidationProblem(validation.ToDictionary());
-
             var created = await svc.CreateAsync(request);
             return Results.Created($"/api/v1/meal-plans/{created.Id}", created);
         })
+        .WithValidation<CreateMealPlanRequest>()
         .WithSummary("Create a new meal plan")
         .WithDescription("Deactivates the current active plan, then creates the new plan as active.");
 
@@ -62,16 +58,12 @@ public static class MealPlanEndpoints
         group.MapPut("/{id:guid}", async (
             Guid id,
             UpdateMealPlanRequest request,
-            MealPlanService svc,
-            IValidator<UpdateMealPlanRequest> validator) =>
+            MealPlanService svc) =>
         {
-            var validation = await validator.ValidateAsync(request);
-            if (!validation.IsValid)
-                return Results.ValidationProblem(validation.ToDictionary());
-
             var updated = await svc.UpdateAsync(id, request);
             return updated is null ? Results.NotFound() : Results.Ok(updated);
         })
+        .WithValidation<UpdateMealPlanRequest>()
         .WithSummary("Rename a meal plan");
 
         // DELETE /meal-plans/{id}
@@ -86,18 +78,14 @@ public static class MealPlanEndpoints
         group.MapPost("/{id:guid}/recipes", async (
             Guid id,
             AddMealPlanRecipeRequest request,
-            MealPlanService svc,
-            IValidator<AddMealPlanRecipeRequest> validator) =>
+            MealPlanService svc) =>
         {
-            var validation = await validator.ValidateAsync(request);
-            if (!validation.IsValid)
-                return Results.ValidationProblem(validation.ToDictionary());
-
             var added = await svc.AddRecipeAsync(id, request);
             return added is null
                 ? Results.NotFound()
                 : Results.Created($"/api/v1/meal-plans/{id}/recipes/{added.Id}", added);
         })
+        .WithValidation<AddMealPlanRecipeRequest>()
         .WithSummary("Add a recipe to a meal plan");
 
         // PUT /meal-plans/{id}/recipes/{mprId}
@@ -105,16 +93,12 @@ public static class MealPlanEndpoints
             Guid id,
             Guid mprId,
             UpdateMealPlanRecipeRequest request,
-            MealPlanService svc,
-            IValidator<UpdateMealPlanRecipeRequest> validator) =>
+            MealPlanService svc) =>
         {
-            var validation = await validator.ValidateAsync(request);
-            if (!validation.IsValid)
-                return Results.ValidationProblem(validation.ToDictionary());
-
             var updated = await svc.UpdateRecipeAsync(id, mprId, request);
             return updated is null ? Results.NotFound() : Results.Ok(updated);
         })
+        .WithValidation<UpdateMealPlanRecipeRequest>()
         .WithSummary("Update the scheduled date or portion size of a plan recipe");
 
         // DELETE /meal-plans/{id}/recipes/{mprId}

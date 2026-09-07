@@ -7,12 +7,20 @@ using RecipeApp.API.Data;
 using RecipeApp.API.Endpoints;
 using RecipeApp.API.Services;
 using RecipeApp.API.Services.Llm;
+using RecipeApp.API.Services.Seeding;
 using Scalar.AspNetCore;
 
 var isSeedCatalogue = args.Contains("seed-catalogue");
 var isSeedDensities = args.Contains("seed-densities");
 
-var builder = WebApplication.CreateBuilder(args);
+// seed-recipes takes flags of its own (--discover, --limit 50, …). Everything after the command
+// token is its argument vector, so it is withheld from the host's command-line configuration
+// provider rather than being read as configuration keys.
+var seedRecipesIndex = SeedRecipesCommand.IndexIn(args);
+var isSeedRecipes    = seedRecipesIndex >= 0;
+var seedRecipesArgs  = isSeedRecipes ? args[(seedRecipesIndex + 1)..] : [];
+
+var builder = WebApplication.CreateBuilder(isSeedRecipes ? args[..seedRecipesIndex] : args);
 
 // ── OpenAPI ───────────────────────────────────────────────────────────────────
 builder.Services.AddOpenApi();
@@ -56,6 +64,20 @@ builder.Services.AddHttpClient("RecipeScraper", client =>
 // Headless render fallback for client-side-rendered pages with no JSON-LD/visible text.
 // The browser process is launched lazily on first use, not at startup.
 builder.Services.AddSingleton<IHeadlessRenderer, PlaywrightHeadlessRenderer>();
+
+// ── Seed recipe library (Phase 9 — USDA MyPlate import) ──────────────────────
+builder.Services.Configure<RecipeSeedingOptions>(
+    builder.Configuration.GetSection(RecipeSeedingOptions.SectionName));
+
+builder.Services.AddSingleton<SeedCacheStore>();
+builder.Services.AddSingleton<IWaybackHarvester, WaybackHarvester>();
+
+builder.Services.AddHttpClient(WaybackHarvester.HttpClientName, (sp, client) =>
+{
+    var seeding = sp.GetRequiredService<IOptions<RecipeSeedingOptions>>().Value;
+    client.Timeout = TimeSpan.FromSeconds(seeding.FetchTimeoutSeconds);
+    client.DefaultRequestHeaders.UserAgent.ParseAdd(seeding.UserAgent);
+});
 
 // ── LLM (Local provider via LLamaSharp) ──────────────────────────────────────
 builder.Services.Configure<LlmOptions>(
@@ -108,6 +130,24 @@ if (isSeedDensities)
     var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
     await db.Database.MigrateAsync();
     await IngredientDensitySeeder.SeedAsync(db, app.Logger);
+    return;
+}
+
+// ── seed-recipes command — harvests the USDA MyPlate library then exits ──────
+// Stages 1-2 touch only the archive and the local cache, so this runs without a database.
+if (isSeedRecipes)
+{
+    // The harvest runs for the best part of an hour, so Ctrl+C is a normal way to stop it.
+    // Cancelling cooperatively lets the cache flush the last page instead of losing it.
+    using var harvestCancellation = new CancellationTokenSource();
+    Console.CancelKeyPress += (_, eventArgs) =>
+    {
+        eventArgs.Cancel = true;
+        harvestCancellation.Cancel();
+    };
+
+    Environment.ExitCode = await SeedRecipesCommand.RunAsync(
+        app.Services, app.Logger, seedRecipesArgs, harvestCancellation.Token);
     return;
 }
 

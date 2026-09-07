@@ -4,7 +4,7 @@
 Mobile-first web app for storing recipes, building meal plans, and generating shopping lists.
 
 - **Spec:** `SPEC.md` — read this for feature requirements and data model definitions.
-- **Current phase:** Phase 8.5.2 complete (FluentValidation 12 migration) — **v1 feature-complete**. Next: Phase 9 (seed recipe library).
+- **Current phase:** Phase 9 in progress (seed recipe library) — **v1 feature-complete**. Stages 1–2 (Wayback discovery + fetch) done; stages 3–5 (parse, LLM normalise, persist) next.
 
 ## Repository structure
 ```
@@ -16,6 +16,8 @@ RecipeApp/
 │   ├── Filters/             (Phase 8.5.2) ValidationFilter.cs — endpoint validation filter
 │   ├── DTOs/                Request/response DTOs (added from Phase 2)
 │   ├── Services/            Business logic services (added from Phase 2)
+│   │   └── Seeding/         (Phase 9) USDA MyPlate seed import — harvester, cache, CLI command
+│   ├── seed-data/myplate/   (Phase 9) On-disk harvest cache; only manifest.json is committed
 │   └── Enums/               Shared enum/constant classes
 ├── frontend/                Vue 3 SPA
 │   └── src/
@@ -79,6 +81,25 @@ API is at `http://localhost:5000`
 Scalar API docs: `http://localhost:5000/scalar/v1`
 Health check: `http://localhost:5000/health`
 Readiness check: `http://localhost:5000/health/ready`
+
+## CLI commands
+
+Each detects its argument, runs, and exits without starting Kestrel. Run from `backend/RecipeApp.API`.
+
+```bash
+dotnet run -- seed-catalogue [count]   # LLM-generated starter ingredient catalogue (default 200)
+dotnet run -- seed-densities           # Curated bulk densities; idempotent, only fills nulls
+
+# Phase 9 — USDA MyPlate seed library. Stages 1-2 implemented; 3-5 pending.
+dotnet run -- seed-recipes --report        # Print cached progress; no work, no network
+dotnet run -- seed-recipes --discover      # Stage 1 — CDX query → manifest.json (~1,123 slugs)
+dotnet run -- seed-recipes --harvest       # Stages 1-2 — cache pages + photos (~50 min, resumable)
+dotnet run -- seed-recipes --harvest --limit 3
+dotnet run -- seed-recipes --refresh-cache # Discard cached pages/photos, re-harvest
+```
+
+`seed-recipes` needs no database — it touches only the archive and the local cache. Ctrl+C stops
+it cooperatively; re-running resumes from the last cached page.
 
 ## Running tests
 
@@ -159,6 +180,10 @@ dotnet test RecipeApp.Tests/RecipeApp.Tests.csproj --coverage --coverage-output-
 | `Llm:Local:GpuLayerCount` | GPU layers to offload (default 999 = all); set 0 for CPU-only |
 | `Measurement:ResolveCupsOnImport` | Resolve `cup` to grams on import where a density exists (default `true`) |
 
+The `RecipeSeeding` section lives in the committed `appsettings.json` (nothing secret in it). Keys
+worth knowing: `CacheDirectory`, `PreferredSnapshotYear`, `FetchDelayMilliseconds`,
+`MinimumDiscoveredSlugs`, `DownloadImages`. See `Services/Seeding/RecipeSeedingOptions.cs`.
+
 ## Notes
 - **No AutoMapper** — manual mapping in `DTOs/Mappings.cs` (extension methods on entity types). Simpler to trace, no reflection.
 - FluentValidation validators are registered automatically via `AddValidatorsFromAssemblyContaining<Program>()` (scoped).
@@ -208,6 +233,50 @@ dotnet test RecipeApp.Tests/RecipeApp.Tests.csproj --coverage --coverage-output-
   endpoints rather than listing them) and `Validators/ScrapeValidatorTests.cs` (the scrape
   validators had no direct coverage). No response shape changed; no existing test was edited.
 - Phase 8 (backend-only) replaced `Anthropic.SDK` with **LLamaSharp 0.27.0** (llama.cpp .NET bindings, CUDA12 backend). Added `Services/Llm/` abstraction layer: `ILlmStructuredClient`, `LlmOptions`, `LlamaModelHolder` (singleton, owns GGUF model weights + `SemaphoreSlim` gate), `LLamaSharpStructuredClient` (GBNF grammar-constrained decoding), `JsonSchemaGrammar` (JSON Schema → GBNF converter). `RecipeScrapeService.NormaliseAsync` extended with two-pass semantic ingredient matching (exact lookup then batched LLM). Added `IngredientCatalogueSeeder` and `seed-catalogue` CLI command. Config: `Llm:Provider` (`"Local"`), `Llm:Local:ModelPath` (path to `.gguf`), `Llm:Local:ChatTemplate` (`"chatml"` or `"llama3"`). `RecipeScrapingOptions` lost Anthropic keys; gained `LlmTimeoutSeconds` (120) and `MatchConfidenceThreshold` (0.8). NpgSql health check changed to lazy `Func<IServiceProvider,string>` resolution; `RecipeAppFactory` injects Testcontainers connection string via `ConfigureAppConfiguration` so the health check uses the right DB in tests.
+- Phase 9 stages 1–2 (backend-only, no new packages) added `Services/Seeding/`:
+  `RecipeSeedingOptions.cs` (bound to `RecipeSeeding`), `SeedModels.cs` (manifest, state,
+  `SeedStage`, `SeedHarvestException`), `SeedCacheStore.cs` (cache layout, atomic writes, a
+  path-traversal slug guard, corrupt-state recovery), `IWaybackHarvester.cs` +
+  `WaybackHarvester.cs` (CDX discovery, filter rules, snapshot selection, sequential fetch with
+  backoff, image harvest), and `SeedRecipesCommand.cs` (the `seed-recipes` CLI). `Program.cs`
+  registers these plus the `RecipeSeeder` named `HttpClient`, and withholds everything after the
+  `seed-recipes` token from the host's command-line configuration provider so the command's own
+  flags are not read as config keys. `RecipeJsonLdExtractor` gained a public `TryFindRecipeNode`
+  (the harvester needs `image.url`; the Stage 3 parser will need the rest) — the existing
+  script-scanning loop was extracted behind it, unchanged.
+  Three deviations from the spec:
+  **(0)** the cache lives at `seed-data/myplate`, not §5's `data/seed/myplate` — Windows paths are
+  case-insensitive, so `data/` merges into the existing EF Core `Data/` folder and the harvest
+  lands beside `AppDbContext.cs`. Verified: it did, before the rename.
+  The other two were forced by the live archive:
+  **(1)** the CDX query omits `collapse=urlkey` (spec §8). Collapse keeps the *first* capture per
+  key, which makes §8's own preferred-year rule inert — measured, it pins 1,086 of 1,123 recipes
+  to a 2024 capture, whereas the uncollapsed query resolves 1,121 to the 2025 captures taken just
+  before the site was retired. Identical slug set; ~5 MB and ~35 s instead of ~9 s, once.
+  `DiscoveryTimeoutSeconds` (300) exists for that one large request.
+  **(2)** images are requested through the `im_` snapshot modifier and validated by magic bytes.
+  Without `im_` the archive 302s to its HTML viewer, and it serves interstitial/error pages with
+  a **200**, so ~11 KB of markup was being cached as `<slug>.jpg`. Real photos are 50–95 KB.
+  **Harvest is complete**: 1,123/1,123 pages (112 MB) and 1,115 photos (101 MB, 968 JPEG +
+  147 PNG) cached; `state.json` is uniformly `fetched`. It took two passes — the first left 25
+  pages and 81 photos on `HTTP 503 after 4 attempt(s)`, scattered across manifest positions
+  471–683 (an archive load window, not missing content), and simply re-running `--harvest`
+  recovered every one. Zero image-validation rejections across 1,003 photos, so the `im_` fix
+  holds corpus-wide. The 8 recipes with no cached photo genuinely carry no JSON-LD image node.
+  Tests: `Seeding/SeedCacheStoreTests.cs`, `Seeding/WaybackHarvesterTests.cs`, plus
+  `Infrastructure/TestHostEnvironment.cs` and `Infrastructure/StubHttpClientFactory.cs`. No
+  network in CI.
+- **Phase 9 Stage 3 must handle two MyPlate page templates**, measured across the harvested
+  corpus. Every page has an ingredient block and an instruction block, but the ingredient block
+  carries one of two Drupal class names: `field--name-field-mp-ingredients` (1,058 pages, the one
+  spec §10.1 lists) or `field--name-field-ingredients` (65 pages, an older content type). The 65
+  legacy pages also use `field--name-field-recipe-image` rather than `field--name-field-media-image`
+  and carry `field--name-field-recipe-serving-size`. `field--name-field-instructions`,
+  `field--name-field-notes` and `field--name-field-source` are common to both. Selecting only the
+  spec's class would fail 5.8% of the corpus for no reason and put the §20 "≥ 95% persisted" bar
+  at risk before the LLM is even involved.
+  Also: spec §10.3 hazard 2 predicts `U+FFFD` mojibake — worth confirming against the cached
+  corpus before building the stripping logic, since the pages sampled so far are clean UTF-8.
 
 ---
 ## Project Notes

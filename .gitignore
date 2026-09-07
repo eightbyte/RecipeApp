@@ -3,6 +3,7 @@
 # ========================
 backend/**/bin/
 backend/**/obj/
+backend/**/TestResults/
 backend/**/*.user
 backend/**/.vs/
 backend/**/appsettings.Development.json

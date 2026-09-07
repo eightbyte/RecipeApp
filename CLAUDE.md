@@ -36,6 +36,7 @@ RecipeApp/
 │       └── views/           Top-level page components (incl. CookingModeView.vue — Phase 7)
 ├── specs/                   Phase detail specification documents
 ├── docker-compose.yml       Local dev environment
+├── global.json              Opts `dotnet test` into the Microsoft.Testing.Platform runner
 ├── SPEC.md                  Full feature specification
 └── CLAUDE.md                This file
 ```
@@ -77,6 +78,21 @@ API is at `http://localhost:5000`
 Scalar API docs: `http://localhost:5000/scalar/v1`
 Health check: `http://localhost:5000/health`
 Readiness check: `http://localhost:5000/health/ready`
+
+## Running tests
+
+Backend tests run on **Microsoft.Testing.Platform**, not VSTest. xunit.v3 4.0 is MTP-only, and
+the .NET 10 SDK errors out if an MTP test project is driven through the VSTest target — the
+repo-root `global.json` (`test.runner: Microsoft.Testing.Platform`) is what makes `dotnet test`
+work. Do not re-add `Microsoft.NET.Test.Sdk` or `xunit.runner.visualstudio`; both are VSTest-only
+and no longer used.
+
+```bash
+docker compose up -d postgres          # Testcontainers needs Docker running
+cd backend
+dotnet test RecipeApp.Tests/RecipeApp.Tests.csproj
+dotnet test RecipeApp.Tests/RecipeApp.Tests.csproj --coverage --coverage-output-format cobertura
+```
 
 ## Git workflow
 

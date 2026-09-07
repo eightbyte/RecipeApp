@@ -47,7 +47,12 @@ public class ScrapeConfirmIngredientValidator : AbstractValidator<ScrapeConfirmI
             .When(x => !string.IsNullOrWhiteSpace(x.Category));
 
         RuleFor(x => x.Amount).GreaterThan(0);
-        RuleFor(x => x.Unit).NotEmpty().MaximumLength(20);
+        RuleFor(x => x.Unit)
+            .NotEmpty()
+            .Must(MeasurementUnit.IsValid)
+            .WithMessage($"Unit must be one of: {string.Join(", ", MeasurementUnit.All)}");
+        RuleFor(x => x.SourceAmount).GreaterThan(0).When(x => x.SourceAmount.HasValue);
+        RuleFor(x => x.SourceUnit).NotEmpty().MaximumLength(32).When(x => x.SourceUnit is not null);
         RuleFor(x => x.Notes).MaximumLength(200).When(x => x.Notes is not null);
     }
 }

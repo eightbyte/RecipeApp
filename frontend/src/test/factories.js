@@ -117,6 +117,8 @@ export const makeRecipeDetail = (overrides = {}) => ({
       category: 'DRY_GOODS',
       amount: 200,
       unit: 'g',
+      sourceAmount: null,
+      sourceUnit: null,
       notes: null,
       displayOrder: 0,
     },

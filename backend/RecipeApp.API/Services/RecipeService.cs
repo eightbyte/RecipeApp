@@ -134,6 +134,8 @@ public class RecipeService(AppDbContext db)
                 IngredientId = req.IngredientId,
                 Amount       = req.Amount,
                 Unit         = req.Unit,
+                SourceAmount = req.SourceAmount,
+                SourceUnit   = req.SourceUnit?.Trim(),
                 Notes        = req.Notes?.Trim(),
                 DisplayOrder = req.DisplayOrder,
             };

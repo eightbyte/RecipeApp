@@ -18,9 +18,6 @@ public static class JsonSchemaGrammar
         null    ::= "null"
         """;
 
-    private static readonly string[] AllowedUnits =
-        ["g", "kg", "ml", "L", "pcs", "tsp", "tbsp"];
-
     public static string ToGbnf(JsonNode schema)
     {
         var ruleList = new List<(string Name, string Body)>();

@@ -4,5 +4,6 @@ public record CreateIngredientRequest(
     string Name,
     string DisplayName,
     string Category,
-    string? DefaultUnit
+    string? DefaultUnit,
+    decimal? GramsPerMillilitre = null
 );

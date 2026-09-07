@@ -61,6 +61,7 @@ public static class IngredientsEndpoints
                 DisplayName = request.DisplayName,
                 Category    = request.Category,
                 DefaultUnit = request.DefaultUnit,
+                GramsPerMillilitre = request.GramsPerMillilitre,
                 CreatedAt   = DateTime.UtcNow,
             };
 
@@ -85,9 +86,10 @@ public static class IngredientsEndpoints
             var ingredient = await db.Ingredients.FindAsync(id);
             if (ingredient is null) return Results.NotFound();
 
-            ingredient.DisplayName = request.DisplayName;
-            ingredient.Category    = request.Category;
-            ingredient.DefaultUnit = request.DefaultUnit;
+            ingredient.DisplayName        = request.DisplayName;
+            ingredient.Category           = request.Category;
+            ingredient.DefaultUnit        = request.DefaultUnit;
+            ingredient.GramsPerMillilitre = request.GramsPerMillilitre;
             await db.SaveChangesAsync();
 
             return Results.Ok(ingredient.ToResponse());

@@ -1,8 +1,8 @@
 # Phase 8.5.1 — Pre-Phase-9 Revisions
 
-**Version:** 1.1
+**Version:** 1.2
 **Date:** 2026-09-06
-**Status:** Draft — awaiting review
+**Status:** Implemented
 **Depends on:** Phase 8 (Local LLM) complete
 **Blocks:** Phase 9 (Seed Recipe Library)
 
@@ -15,6 +15,25 @@
 >
 > This phase is deliberately scoped as a container for revisions. §12 is reserved for further
 > changes to be added before Phase 9 starts.
+
+### Changes in v1.2 (the §14 review answers, applied)
+
+The answers recorded in §14 changed the design in two places. This version folds them in so the
+spec matches what shipped:
+
+1. **Rule 2 is dropped** (§14 Q6). Cup resolution is now **two-way**, not three: density → `g`,
+   otherwise the `cup` is kept as stated. `Ingredient.DefaultUnit` plays no part in import
+   resolution, so `1 cup milk` stores as `1 cup` rather than `240 ml`. §5.4, §5.5 and §15
+   corrected. This also settles the tension in Q7's answer, which was phrased in terms of a rule 2
+   that no longer exists: honey, maple syrup and peanut butter still leave the density table, and
+   with rule 2 gone they are kept as `cup` rather than converted to `ml`.
+2. **Packed and loose brown sugar are separate catalogue entries** (§14 Q2), with a bare
+   `brown sugar` taking the packed density — the standard baking convention — and the assumption
+   recorded in the seeder's citation string. §5.6.
+
+Everything else shipped as written in v1.1. The delivered density table holds **50** curated rows
+(§14 Q1 asked for 40–60), and the trial-run density review from Q5 was added to the Phase 9 spec
+as §14.0.
 
 ### Changes in v1.1 (review against the codebase)
 
@@ -392,7 +411,7 @@ So the rule splits cleanly:
 
 Neither branch guesses.
 
-### 5.4 Conversion policy — cups only, three outcomes
+### 5.4 Conversion policy — cups only, two outcomes
 
 Stage B (§5.5) resolves **`cup` only**. `tsp` and `tbsp` are left as stated.
 
@@ -401,19 +420,24 @@ spoons — `1 tsp salt` is better guidance than `6 g salt`. They also consolidat
 own once §4.1 gives them a dimension. Cups are the problem case precisely because the quantity is
 large enough for density error to compound into a materially wrong recipe.
 
-For a `cup` row, three deterministic outcomes, checked in order:
+For a `cup` row, two deterministic outcomes, checked in order:
 
 | # | Condition | Stored result | Why it is honest |
 |---|---|---|---|
 | 1 | `Ingredient.GramsPerMillilitre` is non-null | grams: `amount × 240 × density` | Real arithmetic on a curated constant |
-| 2 | Else, `Ingredient.DefaultUnit` is one of `ml`, `L`, `tsp`, `tbsp` | millilitres: `amount × 240` | The cup *is* a volume unit. For something naturally measured by volume the conversion is exact and needs no density |
-| 3 | Else | `cup`, as stated | Packing-dominated or unknown; any other figure is invented |
+| 2 | Else | `cup`, as stated | Packing-dominated, liquid, or simply unknown; any other figure is invented |
 
-Rule 2 is what keeps liquids metric **without** putting them in the density table (§5.6). Its
-failure mode is benign: a wrong `DefaultUnit` yields `240 ml` instead of `1 cup` — two spellings of
-the same exact quantity — whereas a wrong density yields a wrong recipe. That asymmetry is why
-liquids do *not* get densities. `cup` is deliberately excluded from rule 2's list: a catalogue entry
-whose natural unit is the cup is exactly the packing case rule 3 exists for.
+**A `DefaultUnit`-driven "volume-natural → ml" rule was considered and rejected** (§14 Q6). It
+would have kept imported liquids metric without a density, and its failure mode was genuinely
+benign — `240 ml` instead of `1 cup`, two spellings of the same exact quantity. But `DefaultUnit`
+is LLM-suggested for catalogue-seeded entries, so the rule would have made an import-time storage
+decision turn on a generated field, which is the shape of dependency this whole phase exists to
+remove. Keeping every density-less cup as a `cup` needs no such input and is never wrong, only
+sometimes less convenient.
+
+The consequence is that `1 cup milk` stores as `1 cup`, not `240 ml`. That is acceptable because
+consolidation (§7) still reconciles it against any `ml` row of the same ingredient once a density
+exists, and because the recipe reads as its source wrote it.
 
 Encoded as `MeasurementUnit.ImportResolvable = [Cup]` so widening it later is a one-line change
 with an obvious blast radius. This is an **import-time storage policy**; shopping-list consolidation
@@ -431,8 +455,7 @@ Stage A: Canonicalise   →  (2, "cup")        alias → canonical; oz/lb/fl oz/
                                              cup is NO LONGER converted here (v1.0 had → 480 ml)
 [catalogue match]       →  IngredientId resolved (pass 1 exact, or pass 2 semantic)
 Stage B: ResolveCup     →  (240, "g")        density 0.5 known                 — rule 1
-                        →  (480, "ml")       DefaultUnit is ml/L/tsp/tbsp      — rule 2
-                        →  (2,   "cup")      neither                           — rule 3
+                        →  (2,   "cup")      no density                        — rule 2
 Source recorded         →  SourceAmount 2, SourceUnit "cups"   verbatim, on the preview row (§6)
 ```
 
@@ -452,7 +475,7 @@ switched off.
 In [NormaliseAsync](../backend/RecipeApp.API/Services/RecipeScrapeService.cs#L436), the existing
 `dbIngredients` projection at
 [RecipeScrapeService.cs:445-448](../backend/RecipeApp.API/Services/RecipeScrapeService.cs#L445-L448)
-must add `GramsPerMillilitre` **and `DefaultUnit`** (rule 2 needs it). Stage B then applies in
+must add `GramsPerMillilitre`. Stage B then applies in
 **both** the pass-1 exact-match branch and the pass-2 semantic-match branch — pass 2 resolves an
 `IngredientId` later ([lines 543-548](../backend/RecipeApp.API/Services/RecipeScrapeService.cs#L543-L548)),
 so cup resolution has to happen after it, not inline with the current `ConvertUnit` call at
@@ -496,7 +519,8 @@ carries a source citation string, so a disputed value can be traced.
 | bread flour | bread flour | 120 | 0.5000 |
 | whole wheat flour | whole wheat flour, wholemeal flour | 113 | 0.4708 |
 | granulated sugar | granulated sugar, sugar, white sugar | 200 | 0.8333 |
-| brown sugar (packed) | brown sugar | 213 | 0.8875 |
+| brown sugar (packed) | brown sugar (packed), packed brown sugar, brown sugar, light brown sugar, dark brown sugar | 213 | 0.8875 |
+| brown sugar (loose) | brown sugar (loose), loose brown sugar | 145 | 0.6042 |
 | powdered sugar | powdered sugar, icing sugar, confectioners sugar | 120 | 0.5000 |
 | white rice (uncooked) | white rice, rice, long grain rice | 185 | 0.7708 |
 | rolled oats | rolled oats, oats | 90 | 0.3750 |
@@ -507,22 +531,25 @@ carries a source citation string, so a disputed value can be traced.
 | dried lentils | dried lentils, lentils | 192 | 0.8000 |
 | dried black beans | dried black beans | 194 | 0.8083 |
 | butter | butter | 227 | 0.9458 |
-| honey | honey | 340 | 1.4167 |
-| maple syrup | maple syrup | 322 | 1.3417 |
-| peanut butter | peanut butter | 258 | 1.0750 |
 | table salt | table salt, salt | 292 | 1.2167 |
 | grated parmesan | grated parmesan, parmesan cheese, parmesan | 100 | 0.4167 |
 | shredded cheddar | shredded cheddar, cheddar cheese, cheddar | 113 | 0.4708 |
 
-Target ~40–60 entries covering flours, sugars, rices, grains, oats, legumes, nuts, dairy solids,
-syrups and fats. Everything else stays `null` — which is the correct outcome, not a gap to be filled.
+**Delivered: 50 entries** covering flours and starches, sugars, rices and grains, crumbs, dried
+legumes, nuts and seeds, dairy solids, and baking staples. Everything else stays `null` — which is
+the correct outcome, not a gap to be filled. Phase 9 §14.0 validates this coverage against the real
+corpus after the trial run.
 
-> **Not in the table, by design: water, milk, cream, stock, oil, juice, vinegar.** These are
-> naturally volume-measured and reach `ml` through §5.4 rule 2 with no density at all. v1.0 listed
-> `water 1.0`, `milk 1.029`, `vegetable oil 0.917`; with them, `1 cup milk` would have been stored
-> as `247 g milk` — correct physics, useless cooking — and every consolidated milk row would then
-> have been dragged into grams by §7. Density exists to reach the dimension an ingredient is
-> **bought** in; liquids are bought by volume.
+> **Not in the table, by design: water, milk, cream, stock, oil, juice, vinegar — and honey, maple
+> syrup and peanut butter** (§14 Q7). v1.0 listed `water 1.0`, `milk 1.029`, `vegetable oil 0.917`;
+> with them, `1 cup milk` would have been stored as `247 g milk` — correct physics, useless
+> cooking — and every consolidated milk row would then have been dragged into grams by §7. Density
+> exists to reach the dimension an ingredient is **bought** in; these are bought by volume, or are
+> measured by the spoonful in practice. With rule 2 dropped they are stored as `cup`.
+
+> **Packed vs. loose brown sugar are two catalogue entries** (§14 Q2) — the pack states differ by
+> ~50%, which is far too much to average away. A bare `brown sugar` takes the packed figure, the
+> standard baking convention, with the assumption recorded in that row's citation string.
 
 > The catalogue LLM seeder **may** propose a density for genuinely new ingredients, but only into a
 > review queue or log — never written directly. Deferred; not in this phase.
@@ -734,7 +761,7 @@ from three to two), and a trial run that can actually be audited.
 
 ## 12. Further revisions
 
-*Reserved. Additional pre-Phase-9 changes to be appended here before this spec is marked Ready.*
+*None were added. The phase shipped with the four workstreams in §2.*
 
 ---
 
@@ -785,38 +812,38 @@ from three to two), and a trial run that can actually be audited.
 
 ## 15. Definition of Done
 
-- [ ] `Enums/MeasurementUnit.cs` exists; all five hardcoded arrays (§3.1) deleted or migrated;
+- [x] `Enums/MeasurementUnit.cs` exists; all five hardcoded arrays (§3.1) deleted or migrated;
       `ScrapeConfirmIngredientValidator` enforces `MeasurementUnit.IsValid`
-- [ ] `TryCanonicalise` covers every alias in §4.1 plus case variants; `IsValid` rejects
+- [x] `TryCanonicalise` covers every alias in §4.1 plus case variants; `IsValid` rejects
       non-canonical spellings; both unit-tested
-- [ ] `JsonSchemaGrammar.AllowedUnits` deleted
-- [ ] `cup`/`cups` removed from `UnitConversions`; `ConvertUnit_*` tests updated (cup rows assert
+- [x] `JsonSchemaGrammar.AllowedUnits` deleted
+- [x] `cup`/`cups` removed from `UnitConversions`; `ConvertUnit_*` tests updated (cup rows assert
       canonical passthrough, not `240 ml`)
-- [ ] `Ingredient.GramsPerMillilitre` and `RecipeIngredient.SourceAmount`/`SourceUnit` added;
+- [x] `Ingredient.GramsPerMillilitre` and `RecipeIngredient.SourceAmount`/`SourceUnit` added;
       migration applies cleanly to an existing populated database; §8 pre-flight documented
-- [ ] `Services/MeasurementConverter.cs` with unit tests covering: cup + density → g;
-      cup + no density + volume `DefaultUnit` → ml; cup + neither → `cup`; tsp/tbsp untouched;
-      alias canonicalisation; unknown unit passthrough; `ResolveCupsOnImport = false` keeps `cup`
-- [ ] Density seeder is idempotent, matches by alias names, and gives every dry-goods entry in the
+- [x] `Services/MeasurementConverter.cs` with unit tests covering: cup + density → g;
+      cup + no density → `cup`; tsp/tbsp untouched even with a density; alias canonicalisation;
+      unknown unit passthrough; `ResolveCupsOnImport = false` keeps `cup`
+- [x] Density seeder is idempotent, matches by alias names, and gives every dry-goods entry in the
       existing `DataSeeder` (`plain flour`, `rice`, `breadcrumbs`, `salt`, `butter`,
       `parmesan cheese`, `cheddar cheese`) a density
-- [ ] `NormaliseAsync` resolves cups in **both** the exact-match and semantic-match branches, and
+- [x] `NormaliseAsync` resolves cups in **both** the exact-match and semantic-match branches, and
       records `SourceAmount`/`SourceUnit` on every preview row
-- [ ] `ConfirmAsync` persists `SourceAmount`/`SourceUnit`; `RecipeService` create/update carries
+- [x] `ConfirmAsync` persists `SourceAmount`/`SourceUnit`; `RecipeService` create/update carries
       them through
-- [ ] `IngredientsEndpoints` POST/PUT accept and persist `GramsPerMillilitre`
-- [ ] `1 tbsp olive oil` + `15 ml olive oil` consolidate to `30 ml` in one row, `NeedsReview = false`
+- [x] `IngredientsEndpoints` POST/PUT accept and persist `GramsPerMillilitre`
+- [x] `1 tbsp olive oil` + `15 ml olive oil` consolidate to `30 ml` in one row, `NeedsReview = false`
       (regression test for §3.3)
-- [ ] `1 cup flour` + `120 g flour` consolidate to `240 g` in one row (cross-dimension, §7)
-- [ ] `1 tsp salt` + `10 g salt` consolidate to one mass row (density applies to spoons in
+- [x] `1 cup flour` + `120 g flour` consolidate to `240 g` in one row (cross-dimension, §7)
+- [x] `1 tsp salt` + `10 g salt` consolidate to one mass row (density applies to spoons in
       consolidation, §7)
-- [ ] `2 cup spinach` + `1 cup spinach` consolidate to `3 cup` — no fabricated mass, no `ml` (§5.3, §7)
-- [ ] `1 cup spinach` + `100 g spinach` (no density) → two rows, `NeedsReview = true`
-- [ ] Frontend: shared unit constant; `cup` selectable in the recipe form and the scrape preview;
+- [x] `2 cup spinach` + `1 cup spinach` consolidate to `3 cup` — no fabricated mass, no `ml` (§5.3, §7)
+- [x] `1 cup spinach` + `100 g spinach` (no density) → two rows, `NeedsReview = true`
+- [x] Frontend: shared unit constant; `cup` selectable in the recipe form and the scrape preview;
       preview unit is a select; detail and cooking views show source alongside canonical; editing a
       scraped recipe preserves `sourceAmount`/`sourceUnit`; create-ingredient dialog accepts density
-- [ ] `SPEC.md` (§measurements, data model) and `CLAUDE.md` (Measurements, Notes) updated
-- [ ] Existing `ShoppingListServiceTests`, `RecipeValidatorTests`, `RecipeScrapeServiceTests`,
+- [x] `SPEC.md` (§measurements, data model) and `CLAUDE.md` (Measurements, Notes) updated
+- [x] Existing `ShoppingListServiceTests`, `RecipeValidatorTests`, `RecipeScrapeServiceTests`,
       `MappingsTests` updated where they asserted the old unit set or the §3.3 bug
-- [ ] Full backend + frontend suites green
-- [ ] Phase 9 spec updated per §11
+- [x] Full backend + frontend suites green
+- [x] Phase 9 spec updated per §11

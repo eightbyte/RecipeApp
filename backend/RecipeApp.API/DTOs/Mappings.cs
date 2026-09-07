@@ -20,6 +20,7 @@ public static class Mappings
         i.DisplayName,
         i.Category,
         i.DefaultUnit,
+        i.GramsPerMillilitre,
         i.CreatedAt
     );
 
@@ -64,6 +65,8 @@ public static class Mappings
         ri.Ingredient.Category,
         ri.Amount,
         ri.Unit,
+        ri.SourceAmount,
+        ri.SourceUnit,
         ri.Notes,
         ri.DisplayOrder
     );

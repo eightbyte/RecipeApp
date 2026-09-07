@@ -88,12 +88,63 @@ public class IngredientValidatorTests
     public static IEnumerable<object[]> AllCategories =>
         IngredientCategory.All.Select(c => new object[] { c });
 
-    [Fact]
-    public void Create_DefaultUnitExceeds20Chars_HasErrorOnDefaultUnit()
+    [Theory]
+    [InlineData("teaspoon")]
+    [InlineData("Cup")]
+    [InlineData("clove")]
+    public void Create_NonCanonicalDefaultUnit_HasErrorOnDefaultUnit(string unit)
     {
         var result = _createValidator.TestValidate(
-            new CreateIngredientRequest("flour", "Plain Flour", IngredientCategory.DryGoods, new string('x', 21)));
+            new CreateIngredientRequest("flour", "Plain Flour", IngredientCategory.DryGoods, unit));
         result.ShouldHaveValidationErrorFor(x => x.DefaultUnit);
+    }
+
+    [Theory]
+    [MemberData(nameof(AllUnits))]
+    public void Create_EachStorableDefaultUnit_HasNoError(string unit)
+    {
+        var result = _createValidator.TestValidate(
+            new CreateIngredientRequest("flour", "Plain Flour", IngredientCategory.DryGoods, unit));
+        result.ShouldNotHaveValidationErrorFor(x => x.DefaultUnit);
+    }
+
+    public static IEnumerable<object[]> AllUnits =>
+        MeasurementUnit.All.Select(u => new object[] { u });
+
+    // ── Density ───────────────────────────────────────────────────────────────
+
+    [Fact]
+    public void Create_NullDensity_HasNoError()
+    {
+        // Null is load-bearing: "no reliable density known", not "not filled in yet".
+        var result = _createValidator.TestValidate(
+            new CreateIngredientRequest("spinach", "Spinach", IngredientCategory.Produce, "g"));
+        result.ShouldNotHaveValidationErrorFor(x => x.GramsPerMillilitre);
+    }
+
+    [Theory]
+    [InlineData(0.01)]
+    [InlineData(0.5)]
+    [InlineData(1.2167)]
+    [InlineData(3)]
+    public void Create_PlausibleDensity_HasNoError(decimal density)
+    {
+        var result = _createValidator.TestValidate(
+            new CreateIngredientRequest("flour", "Plain Flour", IngredientCategory.DryGoods, "g", density));
+        result.ShouldNotHaveValidationErrorFor(x => x.GramsPerMillilitre);
+    }
+
+    [Theory]
+    [InlineData(0)]
+    [InlineData(-1)]
+    [InlineData(0.009)]
+    [InlineData(3.01)]
+    [InlineData(1000)]
+    public void Create_ImplausibleDensity_HasErrorOnDensity(decimal density)
+    {
+        var result = _createValidator.TestValidate(
+            new CreateIngredientRequest("flour", "Plain Flour", IngredientCategory.DryGoods, "g", density));
+        result.ShouldHaveValidationErrorFor(x => x.GramsPerMillilitre);
     }
 
     [Fact]
@@ -128,5 +179,30 @@ public class IngredientValidatorTests
         var result = _updateValidator.TestValidate(
             new UpdateIngredientRequest("Plain Flour", "INVALID", null));
         result.ShouldHaveValidationErrorFor(x => x.Category);
+    }
+
+    [Fact]
+    public void Update_NonCanonicalDefaultUnit_HasErrorOnDefaultUnit()
+    {
+        var result = _updateValidator.TestValidate(
+            new UpdateIngredientRequest("Plain Flour", IngredientCategory.DryGoods, "teaspoon"));
+        result.ShouldHaveValidationErrorFor(x => x.DefaultUnit);
+    }
+
+    [Fact]
+    public void Update_PlausibleDensity_HasNoErrors()
+    {
+        // Correcting a density is the supported repair path when a conversion turns out wrong.
+        var result = _updateValidator.TestValidate(
+            new UpdateIngredientRequest("Plain Flour", IngredientCategory.DryGoods, "g", 0.5m));
+        result.ShouldNotHaveAnyValidationErrors();
+    }
+
+    [Fact]
+    public void Update_ImplausibleDensity_HasErrorOnDensity()
+    {
+        var result = _updateValidator.TestValidate(
+            new UpdateIngredientRequest("Plain Flour", IngredientCategory.DryGoods, "g", 12m));
+        result.ShouldHaveValidationErrorFor(x => x.GramsPerMillilitre);
     }
 }

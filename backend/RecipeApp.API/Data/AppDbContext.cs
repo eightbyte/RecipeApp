@@ -25,6 +25,7 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
         {
             e.HasIndex(i => i.Name).IsUnique();
             e.Property(i => i.Category).HasDefaultValue("OTHER");
+            e.Property(i => i.GramsPerMillilitre).HasPrecision(8, 4);
             e.Property(i => i.CreatedAt).HasDefaultValueSql("NOW()");
         });
 
@@ -40,6 +41,8 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
         modelBuilder.Entity<RecipeIngredient>(e =>
         {
             e.Property(ri => ri.Amount).HasPrecision(10, 3);
+            e.Property(ri => ri.SourceAmount).HasPrecision(10, 3);
+            e.Property(ri => ri.SourceUnit).HasMaxLength(32);
 
             e.HasOne(ri => ri.Recipe)
                 .WithMany(r => r.Ingredients)

@@ -33,6 +33,7 @@ public class RecipeScrapeServiceFetchTests
             llm: null!,                 // not used in FetchAndStripHtmlAsync
             db: null!,                  // not used in FetchAndStripHtmlAsync
             headlessRenderer: headlessRenderer,
+            measurementConverter: new MeasurementConverter(Options.Create(new MeasurementOptions())),
             logger: NullLogger<RecipeScrapeService>.Instance);
     }
 

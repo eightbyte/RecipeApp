@@ -263,6 +263,133 @@ public class ShoppingListServiceTests(DatabaseFixture db) : IAsyncLifetime
         item.NeedsReview.Should().BeFalse();
     }
 
+    // ── Aggregation — dimensioned spoons and cups (Phase 8.5.1 §3.3, §7) ──────
+
+    /// <summary>
+    /// Builds an active plan whose recipes each contribute one row for the same ingredient,
+    /// then returns the generated shopping list.
+    /// </summary>
+    private async Task<ShoppingListResponse> BuildListForAsync(
+        decimal? gramsPerMillilitre,
+        params (decimal Amount, string Unit)[] rows)
+    {
+        await using var ctx = db.CreateDbContext();
+        var ing = TestDataBuilder.Ingredient(gramsPerMillilitre: gramsPerMillilitre);
+        ctx.Ingredients.Add(ing);
+        await ctx.SaveChangesAsync();
+
+        var recipeSvc = new RecipeService(ctx);
+        var mealSvc   = new MealPlanService(ctx);
+        var plan      = await mealSvc.CreateAsync(TestDataBuilder.CreateMealPlanRequest("Plan"));
+
+        for (var i = 0; i < rows.Length; i++)
+        {
+            var recipe = await recipeSvc.CreateAsync(new API.DTOs.Recipes.CreateRecipeRequest(
+                $"R{i}", null, null, 4,
+                [new API.DTOs.Recipes.RecipeIngredientRequest(ing.Id, rows[i].Amount, rows[i].Unit, null, 0)],
+                [new API.DTOs.Recipes.RecipeStepRequest(1, "Cook", [])]));
+            await mealSvc.AddRecipeAsync(plan.Id, TestDataBuilder.AddMealPlanRecipeRequest(recipe.Id));
+        }
+
+        return (await new ShoppingListService(ctx).GetActiveAsync())!;
+    }
+
+    [Fact]
+    public async Task Aggregation_ConsolidatesTablespoonsWithMillilitres()
+    {
+        // Regression for the bug that shipped before Phase 8.5.1: tsp and tbsp had no dimension,
+        // so two physically identical measurements produced two rows and a spurious review flag.
+        var list = await BuildListForAsync(null, (1m, "tbsp"), (15m, "ml"));
+
+        var item = list.Items.Single();
+        item.Amount.Should().Be(30m);
+        item.Unit.Should().Be("ml");
+        item.NeedsReview.Should().BeFalse();
+    }
+
+    [Fact]
+    public async Task Aggregation_SumsTeaspoonsInTeaspoons()
+    {
+        // Every contributing row uses the same unit, so there is nothing to convert and no
+        // arithmetic improves on what the cook wrote.
+        var list = await BuildListForAsync(null, (1m, "tbsp"), (2m, "tbsp"));
+
+        var item = list.Items.Single();
+        item.Amount.Should().Be(3m);
+        item.Unit.Should().Be("tbsp");
+        item.NeedsReview.Should().BeFalse();
+    }
+
+    [Fact]
+    public async Task Aggregation_CupPlusGrams_WithDensity_ResolvesToOneMassRow()
+    {
+        // 1 cup x 240 ml x 0.5 g/ml = 120 g, plus 120 g = 240 g.
+        var list = await BuildListForAsync(0.5m, (1m, "cup"), (120m, "g"));
+
+        var item = list.Items.Single();
+        item.Amount.Should().Be(240m);
+        item.Unit.Should().Be("g");
+        item.NeedsReview.Should().BeFalse();
+    }
+
+    [Fact]
+    public async Task Aggregation_TeaspoonPlusGrams_WithDensity_ResolvesToOneMassRow()
+    {
+        // Density applies to every volume unit here, unlike the import policy: a shopping total
+        // is a quantity to buy, and 1 tsp salt plus 10 g salt is one item.
+        var list = await BuildListForAsync(1.2167m, (1m, "tsp"), (10m, "g"));
+
+        var item = list.Items.Single();
+        item.Unit.Should().Be("g");
+        item.Amount.Should().BeApproximately(16.08m, 0.01m);
+        item.NeedsReview.Should().BeFalse();
+    }
+
+    [Fact]
+    public async Task Aggregation_CupsWithoutDensity_StayCups()
+    {
+        // No fabricated mass and no misleading millilitres — 2 cups of spinach plus 1 cup is
+        // 3 cups, and any gram figure would be invented (Phase 8.5.1 §5.3).
+        var list = await BuildListForAsync(null, (2m, "cup"), (1m, "cup"));
+
+        var item = list.Items.Single();
+        item.Amount.Should().Be(3m);
+        item.Unit.Should().Be("cup");
+        item.NeedsReview.Should().BeFalse();
+    }
+
+    [Fact]
+    public async Task Aggregation_CupPlusGrams_WithoutDensity_NeedsReview()
+    {
+        // Genuinely irreconcilable: nothing on the catalogue can relate a cup of this to a gram.
+        var list = await BuildListForAsync(null, (1m, "cup"), (100m, "g"));
+
+        list.Items.Should().HaveCount(2);
+        list.Items.Should().AllSatisfy(i => i.NeedsReview.Should().BeTrue());
+    }
+
+    [Fact]
+    public async Task Aggregation_PiecesPlusGrams_StayFlaggedEvenWithDensity()
+    {
+        // A density cannot help: pcs has no fixed size, so the shopper has to decide.
+        var list = await BuildListForAsync(0.5m, (2m, "pcs"), (150m, "g"));
+
+        list.Items.Should().HaveCount(2);
+        list.Items.Should().AllSatisfy(i => i.NeedsReview.Should().BeTrue());
+    }
+
+    [Fact]
+    public async Task Aggregation_MixedVolumeUnitsWithDensity_PromotesToKilograms()
+    {
+        // 2 cup (480 ml) + 1 L = 1480 ml x 0.8 g/ml = 1184 g, plus 100 g = 1284 g -> 1.284 kg.
+        var list = await BuildListForAsync(0.8m, (2m, "cup"), (1m, "L"), (100m, "g"));
+
+        var item = list.Items.Single();
+        item.Unit.Should().Be("kg");
+        item.Amount.Should().BeApproximately(1.284m, 0.001m);
+        item.NeedsReview.Should().BeFalse();
+    }
+
     // ── Category ordering ─────────────────────────────────────────────────────
 
     [Fact]

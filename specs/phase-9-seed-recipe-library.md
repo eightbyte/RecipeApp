@@ -13,7 +13,10 @@ A fresh RecipeApp install is empty. The user must scrape or hand-enter every rec
 
 Phase 9 ships a **one-time offline import** that populates the database with a public-domain North American recipe library sourced from **USDA MyPlate Kitchen** (~1,072 recipes). The import runs as a CLI command against the local LLM, exactly like the existing `seed-catalogue` command, and caches every network artefact on disk so the harvest is performed **once, ever**.
 
-This is backend-only. No API surface, no frontend work, no schema migration.
+This is backend-only. No API surface and no frontend work. **It does depend on Phase 8.5.1's
+migration** (`AddMeasurementDensityAndSource`), which must be applied before the first
+`seed-recipes` run — the source-measurement columns have to exist before the first seeded recipe
+is persisted, or the harvest's conversions become unauditable.
 
 ### 1.1 Why this source
 
@@ -67,7 +70,8 @@ The import deliberately introduces **no new normalisation or persistence logic**
 |---|---|---|
 | `ExtractedRecipe` / `ExtractedIngredient` / `ExtractedStep` | `RecipeScrapeService.cs:641` | Target shape produced by the new MyPlate parser |
 | `NormaliseAsync(ExtractedRecipe, url, ct)` | `RecipeScrapeService.cs:436` | Metric conversion, two-pass catalogue matching, `ScrapePreviewResponse` |
-| `ConvertUnit(...)` | `RecipeScrapeService` (private) | US customary → metric |
+| `MeasurementConverter.ToCanonical(...)` | `Services/MeasurementConverter.cs` (`public static`) | US customary → metric, plus unit alias canonicalisation (Stage A) |
+| `MeasurementConverter.ResolveForImport(...)` | `Services/MeasurementConverter.cs` | Resolves `cup` against the matched ingredient's density (Stage B) |
 | `ConfirmAsync(ScrapeConfirmRequest, ct)` | `RecipeScrapeService.cs:194` | Writes `Recipe` + `RecipeIngredient` + `RecipeStep` + `RecipeStepIngredient` |
 
 `NormaliseAsync` and the `Extracted*` records are currently `internal`. They stay `internal` — the new seeder lives in the same assembly. `InternalsVisibleTo` for the test project is already configured for Phase 8 tests.
@@ -322,7 +326,7 @@ A recipe missing a name, an ingredient block, or an instruction block is marked 
 
 The MyPlate parse leaves two jobs that only the LLM can do well:
 
-1. **Ingredient quantity extraction** — `"1 can (14.5 ounces) no salt added diced tomatoes"` → `{ name: "diced tomatoes", amount: 411, unit: "g", notes: "no salt added, canned" }`
+1. **Ingredient quantity extraction** — `"1 can (14.5 ounces) no salt added diced tomatoes"` → `{ name: "diced tomatoes", amount: 14.5, unit: "ounces", notes: "no salt added, canned" }`. The model preserves the unit as stated; Stage A mechanically produces `411 g`. Asking the model to convert would contradict the extraction schema's own instruction (Phase 8.5.1 §1.2).
 2. **Step segmentation** — the single `directions` prose blob → an ordered `RecipeStep` list
 
 Both are already expressed by `RecipeSchemaJson` at `RecipeScrapeService.cs:31`, which defines `ingredients` and an ordered `steps` array and is enforced via `JsonSchemaGrammar` GBNF. Phase 9 reuses that schema verbatim — a second, divergent schema would be a maintenance trap.
@@ -337,7 +341,7 @@ Output is written to `normalised/<slug>.json`, then passed to `NormaliseAsync` f
 
 | Customary | Metric | Note |
 |---|---|---|
-| cup | 240 ml | Liquid; dry ingredients are mass-dependent — the LLM should emit `g` for flour/sugar/rice |
+| cup | *resolved per Phase 8.5.1 §5.4* | Density known → `g` (`2 cups flour` → `240 g`); density unknown → kept as `cup`. Never a blind 240 ml. |
 | fluid ounce | 30 ml | |
 | ounce (mass) | 28 g | |
 | pound | 454 g | |
@@ -347,7 +351,16 @@ Output is written to `normalised/<slug>.json`, then passed to `NormaliseAsync` f
 | "1 can (14.5 oz)" | 411 g | Container quantity resolves to net mass |
 | "1 medium onion" | 1 `pcs` | Descriptive size → `pcs`, size retained in `Notes` |
 
-> **Dry-cup ambiguity is the main quality risk.** 1 cup of flour is 120 g, of granulated sugar 200 g, of rice 185 g. Blindly mapping every cup to 240 ml produces recipes that are wrong in a way that is not obvious on inspection. The prompt must instruct the model to emit mass units for dry bulk ingredients. **This is the single most important thing to check in the trial run** (§14).
+> **Dry-cup ambiguity is handled structurally, not by prompt.** Phase 8.5.1 moved the cup→gram
+> relationship out of the generative step and onto the ingredient catalogue as
+> `GramsPerMillilitre`, so the conversion is deterministic arithmetic on a curated constant —
+> identical on every recipe, auditable after the fact via `SourceAmount`/`SourceUnit`, and
+> correctable by editing one catalogue row rather than re-running the import. The prompt must
+> **not** ask the model to emit mass units; it preserves the unit as stated.
+>
+> What remains to verify in the trial run is **coverage**: whether
+> `Data/IngredientDensitySeeder.cs` carries a density for the bulk dry goods this corpus actually
+> uses. Anything it misses is stored as `cup` — honest, but less useful. See §14.
 
 ### 11.2 Throughput
 
@@ -357,6 +370,9 @@ Single-threaded through `LlamaModelHolder`'s `SemaphoreSlim` gate, ~10–30 s pe
 
 LLM output is rejected and retried (up to `MaxLlmRetries`) when:
 
+- Any ingredient's unit fails `MeasurementUnit.IsValid` **after** `TryCanonicalise` — so
+  `teaspoon` and `cups` pass (they canonicalise to `tsp` and `cup`) while `clove` and `pinch`
+  still fail
 - Any ingredient has `Amount <= 0`
 - Any unit is outside `g, kg, ml, L, pcs, tsp, tbsp`
 - `Steps` is empty, or step numbers are not contiguous from 1
@@ -395,7 +411,7 @@ Field mapping:
 ## 13. Idempotency & Re-runs
 
 - **Natural key:** `Recipe.SourceUrl`. Before persisting, query for an existing recipe with that URL; skip if present.
-- **No schema change.** Seeded recipes are identified by their `myplate.gov` `SourceUrl` prefix, which needs no new column.
+- **No schema change of its own.** Seeded recipes are identified by their `myplate.gov` `SourceUrl` prefix, which needs no new column. Phase 8.5.1's migration is a prerequisite (§1).
 - `--force` re-normalises and re-persists, deleting the prior row first (cascade removes children).
 - `--refresh-cache` discards `raw/` and re-harvests from Wayback. Not needed in normal operation.
 - Deleting `normalised/<slug>.json` and re-running re-does only the LLM pass for that recipe — the intended loop for prompt iteration.
@@ -408,7 +424,8 @@ Field mapping:
 
 Selection is **stratified and deterministic**, not the first 20 alphabetically — the sample must exercise the hard cases. The 20 slugs are pinned in source so the trial is reproducible across machines, covering:
 
-- **Baking** (dry-cup → grams: flour, sugar, oats) — the highest-risk conversion
+- **Baking** (dry cups: flour, sugar, oats) — verifies *density-table coverage*, not the model's
+  arithmetic. Any cup that stays a cup names a catalogue entry needing a curated density.
 - **Canned goods** (`1 can (14.5 ounces)` container quantities)
 - **Whole produce** (`2 medium celery stalks` → `pcs`)
 - **Long instructions** (≥ 8 steps, to test segmentation)
@@ -416,6 +433,33 @@ Selection is **stratified and deterministic**, not the first 20 alphabetically �
 - **Recipes with footnoted notes** (the `*` aside hazard, §10.3)
 - **Adapted-source credits** (provenance capture)
 - **Fractional quantities** (`1/4`, `1 1/2`)
+
+### 14.0 Density-table review (run before the full harvest)
+
+The trial's 20 recipes are the first real evidence of what the corpus actually measures in cups.
+Before authorising the full run:
+
+1. Query the trial's imported rows for anything still stored in cups:
+
+   ```sql
+   SELECT i."Name", COUNT(*) AS occurrences
+   FROM "RecipeIngredients" ri
+   JOIN "Ingredients" i ON i."Id" = ri."IngredientId"
+   WHERE ri."Unit" = 'cup'
+   GROUP BY i."Name"
+   ORDER BY occurrences DESC;
+   ```
+
+2. For each row, decide deliberately: is this a **bulk dry good that should have a density**
+   (add it to `Data/IngredientDensitySeeder.cs` with a citation), or is it genuinely
+   **packing-dominated or liquid** (leave it — `cup` is the honest storage)?
+
+3. Re-run `dotnet run -- seed-densities` (idempotent; it only fills nulls and never overwrites a
+   hand-corrected value), then re-run the trial so the affected recipes reimport with the new
+   densities.
+
+This closes the loop the density table was curated blind: the table is validated against the
+corpus rather than guessed at in advance (Phase 8.5.1 §14 Q5).
 
 ### 14.1 Acceptance criteria
 
@@ -425,7 +469,7 @@ Reviewed by hand against the archived source pages before authorising the full r
 |---|---|
 | 1 | ≥ 18 of 20 import without validation failure |
 | 2 | Every ingredient amount is plausible for the stated serving count |
-| 3 | Dry ingredients use mass units, not `ml` — **explicitly verify flour, sugar, rice, oats** |
+| 3 | The density table covers the corpus's bulk dry goods — **explicitly verify flour, sugar, rice, oats resolved to `g` rather than staying `cup`**. Spot-check with the Phase 8.5.1 §6.2 query; a miss is fixed by adding a row to `IngredientDensitySeeder` and re-running `seed-densities`, not by re-importing. |
 | 4 | Steps are correctly ordered and semantically complete vs. the source directions |
 | 5 | No footnote text (`* Store bought chili sauce…`) leaked into a step |
 | 6 | `IngredientIndexes` correctly identifies ingredients used per step (drives Cooking Mode) |
@@ -433,7 +477,7 @@ Reviewed by hand against the archived source pages before authorising the full r
 | 8 | Catalogue matches are semantically right — no `"chili sauce"` → `"chili powder"` |
 | 9 | `SourceUrl` is the myplate.gov URL, never a `web.archive.org` URL |
 | 10 | Images render, and `ImageUrl` resolves under `/uploads/images/` |
-| 11 | Shopping list generation from a plan of 3 seeded recipes consolidates units correctly |
+| 11 | Shopping list generation from a plan of 3 seeded recipes consolidates units correctly (now genuinely reachable — the tsp/tbsp dimension bug that would have failed this regardless was fixed in Phase 8.5.1 §3.3) |
 
 Criteria 3, 5 and 8 are the ones expected to need prompt iteration. Criterion 11 is the genuine end-to-end check — it exercises Phase 5 consolidation against real imported data, which is where unit errors actually surface.
 
@@ -509,7 +553,11 @@ Against a Testcontainers Postgres, with a **stubbed `ILlmStructuredClient`** ret
 - Persists a recipe with correct ingredients, ordered steps, and step→ingredient links
 - Is idempotent: running twice yields one recipe
 - `--force` replaces rather than duplicating
-- Validation gate rejects out-of-range units, zero amounts, non-contiguous steps
+- Validation gate rejects out-of-range units, zero amounts, non-contiguous steps — with units
+  checked **after** canonicalisation, so `teaspoon` passes and `clove` fails
+- `SourceAmount`/`SourceUnit` are persisted verbatim on every seeded ingredient row
+- `2 cups flour` resolves to `240 g` when the catalogue entry carries a density, and
+  `2 cups spinach` stays `2 cup` when it does not
 - Reuses existing catalogue entries instead of creating duplicates
 - `SourceUrl` is the myplate.gov URL, not the Wayback URL
 
@@ -531,7 +579,8 @@ Network calls to Wayback are **not** exercised in CI — `WaybackHarvester` is b
 
 - Any frontend work — no seeding UI, no admin screen
 - Any API endpoint — CLI only
-- Any EF migration — no schema change
+- Any EF migration of its own — Phase 8.5.1's `AddMeasurementDensityAndSource` is a
+  **prerequisite**, not part of this phase
 - Nutrition data — MyPlate provides a full nutrition table, but `Recipe` has no nutrition fields and adding them is a separate phase
 - Non-USDA sources (Wikibooks CC BY-SA, TheMealDB) — evaluated and rejected in §1.1
 - Localised recipes — MyPlate has Spanish/French/Korean/German variants; English only for v1

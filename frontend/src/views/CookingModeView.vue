@@ -110,6 +110,7 @@
                   :variant="isCurrent(index) ? 'flat' : 'tonal'"
                 >
                   <span class="font-weight-medium mr-1">{{ formatAmount(ing.amount, ing.unit) }}</span>
+                  <span v-if="formatSource(ing)" class="text-caption mr-1">{{ formatSource(ing) }}</span>
                   {{ ing.ingredientDisplayName }}
                 </v-chip>
               </div>
@@ -155,6 +156,7 @@
 import { ref, computed, onMounted, nextTick } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useRecipeStore } from '@/stores/recipes'
+import { formatMeasurement, formatSourceMeasurement } from '@/constants/units'
 import { useUiStore } from '@/stores/ui'
 import { useWakeLock } from '@/composables/useWakeLock'
 import EmptyState from '@/components/EmptyState.vue'
@@ -216,9 +218,13 @@ function stepIngredients(step) {
 }
 
 function formatAmount(baseAmount, unit) {
-  const scaled = baseAmount * portionMultiplier.value
-  const n = Math.round(scaled * 100) / 100
-  return `${n} ${unit}`
+  return formatMeasurement(baseAmount * portionMultiplier.value, unit)
+}
+
+/** The measurement as the source recipe stated it; null when there is nothing to add. */
+function formatSource(ing) {
+  return formatSourceMeasurement(
+    ing.sourceAmount, ing.sourceUnit, ing.unit, portionMultiplier.value)
 }
 
 function toggleStep(step) {

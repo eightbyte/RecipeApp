@@ -73,6 +73,58 @@ describe('RecipeDetailView', () => {
     expect(wrapper.vm.formatAmount(100, 'g')).toBe('200 g')
   })
 
+  it('shows the source measurement alongside the converted amount', async () => {
+    // "240 g (2 cups)" — the recipe reads as written while the shopping list sums grams.
+    const wrapper = await mountView({
+      ingredients: [{
+        id: 'ri-1',
+        ingredientId: 'test-ingredient-1',
+        ingredientName: 'flour',
+        ingredientDisplayName: 'Flour',
+        category: 'DRY_GOODS',
+        amount: 240,
+        unit: 'g',
+        sourceAmount: 2,
+        sourceUnit: 'cups',
+        notes: null,
+        displayOrder: 0,
+      }],
+    })
+
+    expect(wrapper.text()).toContain('240 g')
+    expect(wrapper.text()).toContain('(2 cups)')
+  })
+
+  it('scales the source measurement with the portion multiplier', async () => {
+    const wrapper = await mountView({
+      ingredients: [{
+        id: 'ri-1',
+        ingredientId: 'test-ingredient-1',
+        ingredientName: 'flour',
+        ingredientDisplayName: 'Flour',
+        category: 'DRY_GOODS',
+        amount: 240,
+        unit: 'g',
+        sourceAmount: 2,
+        sourceUnit: 'cups',
+        notes: null,
+        displayOrder: 0,
+      }],
+    })
+
+    wrapper.vm.portionSize = 'DOUBLE'
+    await wrapper.vm.$nextTick()
+
+    expect(wrapper.text()).toContain('480 g')
+    expect(wrapper.text()).toContain('(4 cups)')
+  })
+
+  it('shows no source measurement for a hand-entered row', async () => {
+    const wrapper = await mountView()
+    expect(wrapper.text()).toContain('200 g')
+    expect(wrapper.text()).not.toContain('(')
+  })
+
   it('applies grayscale class when isRecentlyCooked returns true', async () => {
     vi.spyOn(store, 'isRecentlyCooked').mockReturnValue(true)
     const wrapper = await mountView({ lastCookedAt: new Date(Date.now() - 2 * 86400_000).toISOString() })

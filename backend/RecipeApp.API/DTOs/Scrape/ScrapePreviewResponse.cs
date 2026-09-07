@@ -15,6 +15,8 @@ public record ScrapePreviewIngredient(
     string DisplayName,
     decimal Amount,
     string Unit,
+    decimal? SourceAmount,
+    string? SourceUnit,
     string? Notes,
     bool IsNew,
     string SuggestedCategory,

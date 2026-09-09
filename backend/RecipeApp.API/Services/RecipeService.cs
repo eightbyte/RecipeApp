@@ -127,13 +127,14 @@ public class RecipeService(AppDbContext db)
         var result = new List<RecipeIngredient>();
         foreach (var req in requests.OrderBy(r => r.DisplayOrder))
         {
+            var (amount, unit) = RecipeIngredient.ToStoredMeasurement(req.Amount, req.Unit);
             var ri = new RecipeIngredient
             {
                 Id           = Guid.NewGuid(),
                 RecipeId     = recipeId,
                 IngredientId = req.IngredientId,
-                Amount       = req.Amount,
-                Unit         = req.Unit,
+                Amount       = amount,
+                Unit         = unit,
                 SourceAmount = req.SourceAmount,
                 SourceUnit   = req.SourceUnit?.Trim(),
                 Notes        = req.Notes?.Trim(),

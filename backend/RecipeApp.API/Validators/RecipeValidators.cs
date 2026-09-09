@@ -9,11 +9,27 @@ public class RecipeIngredientRequestValidator : AbstractValidator<RecipeIngredie
     public RecipeIngredientRequestValidator()
     {
         RuleFor(x => x.IngredientId).NotEmpty();
-        RuleFor(x => x.Amount).GreaterThan(0);
+
+        // Amount and Unit are null together or set together. Null asserts "this ingredient has no
+        // stated quantity" (Phase 9.1 §3.1); a half-set pair is a half-written row, and a unit with
+        // no amount fabricates a measurement exactly as a mass derived from an unknown density
+        // would. Zero is still rejected — it is a quantity, and a wrong one.
+        RuleFor(x => x.Amount)
+            .GreaterThan(0)
+            .When(x => x.Amount.HasValue)
+            .WithMessage("Amount must be greater than zero, or null when no quantity is stated.");
+
         RuleFor(x => x.Unit)
             .NotEmpty()
             .Must(MeasurementUnit.IsValid)
-            .WithMessage($"Unit must be one of: {string.Join(", ", MeasurementUnit.All)}");
+            .WithMessage($"Unit must be one of: {string.Join(", ", MeasurementUnit.All)}")
+            .When(x => x.Amount.HasValue);
+
+        RuleFor(x => x.Unit)
+            .Null()
+            .WithMessage("Unit must be null when no amount is stated.")
+            .When(x => !x.Amount.HasValue);
+
         RuleFor(x => x.SourceAmount).GreaterThan(0).When(x => x.SourceAmount.HasValue);
         RuleFor(x => x.SourceUnit).NotEmpty().MaximumLength(32).When(x => x.SourceUnit is not null);
         RuleFor(x => x.Notes).MaximumLength(500).When(x => x.Notes is not null);

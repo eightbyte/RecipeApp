@@ -4,7 +4,7 @@
 Mobile-first web app for storing recipes, building meal plans, and generating shopping lists.
 
 - **Spec:** `SPEC.md` — read this for feature requirements and data model definitions.
-- **Current phase:** Phase 9 in progress (seed recipe library) — **v1 feature-complete**. Stages 1–3 (Wayback discovery, fetch, parse) done; stages 4–5 (LLM normalise, persist) next.
+- **Current phase:** Phase 9 in progress (seed recipe library) — **v1 feature-complete**. Stages 1–3 (Wayback discovery, fetch, parse) done, and Phase 9.1 (unquantified ingredients — the Stage 4 prerequisite) done; stages 4–5 (LLM normalise, persist) next.
 
 ## Repository structure
 ```
@@ -159,6 +159,15 @@ dotnet test RecipeApp.Tests/RecipeApp.Tests.csproj --coverage --coverage-output-
 - **`Ingredient.GramsPerMillilitre == null` means "no reliable density — do not invent a mass."**
   A cup of that ingredient is stored as `cup`, not as a fabricated gram figure. Liquids and
   packing-dominated ingredients are deliberately left null.
+- **`RecipeIngredient.Amount == null` means "the source states no quantity" (Phase 9.1).**
+  `salt`, `raisins`, `nonstick cooking spray` — a real property of home cooking, not a parse
+  defect. `Unit` is null exactly when `Amount` is; both validators reject a half-set pair, and
+  `RecipeIngredient.ToStoredMeasurement` holds the invariant at the entity boundary because
+  `ConfirmAsync` has no validation of its own and a service-level caller bypasses the endpoint
+  filter. **Never zero**: `0` renders as `0 g Salt` and sums into shopping lists. Unquantified rows
+  are partitioned out of `ShoppingListService` consolidation and never summed; an ingredient the
+  plan only ever names yields one amount-less item. On the frontend, `formatMeasurement` returns
+  null for a null amount, and scaling must short-circuit before multiplying — `null * 2` is `0`.
 - **Never destroy the input.** Imported rows record `RecipeIngredient.SourceAmount`/`SourceUnit`
   verbatim. These are provenance only — never summed, never used in consolidation — and every
   persistence path (scrape confirm, recipe create/update) must carry them through.
@@ -317,16 +326,37 @@ worth knowing: `CacheDirectory`, `PreferredSnapshotYear`, `FetchDelayMillisecond
   §20 "≥ 95% persisted" bar out of reach before the LLM has made a single mistake. Stage 4 needs a
   deliberate policy for unquantified ingredients (a `to taste` convention, or exempting them from
   the gate) rather than inheriting the rule as written.
-  **Addressed by `specs/phase-9.1-unquantified-ingredients.md` — a prerequisite for Stage 4, not
-  part of it.** It is not a "to taste" convention: only 40 of the 432 lines say "to taste" and 49%
+  **Resolved by Phase 9.1 (below), which is implemented.**
+- Phase 9.1 (`specs/phase-9.1-unquantified-ingredients.md`, backend + frontend, no new packages)
+  made "this ingredient has no stated quantity" representable — the prerequisite for Stage 4, not
+  part of it. It is not a "to taste" convention: only 40 of the 432 lines say "to taste" and 49%
   are ordinary foods (`raisins`, `lemon zest`), so the predicate is *the source states no
-  quantity*. The storage is `Amount = null, Unit = null` (zero renders as `0 g Salt` and sums into
-  shopping lists), which needs a migration widening both columns — `ShoppingListItem` already has
-  exactly this shape. The fix starts at `RecipeSchemaJson`, not at the gate: `amount` is a required
-  number, so grammar-constrained decoding *forces* the model to invent one. Note both
-  `RuleFor(x => x.Amount).GreaterThan(0)` validators, and that `ConfirmAsync` does no validation of
-  its own — Stage 5 calling it as a service bypasses the endpoint filter, so seeded rows would
-  persist and then fail on the user's first edit.
+  quantity*. Widened `RecipeIngredient.Amount`/`Unit` to nullable with migration
+  `AllowUnquantifiedRecipeIngredients` (columns only; no row is rewritten, nothing backfills), and
+  the same widening through `RecipeIngredientRequest`/`Response`, `ScrapeConfirmIngredient` and
+  `ScrapePreviewIngredient`. Added `Services/Seeding/SeedQuantityGate.cs` —
+  `HasStatedQuantity(text)` (ASCII digit, vulgar fraction, or a *leading* number word) plus
+  `Check(text, amount, unit)` returning a `SeedQuantityVerdict` with the unit already canonicalised.
+  Added `RecipeIngredient.ToStoredMeasurement`, used by both persistence paths.
+  **Three things worth knowing:**
+  - **The gate is stricter than the rule it replaces, not laxer.** The exemption is earned from the
+    source text, never granted by the model's output, so a model inventing `1 tsp` for a line
+    reading `salt` is now rejected where `Amount <= 0` waved it through. A model cannot opt itself
+    out by returning null for a line that *does* state a quantity.
+  - **The fix had to start at `RecipeSchemaJson`, not at the gate.** `amount` was a required
+    number, so grammar-constrained decoding *forced* the model to invent one. It is now
+    `["number", "null"]` and still required, so an absent quantity is an explicit assertion.
+    `JsonSchemaGrammar` already emitted `(number | null)` for that form, so no grammar work was
+    needed. `RecipeSchemaJson` became `internal` and `JsonSchemaGrammarTests` now reads it directly
+    — the local copy in that test file had already drifted and would have kept passing.
+  - **`null * 2` is `0` in JavaScript.** Guarding only `formatMeasurement` was not enough; each
+    view's `formatAmount` short-circuits before applying the portion multiplier, or every
+    unquantified ingredient renders as a bare `0`. A test caught this.
+  Frontend: `formatMeasurement` returns null for a null amount, new `toPayloadMeasurement` sends
+  null for both rather than coercing to `0`, and the detail and cooking views guard the amount
+  span. `ShoppingView` needed no change — it was already guarded. **Blast radius is deliberate and
+  wider than seeding**: hand-entered recipes may now omit an amount, and a scrape preview shows an
+  empty field where it used to show a fabricated number.
 
 ---
 ## Project Notes

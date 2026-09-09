@@ -193,15 +193,25 @@ public class ShoppingListService(AppDbContext db)
         // Step 1-3: Scale and group by IngredientId
         var byIngredient = new Dictionary<Guid, (Ingredient Ingredient, List<(decimal Amount, string Unit)> Rows)>();
 
+        // An unquantified ingredient (Phase 9.1 §3.1) is partitioned out before grouping so it can
+        // never be summed: adding a zero would silently claim the recipe needs none of it. It is
+        // tracked rather than dropped, because the shopper still has to buy the salt.
+        var unquantifiedIngredients = new Dictionary<Guid, Ingredient>();
+
         foreach (var mpr in planRecipes)
         {
             var multiplier = PortionSize.Multiplier(mpr.PortionSize);
             foreach (var ri in mpr.Recipe.Ingredients)
             {
-                var scaledAmount = ri.Amount * multiplier;
+                if (ri.Amount is not { } baseAmount || ri.Unit is not { } unit)
+                {
+                    unquantifiedIngredients[ri.IngredientId] = ri.Ingredient;
+                    continue;
+                }
+
                 if (!byIngredient.ContainsKey(ri.IngredientId))
                     byIngredient[ri.IngredientId] = (ri.Ingredient, []);
-                byIngredient[ri.IngredientId].Rows.Add((scaledAmount, ri.Unit));
+                byIngredient[ri.IngredientId].Rows.Add((baseAmount * multiplier, unit));
             }
         }
 
@@ -214,6 +224,16 @@ public class ShoppingListService(AppDbContext db)
             var needsReview = resultRows.Count > 1;
             foreach (var (amount, unit) in resultRows)
                 consolidated.Add((ing, amount, unit, needsReview));
+        }
+
+        // An ingredient measured in one recipe and merely named in another keeps its total alone:
+        // "500 g flour and also some flour" is no more useful to a shopper than "500 g flour".
+        // Only an ingredient the plan never quantifies yields an amount-less row — the same shape
+        // a custom item already takes, which the shopping view already renders.
+        foreach (var (ingredientId, ing) in unquantifiedIngredients)
+        {
+            if (byIngredient.ContainsKey(ingredientId)) continue;
+            consolidated.Add((ing, null, null, false));
         }
 
         // Sort: by IngredientCategory.All index, then DisplayName, then unit

@@ -673,21 +673,25 @@ Single-threaded through `LlamaModelHolder`'s `SemaphoreSlim` gate, ~10–30 s pe
 
 ### 11.3 Validation gate
 
-> **⚠️ Superseded in part by [Phase 9.1](phase-9.1-unquantified-ingredients.md).** The
-> `Amount <= 0` bullet below **must not be implemented as written** — measured on the parsed
-> corpus it fails 313 of 1,089 recipes (28.7%) before the model makes a single mistake, because
-> 432 ingredient lines state no quantity at all. Phase 9.1 replaces that one bullet with a source-
-> evidenced rule that is *stronger*, not weaker: an unquantified source line must produce a null
-> amount, and a model that invents a quantity for one is rejected. Phase 9.1 is a prerequisite for
-> Stage 4 — it carries a schema migration. Every other bullet here stands unchanged.
+> **⚠️ Superseded in part by [Phase 9.1](phase-9.1-unquantified-ingredients.md), which is
+> implemented (2026-09-08).** The `Amount <= 0` bullet below **must not be implemented as
+> written** — measured on the parsed corpus it fails 313 of 1,089 recipes (28.7%) before the model
+> makes a single mistake, because 432 ingredient lines state no quantity at all. Phase 9.1
+> replaces that one bullet with a source-evidenced rule that is *stronger*, not weaker: an
+> unquantified source line must produce a null amount, and a model that invents a quantity for one
+> is rejected. Stage 4 consumes it as `SeedQuantityGate.Check` in
+> `Services/Seeding/SeedQuantityGate.cs`, which returns the measurement already canonicalised.
+> Every other bullet here stands unchanged.
 
 LLM output is rejected and retried (up to `MaxLlmRetries`) when:
 
 - Any ingredient's unit fails `MeasurementUnit.IsValid` **after** `TryCanonicalise` — so
   `teaspoon` and `cups` pass (they canonicalise to `tsp` and `cup`) while `clove` and `pinch`
-  still fail
+  still fail. `SeedQuantityGate.Check` applies this, and it is the whole unit rule: the storable
+  set is `MeasurementUnit.All` and is never restated as a literal list (CLAUDE.md)
 - ~~Any ingredient has `Amount <= 0`~~ → **see Phase 9.1 §3.2**
-- Any unit is outside `g, kg, ml, L, pcs, tsp, tbsp`
+- ~~Any unit is outside `g, kg, ml, L, pcs, tsp, tbsp`~~ → duplicated the bullet above with a
+  stale list that predates `cup` becoming storable in Phase 8.5.1
 - `Steps` is empty, or step numbers are not contiguous from 1
 - Any `IngredientIndexes` entry is out of range
 - Ingredient count differs from the parsed count by more than 2 (indicates hallucinated or dropped items)
@@ -746,6 +750,14 @@ Selection is **stratified and deterministic**, not the first 20 alphabetically �
 - **Recipes with footnoted notes** (the `*` aside hazard, §10.3)
 - **Adapted-source credits** (provenance capture)
 - **Fractional quantities** (`1/4`, `1 1/2`)
+- **Unquantified ingredients** (Phase 9.1 §9 Q4, answered yes): **at least 3** of the 20 slugs
+  drawn from the 313 recipes carrying an unquantified line, and **at least 1** from the 6 carrying
+  four or more. This stratum tests the half of the gate that has no other coverage — a model
+  inventing a quantity for `salt` is rejected only here, and it is the failure mode most likely to
+  pass silently, because an invented `1 tsp` looks exactly like a correct extraction.
+- **A vulgar fraction with no ASCII digit** — `¼ cup sliced almonds (optional)` is the one corpus
+  line where a naive digit test would classify a real quarter-cup as unquantified and instruct the
+  model to discard it (Phase 9.1 §2)
 
 ### 14.0 Density-table review (run before the full harvest)
 

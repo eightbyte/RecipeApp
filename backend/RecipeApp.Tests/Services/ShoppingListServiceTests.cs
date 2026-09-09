@@ -271,7 +271,7 @@ public class ShoppingListServiceTests(DatabaseFixture db) : IAsyncLifetime
     /// </summary>
     private async Task<ShoppingListResponse> BuildListForAsync(
         decimal? gramsPerMillilitre,
-        params (decimal Amount, string Unit)[] rows)
+        params (decimal? Amount, string? Unit)[] rows)
     {
         await using var ctx = db.CreateDbContext();
         var ing = TestDataBuilder.Ingredient(gramsPerMillilitre: gramsPerMillilitre);
@@ -388,6 +388,56 @@ public class ShoppingListServiceTests(DatabaseFixture db) : IAsyncLifetime
         item.Unit.Should().Be("kg");
         item.Amount.Should().BeApproximately(1.284m, 0.001m);
         item.NeedsReview.Should().BeFalse();
+    }
+
+    // ── Aggregation — unquantified ingredients (Phase 9.1 §3.5) ──────────────
+
+    [Fact]
+    public async Task Aggregation_OnlyEverUnquantified_YieldsOneAmountLessRow()
+    {
+        // The shopper still has to buy the salt, so the ingredient is not dropped — it becomes
+        // the amount-less row a custom item already takes, which ShoppingView already renders.
+        var list = await BuildListForAsync(null, (null, null), (null, null));
+
+        var item = list.Items.Single();
+        item.Amount.Should().BeNull();
+        item.Unit.Should().BeNull();
+        item.NeedsReview.Should().BeFalse();
+    }
+
+    [Fact]
+    public async Task Aggregation_QuantifiedAndUnquantified_KeepsTheQuantifiedTotalAlone()
+    {
+        // "500 g flour and also some flour" is no more useful than "500 g flour". Crucially the
+        // unquantified row is not summed as a zero, which would claim the plan needs none of it.
+        var list = await BuildListForAsync(null, (200m, "g"), (null, null));
+
+        var item = list.Items.Single();
+        item.Amount.Should().Be(200m);
+        item.Unit.Should().Be("g");
+        item.NeedsReview.Should().BeFalse();
+    }
+
+    [Fact]
+    public async Task Aggregation_UnquantifiedRow_DoesNotFlagAnIncompatibleMixForReview()
+    {
+        // An absent amount is not a third dimension to reconcile: the mass/count split is what
+        // needs review, and the unquantified row neither adds a row nor changes the flag.
+        var list = await BuildListForAsync(null, (150m, "g"), (2m, "pcs"), (null, null));
+
+        list.Items.Should().HaveCount(2);
+        list.Items.Should().AllSatisfy(i => i.NeedsReview.Should().BeTrue());
+        list.Items.Should().AllSatisfy(i => i.Amount.Should().NotBeNull());
+    }
+
+    [Fact]
+    public async Task Aggregation_UnquantifiedRow_IsNeverStoredAsZero()
+    {
+        // The corpus check after Stage 4 asserts zero rows with Amount = 0; a zero anywhere means
+        // a fabricated quantity got through (Phase 9.1 §7).
+        var list = await BuildListForAsync(null, (null, null));
+
+        list.Items.Should().NotContain(i => i.Amount == 0m);
     }
 
     // ── Category ordering ─────────────────────────────────────────────────────

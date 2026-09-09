@@ -1,4 +1,5 @@
 using System.Text.Json.Nodes;
+using RecipeApp.API.Services;
 using RecipeApp.API.Services.Llm;
 
 namespace RecipeApp.Tests.Services.Llm;
@@ -97,7 +98,7 @@ public class JsonSchemaGrammarTests
     [Fact]
     public void ToGbnf_RecipeExtractionSchema_ContainsTopLevelFields()
     {
-        var schema = JsonNode.Parse(RecipeSchemaJson)!;
+        var schema = JsonNode.Parse(RecipeScrapeService.RecipeSchemaJson)!;
         var gbnf   = JsonSchemaGrammar.ToGbnf(schema);
 
         gbnf.Should().Contain("\\\"name\\\"");
@@ -105,6 +106,40 @@ public class JsonSchemaGrammarTests
         gbnf.Should().Contain("\\\"ingredients\\\"");
         gbnf.Should().Contain("\\\"steps\\\"");
         gbnf.Should().NotBeNullOrWhiteSpace();
+    }
+
+    /// <summary>
+    /// Read from the live constant, not a copy: decoding is grammar-constrained, so if the
+    /// service's schema ever declares <c>amount</c> as a bare number again the grammar will
+    /// <i>force</i> the model to invent one for a line reading <c>salt</c> (Phase 9.1 §1.3).
+    /// A copy in this file could drift back without anything noticing.
+    /// </summary>
+    [Fact]
+    public void ToGbnf_LiveRecipeExtractionSchema_LetsTheModelStateAnAbsentQuantity()
+    {
+        var schema = JsonNode.Parse(RecipeScrapeService.RecipeSchemaJson)!;
+        var gbnf   = JsonSchemaGrammar.ToGbnf(schema);
+
+        gbnf.Should().Contain("(number | null)");
+        gbnf.Should().Contain("(string | null)");
+    }
+
+    [Fact]
+    public void LiveRecipeExtractionSchema_DeclaresAmountAndUnitNullableAndStillRequired()
+    {
+        var schema = JsonNode.Parse(RecipeScrapeService.RecipeSchemaJson)!;
+        var ingredient = schema["properties"]!["ingredients"]!["items"]!;
+
+        // Nullable, so "no quantity" is expressible...
+        ingredient["properties"]!["amount"]!["type"]!.AsArray()
+            .Select(t => t!.GetValue<string>()).Should().BeEquivalentTo("number", "null");
+        ingredient["properties"]!["unit"]!["type"]!.AsArray()
+            .Select(t => t!.GetValue<string>()).Should().BeEquivalentTo("string", "null");
+
+        // ...and still required, so an absent quantity is an explicit assertion rather than a
+        // key the model quietly omitted (Phase 9.1 §3.3).
+        ingredient["required"]!.AsArray()
+            .Select(t => t!.GetValue<string>()).Should().Contain(["amount", "unit"]);
     }
 
     [Fact]
@@ -128,43 +163,10 @@ public class JsonSchemaGrammarTests
 
     // ── Schemas referenced from RecipeScrapeService ───────────────────────────
 
-    private const string RecipeSchemaJson = """
-        {
-          "type": "object",
-          "properties": {
-            "name":        { "type": "string" },
-            "description": { "type": ["string","null"] },
-            "servings":    { "type": "integer" },
-            "ingredients": {
-              "type": "array",
-              "items": {
-                "type": "object",
-                "properties": {
-                  "name":         { "type": "string" },
-                  "display_name": { "type": "string" },
-                  "amount":       { "type": "number" },
-                  "unit":         { "type": "string" },
-                  "notes":        { "type": ["string","null"] }
-                },
-                "required": ["name","display_name","amount","unit"]
-              }
-            },
-            "steps": {
-              "type": "array",
-              "items": {
-                "type": "object",
-                "properties": {
-                  "step_number":        { "type": "integer" },
-                  "instruction":        { "type": "string" },
-                  "ingredient_indexes": { "type": "array", "items": { "type": "integer" } }
-                },
-                "required": ["step_number","instruction","ingredient_indexes"]
-              }
-            }
-          },
-          "required": ["name","servings","ingredients","steps"]
-        }
-        """;
+    // The recipe extraction schema is read from RecipeScrapeService.RecipeSchemaJson directly.
+    // A local copy used to live here and had already drifted from the live constant by the time
+    // Phase 9.1 made amount nullable — the copy still declared it a bare number, so these tests
+    // would have kept passing while the grammar forced the model to invent a quantity.
 
     private const string MatchingSchemaJson = """
         {

@@ -29,7 +29,7 @@ public class RecipeScrapeService(
 
     // ── Recipe extraction schema ──────────────────────────────────────────────
 
-    private const string RecipeSchemaJson = """
+    internal const string RecipeSchemaJson = """
         {
           "type": "object",
           "properties": {
@@ -60,12 +60,12 @@ public class RecipeScrapeService(
                     "description": "Ingredient name as it should be displayed (e.g. 'Onion', 'Chicken Breast')."
                   },
                   "amount": {
-                    "type": "number",
-                    "description": "Numeric quantity. Use the amount as stated on the page."
+                    "type": ["number", "null"],
+                    "description": "Numeric quantity exactly as stated on the page. Null if the line states no quantity (e.g. 'salt', 'salt and pepper to taste', 'nonstick cooking spray'). Never invent a quantity."
                   },
                   "unit": {
-                    "type": "string",
-                    "description": "Unit of measurement as stated on the page. Preserve the original unit; do not convert."
+                    "type": ["string", "null"],
+                    "description": "Unit of measurement as stated on the page. Preserve the original unit; do not convert. Null when amount is null."
                   },
                   "notes": {
                     "type": ["string", "null"],
@@ -131,6 +131,7 @@ public class RecipeScrapeService(
         "You are a recipe data extraction assistant. " +
         "Extract the complete recipe from the web page text provided by the user. " +
         "If any information is missing or ambiguous, make a reasonable best-guess rather than omitting it. " +
+        "Never invent a quantity: if an ingredient line states no amount, emit null for both amount and unit. " +
         "Respond with a single JSON object conforming to the schema and nothing else.";
 
     // ── Ingredient category heuristic ─────────────────────────────────────────
@@ -202,13 +203,14 @@ public class RecipeScrapeService(
         for (int i = 0; i < orderedIngredients.Count; i++)
         {
             var ing = orderedIngredients[i];
+            var (amount, unit) = RecipeIngredient.ToStoredMeasurement(ing.Amount, ing.Unit);
             var ri = new RecipeIngredient
             {
                 Id           = Guid.NewGuid(),
                 RecipeId     = recipe.Id,
                 IngredientId = resolvedIngredientIds[i],
-                Amount       = ing.Amount,
-                Unit         = ing.Unit,
+                Amount       = amount,
+                Unit         = unit,
                 SourceAmount = ing.SourceAmount,
                 SourceUnit   = ing.SourceUnit?.Trim(),
                 Notes        = ing.Notes?.Trim(),
@@ -431,12 +433,15 @@ public class RecipeScrapeService(
 
         // Stage B: resolve an import-resolvable unit (cup) against the matched ingredient's
         // density. An ingredient with no catalogue row has no density by construction, so it
-        // keeps its measurement as stated.
+        // keeps its measurement as stated. An unquantified row has nothing to resolve and is
+        // handed through untouched — a null amount never reaches the converter (Phase 9.1 §3.5).
         ScrapePreviewIngredient ResolveAgainstCatalogue(ScrapePreviewIngredient row, Guid ingredientId)
         {
+            if (row.Amount is not { } statedAmount || row.Unit is not { } statedUnit) return row;
+
             densityById.TryGetValue(ingredientId, out var density);
             var (resolvedAmount, resolvedUnit) =
-                measurementConverter.ResolveForImport(row.Amount, row.Unit, density);
+                measurementConverter.ResolveForImport(statedAmount, statedUnit, density);
             return row with { Amount = resolvedAmount, Unit = resolvedUnit };
         }
 
@@ -450,8 +455,21 @@ public class RecipeScrapeService(
             var normalisedName = ing.Name.Trim().ToLowerInvariant();
 
             // Stage A. The source measurement is recorded verbatim first, so a conversion can
-            // always be audited or recomputed later (Phase 8.5.1 §6.2).
-            var (amount, unit) = MeasurementConverter.ToCanonical(ing.Amount, ing.Unit);
+            // always be audited or recomputed later (Phase 8.5.1 §6.2). A line the model reported
+            // as unquantified carries neither a canonical nor a source measurement: there is
+            // nothing to convert and nothing to record, and a unit without an amount would be as
+            // invented as the amount itself (Phase 9.1 §3.1).
+            decimal? amount       = null;
+            string?  unit         = null;
+            decimal? sourceAmount = null;
+            string?  sourceUnit   = null;
+
+            if (ing.Amount is { } statedAmount)
+            {
+                (amount, unit) = MeasurementConverter.ToCanonical(statedAmount, ing.Unit ?? string.Empty);
+                sourceAmount   = Math.Round((decimal)statedAmount, 3);
+                sourceUnit     = ing.Unit?.Trim();
+            }
 
             var row = new ScrapePreviewIngredient(
                 IngredientId:      null,
@@ -459,8 +477,8 @@ public class RecipeScrapeService(
                 DisplayName:       ing.DisplayName,
                 Amount:            amount,
                 Unit:              unit,
-                SourceAmount:      Math.Round((decimal)ing.Amount, 3),
-                SourceUnit:        ing.Unit?.Trim(),
+                SourceAmount:      sourceAmount,
+                SourceUnit:        sourceUnit,
                 Notes:             string.IsNullOrWhiteSpace(ing.Notes) ? null : ing.Notes,
                 IsNew:             true,
                 SuggestedCategory: CategoriseIngredient(normalisedName),
@@ -632,11 +650,17 @@ public class RecipeScrapeService(
         List<ExtractedStep> Steps
     );
 
+    /// <param name="Amount">
+    /// Null when the source line states no quantity. The schema declares
+    /// <c>["number", "null"]</c> precisely so the grammar permits the model to say so rather than
+    /// forcing it to invent a figure (Phase 9.1 §1.3, §3.3).
+    /// </param>
+    /// <param name="Unit">Null exactly when <paramref name="Amount"/> is null.</param>
     internal record ExtractedIngredient(
         string Name,
         [property: JsonPropertyName("display_name")] string DisplayName,
-        double Amount,
-        string Unit,
+        double? Amount,
+        string? Unit,
         string? Notes
     );
 

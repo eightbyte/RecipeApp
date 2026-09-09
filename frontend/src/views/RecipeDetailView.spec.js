@@ -119,6 +119,57 @@ describe('RecipeDetailView', () => {
     expect(wrapper.text()).toContain('(4 cups)')
   })
 
+  it('renders an unquantified ingredient as its name alone', async () => {
+    // "salt" states no quantity, so it is stored with a null amount and a null unit and must
+    // render as "Salt", never "0 g Salt" (Phase 9.1 §3.4).
+    const wrapper = await mountView({
+      ingredients: [{
+        id: 'ri-1',
+        ingredientId: 'test-ingredient-1',
+        ingredientName: 'salt',
+        ingredientDisplayName: 'Salt',
+        category: 'DRY_GOODS',
+        amount: null,
+        unit: null,
+        sourceAmount: null,
+        sourceUnit: null,
+        notes: null,
+        displayOrder: 0,
+      }],
+    })
+
+    // The row is exactly the name — no amount, no unit, and no bare "0". Scaling a null amount
+    // by the portion multiplier yields 0 in JavaScript, so asserting only on "0 g" would pass
+    // against exactly that bug.
+    expect(wrapper.get('#ingredient-ri-1').text().trim()).toBe('Salt')
+    expect(wrapper.vm.formatAmount(null, null)).toBeNull()
+  })
+
+  it('leaves an unquantified ingredient unscaled at Double portions', async () => {
+    // There is nothing to multiply, and 2 x nothing must not become a number.
+    const wrapper = await mountView({
+      ingredients: [{
+        id: 'ri-1',
+        ingredientId: 'test-ingredient-1',
+        ingredientName: 'salt',
+        ingredientDisplayName: 'Salt',
+        category: 'DRY_GOODS',
+        amount: null,
+        unit: null,
+        sourceAmount: null,
+        sourceUnit: null,
+        notes: null,
+        displayOrder: 0,
+      }],
+    })
+
+    wrapper.vm.portionSize = 'DOUBLE'
+    await wrapper.vm.$nextTick()
+
+    expect(wrapper.vm.formatAmount(null, null)).toBeNull()
+    expect(wrapper.get('#ingredient-ri-1').text().trim()).toBe('Salt')
+  })
+
   it('shows no source measurement for a hand-entered row', async () => {
     const wrapper = await mountView()
     expect(wrapper.text()).toContain('200 g')

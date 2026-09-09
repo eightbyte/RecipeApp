@@ -153,6 +153,37 @@ public class ScrapeValidatorTests
         result.ShouldHaveValidationErrorFor(x => x.Amount);
     }
 
+    // ── Unquantified ingredients (Phase 9.1 §3.1) ─────────────────────────────
+
+    [Fact]
+    public void Ingredient_NullAmountAndNullUnit_HasNoErrors()
+    {
+        // A scraped page reading "salt to taste" has always had this problem; before Phase 9.1
+        // the preview showed a number the model invented to satisfy the schema.
+        var result = _ingredientValidator.TestValidate(
+            Ingredient() with { Amount = null, Unit = null });
+
+        result.ShouldNotHaveAnyValidationErrors();
+    }
+
+    [Fact]
+    public void Ingredient_NullAmountWithUnit_HasErrorOnUnit()
+    {
+        var result = _ingredientValidator.TestValidate(
+            Ingredient() with { Amount = null, Unit = MeasurementUnit.Gram });
+
+        result.ShouldHaveValidationErrorFor(x => x.Unit);
+    }
+
+    [Fact]
+    public void Ingredient_AmountWithNullUnit_HasErrorOnUnit()
+    {
+        var result = _ingredientValidator.TestValidate(
+            Ingredient() with { Amount = 100m, Unit = null });
+
+        result.ShouldHaveValidationErrorFor(x => x.Unit);
+    }
+
     // ── ScrapeConfirmIngredientValidator: provenance bounds ───────────────────
 
     [Fact]

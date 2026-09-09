@@ -109,7 +109,11 @@
                   :color="isCurrent(index) ? 'primary' : undefined"
                   :variant="isCurrent(index) ? 'flat' : 'tonal'"
                 >
-                  <span class="font-weight-medium mr-1">{{ formatAmount(ing.amount, ing.unit) }}</span>
+                  <!-- Absent for an ingredient whose source stated no quantity (Phase 9.1 §3.4) -->
+                  <span
+                    v-if="formatAmount(ing.amount, ing.unit)"
+                    class="font-weight-medium mr-1"
+                  >{{ formatAmount(ing.amount, ing.unit) }}</span>
                   <span v-if="formatSource(ing)" class="text-caption mr-1">{{ formatSource(ing) }}</span>
                   {{ ing.ingredientDisplayName }}
                 </v-chip>
@@ -217,7 +221,12 @@ function stepIngredients(step) {
     .filter(Boolean)
 }
 
+/**
+ * Short-circuits on a null amount rather than delegating: `null * 2` is `0` in JavaScript,
+ * which would turn an ingredient with no stated quantity into a rendered `0` (Phase 9.1 §3.4).
+ */
 function formatAmount(baseAmount, unit) {
+  if (baseAmount == null) return null
   return formatMeasurement(baseAmount * portionMultiplier.value, unit)
 }
 

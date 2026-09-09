@@ -77,6 +77,45 @@ public class RecipeValidatorTests
         result.ShouldHaveValidationErrorFor(x => x.Unit);
     }
 
+    // ── Unquantified ingredients (Phase 9.1 §3.1) ─────────────────────────────
+
+    [Fact]
+    public void Ingredient_NullAmountAndNullUnit_HasNoErrors()
+    {
+        // "salt" states no quantity. Null asserts that; it is not a placeholder for an unknown.
+        var result = _ingredientValidator.TestValidate(
+            new RecipeIngredientRequest(Guid.NewGuid(), null, null, null, 0));
+        result.ShouldNotHaveAnyValidationErrors();
+    }
+
+    [Fact]
+    public void Ingredient_NullAmountWithUnit_HasErrorOnUnit()
+    {
+        // A unit measuring nothing is as fabricated as a mass derived from an unknown density.
+        var result = _ingredientValidator.TestValidate(
+            new RecipeIngredientRequest(Guid.NewGuid(), null, "g", null, 0));
+        result.ShouldHaveValidationErrorFor(x => x.Unit);
+    }
+
+    [Fact]
+    public void Ingredient_AmountWithNullUnit_HasErrorOnUnit()
+    {
+        var result = _ingredientValidator.TestValidate(
+            new RecipeIngredientRequest(Guid.NewGuid(), 100m, null, null, 0));
+        result.ShouldHaveValidationErrorFor(x => x.Unit);
+    }
+
+    [Fact]
+    public void Ingredient_NullAmount_StillCarriesSourceProvenance()
+    {
+        // Provenance is independent of the canonical measurement: an imported line can record
+        // what it said while stating no quantity of its own.
+        var result = _ingredientValidator.TestValidate(
+            new RecipeIngredientRequest(Guid.NewGuid(), null, null, null, 0,
+                SourceAmount: null, SourceUnit: null));
+        result.ShouldNotHaveAnyValidationErrors();
+    }
+
     [Fact]
     public void Ingredient_SourceMeasurement_IsOptionalAndRoundTrips()
     {

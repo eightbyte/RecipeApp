@@ -313,7 +313,7 @@ import { ref, reactive, computed, onMounted, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useRecipeStore }     from '@/stores/recipes'
 import { useIngredientStore } from '@/stores/ingredients'
-import { MEASUREMENT_UNITS, DEFAULT_UNIT } from '@/constants/units'
+import { MEASUREMENT_UNITS, DEFAULT_UNIT, toPayloadMeasurement } from '@/constants/units'
 
 const props = defineProps({ id: String })
 const route  = useRoute()
@@ -508,8 +508,8 @@ async function submit() {
       servings:    form.servings,
       ingredients: form.ingredients.map((ing, i) => ({
         ingredientId: ing.ingredientId,
-        amount:       Number(ing.amount),
-        unit:         ing.unit,
+        // An empty amount round-trips as null, never as 0 (Phase 9.1 §3.4).
+        ...toPayloadMeasurement(ing.amount, ing.unit),
         notes:        ing.notes?.trim() || null,
         displayOrder: i,
         sourceAmount: ing.sourceAmount ?? null,

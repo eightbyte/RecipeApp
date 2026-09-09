@@ -1,8 +1,8 @@
 # Phase 9.1 — Unquantified Ingredients
 
-**Version:** 1.0
-**Date:** 2026-09-07
-**Status:** Proposed. Blocks Phase 9 Stage 4.
+**Version:** 1.1
+**Date:** 2026-09-07 (implemented 2026-09-08)
+**Status:** **Implemented.** All four §9 questions answered. Unblocks Phase 9 Stage 4.
 **Depends on:** Phase 9 Stages 1–3 complete (the parsed corpus is the evidence base)
 **Supersedes:** Phase 9 §11.3 bullet 2 (`Any ingredient has Amount <= 0`)
 
@@ -354,16 +354,48 @@ and zero rows with `Amount = 0`.** A zero anywhere means a fabricated quantity g
 
 ## 8. Definition of done
 
-- [ ] Migration applied; `Amount`/`Unit` nullable on `RecipeIngredient`
-- [ ] Both validators accept null-and-null, reject a half-set pair, still reject `0`
-- [ ] `RecipeSchemaJson` declares nullable `amount`/`unit`; grammar verified to emit `null`
-- [ ] Stage 4 gate implements the §3.2 table, including the new reject-on-invented-quantity case
-- [ ] Consolidation never sums an unquantified row; an only-unquantified ingredient yields one amount-less item
-- [ ] No view renders `0 g` for an unquantified ingredient; form and preview round-trip null
-- [ ] Full backend and frontend suites green
-- [ ] Corpus check: 432 null, 0 zero
-- [ ] Phase 9 §11.3 amended to point here; §22.1 item 2 marked resolved
-- [ ] `CLAUDE.md` measurement section records the null-amount convention
+- [x] Migration applied; `Amount`/`Unit` nullable on `RecipeIngredient` — `AllowUnquantifiedRecipeIngredients`, columns only, no row rewritten
+- [x] Both validators accept null-and-null, reject a half-set pair, still reject `0`
+- [x] `RecipeSchemaJson` declares nullable `amount`/`unit`; grammar verified to emit `null`
+- [x] Stage 4 gate implements the §3.2 table, including the new reject-on-invented-quantity case
+- [x] Consolidation never sums an unquantified row; an only-unquantified ingredient yields one amount-less item
+- [x] No view renders `0 g` for an unquantified ingredient; form and preview round-trip null
+- [x] Full backend and frontend suites green — 788 backend, 206 frontend, zero failures
+- [ ] Corpus check: 432 null, 0 zero — **deferred to Stage 4**, which is what produces the rows
+- [x] Phase 9 §11.3 amended to point here; §22.1 item 2 marked resolved
+- [x] `CLAUDE.md` measurement section records the null-amount convention
+
+### 8.1 What implementation added beyond §4
+
+Four things the work inventory did not anticipate. Each is recorded because it changes the shape
+of the fix rather than only its size.
+
+1. **`RecipeIngredient.ToStoredMeasurement`**, used by `RecipeService.CreateIngredients` and
+   `RecipeScrapeService.ConfirmAsync`. §4 said only "assign nullable" at both sites, which leaves
+   §1.2's trap half-open: neither method validates, so a service-level caller — Stage 5 — could
+   still persist a half-set pair the endpoint validator rejects. The helper holds the invariant at
+   the entity boundary instead. It coerces in one direction only: a null amount drops its unit
+   (a unit measuring nothing is not data), while an amount with no unit is kept and left for the
+   validators to reject loudly, because discarding a stated amount would be silent data loss.
+
+2. **A fifth rejection reason, `InventedUnit`.** §3.2's table rejects an unquantified line only on
+   a non-null *amount*. A null amount carrying a unit is the same fabrication in a different
+   column, and it is exactly the half-set pair both validators reject — so the gate must not admit
+   one either, or Stage 5 reintroduces the trap the gate exists to close.
+
+3. **`null * multiplier` is `0` in JavaScript.** §3.4 and §4 put the display guard in
+   `formatMeasurement` and in the templates. That is not sufficient: both views scale *before*
+   formatting, so the null was destroyed on the way in and every unquantified ingredient rendered
+   as a bare `0` — which the template's `v-if` then happily showed, since `"0"` is a non-empty
+   string. Each view's `formatAmount` now short-circuits on a null amount. Half of nothing is
+   still nothing. A test caught this; an earlier test asserting only `not.toContain('0 g')` had
+   passed against the bug, and was tightened to assert the row's exact text.
+
+4. **`RecipeSchemaJson` became `internal` and `JsonSchemaGrammarTests` reads it directly.** That
+   file kept a private copy of the schema, and the copy had already drifted — it still declared
+   `amount` a bare number. Left alone, the grammar tests would have gone on passing while the live
+   grammar forced the model to invent a quantity, which is precisely the failure §1.3 identifies.
+   The copy is deleted; `InternalsVisibleTo("RecipeApp.Tests")` was already configured.
 
 **Consequence for Phase 9 §20.** With this in place the 28.7% is no longer a floor on failure, and
 the "≥ 95% persisted" bar becomes a measurement of the model's accuracy — which is what it was
@@ -371,7 +403,7 @@ meant to measure.
 
 ---
 
-## 9. Open questions
+## 9. Open questions — all answered, 2026-09-08
 
 1. **Nullable `Unit` alongside nullable `Amount` — confirm.** §3.1 argues both, on the grounds that
    a fabricated unit is the same error as a fabricated mass. The cheaper alternative is a nullable

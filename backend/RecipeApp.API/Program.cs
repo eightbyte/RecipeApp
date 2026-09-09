@@ -71,6 +71,8 @@ builder.Services.Configure<RecipeSeedingOptions>(
 
 builder.Services.AddSingleton<SeedCacheStore>();
 builder.Services.AddSingleton<IWaybackHarvester, WaybackHarvester>();
+builder.Services.AddSingleton<MyPlateRecipeParser>();
+builder.Services.AddSingleton<IRecipeLibrarySeeder, RecipeLibrarySeeder>();
 
 builder.Services.AddHttpClient(WaybackHarvester.HttpClientName, (sp, client) =>
 {

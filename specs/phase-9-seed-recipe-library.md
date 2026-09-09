@@ -1,10 +1,15 @@
 # Phase 9 — Seed Recipe Library (USDA MyPlate)
 
-**Version:** 1.1  
+**Version:** 1.2  
 **Date:** 2026-09-07  
-**Status:** Stages 1–2 implemented and the corpus is harvested. Stages 3–5 not started.  
+**Status:** Stages 1–3 implemented. The corpus is harvested and fully parsed. Stages 4–5 not started.  
 **Depends on:** Phase 8 (Local LLM) complete — requires a working `ILlmStructuredClient` and a seeded ingredient catalogue
 
+> **Revision 1.2 (2026-09-07)** records what Stage 3 found in the cached corpus. §10.3's
+> hazards were each observed on a single research page; all six have now been counted across all
+> 1,089 pages, and two of them were wrong in a way that would have lost content — see §10.2a and
+> §22. The corpus was also curated down from 1,123 to 1,089 by hand before Stage 3 ran.
+>
 > **Revision 1.1 (2026-09-07)** records what the live archive actually did. Sections carrying an
 > **`✅ As built`** or **`⚠️ Revised`** note have been reconciled against the implementation;
 > everything else is still the original plan. Three prescriptions were wrong in practice and are
@@ -242,8 +247,9 @@ backend/RecipeApp.API/
 │   ├── IWaybackHarvester.cs           ✅ Added — the seam that keeps CI off the network
 │   ├── WaybackHarvester.cs            ✅ Stages 1, 2, 2b — CDX discovery + fetch
 │   ├── SeedRecipesCommand.cs          ✅ Added — CLI arg parsing + run modes
-│   ├── MyPlateRecipeParser.cs         ⬜ Stage 3 — HTML → ExtractedRecipe
-│   └── RecipeLibrarySeeder.cs         ⬜ Stages 4, 5 — orchestration
+│   ├── MyPlateRecipeParser.cs        ✅ Stage 3 — HTML → ParsedSeedRecipe
+│   ├── SeedParseModels.cs            ✅ Added — parsed recipe, template, failure, result
+│   └── RecipeLibrarySeeder.cs        ◐ Stage 3 orchestration done; stages 4, 5 pending
 └── (Program.cs — register services + wire the CLI command)  ✅
 ```
 
@@ -265,15 +271,17 @@ backend/RecipeApp.Tests/
 ├── Seeding/
 │   ├── SeedCacheStoreTests.cs         ✅ 29 tests
 │   ├── WaybackHarvesterTests.cs       ✅ 50 tests
-│   ├── MyPlateRecipeParserTests.cs    ⬜
-│   └── Fixtures/myplate/*.html        ⬜ Committed sample pages
+│   ├── MyPlateRecipeParserTests.cs    ✅ 32 tests
+│   ├── RecipeLibrarySeederTests.cs    ✅ 23 tests — added; the Stage 3 runner
+│   └── Fixtures/myplate/*.html        ✅ 4 committed pages, verbatim from the harvest
 └── Infrastructure/
     ├── TestHostEnvironment.cs         ✅ Added — IHostEnvironment for the cache's content root
     └── StubHttpClientFactory.cs       ✅ Added — per-request scripted archive responses
 ```
 
-`Fixtures/myplate/*.html` should be drawn from the harvested corpus once Stage 3 starts, and
-**must include one page of each template variant** — see §10.1.
+`Fixtures/myplate/*.html` are drawn from the harvested corpus and include one page of each
+template variant — see §10.1. They are committed whole, Wayback toolbar included, because a
+trimmed excerpt would not catch a selector-scoping mistake.
 
 ---
 
@@ -434,9 +442,23 @@ verified against the markup, not inferred from a failure count.
 
 ## 10. Stage 3 — Parse
 
-`MyPlateRecipeParser.Parse(string html, string slug, string originalUrl) → ExtractedRecipe`
+**✅ As built.** `MyPlateRecipeParser.Parse(string html, string slug, string originalUrl)`
 
-Deterministic, no LLM. Verified against a live archived page during spec research.
+Deterministic, no LLM, no database, no network. Runs over the whole corpus in about four seconds.
+
+> **⚠️ Revised in 1.2 — the return type is `ParsedSeedRecipe`, not `ExtractedRecipe`.**
+>
+> `ExtractedRecipe` cannot hold notes, the source credit, the image URL or the published yield
+> string, and §12 needs all four at persist time to compose `Recipe.Description` and
+> `Recipe.ImageUrl`. Folding them together in Stage 3 would mean Stage 5 could not take them
+> apart. `parsed/<slug>.json` therefore caches the richer, lossless shape, and the provisional
+> `ExtractedRecipe` projection (§10.2) is Stage 4's to build when it assembles its prompt — it is
+> a lossy view of this, not the artefact worth caching.
+>
+> **Result: 1,089 of 1,089 pages parsed, zero failures** — 8,601 ingredient lines, 6,639 steps,
+> 1,024 primary and 65 legacy templates. Verified corpus-wide for the things a green run does not
+> prove: no `U+FFFD`, no NBSP, no undecoded entities, no leaked markup, no `web.archive.org` URL
+> in any persisted field, and every recipe carrying a name, ingredients, steps and a serving count.
 
 ### 10.1 Field extraction
 
@@ -502,26 +524,104 @@ The ingredient block yields clean per-item strings with prep notes already paren
 
 The parser splits each `<li>` into a raw string and a parenthetical note, then emits a **provisional** `ExtractedIngredient` with `Amount = 0`, `Unit = ""` and the full text in `Name`. **It does not attempt regex quantity parsing.** Vulgar fractions (`1/4`), nested container quantities (`1 can (14.5 ounces)`), and descriptive counts (`2 medium celery stalks`) are exactly the cases regex handles badly and the LLM handles well. Stage 4 owns quantity extraction.
 
+### 10.2a Step structure — *added in 1.2*
+
+The draft assumed §11 would receive "the single `directions` prose blob" and segment it with the
+LLM. **It is not a blob.** All 1,089 pages render their directions as an `<ol>`, so the steps are
+already segmented by the source and Stage 3 emits them directly. Two shapes complicate that, and
+both lose content if ignored:
+
+| Shape | Pages | Handling |
+|---|---|---|
+| One `<ol>`, nothing else | 1,059 | Each `<li>` is a step |
+| More than one `<ol>`, split by a section label | 28 | **Every** list contributes; the label folds onto the step it introduces |
+| Content after the last `</ol>` | 30 | Not a step — routed to `Notes` (§10.3 hazard 5) |
+| A nested sub-list inside a step | 1 | Counted once, as part of its parent step |
+
+**Taking only the first `<ol>` would silently truncate 28 recipes.** `frosted-cake` is the clear
+case: eight steps for the cake, a `<p><strong>Icing:</strong></p>`, then three more. The label
+becomes `"Icing: Cream together cream cheese and milk until smooth."` rather than a contentless
+step of its own, which reads correctly in Cooking Mode.
+
+**The nested sub-list is the subtle one.** `QuerySelectorAll("li")` descends into it, so
+`black-bean-and-couscous-salad` produced its four preparation tasks twice — once inside step 2's
+text and again as steps 3–6. Both list walks take direct `<li>` children only.
+
+**Consequence for §11.** Stage 4 should *keep* this segmentation rather than re-derive it. The
+model's remaining job is ingredient quantity extraction and `IngredientIndexes` linkage; asking it
+to re-split steps it did not segment risks losing the source's own ordering for no gain.
+
+### 10.2b Ingredient group headings — *added in 1.2*
+
+80 pages render group headings as list items — `<li><b>For the Dressing:</b></li>`. These are
+layout, not shopping, and feeding them to Stage 4 as ingredients produces junk rows.
+
+The rule is deliberately narrow: **an `<li>` wholly wrapped in `<b>`/`<strong>` *and* ending in a
+colon is dropped.** That is 86 items. The colon is load-bearing — 40 other bolded items are real
+entries (`aluminum foil (10x12 inches square)`, `Note: "Minced" means cut up into tiny pieces.`)
+and are kept. The trade is accepted knowingly: ~40 colon-less headings (`Dressing`, `Topping`)
+survive as ingredient lines, which Stage 4 can drop on semantics. Widening the rule to catch them
+would start dropping real ingredients, and a missing ingredient is worse than a junk one.
+
 ### 10.3 Known data hazards
 
 Each of these was observed in the archived sample and must be handled:
 
 1. **Truncated descriptions** — JSON-LD `description` is cut at ~150 chars with a trailing `…`. The full text is in `.mp-recipe-full__description`; prefer the HTML value and fall back to JSON-LD.
+
+   > **✅ Confirmed in 1.2 — real, on 286 of 1,089 pages (26%).** The HTML field is present on
+   > every page; on the other 797 the two agree exactly once entities are decoded, and it is never
+   > the shorter of the two. Four pages have neither, and import with a null description.
 2. **Mojibake** — archived pages contain `U+FFFD` replacement characters (observed: `165 degrees F<?>(3-5 minutes)`), from non-breaking spaces mis-decoded during archival. Strip `U+FFFD` and normalise `&nbsp;` to a regular space before handing text to the LLM.
 
-   > **Confirm before building this.** Every page sampled from the harvested corpus so far is
-   > clean UTF-8. The cache is on disk, so the honest first step is to grep the 1,123 files for
-   > `U+FFFD` and find out how many pages and which fields are actually affected, rather than
-   > writing stripping logic against a hazard observed once during research. `&nbsp;` normalisation
-   > is worth doing regardless — it is cheap and unconditionally correct.
+   > **⚠️ Resolved in 1.2 — this hazard does not exist in this corpus, and no stripping logic
+   > was written.** Measured across all 1,089 cached pages: **zero `U+FFFD`** and zero undecoded
+   > HTML entities.
+   >
+   > The observation behind the hazard was a rendering artefact. The markup at that position is a
+   > literal `&nbsp;` — `165 degrees F&nbsp;(3-5 minutes)` — which any HTML parser decodes to
+   > U+00A0; whatever displayed it as `<?>` was not decoding entities. `&nbsp;` normalisation *is*
+   > done, unconditionally, and it is the whole of what this hazard needed: 1,088 of 1,089 pages
+   > contain at least one.
+   >
+   > Writing replacement-character stripping anyway would have been untestable against real input
+   > and would have implied a decoding problem the cache does not have.
 3. **Wayback URL rewriting** — the archive rewrites *all* absolute URLs, including `@context` (`"http://web.archive.org/web/…/https://schema.org"`) and `@id`. The parser must unwrap the `/web/{timestamp}/` prefix before treating any URL as canonical, and must not assume `@context` equals `https://schema.org`.
 4. **Wayback toolbar injection** — the archive injects its own banner markup and scripts. Scope all selectors beneath the page's own content root; never take the first matching element document-wide.
+
+   > **✅ Done in 1.2, though measurement says it was never load-bearing.** Everything is scoped
+   > beneath `.mp-recipe-full`, which is present on all 1,089 pages. Checked corpus-wide: no
+   > recipe field class occurs outside that root, and none occurs more than once on a page — so
+   > the naive document-wide selector would in fact have worked. The scoping is kept because it
+   > costs nothing and the guarantee is worth having explicitly rather than by luck.
 5. **Notes bleed into instructions** — the instructions field frequently ends with a footnoted `*` aside (`* Store bought chili sauce can be high in sodium…`) that is a note, not a step. Split on the footnote marker and route the remainder to `Notes`.
+
+   > **⚠️ Revised in 1.2 — real on 30 pages, but "split on the footnote marker" would catch only
+   > 11 of them.** The trailing content takes three forms: `*`-prefixed asides (11), labelled
+   > paragraphs such as `Storage:` / `Create-a-Flavor Changes:` / `Oven Instructions:` (11), and
+   > bare prose (8).
+   >
+   > The rule used instead is structural and needs no marker: **anything after the last `</ol>` is
+   > not a step.** It covers all 30, and it cannot misfire on a step that merely happens to contain
+   > an asterisk — `"Add tomatoes with juice, chili sauce*, green pepper…"` stays a step, which a
+   > marker-based split would have broken.
 6. **Adapted-source credits** — many recipes carry `Source: Adapted from: Food Hero, Oregon State University Cooperative Extension`. These are land-grant extension programs; the recipes remain USDA-published federal works. Capture the credit into `Recipe.Description` alongside `SeedAttributionNote` for provenance, and **do not discard it**.
+
+   > **✅ Confirmed in 1.2 — 1,081 of 1,089 pages carry one**, in a single consistent shape:
+   > `<span class="field--name-field-source"><span>Source:</span><span class="field__item">…</span></span>`.
+   > Selecting `.field__item` drops the `Source:` label structurally, so no string-stripping is
+   > needed. Held on `ParsedSeedRecipe.SourceCredit` for Stage 5 to compose, not merged into the
+   > description by Stage 3.
 
 ### 10.4 Parse failure
 
 A recipe missing a name, an ingredient block, or an instruction block is marked `failed` with reason `ParseFailed` and skipped. Failures are reported in the run summary, not thrown — one bad page must not abort a 1,000-recipe harvest.
+
+**✅ As built**, with the reason narrowed to a `SeedParseFailure` enum so the summary says *which*
+part was missing rather than only that something was: `NoContentRoot`, `NoName`,
+`NoIngredientBlock`, `NoIngredients`, `NoInstructionBlock`, `NoSteps`. The parser throws
+`SeedParseException`; the stage runner catches it per slug, records `ParseFailed: <reason>` in
+`state.json`, and continues. **Zero pages in the corpus reach any of these.**
 
 ---
 
@@ -573,12 +673,20 @@ Single-threaded through `LlamaModelHolder`'s `SemaphoreSlim` gate, ~10–30 s pe
 
 ### 11.3 Validation gate
 
+> **⚠️ Superseded in part by [Phase 9.1](phase-9.1-unquantified-ingredients.md).** The
+> `Amount <= 0` bullet below **must not be implemented as written** — measured on the parsed
+> corpus it fails 313 of 1,089 recipes (28.7%) before the model makes a single mistake, because
+> 432 ingredient lines state no quantity at all. Phase 9.1 replaces that one bullet with a source-
+> evidenced rule that is *stronger*, not weaker: an unquantified source line must produce a null
+> amount, and a model that invents a quantity for one is rejected. Phase 9.1 is a prerequisite for
+> Stage 4 — it carries a schema migration. Every other bullet here stands unchanged.
+
 LLM output is rejected and retried (up to `MaxLlmRetries`) when:
 
 - Any ingredient's unit fails `MeasurementUnit.IsValid` **after** `TryCanonicalise` — so
   `teaspoon` and `cups` pass (they canonicalise to `tsp` and `cup`) while `clove` and `pinch`
   still fail
-- Any ingredient has `Amount <= 0`
+- ~~Any ingredient has `Amount <= 0`~~ → **see Phase 9.1 §3.2**
 - Any unit is outside `g, kg, ml, L, pcs, tsp, tbsp`
 - `Steps` is empty, or step numbers are not contiguous from 1
 - Any `IngredientIndexes` entry is out of range
@@ -698,13 +806,15 @@ dotnet run -- seed-recipes --harvest         # ✅ Stages 1-2 — download and c
 dotnet run -- seed-recipes --harvest --limit 3   # ✅ Cap the pages fetched this run
 dotnet run -- seed-recipes --refresh-cache   # ✅ Discard raw/ + images/ and re-harvest
 dotnet run -- seed-recipes --report          # ✅ Print state.json summary, no work
+dotnet run -- seed-recipes --parse           # ✅ Stage 3 — cached HTML → parsed/, offline
+dotnet run -- seed-recipes --parse --force   # ✅ Discard parsed/ and re-derive
 dotnet run -- seed-recipes --trial           # ⬜ Full pipeline, 20 stratified recipes
 dotnet run -- seed-recipes                   # ⬜ Full pipeline, entire library
 dotnet run -- seed-recipes --limit 50        # ⬜ Full pipeline, first 50 unprocessed
 dotnet run -- seed-recipes --force           # ⬜ Re-import recipes already in the database
 ```
 
-The unimplemented modes are parsed and rejected with an explicit "stages 3-5 are not implemented
+The unimplemented modes are parsed and rejected with an explicit "stages 4-5 are not implemented
 yet" message and exit code `2`, rather than silently doing part of the job. Usage errors exit `1`;
 the implemented modes exit `0`.
 
@@ -750,9 +860,20 @@ The guiding rule: **one bad recipe never aborts the run**, and **no suspect reci
 
 Following the existing xunit.v3 + Testcontainers suite.
 
-### 17.1 Unit — `MyPlateRecipeParserTests`
+### 17.1 Unit — `MyPlateRecipeParserTests` ✅ (32 tests) + `RecipeLibrarySeederTests` ✅ (23 tests)
 
-Against committed HTML fixtures in `Fixtures/myplate/`, each capturing a real archived page:
+Against four committed fixtures in `Fixtures/myplate/`, copied verbatim out of the harvest —
+Wayback toolbar and all, because a tidied excerpt would pass a scoping bug that a real page
+catches. Each was chosen for a hazard: `20-minute-chicken-creole` (truncated description, `*`
+aside, `&nbsp;`, prep notes, adapted credit), `apple-tuna-sandwiches` (legacy template),
+`cuban-salad` (two step lists, bolded group headings), `black-bean-and-couscous-salad` (nested
+sub-list). The `U+FFFD` case from the draft list below is asserted as an *absence*, per §10.3.
+
+`RecipeLibrarySeederTests` covers the runner separately: resume, `--force`, `--limit`,
+per-slug failure isolation, an unharvested manifest entry, an unsafe slug recorded rather than
+thrown, and `ClearParsedContentAsync` rewinding only as far as the artefacts justify.
+
+Original draft list, all covered:
 
 - Extracts name, description, servings, image from JSON-LD
 - Extracts ingredient list and instruction blob from Drupal field markup
@@ -852,11 +973,12 @@ Network calls to Wayback are **not** exercised in CI — `WaybackHarvester` is b
 
 - [x] `seed-recipes --discover` reports ≥ 800 slugs and writes `manifest.json` — **1,123**
 - [x] `seed-recipes --harvest` caches raw HTML and images with resumable state — **1,123/1,123 pages, 1,115 photos**
+- [x] `seed-recipes --parse` turns every cached page into a recipe — **1,089/1,089, zero failures**
 - [ ] `seed-recipes --trial` imports 20 stratified recipes
 - [ ] All 11 trial acceptance criteria (§14.1) pass on manual review
 - [ ] Full run completes with ≥ 95% of discovered recipes persisted
 - [ ] Re-running `seed-recipes` is a no-op
-- [x] Unit tests pass; CI needs no GPU and no network — **79 seeding tests, 673 suite-wide**
+- [x] Unit tests pass; CI needs no GPU and no network — **134 seeding tests, 728 suite-wide**
 - [ ] Integration tests (`RecipeLibrarySeederTests`) — blocked on stages 4–5
 - [x] `CLAUDE.md` updated with the new files, config keys and CLI command
 - [x] `.gitignore` updated for cache directories
@@ -905,13 +1027,79 @@ reports zero failures, as it now does.
 | 10.1 | Ingredient class names "stable across the archive" | Two templates: 1,058 / 65 |
 | 18 Q3 | ~1,072 recipes | 1,123 |
 
-### 21.2 Open items for Stage 3
+### 21.2 Open items for Stage 3 — **all closed in 1.2**
 
-1. **Handle both templates** (§10.1). This is the one that affects the §20 bar.
-2. **Confirm the `U+FFFD` hazard** against the cached corpus before writing stripping logic
-   (§10.3 hazard 2) — every page sampled so far is clean UTF-8.
-3. **Draw `Fixtures/myplate/*.html` from the real corpus**, including at least one legacy-template
-   page such as `apple-tuna-sandwiches`.
-4. **Re-check §10.3 hazards 1, 5 and 6** the same way — truncated descriptions, footnote bleed and
-   adapted-source credits were each observed on a single research page, and the corpus can now say
-   how common they actually are, and whether they take more than one form.
+1. ~~**Handle both templates** (§10.1).~~ **Done** — 1,024 primary and 65 legacy parse through one
+   code path; the template is recorded per recipe and reported per run.
+2. ~~**Confirm the `U+FFFD` hazard.**~~ **Done, and it does not exist** — zero across all 1,089
+   pages, so no stripping logic was written. See §10.3 hazard 2.
+3. ~~**Draw fixtures from the real corpus.**~~ **Done** — four pages, including
+   `apple-tuna-sandwiches` for the legacy template. See §17.1.
+4. ~~**Re-check hazards 1, 5 and 6.**~~ **Done, and hazard 5 was wrong** — the footnote marker it
+   prescribed covers only 11 of the 30 affected pages. See §10.3.
+
+Two things the corpus revealed that were not on this list at all, both of which silently lose
+content: **multi-list instructions** (28 pages) and **nested sub-lists inside a step** (1 page).
+See §10.2a — the second was caught only by reading the parsed output, not by the run succeeding.
+
+---
+
+## 22. Stage 3 Results (2026-09-07)
+
+The corpus is fully parsed. Stage 4 can be developed against `parsed/` with no HTML in sight.
+
+| | Result |
+|---|---|
+| Pages in the manifest | 1,089 *(curated down from 1,123 by hand before Stage 3)* |
+| **Parsed** | **1,089 / 1,089 — zero failures**, ~4 s |
+| Templates | 1,024 primary, 65 legacy |
+| Ingredient lines | 8,601 (86 group headings dropped) |
+| Steps | 6,639 |
+| Recipes with a description | 1,085 (286 recovered from the HTML field, not JSON-LD) |
+| Recipes with a source credit | 1,081 |
+| Recipes with notes | 1,015 |
+| Recipes with an image URL | 1,081 |
+
+**A green run is not the evidence that matters.** The parser not throwing says only that four
+selectors matched. The output was checked corpus-wide for the failures that pass silently: zero
+`U+FFFD`, zero `U+00A0`, zero undecoded entities, zero leaked markup, zero `web.archive.org` URLs
+in any field, every `SourceUrl` canonical, and no empty or duplicated step anywhere. That last
+check is what caught the nested sub-list bug — the run had reported 1,089 successes with it in
+place.
+
+### 22.1 What Stage 4 inherits
+
+1. **Steps are already segmented and should stay that way.** §11 assumed a prose blob needing LLM
+   segmentation; the source provides an ordered list on every page (§10.2a). The model's remaining
+   jobs are ingredient quantity extraction and `IngredientIndexes` linkage.
+
+2. **§11.3's `Amount <= 0` rule cannot be applied as written.** Measured on the parsed output:
+   **432 of 8,601 ingredient lines (5.0%) contain no quantity at all** — `salt`, `pepper`,
+   `nonstick cooking spray`, `salt and pepper, to taste` — and they are spread across **313 of the
+   1,089 recipes (28.7%)**, not concentrated in a few.
+
+   > Rejecting any recipe with a zero-amount ingredient therefore fails 28.7% of the corpus before
+   > the model has made a single mistake, which alone puts the §20 "≥ 95% persisted" bar out of
+   > reach. This is a real property of home-cooking recipes, not a parse defect: "salt to taste"
+   > has no amount because there isn't one.
+   >
+   > Stage 4 needs a deliberate policy — the likely shape being a `to taste` convention that
+   > stores the ingredient with a null or zero amount and exempts it from the gate, keeping the
+   > gate's teeth for an ingredient that *states* a quantity the model then got wrong. That is the
+   > case the gate was written for, and it stays fully armed.
+
+   **Resolved by [Phase 9.1](phase-9.1-unquantified-ingredients.md) (2026-09-07).** The diagnosis
+   held; the proposed remedy needed three corrections. It is not a `to taste` convention — only 40
+   of the 432 lines say "to taste", and 49% are ordinary foods (`raisins`, `lemon zest`), so the
+   predicate is *the source states no quantity*. Zero and null are not interchangeable: `0` renders
+   as `0 g Salt` and sums into shopping lists, so the storage is `Amount = null, Unit = null`,
+   which needs a migration. And the exemption cannot start at the gate — `RecipeSchemaJson` makes
+   `amount` a required number, so the grammar *forces* the model to invent one. See Phase 9.1.
+
+3. **~40 colon-less group headings survive as ingredient lines** (`Dressing`, `Topping`,
+   `For the Dressing`). Deliberate — see §10.2b. Stage 4 can drop them on semantics, where the
+   information to do so safely actually exists.
+
+4. **Notes are held separately from the description.** `ParsedSeedRecipe` carries `Notes` and
+   `SourceCredit` as distinct fields so §12 can compose `Recipe.Description` from the description,
+   the credit and `SeedAttributionNote`. Stage 3 deliberately does not merge them.

@@ -215,6 +215,38 @@ public class SeedCacheStore
     public Task<string> ReadRawAsync(string slug, CancellationToken ct = default) =>
         File.ReadAllTextAsync(RawPath(slug), ct);
 
+    // ── Parsed recipes (Stage 3) ──────────────────────────────────────────────
+
+    public bool HasParsed(string slug) => File.Exists(ParsedPath(slug));
+
+    public async Task WriteParsedAsync(
+        string slug, ParsedSeedRecipe recipe, CancellationToken ct = default)
+    {
+        EnsureDirectories();
+        await WriteJsonAtomicallyAsync(ParsedPath(slug), recipe, ct);
+    }
+
+    /// <summary>The cached Stage 3 output for a slug, or null when it is absent or unreadable.</summary>
+    public async Task<ParsedSeedRecipe?> TryLoadParsedAsync(string slug, CancellationToken ct = default)
+    {
+        var path = ParsedPath(slug);
+        if (!File.Exists(path)) return null;
+
+        try
+        {
+            await using var stream = File.OpenRead(path);
+            return await JsonSerializer.DeserializeAsync<ParsedSeedRecipe>(stream, JsonOptions, ct);
+        }
+        catch (JsonException ex)
+        {
+            // Same posture as the raw cache: a derived artefact that cannot be read is discarded
+            // and rebuilt, because re-parsing costs milliseconds and needs no network.
+            _logger.LogWarning(ex,
+                "Parsed recipe at {Path} is unreadable and will be re-parsed.", path);
+            return null;
+        }
+    }
+
     // ── Images (Stage 2b) ─────────────────────────────────────────────────────
 
     /// <summary>Path of the cached image for a slug, whatever its extension, or null if none was harvested.</summary>
@@ -252,6 +284,32 @@ public class SeedCacheStore
         await SaveStateAsync(ct);
 
         _logger.LogInformation("Discarded cached pages and images under {Path}.", RootPath);
+    }
+
+    /// <summary>
+    /// Discards every parsed recipe and rewinds any slug that had got past Stage 3, so
+    /// <c>--parse --force</c> re-derives them. Cached pages and images are untouched — the point
+    /// of the 2→3 cache boundary is that re-parsing never costs a re-download.
+    /// </summary>
+    public async Task ClearParsedContentAsync(CancellationToken ct = default)
+    {
+        DeleteDirectoryContents(ParsedDirectory);
+
+        var state = await LoadStateAsync(ct);
+        foreach (var (slug, slugState) in state.Slugs)
+        {
+            if (slugState.Stage == SeedStage.Discovered) continue;
+
+            // The cached file is the authority, here as in the harvest: a slug is rewound to the
+            // furthest stage its artefacts still support, so a page that failed to fetch is not
+            // credited with a fetch it never made.
+            slugState.Stage     = HasRaw(slug) ? SeedStage.Fetched : SeedStage.Discovered;
+            slugState.Attempts  = 0;
+            slugState.LastError = null;
+        }
+
+        await SaveStateAsync(ct);
+        _logger.LogInformation("Discarded parsed recipes under {Path}.", ParsedDirectory);
     }
 
     private static void DeleteDirectoryContents(string directory)

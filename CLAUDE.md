@@ -4,7 +4,7 @@
 Mobile-first web app for storing recipes, building meal plans, and generating shopping lists.
 
 - **Spec:** `SPEC.md` — read this for feature requirements and data model definitions.
-- **Current phase:** Phase 9 in progress (seed recipe library) — **v1 feature-complete**. Stages 1–2 (Wayback discovery + fetch) done; stages 3–5 (parse, LLM normalise, persist) next.
+- **Current phase:** Phase 9 in progress (seed recipe library) — **v1 feature-complete**. Stages 1–3 (Wayback discovery, fetch, parse) done; stages 4–5 (LLM normalise, persist) next.
 
 ## Repository structure
 ```
@@ -16,7 +16,7 @@ RecipeApp/
 │   ├── Filters/             (Phase 8.5.2) ValidationFilter.cs — endpoint validation filter
 │   ├── DTOs/                Request/response DTOs (added from Phase 2)
 │   ├── Services/            Business logic services (added from Phase 2)
-│   │   └── Seeding/         (Phase 9) USDA MyPlate seed import — harvester, cache, CLI command
+│   │   └── Seeding/         (Phase 9) USDA MyPlate seed import — harvester, parser, cache, CLI
 │   ├── seed-data/myplate/   (Phase 9) On-disk harvest cache; only manifest.json is committed
 │   └── Enums/               Shared enum/constant classes
 ├── frontend/                Vue 3 SPA
@@ -90,12 +90,14 @@ Each detects its argument, runs, and exits without starting Kestrel. Run from `b
 dotnet run -- seed-catalogue [count]   # LLM-generated starter ingredient catalogue (default 200)
 dotnet run -- seed-densities           # Curated bulk densities; idempotent, only fills nulls
 
-# Phase 9 — USDA MyPlate seed library. Stages 1-2 implemented; 3-5 pending.
+# Phase 9 — USDA MyPlate seed library. Stages 1-3 implemented; 4-5 pending.
 dotnet run -- seed-recipes --report        # Print cached progress; no work, no network
 dotnet run -- seed-recipes --discover      # Stage 1 — CDX query → manifest.json (~1,123 slugs)
 dotnet run -- seed-recipes --harvest       # Stages 1-2 — cache pages + photos (~50 min, resumable)
 dotnet run -- seed-recipes --harvest --limit 3
 dotnet run -- seed-recipes --refresh-cache # Discard cached pages/photos, re-harvest
+dotnet run -- seed-recipes --parse         # Stage 3 — cached HTML → parsed/*.json (offline, ~4 s)
+dotnet run -- seed-recipes --parse --force # Discard parsed/ and re-derive from the cached pages
 ```
 
 `seed-recipes` needs no database — it touches only the archive and the local cache. Ctrl+C stops
@@ -266,17 +268,65 @@ worth knowing: `CacheDirectory`, `PreferredSnapshotYear`, `FetchDelayMillisecond
   Tests: `Seeding/SeedCacheStoreTests.cs`, `Seeding/WaybackHarvesterTests.cs`, plus
   `Infrastructure/TestHostEnvironment.cs` and `Infrastructure/StubHttpClientFactory.cs`. No
   network in CI.
-- **Phase 9 Stage 3 must handle two MyPlate page templates**, measured across the harvested
-  corpus. Every page has an ingredient block and an instruction block, but the ingredient block
-  carries one of two Drupal class names: `field--name-field-mp-ingredients` (1,058 pages, the one
-  spec §10.1 lists) or `field--name-field-ingredients` (65 pages, an older content type). The 65
-  legacy pages also use `field--name-field-recipe-image` rather than `field--name-field-media-image`
-  and carry `field--name-field-recipe-serving-size`. `field--name-field-instructions`,
-  `field--name-field-notes` and `field--name-field-source` are common to both. Selecting only the
-  spec's class would fail 5.8% of the corpus for no reason and put the §20 "≥ 95% persisted" bar
-  at risk before the LLM is even involved.
-  Also: spec §10.3 hazard 2 predicts `U+FFFD` mojibake — worth confirming against the cached
-  corpus before building the stripping logic, since the pages sampled so far are clean UTF-8.
+- Phase 9 Stage 3 (backend-only, no new packages) added `Services/Seeding/MyPlateRecipeParser.cs`
+  (cached page → `ParsedSeedRecipe`, deterministic, no LLM), `Services/Seeding/SeedParseModels.cs`
+  (`ParsedSeedRecipe`, `ParsedIngredientLine`, `MyPlateTemplate`, `SeedParseFailure`,
+  `SeedParseResult`, `SeedParseException`), and `Services/Seeding/RecipeLibrarySeeder.cs`
+  (`IRecipeLibrarySeeder.ParseAsync` — the manifest walk, per-slug failure isolation, resume).
+  `SeedCacheStore` gained `HasParsed`/`WriteParsedAsync`/`TryLoadParsedAsync`/
+  `ClearParsedContentAsync`; `RecipeSeedingOptions` gained `DefaultServings` (4);
+  `SeedRecipesCommand` gained `--parse`, and `--force` now also means "re-derive" for it.
+  **Result: 1,089/1,089 pages parsed, zero failures, ~4 s** — 8,601 ingredient lines and 6,639
+  steps, 1,024 primary + 65 legacy templates.
+- **What the corpus settled about Stage 3's hazards** (spec §10.3, all re-measured against the
+  1,089 cached pages rather than the single research page they were observed on):
+  - **Hazard 2 (mojibake) does not exist here.** Zero `U+FFFD` and zero undecoded entities across
+    the corpus, so **no stripping logic was written**. The observation behind it —
+    `165 degrees F<?>(3-5 minutes)` — is a literal `&nbsp;`, which AngleSharp decodes; NBSP is
+    normalised to a space unconditionally (1,088 of 1,089 pages contain one).
+  - **Hazard 1 (truncated descriptions) is real: 286 pages.** The parser prefers
+    `.mp-recipe-full__description` and falls back to JSON-LD; the two agree on the other 797.
+  - **Hazard 5 (notes bleeding into steps) is real but not marker-shaped: 30 pages.** Only 11 of
+    those carry the `*` the spec said to split on; the rest are `Storage:` / `Create-a-Flavor
+    Changes:` / bare prose. The rule used instead is structural — **nothing after the last
+    `<ol>` is a step** — which covers all 30 and needs no marker.
+  - **Hazard 6 (adapted-source credits): 1,081 of 1,089 pages** carry one; captured to
+    `SourceCredit` via `.field__item`, which drops the `Source:` label without string-stripping.
+  - **Hazard 4 (toolbar injection) is not a live risk, but scoping is kept anyway.** No recipe
+    field class occurs outside `.mp-recipe-full` or more than once per page.
+- **Two structural facts about the corpus that the spec did not predict**, both of which silently
+  lose content if ignored:
+  - **Every one of the 1,089 pages renders its directions as an `<ol>`** — steps are already
+    segmented, so Stage 3 emits them directly and nothing has to be guessed. But **28 pages carry
+    more than one list**, split by a section label (`Icing:`, `Make Dumplings:`). Taking only the
+    first list drops the rest of the recipe. Labels are folded onto the step they introduce
+    rather than becoming contentless steps.
+  - **A nested sub-list inside a step must be counted once.** `QuerySelectorAll("li")` descends
+    into it, so the sub-list's text appeared both inside its parent step and again as separate
+    steps (caught on `black-bean-and-couscous-salad`). Both list walks take direct `<li>` children
+    only.
+- **Ingredient group headings are dropped, narrowly.** An `<li>` wholly wrapped in `<b>`/`<strong>`
+  *and* ending in a colon is layout, not shopping — 86 such items on 80 pages (`For the Dressing:`).
+  The colon is load-bearing: 40 other bolded items are real entries (`aluminum foil (10x12 inches
+  square)`) and are kept, at the cost of ~40 colon-less headings surviving as ingredients.
+- **Stage 4 risk measured from the parsed output: `Amount <= 0` cannot be a blanket rejection.**
+  432 of 8,601 ingredient lines (5.0%) contain no digit at all — `salt`, `pepper`,
+  `nonstick cooking spray`, `salt and pepper, to taste` — and they are spread across **313 of the
+  1,089 recipes (28.7%)**. Spec §11.3's validation gate rejects any recipe with an ingredient
+  whose `Amount <= 0`; applied literally that fails 28.7% of the corpus on its own and puts the
+  §20 "≥ 95% persisted" bar out of reach before the LLM has made a single mistake. Stage 4 needs a
+  deliberate policy for unquantified ingredients (a `to taste` convention, or exempting them from
+  the gate) rather than inheriting the rule as written.
+  **Addressed by `specs/phase-9.1-unquantified-ingredients.md` — a prerequisite for Stage 4, not
+  part of it.** It is not a "to taste" convention: only 40 of the 432 lines say "to taste" and 49%
+  are ordinary foods (`raisins`, `lemon zest`), so the predicate is *the source states no
+  quantity*. The storage is `Amount = null, Unit = null` (zero renders as `0 g Salt` and sums into
+  shopping lists), which needs a migration widening both columns — `ShoppingListItem` already has
+  exactly this shape. The fix starts at `RecipeSchemaJson`, not at the gate: `amount` is a required
+  number, so grammar-constrained decoding *forces* the model to invent one. Note both
+  `RuleFor(x => x.Amount).GreaterThan(0)` validators, and that `ConfirmAsync` does no validation of
+  its own — Stage 5 calling it as a service bypasses the endpoint filter, so seeded rows would
+  persist and then fail on the user's first edit.
 
 ---
 ## Project Notes

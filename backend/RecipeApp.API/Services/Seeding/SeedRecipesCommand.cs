@@ -5,9 +5,9 @@ namespace RecipeApp.API.Services.Seeding;
 /// after the <c>seed-recipes</c> token — and drives the harvest stages, then exits without
 /// starting Kestrel.
 ///
-/// <para>Stages 1 and 2 (discover, fetch, images) are implemented. The pipeline modes that need
-/// the parser, the LLM pass and persistence report as unimplemented rather than silently doing
-/// part of the job.</para>
+/// <para>Stages 1-3 (discover, fetch, images, parse) are implemented. The pipeline modes that
+/// need the LLM pass and persistence report as unimplemented rather than silently doing part of
+/// the job.</para>
 /// </summary>
 public static class SeedRecipesCommand
 {
@@ -37,6 +37,9 @@ public static class SeedRecipesCommand
         /// <summary>Stages 1–2 — download and cache pages and images, no LLM.</summary>
         public bool Harvest { get; init; }
 
+        /// <summary>Stage 3 — parse cached pages into recipes, no LLM and no database.</summary>
+        public bool Parse { get; init; }
+
         /// <summary>Print the cached progress summary and do no work.</summary>
         public bool Report { get; init; }
 
@@ -46,14 +49,14 @@ public static class SeedRecipesCommand
         /// <summary>Run the stratified trial subset through the full pipeline.</summary>
         public bool Trial { get; init; }
 
-        /// <summary>Re-import recipes already present in the database.</summary>
+        /// <summary>Redo work already done — re-parse cached recipes, re-import persisted ones.</summary>
         public bool Force { get; init; }
 
         /// <summary>Cap on how many recipes this run processes.</summary>
         public int? Limit { get; init; }
 
-        /// <summary>Whether this invocation needs stages 3–5, which are not yet implemented.</summary>
-        public bool RequiresFullPipeline => !Discover && !Harvest && !Report;
+        /// <summary>Whether this invocation needs stages 4–5, which are not yet implemented.</summary>
+        public bool RequiresFullPipeline => !Discover && !Harvest && !Parse && !Report;
     }
 
     /// <summary>Parses the command's own arguments, or returns null after reporting a usage error.</summary>
@@ -67,6 +70,7 @@ public static class SeedRecipesCommand
             {
                 case "--discover":      arguments = arguments with { Discover = true }; break;
                 case "--harvest":       arguments = arguments with { Harvest = true }; break;
+                case "--parse":         arguments = arguments with { Parse = true }; break;
                 case "--report":        arguments = arguments with { Report = true }; break;
                 case "--refresh-cache": arguments = arguments with { RefreshCache = true }; break;
                 case "--trial":         arguments = arguments with { Trial = true }; break;
@@ -98,11 +102,12 @@ public static class SeedRecipesCommand
 
           --discover        Stage 1 only — build the manifest and report the slug count
           --harvest         Stages 1-2 — download and cache pages and images, no LLM
+          --parse           Stage 3 — parse cached pages into recipes, offline
           --report          Print the cached progress summary and do no work
           --refresh-cache   Discard cached pages and images, then re-harvest
           --limit <n>       Process at most n recipes this run
           --trial           Full pipeline over the stratified trial subset
-          --force           Re-import recipes already present in the database
+          --force           Redo work already done (re-parse, or re-import)
         """;
 
     // ── Execution ─────────────────────────────────────────────────────────────
@@ -130,9 +135,12 @@ public static class SeedRecipesCommand
             if (arguments.Harvest || arguments.RefreshCache)
                 return await HarvestAsync(harvester, logger, arguments.Limit, ct);
 
+            if (arguments.Parse)
+                return await ParseAsync(services, harvester, cache, logger, arguments, ct);
+
             logger.LogError(
-                "Stages 3-5 (parse, normalise, persist) are not implemented yet, so this mode " +
-                "cannot run. Use --discover, --harvest or --report.\n{Usage}", Usage);
+                "Stages 4-5 (LLM normalise, persist) are not implemented yet, so this mode " +
+                "cannot run. Use --discover, --harvest, --parse or --report.\n{Usage}", Usage);
             return NotImplementedExitCode;
         }
         catch (SeedHarvestException ex)
@@ -142,7 +150,7 @@ public static class SeedRecipesCommand
         }
         catch (OperationCanceledException)
         {
-            logger.LogWarning("Seed harvest cancelled. Progress is cached — re-run to resume.");
+            logger.LogWarning("Seed run cancelled. Progress is cached — re-run to resume.");
             return FailureExitCode;
         }
     }
@@ -176,6 +184,41 @@ public static class SeedRecipesCommand
         logger.LogInformation(
             "Images: {Fetched} fetched, {Skipped} skipped, {Failed} failed.",
             result.ImagesFetched, result.ImagesSkipped, result.ImagesFailed);
+
+        foreach (var (slug, error) in result.Failures.OrderBy(pair => pair.Key, StringComparer.Ordinal))
+            logger.LogWarning("  {Slug}: {Error}", slug, error);
+
+        return 0;
+    }
+
+    private static async Task<int> ParseAsync(
+        IServiceProvider services,
+        IWaybackHarvester harvester,
+        SeedCacheStore cache,
+        ILogger logger,
+        SeedRecipesArguments arguments,
+        CancellationToken ct)
+    {
+        var seeder = services.GetRequiredService<IRecipeLibrarySeeder>();
+
+        // --force here means "re-derive", not "re-download": the cached pages are untouched, which
+        // is the whole point of caching between stages 2 and 3.
+        if (arguments.Force)
+            await cache.ClearParsedContentAsync(ct);
+
+        var manifest = await harvester.EnsureManifestAsync(ct);
+        var result   = await seeder.ParseAsync(manifest, arguments.Limit, arguments.Force, ct);
+
+        logger.LogInformation(
+            "Parse complete: {Parsed} parsed, {Skipped} already parsed, {Failed} failed " +
+            "(of {Total} in the manifest).",
+            result.Parsed, result.Skipped, result.Failed, manifest.Recipes.Count);
+
+        logger.LogInformation("Templates: {Primary} primary, {Legacy} legacy.",
+            result.PrimaryTemplate, result.LegacyTemplate);
+
+        if (result.NotHarvested > 0)
+            logger.LogWarning("{Count} recipes have no cached page yet.", result.NotHarvested);
 
         foreach (var (slug, error) in result.Failures.OrderBy(pair => pair.Key, StringComparer.Ordinal))
             logger.LogWarning("  {Slug}: {Error}", slug, error);

@@ -57,6 +57,14 @@ public class RecipeSeedingOptions
     /// <summary>Base backoff before the first retry; doubled on each subsequent attempt.</summary>
     public int RetryBackoffMilliseconds { get; init; } = 5000;
 
+    /// <summary>
+    /// Serving count assumed when a page publishes no <c>recipeYield</c>. Every page in the
+    /// harvested corpus states one, so this is a guard rather than a routine path — but a recipe
+    /// with no serving count cannot be scaled or shopped for, and inventing four is more useful
+    /// than storing zero.
+    /// </summary>
+    public int DefaultServings { get; init; } = 4;
+
     /// <summary>Retries per recipe when LLM output fails the Stage 4 validation gate.</summary>
     public int MaxLlmRetries { get; init; } = 2;
 

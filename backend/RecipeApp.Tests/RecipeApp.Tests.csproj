@@ -34,6 +34,13 @@
   </ItemGroup>
 
   <ItemGroup>
+    <!-- Archived MyPlate pages, verbatim from the Phase 9 harvest. Committed so the Stage 3
+         parser is exercised against real markup — Wayback toolbar, Drupal chrome and all —
+         rather than against a tidied excerpt that would not catch a scoping mistake. -->
+    <None Include="Seeding\Fixtures\**\*.html" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+
+  <ItemGroup>
     <ProjectReference Include="..\RecipeApp.API\RecipeApp.API.csproj" />
   </ItemGroup>
 

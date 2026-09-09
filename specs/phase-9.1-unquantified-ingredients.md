@@ -312,6 +312,10 @@ separate fix (semantic, at Stage 4, where the information to judge them exists) 
 deliberately does not solve it. It is worth noting that Phase 9.1 makes them *quieter*: a heading
 that previously would have failed the gate now passes it. Tracked as §9 Q3.
 
+> **Analysis in [Phase 9.2](phase-9.2-recipe-sections.md).** After consideration the user has 
+> decided not to worry about this artifact.  The items and the effect does not require special 
+> handling and are considered acceptable artifacts since this is just seed data.
+
 **Equipment lines** (`bamboo skewers`, `aluminum foil` — 18 lines) are likewise out of scope. They
 will persist as ingredients with no amount and land in the `Other` category.
 
@@ -373,13 +377,20 @@ meant to measure.
    a fabricated unit is the same error as a fabricated mass. The cheaper alternative is a nullable
    `Amount` with `Unit` left non-nullable and set to `""`. Recommend **both nullable**; it is one
    extra column in the same migration and it matches `ShoppingListItem` exactly.
+   - both can be nullable
 2. **Should an unquantified ingredient show a `to taste` affordance in the UI?** §3.4 assumes no.
    Note that only 35.6% of the population are seasonings, so a literal `to taste` label would
    misdescribe `raisins` and `bamboo skewers`. If an affordance is wanted, "as needed" is the
    honest wording.
+   - no, dont show 'to taste' or 'as needed'
 3. **Group headings (§6) — fix in Phase 9 Stage 4, or defer?** They are ~40 lines across the
    corpus and Phase 9.1 makes them pass the gate rather than fail it. Recommend fixing in Stage 4,
    tracked separately, not folded in here.
+   - this brings into question recipes with multiple parts.  Can we add a recipe step type for header? Or is there an easier solution to indicate steps are for a different part of the recipe?  Sounds like a 9.2 item potentially
+   - **Answered by [Phase 9.2](phase-9.2-recipe-sections.md) (2026-09-08).** 
+   - The User has declared to not proceed with this change as the artifacts are imaterial.  They do not need
+   further consideration and can fall through the process as is.  These are acceptable artifacts.
 4. **Does the trial run (§14) need a stratum for unquantified ingredients?** Recommend **yes** —
    at least 3 of the 20 pinned slugs should be drawn from the 313, and one from the 6 recipes
    carrying 4+ unquantified lines.
+   - Yes

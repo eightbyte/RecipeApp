@@ -1,3 +1,4 @@
+using System.Security.Cryptography;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using System.Text.RegularExpressions;
@@ -247,6 +248,59 @@ public class SeedCacheStore
         }
     }
 
+    /// <summary>
+    /// Hash of a slug's cached Stage 3 output, or null when it has none.
+    ///
+    /// <para>Taken over the file's bytes rather than the deserialised recipe, so it is cheap and
+    /// stable: the writer's serializer options are fixed, so the same parse produces the same bytes
+    /// on any machine. Stage 4 records it, which is what lets <c>--parse --force</c> re-derive the
+    /// corpus without silently leaving hours of LLM output behind that was computed from a page the
+    /// parser no longer reads the same way.</para>
+    /// </summary>
+    public async Task<string?> TryComputeParsedFingerprintAsync(
+        string slug, CancellationToken ct = default)
+    {
+        var path = ParsedPath(slug);
+        if (!File.Exists(path)) return null;
+
+        await using var stream = File.OpenRead(path);
+        var hash = await SHA256.HashDataAsync(stream, ct);
+        return Convert.ToHexStringLower(hash);
+    }
+
+    // ── Normalised recipes (Stage 4) ──────────────────────────────────────────
+
+    public bool HasNormalised(string slug) => File.Exists(NormalisedPath(slug));
+
+    public async Task WriteNormalisedAsync(
+        string slug, NormalisedSeedRecipe recipe, CancellationToken ct = default)
+    {
+        EnsureDirectories();
+        await WriteJsonAtomicallyAsync(NormalisedPath(slug), recipe, ct);
+    }
+
+    /// <summary>The cached Stage 4 output for a slug, or null when it is absent or unreadable.</summary>
+    public async Task<NormalisedSeedRecipe?> TryLoadNormalisedAsync(
+        string slug, CancellationToken ct = default)
+    {
+        var path = NormalisedPath(slug);
+        if (!File.Exists(path)) return null;
+
+        try
+        {
+            await using var stream = File.OpenRead(path);
+            return await JsonSerializer.DeserializeAsync<NormalisedSeedRecipe>(stream, JsonOptions, ct);
+        }
+        catch (JsonException ex)
+        {
+            // Unlike a parsed recipe, re-deriving this one costs a GPU pass — but keeping an
+            // unreadable file would cost the recipe entirely, so it is discarded and redone.
+            _logger.LogWarning(ex,
+                "Normalised recipe at {Path} is unreadable and will be re-normalised.", path);
+            return null;
+        }
+    }
+
     // ── Images (Stage 2b) ─────────────────────────────────────────────────────
 
     /// <summary>Path of the cached image for a slug, whatever its extension, or null if none was harvested.</summary>
@@ -291,26 +345,50 @@ public class SeedCacheStore
     /// <c>--parse --force</c> re-derives them. Cached pages and images are untouched — the point
     /// of the 2→3 cache boundary is that re-parsing never costs a re-download.
     /// </summary>
-    public async Task ClearParsedContentAsync(CancellationToken ct = default)
+    public Task ClearParsedContentAsync(CancellationToken ct = default) =>
+        ClearDerivedContentAsync(ParsedDirectory, "parsed recipes", ct);
+
+    /// <summary>
+    /// Discards every normalised recipe and rewinds any slug that had got past Stage 4, for
+    /// <c>--normalise --force</c>. Parsed recipes, cached pages and images are untouched — this
+    /// throws away a GPU pass, not a harvest.
+    /// </summary>
+    public Task ClearNormalisedContentAsync(CancellationToken ct = default) =>
+        ClearDerivedContentAsync(NormalisedDirectory, "normalised recipes", ct);
+
+    /// <summary>
+    /// Empties one derived-artefact directory and rewinds every slug to whatever its surviving
+    /// files still justify. Shared by both <c>--force</c> paths because the rewind rule is the
+    /// same one in each: progress is claimed from the cache, never from the previous claim.
+    /// </summary>
+    private async Task ClearDerivedContentAsync(
+        string directory, string description, CancellationToken ct)
     {
-        DeleteDirectoryContents(ParsedDirectory);
+        DeleteDirectoryContents(directory);
 
         var state = await LoadStateAsync(ct);
         foreach (var (slug, slugState) in state.Slugs)
         {
             if (slugState.Stage == SeedStage.Discovered) continue;
 
-            // The cached file is the authority, here as in the harvest: a slug is rewound to the
-            // furthest stage its artefacts still support, so a page that failed to fetch is not
-            // credited with a fetch it never made.
-            slugState.Stage     = HasRaw(slug) ? SeedStage.Fetched : SeedStage.Discovered;
+            slugState.Stage     = RewoundStage(slug);
             slugState.Attempts  = 0;
             slugState.LastError = null;
         }
 
         await SaveStateAsync(ct);
-        _logger.LogInformation("Discarded parsed recipes under {Path}.", ParsedDirectory);
+        _logger.LogInformation("Discarded {Description} under {Path}.", description, directory);
     }
+
+    /// <summary>
+    /// The furthest stage a slug's surviving artefacts still justify. The cached files are the
+    /// authority, so a page that never fetched is not credited with a fetch and a recipe whose
+    /// parse was discarded is not credited with a parse.
+    /// </summary>
+    private SeedStage RewoundStage(string slug) =>
+        HasParsed(slug) ? SeedStage.Parsed
+        : HasRaw(slug)  ? SeedStage.Fetched
+        : SeedStage.Discovered;
 
     private static void DeleteDirectoryContents(string directory)
     {

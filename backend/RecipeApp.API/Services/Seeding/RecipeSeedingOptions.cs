@@ -68,6 +68,25 @@ public class RecipeSeedingOptions
     /// <summary>Retries per recipe when LLM output fails the Stage 4 validation gate.</summary>
     public int MaxLlmRetries { get; init; } = 2;
 
+    /// <summary>
+    /// Budget for one Stage 4 completion. Longer than the scraper's because the model copies every
+    /// step back out as well as extracting the ingredients, and the corpus reaches 19 steps.
+    /// </summary>
+    public int LlmTimeoutSeconds { get; init; } = 180;
+
+    /// <summary>
+    /// Token ceiling for one Stage 4 completion. The corpus's largest recipe is 18 ingredients and
+    /// 19 steps; the default leaves roughly half again as much headroom.
+    /// </summary>
+    public int MaxLlmOutputTokens { get; init; } = 4096;
+
+    /// <summary>
+    /// Consecutive recipe failures that stop a Stage 4 run. One bad recipe never aborts a run
+    /// (§16), but an unloaded model, an exhausted GPU or a broken grammar fails every recipe
+    /// identically, and grinding through a thousand of those helps nobody.
+    /// </summary>
+    public int MaxConsecutiveLlmFailures { get; init; } = 5;
+
     /// <summary>Recipes imported by <c>--trial</c>.</summary>
     public int TrialSize { get; init; } = 20;
 

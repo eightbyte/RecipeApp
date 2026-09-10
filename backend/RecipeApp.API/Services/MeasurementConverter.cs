@@ -53,6 +53,14 @@ public class MeasurementConverter(IOptions<MeasurementOptions> options)
             ["gallons"]      = (MeasurementUnit.Litre,        3.78541),
         };
 
+    /// <summary>
+    /// Every customary spelling <see cref="ToCanonical"/> converts. Exposed so a caller that has to
+    /// state the unit vocabulary it will accept — the seed normaliser's prompt — can derive it from
+    /// this table together with <see cref="MeasurementUnit.All"/>, rather than restating a list
+    /// that drifts away from the one actually enforced.
+    /// </summary>
+    public static IReadOnlyCollection<string> ConvertibleUnits => UnitConversions.Keys;
+
     // ── Stage A ───────────────────────────────────────────────────────────────
 
     /// <summary>

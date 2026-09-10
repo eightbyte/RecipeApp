@@ -227,10 +227,15 @@ Add to `.gitignore`:
 ```
 backend/RecipeApp.API/seed-data/**/raw/
 backend/RecipeApp.API/seed-data/**/parsed/
+backend/RecipeApp.API/seed-data/**/normalised/
 backend/RecipeApp.API/seed-data/**/images/
 backend/RecipeApp.API/seed-data/**/state.json
 backend/RecipeApp.API/seed-data/**/*.tmp
 ```
+
+`normalised/` is ignored **for now**, not on principle: §18 Q1's recommendation to commit it still
+stands, but a prompt change rewrites all 1,089 files, so committing it before the prompt settles
+would put a thousand-file churn in every review.
 
 The `*.tmp` rule covers the temporary files the cache's atomic writes move into place.
 
@@ -627,12 +632,33 @@ part was missing rather than only that something was: `NoContentRoot`, `NoName`,
 
 ## 11. Stage 4 — Normalise (LLM)
 
+> **✅ As built (2026-09-08).** Implemented as `Services/Seeding/SeedRecipeNormaliser.cs` plus
+> `RecipeLibrarySeeder.NormaliseAsync`, behind `seed-recipes --normalise`. Four things below turned
+> out differently and are corrected in place, with the measurement that overturned each kept
+> alongside: the model no longer writes the steps (§22.1 point 1, now enforced rather than merely
+> noted), the ±2 ingredient-count tolerance is gone (§11.3), `NormaliseAsync` moved to Stage 5
+> (below), and the extraction schema needed a fix of its own before any prompt could work
+> (§23.1). See §23 for results.
+>
+> **`normalised/{slug}.json` holds the LLM pass only; `RecipeScrapeService.NormaliseAsync` is
+> Stage 5's.** Catalogue matching resolves ingredient rows to `Ingredient.Id` values that are
+> local to one database, so folding it into Stage 4 would make the cached artefact
+> machine-specific and defeat §18 Q1's reason for committing it. Stage 4 is therefore the only
+> stage that needs a GPU, and the only one that does not need Postgres.
+
 `RecipeLibrarySeeder` feeds each parsed recipe to a grammar-constrained LLM pass, then to the existing `NormaliseAsync`.
 
 The MyPlate parse leaves two jobs that only the LLM can do well:
 
 1. **Ingredient quantity extraction** — `"1 can (14.5 ounces) no salt added diced tomatoes"` → `{ name: "diced tomatoes", amount: 14.5, unit: "ounces", notes: "no salt added, canned" }`. The model preserves the unit as stated; Stage A mechanically produces `411 g`. Asking the model to convert would contradict the extraction schema's own instruction (Phase 8.5.1 §1.2).
-2. **Step segmentation** — the single `directions` prose blob → an ordered `RecipeStep` list
+2. ~~**Step segmentation** — the single `directions` prose blob → an ordered `RecipeStep` list~~
+   → **step→ingredient linkage only.** Every page publishes an ordered `<ol>` (§22.1 point 1), so
+   Stage 3 already segmented the steps. Stage 4 keeps the model's `ingredient_indexes` and
+   **overwrites every `instruction` with the parsed page's own wording**. The model is still asked
+   for the text — quoting the step it is linking grounds the indexes, and the schema requires it
+   — but its version never reaches the cache, so a paraphrase, a truncation or a leaked footnote
+   cannot enter the library through Stage 4. The same applies to `name`, `description` and
+   `servings`, all of which Stage 3 derives deterministically
 
 Both are already expressed by `RecipeSchemaJson` at `RecipeScrapeService.cs:31`, which defines `ingredients` and an ordered `steps` array and is enforced via `JsonSchemaGrammar` GBNF. Phase 9 reuses that schema verbatim — a second, divergent schema would be a maintenance trap.
 
@@ -694,7 +720,15 @@ LLM output is rejected and retried (up to `MaxLlmRetries`) when:
   stale list that predates `cup` becoming storable in Phase 8.5.1
 - `Steps` is empty, or step numbers are not contiguous from 1
 - Any `IngredientIndexes` entry is out of range
-- Ingredient count differs from the parsed count by more than 2 (indicates hallucinated or dropped items)
+- ~~Ingredient count differs from the parsed count by more than 2~~ → **the count must match
+  exactly.** The tolerance predates Phase 9.1. The gate now judges each row against *its own*
+  source line, which means knowing which line each row came from; rows are paired to lines by
+  position, and a ±2 tolerance makes that pairing a guess on exactly the recipes where the model
+  has already shown it is confused. Exact pairing is the stricter reading, and it is what the
+  prompt asks for: one object per numbered line, in order. A mismatch is retried, then excluded.
+  Measured cost: the ~40 colon-less group headings of §22.1 point 3 are the recipes this loses,
+  because dropping `For the Dressing` is the sensible thing to do and the structurally wrong one.
+  The prompt therefore tells the model to keep heading lines as amount-less rows
 - `Servings <= 0`
 
 After the final retry the recipe is marked `failed` and excluded. **A wrong recipe is worse than a missing one** — an implausible quantity silently corrupts every shopping list it appears in.
@@ -820,15 +854,26 @@ dotnet run -- seed-recipes --refresh-cache   # ✅ Discard raw/ + images/ and re
 dotnet run -- seed-recipes --report          # ✅ Print state.json summary, no work
 dotnet run -- seed-recipes --parse           # ✅ Stage 3 — cached HTML → parsed/, offline
 dotnet run -- seed-recipes --parse --force   # ✅ Discard parsed/ and re-derive
+dotnet run -- seed-recipes --normalise       # ✅ Stage 4 — parsed/ → normalised/, LLM, no database
+dotnet run -- seed-recipes --normalise --force        # ✅ Discard normalised/ and re-run the pass
+dotnet run -- seed-recipes --normalise --slug apple-carrot-soup   # ✅ One recipe; repeatable
 dotnet run -- seed-recipes --trial           # ⬜ Full pipeline, 20 stratified recipes
 dotnet run -- seed-recipes                   # ⬜ Full pipeline, entire library
 dotnet run -- seed-recipes --limit 50        # ⬜ Full pipeline, first 50 unprocessed
 dotnet run -- seed-recipes --force           # ⬜ Re-import recipes already in the database
 ```
 
-The unimplemented modes are parsed and rejected with an explicit "stages 4-5 are not implemented
+The unimplemented modes are parsed and rejected with an explicit "stage 5 is not implemented
 yet" message and exit code `2`, rather than silently doing part of the job. Usage errors exit `1`;
-the implemented modes exit `0`.
+the implemented modes exit `0`. A Stage 4 run that stops on `MaxConsecutiveLlmFailures` exits `1`:
+everything it did is cached, but it did not finish and must not report that it did.
+
+**`--slug <name>` was added beyond this list** (repeatable, and it narrows `--parse` too). §13
+names deleting `normalised/<slug>.json` and re-running as the prompt-iteration loop, which without
+a filter means walking the manifest to reach the recipe you care about. Stage 4's failures cluster
+by ingredient-line shape rather than by manifest position, so iterating on one named recipe is a
+twenty-second experiment instead of a ten-minute one — and every prompt fix in §23.1 was found
+that way.
 
 Progress is logged per recipe (`[142/1123] apple-oatmeal-bars → fetched (1.3s)`), with a closing
 summary of fetched / skipped / failed counts and per-slug failure reasons.
@@ -872,7 +917,7 @@ The guiding rule: **one bad recipe never aborts the run**, and **no suspect reci
 
 Following the existing xunit.v3 + Testcontainers suite.
 
-### 17.1 Unit — `MyPlateRecipeParserTests` ✅ (32 tests) + `RecipeLibrarySeederTests` ✅ (23 tests)
+### 17.1 Unit — `MyPlateRecipeParserTests` ✅ (32 tests) + `RecipeLibrarySeederTests` ✅ (29 tests)
 
 Against four committed fixtures in `Fixtures/myplate/`, copied verbatim out of the harvest —
 Wayback toolbar and all, because a tidied excerpt would pass a scoping bug that a real page
@@ -936,6 +981,35 @@ Both files use `StubHttpClientFactory` (per-request scripted responses, recorded
 `TestHostEnvironment`. Delays and backoff are configured to zero so the suite asserts on behaviour
 rather than on waiting; the whole seeding namespace runs in about a second.
 
+### 17.2b Unit — `SeedRecipeNormaliserTests` ✅ (55 tests) + `SeedRecipesCommandTests` ✅ (22 tests)
+*added in 1.3*
+
+Stage 4 against `StubLlmStructuredClient`, whose answer is scripted per call — CI has no GPU, so
+nothing in the suite reaches real inference.
+
+- Every §11.3 rejection: ingredient- and step-count mismatch, non-contiguous step numbers, an
+  out-of-range `ingredient_indexes` entry, a nameless ingredient, a non-positive amount, an
+  unstorable unit, and both halves of the Phase 9.1 gate (an invented quantity for an unquantified
+  line, and a null for a line that states one)
+- Units are judged **after** Stage A, so `teaspoons` → `tsp`, `ounces` → `g` and `cloves` fails
+- A quantity stated only in the note span is accepted, and one invented where neither span states
+  a number is not — the two halves of the `FullText` correction (§23.1)
+- The parsed page's step wording, name, servings and description survive the model's versions
+- `Servings <= 0` fails **without calling the model**, because no retry can change what the page said
+- A rejected answer is retried and a corrected one accepted; retries stop at `MaxLlmRetries`;
+  run cancellation unwinds rather than counting as a rejection
+- The prompt's unit vocabulary is derived from `MeasurementUnit.All` and
+  `MeasurementConverter.ConvertibleUnits` rather than restated — asserted by parsing it back out
+  of the prompt, so the two lists cannot drift apart silently
+
+`RecipeLibrarySeederTests` gained the Stage 4 runner: resume, `--force`, `--limit`, per-recipe
+failure isolation, the retry counter, the consecutive-failure abort, and the fingerprint check that
+re-normalises a recipe whose parsed input changed underneath it.
+
+`SeedRecipesCommandTests` is new — the CLI had no coverage at all. It exercises argument parsing
+(including `--slug`, which is rejected unless it passes the cache's own filename guard) and the
+manifest narrowing `--slug` drives.
+
 ### 17.3 Integration — `RecipeLibrarySeederTests`
 
 Against a Testcontainers Postgres, with a **stubbed `ILlmStructuredClient`** returning canned structured output — no GPU in CI:
@@ -986,11 +1060,13 @@ Network calls to Wayback are **not** exercised in CI — `WaybackHarvester` is b
 - [x] `seed-recipes --discover` reports ≥ 800 slugs and writes `manifest.json` — **1,123**
 - [x] `seed-recipes --harvest` caches raw HTML and images with resumable state — **1,123/1,123 pages, 1,115 photos**
 - [x] `seed-recipes --parse` turns every cached page into a recipe — **1,089/1,089, zero failures**
+- [x] `seed-recipes --normalise` turns parsed recipes into gate-approved LLM output — see §23
 - [ ] `seed-recipes --trial` imports 20 stratified recipes
 - [ ] All 11 trial acceptance criteria (§14.1) pass on manual review
-- [ ] Full run completes with ≥ 95% of discovered recipes persisted
+- [ ] Full run completes with ≥ 95% of discovered recipes persisted — *Stage 4 clears the bar on
+      the 30-recipe benchmark at 96.8% (§23); the full-corpus pass has not been run*
 - [ ] Re-running `seed-recipes` is a no-op
-- [x] Unit tests pass; CI needs no GPU and no network — **134 seeding tests, 728 suite-wide**
+- [x] Unit tests pass; CI needs no GPU and no network — **297 seeding tests, 917 suite-wide**
 - [ ] Integration tests (`RecipeLibrarySeederTests`) — blocked on stages 4–5
 - [x] `CLAUDE.md` updated with the new files, config keys and CLI command
 - [x] `.gitignore` updated for cache directories
@@ -1115,3 +1191,113 @@ place.
 4. **Notes are held separately from the description.** `ParsedSeedRecipe` carries `Notes` and
    `SourceCredit` as distinct fields so §12 can compose `Recipe.Description` from the description,
    the credit and `SeedAttributionNote`. Stage 3 deliberately does not merge them.
+
+---
+
+## 23. Stage 4 Results (2026-09-09)
+
+**30 of 31 recipes normalised — 96.8%**, against §20's ≥ 95% bar. The full-corpus pass has **not**
+been run; `normalised/` holds the 30 recipes of the benchmark.
+
+### 23.1 The benchmark
+
+`seed-recipes --normalise --force --limit 30`. `--limit` counts *successes*, so the run continues
+until 30 recipes are cached and **the attempt count is the denominator**. That makes the headline
+number stable across runs while the failure taxonomy carries the signal — a better prompt reaches
+30 in fewer attempts. Every run below walks the same manifest prefix, so the recipe sets overlap
+almost completely.
+
+| Run | Change under test | Normalised / attempted | Rate |
+|---|---|---|---|
+| 6 | Count-word rename broadened (from the previous session) | 30 / 45 | 66.7% |
+| 7 | + grammar number rule, index range stated, temperature 0.2 | 30 / 44 | 68.2% |
+| 8 | + fraction conversion table, `divided` rule | 30 / 45 | 66.7% |
+| 9 | Bracket labels; fraction table, `divided` rule and cold sampling **reverted** | 30 / 35 | 85.7% |
+| 10 | Same build, **Qwen3.5 9B Q6** in place of Qwen2.5 7B Q6 | 30 / 31 | **96.8%** |
+
+Failure taxonomy across the same runs:
+
+| Failure | Run 6 | Run 7 | Run 8 | Run 9 | Run 10 |
+|---|---|---|---|---|---|
+| `QuantityRejected` | 6 | 9 | 14 | 4 | 1 |
+| `IngredientIndexOutOfRange` | 5 | 4 | 0 | 0 | 0 |
+| `InvalidLlmOutput` | 3 | 0 | 1 | 1 | 0 |
+| `IngredientCountMismatch` | 1 | 0 | 0 | 0 | 0 |
+| `StepCountMismatch` | 0 | 1 | 0 | 0 | 0 |
+
+### 23.2 The model dominated every prompt change
+
+Runs 9 and 10 differ only in `Llm:Local:ModelPath`. Swapping Qwen2.5 7B Q6 for **Qwen3.5 9B Q6**
+took 85.7% to 96.8% and *reduced* wall time from 15.5 s to 9.2 s per recipe, because it stops
+needing retries — 12 recipes needed a second attempt under the old model, 1 under the new one. A
+full corpus pass projects to **under 3 hours**.
+
+> Both are ChatML, so nothing but the weights changed. Note the quantisation: the 9B is Q6, and a
+> larger model at Q4 is not obviously better for a task whose whole content is reproducing an exact
+> digit. Two other local models were considered and rejected — Gemma 4 12B (hybrid reasoning model,
+> template does not match `LlamaModelHolder`'s Gemma branch, 9.1 GiB leaves little room for context)
+> and the 12B Mistral-Nemo finetunes (roleplay models).
+
+**Four measured runs of prompt work moved the rate by 19 points; one config line moved it by 11.**
+When Stage 4 quality regresses, check the model file before rewriting the prompt.
+
+### 23.3 What worked, and what backfired
+
+**Worked — label the ingredient lines with the index you want back.** The user message numbered
+ingredient lines from 1 while the prompt asked for 0-based `ingredient_indexes`, so the only 0-based
+number in the exchange was one the model had to derive. It did not. A captured answer mixed both
+bases in one response: `[0]` for the first ingredient, `[8]` and `[9]` for the eighth and ninth of
+nine. **Only the overrun past the end was ever detectable**, which means an unknown share of
+*accepted* linkage in earlier runs was silently off by one. Restating the valid range in words
+changed nothing, because the conflict was between two things the model could both read. Lines now
+carry `[0]`, `[1]`, `[2]` labels — brackets so they cannot be confused with step numbers, which
+still count from 1 because `step_number` does. `IngredientIndexOutOfRange` went from 5 to 0.
+
+**Backfired — a table of fraction conversions.** 37.3% of ingredient lines state a fraction and
+every surviving quantity error was a fraction read as an adjacent value, so the prompt was handed
+the ten conversions it needed, computed through `SeedQuantityGate`'s own parser so prompt and gate
+could not disagree. Quantity rejections went from 9 in 44 to **14 in 45**. The model stopped reading
+the line and started choosing from the list: `1/8` came back as `1`, `1/2` as `0.125`, and
+`1 teaspoon salt` — which contains no fraction at all — came back as `0.25`.
+
+> **A list of plausible answers is a list of things to guess from.** Removed, with a comment at the
+> point of temptation and a test that fails if a run of decimals reappears outside the worked
+> example.
+
+**Backfired — lowering the sampling temperature.** Decoding at 0.2 rather than llama.cpp's 0.75
+looks obviously right for constrained extraction and measured worse: 6 rejections in 45 became 9 in
+44. The misreads reproduce, so they are the model's considered answer rather than sampling noise —
+two attempts at the same recipe returned byte-identical output. At chat temperature a retry
+sometimes samples the correct digit and recovers the recipe; at 0.2 the retry budget is spent
+re-deriving a known failure. Sampling is now configurable under `Llm:Local:Sampling`, and the
+defaults match the library's **as a measured result**, recorded in `LlmSamplingOptions`.
+
+**Fixed regardless — the grammar admitted invalid JSON.** `JsonSchemaGrammar` wrote numbers as an
+unbounded digit run, which permits `00` and `012`. JSON forbids both, so the decode was
+unparseable. This is a real defect in a guard whose entire purpose is that unparseable output is
+unreachable. It was **not**, however, the cause of the observed `InvalidLlmOutput` failures: .NET's
+parser reports a leading zero with a different message than the one the runs produced.
+
+### 23.4 Two loose ends
+
+1. **One recipe in 31 still misreads a quantity** (`1 tablespoon cinnamon` returned as `0.25`).
+   Contained: `SeedQuantityGate.CheckAgainstStatedNumber` catches it and the recipe is excluded
+   rather than stored wrong.
+
+2. **Grammar-constrained decoding still lets an unparseable answer through at a low rate.**
+   Diagnosis was blocked by the client discarding the answer at exactly the moment parsing failed,
+   so a failure 4,700 bytes into a decode reported an offset and nothing else.
+   `LLamaSharpStructuredClient` now reports the text either side of the offending character. If it
+   recurs, `DefaultSamplingPipeline.GrammarOptimization` is the first suspect — it defaults to
+   `Extended`, which checks the grammar against the top-K tokens rather than the full vocabulary,
+   and `None` trades speed for certainty.
+
+### 23.5 Also changed
+
+- `MeasurementUnit.AcceptedSpellings` — the prompt listed only canonical spellings while its own
+  worked example taught `teaspoon`, because the lenient alias table was private. The prompt is now
+  derived from the full accepted set, and a test asserts every unit the example teaches appears in
+  the list.
+- `Llm:Local:ChatTemplate` silently falls through to ChatML for an unrecognised value. The local
+  config read `chatlm`, which worked only by that accident. Fixed; **hardening the selector to fail
+  fast is still open**.

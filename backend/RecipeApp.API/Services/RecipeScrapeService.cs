@@ -29,6 +29,18 @@ public class RecipeScrapeService(
 
     // ── Recipe extraction schema ──────────────────────────────────────────────
 
+    /// <summary>
+    /// The one extraction schema, shared by the Phase 3 scrape and the Phase 9 seed normaliser.
+    ///
+    /// <para><b>Every property a caller wants back must be listed in <c>required</c>.</b>
+    /// <see cref="Llm.JsonSchemaGrammar"/> omits non-required properties from the grammar
+    /// altogether, so an optional property is not "the model may skip it" — it is one the model
+    /// cannot emit at all. That is why <c>notes</c> and <c>description</c> are required and
+    /// nullable rather than optional: measured on the seed corpus, an unreachable <c>notes</c> did
+    /// not make the model drop preparation detail, it made it write the detail into <c>unit</c>
+    /// (<c>"pound, chunks"</c>, <c>"teaspoon, optional"</c>), which fails the storable-unit gate
+    /// and loses the whole recipe. Same shape as Phase 9.1's finding about <c>amount</c>.</para>
+    /// </summary>
     internal const string RecipeSchemaJson = """
         {
           "type": "object",
@@ -69,10 +81,10 @@ public class RecipeScrapeService(
                   },
                   "notes": {
                     "type": ["string", "null"],
-                    "description": "Preparation notes (e.g. 'finely chopped', 'optional'). Null if none."
+                    "description": "Preparation and descriptive detail (e.g. 'finely chopped', 'optional', 'low-sodium', the container or size word). Null if none."
                   }
                 },
-                "required": ["name", "display_name", "amount", "unit"]
+                "required": ["name", "display_name", "amount", "unit", "notes"]
               }
             },
             "steps": {
@@ -99,7 +111,7 @@ public class RecipeScrapeService(
               }
             }
           },
-          "required": ["name", "servings", "ingredients", "steps"]
+          "required": ["name", "description", "servings", "ingredients", "steps"]
         }
         """;
 
@@ -149,7 +161,9 @@ public class RecipeScrapeService(
         (IngredientCategory.Produce,     ["onion", "garlic", "carrot", "celery", "tomato", "potato", "lettuce", "spinach", "kale", "broccoli", "pepper", "capsicum", "zucchini", "cucumber", "avocado", "lemon", "lime", "orange", "apple", "banana", "mushroom", "corn", "asparagus", "pea", "parsley", "basil", "coriander", "thyme", "rosemary", "mint", "dill", "chive", "scallion", "leek", "shallot", "ginger", "chilli", "eggplant", "beetroot", "pumpkin", "squash", "berry"]),
     ];
 
-    private static readonly JsonSerializerOptions JsonOptions = new()
+    /// <summary>How every response to a RecipeSchemaJson-shaped prompt is read. Shared with the
+    /// Phase 9 seed normaliser, which sends the same schema and must read the answer identically.</summary>
+    internal static readonly JsonSerializerOptions LlmJsonOptions = new()
     {
         PropertyNamingPolicy        = JsonNamingPolicy.SnakeCaseLower,
         DefaultIgnoreCondition      = JsonIgnoreCondition.WhenWritingNull,
@@ -401,7 +415,7 @@ public class RecipeScrapeService(
                 "Recipe extraction failed. Please try again or create the recipe manually.");
         }
 
-        var extracted = json.Deserialize<ExtractedRecipe>(JsonOptions)
+        var extracted = json.Deserialize<ExtractedRecipe>(LlmJsonOptions)
             ?? throw new RecipeScrapeException(RecipeScrapeError.NoContent,
                 "No recipe content could be extracted from this page.");
 
@@ -535,7 +549,7 @@ public class RecipeScrapeService(
                 var matchJson = await llm.CompleteStructuredAsync(
                     systemPrompt, userContent, matchSchema, maxTokens: 2048, ct);
 
-                var matchResponse = matchJson.Deserialize<MatchingResponse>(JsonOptions);
+                var matchResponse = matchJson.Deserialize<MatchingResponse>(LlmJsonOptions);
                 if (matchResponse?.Results != null)
                 {
                     foreach (var result in matchResponse.Results)

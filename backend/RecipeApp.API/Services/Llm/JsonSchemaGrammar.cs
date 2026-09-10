@@ -9,11 +9,22 @@ namespace RecipeApp.API.Services.Llm;
 /// </summary>
 public static class JsonSchemaGrammar
 {
+    /// <summary>
+    /// The JSON primitives, as JSON actually defines them.
+    ///
+    /// <para><b>The leading-zero alternation is load-bearing.</b> A digit run written as
+    /// <c>[0-9]+</c> admits <c>00</c> and <c>012</c>, which are not JSON — every parser rejects
+    /// them, and <c>JsonNode.Parse</c> reports "'0' is an invalid end of a number" from somewhere
+    /// deep in the answer. The whole point of constrained decoding is that unparseable output is
+    /// unreachable, so a grammar looser than the format it is guarding is a defect in the guard.
+    /// Phase 9 Stage 4 lost a recipe to it: the model emitted a leading zero several thousand bytes
+    /// into an otherwise well-formed answer, and the decode was thrown away as invalid.</para>
+    /// </summary>
     private const string PrimitiveRules = """
         ws      ::= " "?
         string  ::= "\"" ([^"\\\x7F\x00-\x1F] | "\\" (["\\/bfnrt] | "u" [0-9a-fA-F] [0-9a-fA-F] [0-9a-fA-F] [0-9a-fA-F]))* "\""
-        integer ::= "-"? [0-9]+
-        number  ::= "-"? [0-9]+ ("." [0-9]+)? ([eE] [+-]? [0-9]+)?
+        integer ::= "-"? ("0" | [1-9] [0-9]*)
+        number  ::= "-"? ("0" | [1-9] [0-9]*) ("." [0-9]+)? ([eE] [+-]? [0-9]+)?
         boolean ::= "true" | "false"
         null    ::= "null"
         """;

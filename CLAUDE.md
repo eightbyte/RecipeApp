@@ -4,7 +4,7 @@
 Mobile-first web app for storing recipes, building meal plans, and generating shopping lists.
 
 - **Spec:** `SPEC.md` — read this for feature requirements and data model definitions.
-- **Current phase:** Phase 9 in progress (seed recipe library) — **v1 feature-complete**. Stages 1–3 (Wayback discovery, fetch, parse) done, and Phase 9.1 (unquantified ingredients — the Stage 4 prerequisite) done; stages 4–5 (LLM normalise, persist) next.
+- **Current phase:** Phase 9 in progress (seed recipe library) — **v1 feature-complete**. Stages 1–3 (Wayback discovery, fetch, parse) done and Phase 9.1 (unquantified ingredients — the Stage 4 prerequisite) done. Stage 4 (LLM normalise) is built and clears its acceptance bar on the 30-recipe benchmark, but **the full-corpus pass has not been run**; stage 5 (persist) next.
 
 ## Repository structure
 ```
@@ -59,7 +59,7 @@ RecipeApp/
 | Validation    | FluentValidation 12                   | One validator class per request DTO; invoked explicitly via `.WithValidation<T>()` |
 | Mapping       | Manual (extension methods)            | `DTOs/Mappings.cs` — static `ToResponse()` / `ToDetail()` / `ToListItem()` |
 | Database      | PostgreSQL 16                         | All timestamps stored as UTC                   |
-| Local LLM     | LLamaSharp 0.27.0 + CUDA12 backend    | NuGet packages `LLamaSharp` + `LLamaSharp.Backend.Cuda12`; GGUF model via `Llm:Local:ModelPath` |
+| Local LLM     | LLamaSharp 0.27.0 + CUDA12 backend    | NuGet packages `LLamaSharp` + `LLamaSharp.Backend.Cuda12`; GGUF model via `Llm:Local:ModelPath` (Qwen3.5 9B Q6) |
 
 ## Running locally
 
@@ -90,7 +90,7 @@ Each detects its argument, runs, and exits without starting Kestrel. Run from `b
 dotnet run -- seed-catalogue [count]   # LLM-generated starter ingredient catalogue (default 200)
 dotnet run -- seed-densities           # Curated bulk densities; idempotent, only fills nulls
 
-# Phase 9 — USDA MyPlate seed library. Stages 1-3 implemented; 4-5 pending.
+# Phase 9 — USDA MyPlate seed library. Stages 1-4 implemented; 5 pending.
 dotnet run -- seed-recipes --report        # Print cached progress; no work, no network
 dotnet run -- seed-recipes --discover      # Stage 1 — CDX query → manifest.json (~1,123 slugs)
 dotnet run -- seed-recipes --harvest       # Stages 1-2 — cache pages + photos (~50 min, resumable)
@@ -98,10 +98,19 @@ dotnet run -- seed-recipes --harvest --limit 3
 dotnet run -- seed-recipes --refresh-cache # Discard cached pages/photos, re-harvest
 dotnet run -- seed-recipes --parse         # Stage 3 — cached HTML → parsed/*.json (offline, ~4 s)
 dotnet run -- seed-recipes --parse --force # Discard parsed/ and re-derive from the cached pages
+dotnet run -- seed-recipes --normalise     # Stage 4 — parsed/ → normalised/*.json (LLM, no DB)
+dotnet run -- seed-recipes --normalise --limit 30
+dotnet run -- seed-recipes --normalise --force  # Discard normalised/ and re-run the LLM pass
+dotnet run -- seed-recipes --normalise --slug apple-carrot-soup   # One recipe; repeatable
 ```
 
-`seed-recipes` needs no database — it touches only the archive and the local cache. Ctrl+C stops
-it cooperatively; re-running resumes from the last cached page.
+`seed-recipes` needs no database — stages 1-2 touch only the archive and the local cache, stage 3
+only the cache, and stage 4 the cache plus the local model. Ctrl+C stops it cooperatively;
+re-running resumes from the last cached recipe.
+
+`--slug` exists for prompt iteration: Stage 4's failures cluster by ingredient-line shape rather
+than by manifest position, and re-running one named recipe is a twenty-second experiment instead
+of a ten-minute one. It applies to `--parse` as well.
 
 ## Running tests
 
@@ -168,6 +177,12 @@ dotnet test RecipeApp.Tests/RecipeApp.Tests.csproj --coverage --coverage-output-
   are partitioned out of `ShoppingListService` consolidation and never summed; an ingredient the
   plan only ever names yields one amount-less item. On the frontend, `formatMeasurement` returns
   null for a null amount, and scaling must short-circuit before multiplying — `null * 2` is `0`.
+  **"The source" means the whole published line, not the first span of it.** Stage 4 asks
+  `SeedQuantityGate` about `ParsedIngredientLine.FullText`, because MyPlate renders an optional
+  ingredient as the food in one span and the amount in a sibling `span.notes` —
+  `orange peel, dried` + `(1 teaspoon, optional)`. Measured: 109 lines on 87 recipes (8.0%) state
+  their quantity only there, every one a real measurement, none an incidental digit. Reading the
+  item text alone calls all 109 unquantified and then rejects the model for reading them right.
 - **Never destroy the input.** Imported rows record `RecipeIngredient.SourceAmount`/`SourceUnit`
   verbatim. These are provenance only — never summed, never used in consolidation — and every
   persistence path (scrape confirm, recipe create/update) must carry them through.
@@ -187,8 +202,10 @@ dotnet test RecipeApp.Tests/RecipeApp.Tests.csproj --coverage --coverage-output-
 |---|---|
 | `ConnectionStrings:DefaultConnection` | PostgreSQL connection string |
 | `ImageStorage:BasePath` | Local path for uploaded recipe images |
-| `Llm:Local:ModelPath` | Absolute path to a GGUF model file (e.g. `qwen2.5-7b-instruct-q4_k_m.gguf`) |
+| `Llm:Local:ModelPath` | Absolute path to a GGUF model file. **Currently `Qwen3.5-9B-Q6_K.gguf`** — measured 96.8% vs 85.7% for Qwen2.5 7B on the Stage 4 benchmark, and faster in wall time because it needs far fewer retries. Model choice dominates prompt tuning here. |
 | `Llm:Local:GpuLayerCount` | GPU layers to offload (default 999 = all); set 0 for CPU-only |
+| `Llm:Local:ChatTemplate` | `chatml` (Qwen, Mistral), `llama3` or `gemma`. **Unrecognised values silently fall through to ChatML**, so a typo here is invisible until output degrades |
+| `Llm:Local:Sampling:*` | `Temperature`, `TopK`, `TopP`, `MinP`. Defaults match LLamaSharp's own **as a measured result** — decoding colder for extraction made Stage 4 worse, see `LlmSamplingOptions` |
 | `Measurement:ResolveCupsOnImport` | Resolve `cup` to grams on import where a density exists (default `true`) |
 
 The `RecipeSeeding` section lives in the committed `appsettings.json` (nothing secret in it). Keys
@@ -357,6 +374,86 @@ worth knowing: `CacheDirectory`, `PreferredSnapshotYear`, `FetchDelayMillisecond
   span. `ShoppingView` needed no change — it was already guarded. **Blast radius is deliberate and
   wider than seeding**: hand-entered recipes may now omit an amount, and a scrape preview shows an
   empty field where it used to show a fabricated number.
+- **Phase 9 Stage 4 (LLM normalise) — benchmark clears the §20 bar; full corpus pass still to
+  run (2026-09-09).** Backend-only, no new
+  packages. `seed-recipes --normalise` walks `parsed/`, runs each recipe through a
+  grammar-constrained LLM pass, applies the §11.3 gate, and writes `normalised/{slug}.json`. No
+  database: catalogue matching and `NormaliseAsync` are deliberately Stage 5's, so the artefact
+  stays machine-independent. Added `Services/Seeding/SeedRecipeNormaliser.cs` and
+  `SeedNormaliseModels.cs`; `RecipeLibrarySeeder` gained `NormaliseAsync`, `SeedCacheStore` gained
+  the normalised artefact plus `TryComputeParsedFingerprintAsync`, and `SeedRecipesCommand` gained
+  `--normalise` and `--slug`. Config: `LlmTimeoutSeconds` (180), `MaxLlmOutputTokens` (4096),
+  `MaxConsecutiveLlmFailures` (5). Tests: `SeedRecipeNormaliserTests`, `SeedRecipesCommandTests`,
+  `Infrastructure/StubLlmStructuredClient.cs`, `Services/Llm/LlmSamplingOptionsTests.cs` and
+  `Services/Llm/LLamaSharpStructuredClientTests.cs`, plus Stage 4 cases on the existing files — 917
+  suite-wide, no GPU and no network.
+  **Where it stands: 30 of 31 recipes normalised (96.8%) on the 30-recipe benchmark, clearing the
+  §20 bar.** Getting there took six measured runs; the trajectory was 56.6% → 66.7% → 85.7% →
+  96.8%. The benchmark is `seed-recipes --normalise --force --limit 30`, which counts *successes*,
+  so the attempt count is the denominator and the failure taxonomy is the result. **The full corpus
+  has not been normalised yet** — the benchmark leaves 30 recipes in `normalised/`. Projected at
+  9.2 s/recipe, a full pass is under 3 hours.
+  **The single biggest lever was the model, not the prompt.** Swapping Qwen2.5 7B Q6 for
+  **Qwen3.5 9B Q6** on an identical build took 85.7% to 96.8% and *reduced* wall time per recipe
+  from 15.5 s to 9.2 s, because it stops needing retries (12 retried recipes became 1). Same ChatML
+  template, so nothing but `Llm:Local:ModelPath` changed. Two prompt fixes were worth more than
+  every other prompt change combined, and three were worth nothing or less than nothing — see
+  below. If quality regresses, suspect the model file before the prompt.
+  **Eight things worth knowing, each found by running the corpus rather than reasoning about it:**
+  - **The extraction schema was the bug, not the prompt.** `JsonSchemaGrammar` omits non-required
+    properties from the grammar entirely, so an optional property is not one the model may skip —
+    it is one the model *cannot emit*. `notes` was unreachable, so preparation words went into
+    `unit` (`"pound, chunks"`, `"teaspoon, optional"`), which then failed the storable-unit check
+    and lost the recipe. `notes` and `description` are now required-and-nullable, exactly as Phase
+    9.1 did to `amount`. This also means Phase 3 scraping could never return a description.
+  - **"The source line" means both spans.** MyPlate renders an optional ingredient as the food in
+    one span and the amount in a sibling `span.notes`. 109 lines on 87 recipes state their quantity
+    only there. The gate now reads `ParsedIngredientLine.FullText`.
+  - **The worked example taught the wrong rule.** With a bare `salt` as its null case the model
+    learned *salt* was the exemption rather than *no number*, and began nulling `1 teaspoon salt`.
+    The null case is now cheese, and salt appears with a quantity.
+  - **The gate could not see a wrong amount at all.** Dry-run over output it had already approved:
+    12 of 187 checkable rows carried a wrong quantity — `3 tablespoons brown sugar` read as `0.33`,
+    `1/4 cup oil` as `1`. 83% of corpus lines state exactly one number, so
+    `SeedQuantityGate.CheckAgainstStatedNumber` now verifies those arithmetically. Lines stating
+    several (container sizes) are left alone rather than guessed at.
+  - **±2 ingredient tolerance is gone.** The gate judges each row against its own source line, so
+    rows pair to lines by position and the count must match exactly.
+  - **Label the ingredient lines with the index you want back.** The user message numbered them
+    from 1 while the prompt asked for 0-based positions, so the only 0-based number in the exchange
+    was one the model had to derive. It did not: one answer mixed both bases, `[0]` for the first
+    ingredient but `[8]` and `[9]` for the eighth and ninth of nine. **Only the overrun past the end
+    was detectable**, so an unknown share of *accepted* linkage was silently off by one. Restating
+    the valid range in words changed nothing, because the conflict was between two things the model
+    could both read. Lines now carry `[0]`, `[1]`, `[2]` labels — brackets so they cannot be
+    confused with step numbers, which still count from 1 because `step_number` does. That single
+    change took `IngredientIndexOutOfRange` from 5 failures to 0.
+  - **Never give the model a menu of candidate amounts.** 37.3% of ingredient lines state a
+    fraction and the surviving quantity errors were all fractions read as an adjacent value, so the
+    prompt was given the ten conversions it needed, computed by the gate's own parser so the two
+    could not disagree. It made the class **nearly three times worse** (9 rejections in 44 recipes
+    became 14 in 45): the model stopped reading the line and started choosing from the list. `1/8`
+    came back as `1`, `1/2` as `0.125`, and `1 teaspoon salt`, which contains no fraction at all,
+    came back as `0.25`. Removed, with a comment in the source and a test that fails if a run of
+    decimals reappears outside the worked example, so it is not re-added.
+  - **Temperature is the wrong lever for a systematic error, and lowering it removed the thing that
+    was compensating.** Dropping to 0.2 looked obviously right for constrained extraction and
+    measured worse (6 rejections in 45 became 9 in 44). The misreads reproduce, so they are the
+    model's considered answer, not sampling noise — two attempts on the same recipe returned
+    byte-identical output. At chat temperature a retry sometimes samples the correct digit and
+    recovers the recipe; at 0.2 the retry budget is spent re-deriving a known failure. Sampling is
+    now configurable (`Llm:Local:Sampling`), and the values are LLamaSharp's own **as a measured
+    result**, not an oversight.
+  - **The prompt was arguing with itself about units.** It listed only canonical spellings while its
+    own worked example taught `teaspoon`, because the lenient alias table was private.
+    `MeasurementUnit.AcceptedSpellings` now exposes it and the prompt is derived from that; a test
+    asserts every unit the example teaches appears in the list.
+  **Two loose ends.** One in 31 recipes still misreads a quantity (`1 tablespoon cinnamon` as
+  `0.25`), and grammar-constrained decoding still lets an unparseable answer through at a low rate —
+  the grammar's number rule admitted `00` and `012`, which is fixed, but that was **not** the cause
+  of the observed failures (a leading zero produces a different parser message; I checked). The
+  client now reports the text either side of the offending character, so the next occurrence names
+  itself instead of only giving an offset.
 
 ---
 ## Project Notes

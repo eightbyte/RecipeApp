@@ -93,6 +93,31 @@ public class JsonSchemaGrammarTests
         gbnf.Should().Contain("null");
     }
 
+    /// <summary>
+    /// A number is only useful if it parses. JSON forbids a leading zero on a multi-digit run, so a
+    /// grammar that admits <c>00</c> lets the decoder produce an answer no JSON reader will accept —
+    /// and the failure lands thousands of bytes away from the digit that caused it. Phase 9 Stage 4
+    /// lost a recipe to exactly that.
+    /// </summary>
+    [Theory]
+    [InlineData("integer")]
+    [InlineData("number")]
+    public void ToGbnf_NumericPrimitives_CannotBeginADigitRunWithZero(string rule)
+    {
+        var schema = JsonNode.Parse("""{"type":"object","properties":{},"required":[]}""")!;
+        var gbnf   = JsonSchemaGrammar.ToGbnf(schema);
+
+        var production = gbnf
+            .Split('\n')
+            .Single(line => line.TrimStart().StartsWith($"{rule} ", StringComparison.Ordinal));
+
+        // Zero stands alone or the run starts at one — the two forms JSON allows, and no other.
+        production.Should().Contain("""("0" | [1-9] [0-9]*)""");
+
+        // The unbounded digit run this replaced, which admitted 00 and 012.
+        production.Should().NotContain("\"-\"? [0-9]+");
+    }
+
     // ── Realistic schemas used by the app ────────────────────────────────────
 
     [Fact]

@@ -72,6 +72,7 @@ builder.Services.Configure<RecipeSeedingOptions>(
 builder.Services.AddSingleton<SeedCacheStore>();
 builder.Services.AddSingleton<IWaybackHarvester, WaybackHarvester>();
 builder.Services.AddSingleton<MyPlateRecipeParser>();
+builder.Services.AddSingleton<SeedRecipeNormaliser>();
 builder.Services.AddSingleton<IRecipeLibrarySeeder, RecipeLibrarySeeder>();
 
 builder.Services.AddHttpClient(WaybackHarvester.HttpClientName, (sp, client) =>
@@ -136,7 +137,8 @@ if (isSeedDensities)
 }
 
 // ── seed-recipes command — harvests the USDA MyPlate library then exits ──────
-// Stages 1-2 touch only the archive and the local cache, so this runs without a database.
+// Stages 1-4 touch only the archive, the local cache and the local model, so this runs without a
+// database. Stage 5 will be the first mode that needs one.
 if (isSeedRecipes)
 {
     // The harvest runs for the best part of an hour, so Ctrl+C is a normal way to stop it.

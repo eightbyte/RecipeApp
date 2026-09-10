@@ -53,6 +53,10 @@ backend/**/uploads/
 # reproducible without a GPU. Everything below is bulk or derivable.
 backend/RecipeApp.API/seed-data/**/raw/
 backend/RecipeApp.API/seed-data/**/parsed/
+# Stage 4 output. Phase 9 §18 Q1 recommends committing this eventually, so every developer
+# and CI get the library without a GPU — but not while the prompt is still being iterated on,
+# because each pass rewrites all 1,089 files.
+backend/RecipeApp.API/seed-data/**/normalised/
 backend/RecipeApp.API/seed-data/**/images/
 backend/RecipeApp.API/seed-data/**/state.json
 backend/RecipeApp.API/seed-data/**/*.tmp

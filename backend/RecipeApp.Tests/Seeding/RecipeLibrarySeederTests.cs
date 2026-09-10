@@ -1,3 +1,4 @@
+using System.Text.Json.Nodes;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
 using RecipeApp.API.Services.Seeding;
@@ -6,12 +7,13 @@ using RecipeApp.Tests.Infrastructure;
 namespace RecipeApp.Tests.Seeding;
 
 /// <summary>
-/// The Stage 3 runner — the loop around <see cref="MyPlateRecipeParser"/> that walks the manifest,
-/// isolates a bad page, and leaves the run resumable. File system only; no database, no network,
-/// no inference.
+/// The Stage 3 and Stage 4 runners — the loops around <see cref="MyPlateRecipeParser"/> and
+/// <see cref="SeedRecipeNormaliser"/> that walk the manifest, isolate a bad recipe, and leave the
+/// run resumable. File system only; no database, no network, and inference is scripted through
+/// <see cref="StubLlmStructuredClient"/>.
 ///
-/// <para>Stages 4 and 5 will join this class and get their own coverage; the integration tests
-/// §17.3 describes are blocked on them.</para>
+/// <para>Stage 5 will join this class and get its own coverage; the integration tests §17.3
+/// describes are blocked on it.</para>
 /// </summary>
 public class RecipeLibrarySeederTests : IDisposable
 {
@@ -31,9 +33,18 @@ public class RecipeLibrarySeederTests : IDisposable
             new TestHostEnvironment(_contentRoot),
             NullLogger<SeedCacheStore>.Instance);
 
-    private RecipeLibrarySeeder BuildSeeder(SeedCacheStore cache) =>
+    /// <summary>A model that is never reached — Stage 3 does no inference.</summary>
+    private static readonly StubLlmStructuredClient UnusedLlm =
+        StubLlmStructuredClient.AlwaysFailing("Stage 3 must not call the model.");
+
+    private RecipeLibrarySeeder BuildSeeder(
+        SeedCacheStore cache, StubLlmStructuredClient? llm = null) =>
         new(cache,
             new MyPlateRecipeParser(Options.Create(_options)),
+            new SeedRecipeNormaliser(
+                llm ?? UnusedLlm, Options.Create(_options),
+                NullLogger<SeedRecipeNormaliser>.Instance),
+            Options.Create(_options),
             NullLogger<RecipeLibrarySeeder>.Instance);
 
     private static SeedManifest ManifestOf(params string[] slugs) => new()
@@ -281,5 +292,314 @@ public class RecipeLibrarySeederTests : IDisposable
     public async Task TryLoadParsed_ReturnsNullWhenNothingHasBeenParsed()
     {
         (await BuildCache().TryLoadParsedAsync("first")).Should().BeNull();
+    }
+
+    // ── Stage 4 — the normalise runner ────────────────────────────────────────
+
+    /// <summary>The answer a well-behaved model gives for <see cref="RecipePage"/>'s defaults.</summary>
+    private static JsonNode RiceAnswer(string ingredientName = "rice") => new JsonObject
+    {
+        ["name"]     = "Test Recipe",
+        ["servings"] = 4,
+        ["ingredients"] = new JsonArray(new JsonObject
+        {
+            ["name"]         = ingredientName,
+            ["display_name"] = "Rice",
+            ["amount"]       = 1,
+            ["unit"]         = "cup",
+            ["notes"]        = null,
+        }),
+        ["steps"] = new JsonArray(new JsonObject
+        {
+            ["step_number"]        = 1,
+            ["instruction"]        = "Cook the rice.",
+            ["ingredient_indexes"] = new JsonArray(0),
+        }),
+    };
+
+    /// <summary>A model that always breaks the gate — it invents a quantity the page never stated.</summary>
+    private static JsonNode InventedQuantityAnswer() => new JsonObject
+    {
+        ["name"]     = "Test Recipe",
+        ["servings"] = 4,
+        ["ingredients"] = new JsonArray(new JsonObject
+        {
+            ["name"] = "salt", ["display_name"] = "Salt", ["amount"] = 1, ["unit"] = "tsp",
+        }),
+        ["steps"] = new JsonArray(new JsonObject
+        {
+            ["step_number"] = 1, ["instruction"] = "Season.", ["ingredient_indexes"] = new JsonArray(0),
+        }),
+    };
+
+    private static string SaltPage() =>
+        RecipePage(ingredients: "<li>salt</li>", steps: "<li>Season.</li>");
+
+    private async Task<SeedCacheStore> GivenParsedRecipesAsync(params string[] slugs)
+    {
+        var cache = BuildCache();
+        foreach (var slug in slugs) await GivenCachedPageAsync(cache, slug, RecipePage());
+        await BuildSeeder(cache).ParseAsync(ManifestOf(slugs));
+        return cache;
+    }
+
+    [Fact]
+    public async Task NormaliseAsync_WritesOneNormalisedRecipePerParsedRecipe()
+    {
+        var cache = await GivenParsedRecipesAsync("first", "second");
+        var llm   = new StubLlmStructuredClient(RiceAnswer());
+
+        var result = await BuildSeeder(cache, llm).NormaliseAsync(ManifestOf("first", "second"));
+
+        result.Normalised.Should().Be(2);
+        result.Failed.Should().Be(0);
+
+        var normalised = await cache.TryLoadNormalisedAsync("second");
+        normalised.Should().NotBeNull();
+        normalised!.Ingredients.Should().ContainSingle().Which.Unit.Should().Be("cup");
+        normalised.Steps.Should().ContainSingle().Which.Instruction.Should().Be("Cook the rice.");
+    }
+
+    [Fact]
+    public async Task NormaliseAsync_RecordsTheNormalisedStageSoAReportCanSeeProgress()
+    {
+        var cache = await GivenParsedRecipesAsync("first");
+
+        await BuildSeeder(cache, new StubLlmStructuredClient(RiceAnswer()))
+            .NormaliseAsync(ManifestOf("first"));
+
+        var state = await BuildCache().LoadStateAsync();
+        state.Slugs["first"].Stage.Should().Be(SeedStage.Normalised);
+        state.Slugs["first"].LastError.Should().BeNull();
+    }
+
+    [Fact]
+    public async Task NormaliseAsync_SkipsARecipeWhoseCachedOutputMatchesItsParsedInput()
+    {
+        var cache = await GivenParsedRecipesAsync("first");
+        var llm   = new StubLlmStructuredClient(RiceAnswer());
+        var seeder = BuildSeeder(cache, llm);
+
+        await seeder.NormaliseAsync(ManifestOf("first"));
+        var second = await seeder.NormaliseAsync(ManifestOf("first"));
+
+        second.Normalised.Should().Be(0);
+        second.Skipped.Should().Be(1);
+        llm.CallCount.Should().Be(1, "a skipped recipe must not cost a GPU pass");
+    }
+
+    /// <summary>
+    /// The staleness the fingerprint exists for: <c>--parse --force</c> leaves normalised output
+    /// alone, so without this check a re-parse would silently keep an answer to a question the
+    /// corpus no longer asks.
+    /// </summary>
+    [Fact]
+    public async Task NormaliseAsync_RedoesARecipeWhoseParsedInputChangedUnderneathIt()
+    {
+        var cache  = await GivenParsedRecipesAsync("first");
+        var llm    = new StubLlmStructuredClient(RiceAnswer());
+        var seeder = BuildSeeder(cache, llm);
+        await seeder.NormaliseAsync(ManifestOf("first"));
+
+        // The page is re-harvested and re-parsed with a corrected ingredient line. The quantity is
+        // left alone: changing it would make the cached answer wrong as well as stale, and this
+        // test is about staleness.
+        await GivenCachedPageAsync(cache, "first",
+            RecipePage(ingredients: "<li>1 cup brown rice</li>"));
+        await seeder.ParseAsync(ManifestOf("first"), force: true);
+
+        var result = await seeder.NormaliseAsync(ManifestOf("first"));
+
+        result.Normalised.Should().Be(1);
+        result.Stale.Should().Be(1);
+        result.Skipped.Should().Be(0);
+    }
+
+    [Fact]
+    public async Task NormaliseAsync_ReNormalisesWhenForced()
+    {
+        var cache  = await GivenParsedRecipesAsync("first");
+        var llm    = new StubLlmStructuredClient(call => RiceAnswer(call == 1 ? "rice" : "brown rice"));
+        var seeder = BuildSeeder(cache, llm);
+        await seeder.NormaliseAsync(ManifestOf("first"));
+
+        var result = await seeder.NormaliseAsync(ManifestOf("first"), force: true);
+
+        result.Normalised.Should().Be(1);
+        result.Skipped.Should().Be(0);
+        (await cache.TryLoadNormalisedAsync("first"))!.Ingredients[0].Name.Should().Be("brown rice");
+    }
+
+    [Fact]
+    public async Task NormaliseAsync_ReportsManifestEntriesThatHaveNotBeenParsedYet()
+    {
+        var cache = await GivenParsedRecipesAsync("parsed-already");
+
+        var result = await BuildSeeder(cache, new StubLlmStructuredClient(RiceAnswer()))
+            .NormaliseAsync(ManifestOf("parsed-already", "never-parsed"));
+
+        result.Normalised.Should().Be(1);
+        result.NotParsed.Should().Be(1);
+        result.Failed.Should().Be(0);
+    }
+
+    [Fact]
+    public async Task NormaliseAsync_HonoursTheLimitAndCountsOnlyRecipesItActuallyNormalised()
+    {
+        var cache = await GivenParsedRecipesAsync("one", "two", "three");
+
+        var result = await BuildSeeder(cache, new StubLlmStructuredClient(RiceAnswer()))
+            .NormaliseAsync(ManifestOf("one", "two", "three"), limit: 2);
+
+        result.Normalised.Should().Be(2);
+        cache.HasNormalised("three").Should().BeFalse();
+    }
+
+    [Fact]
+    public async Task NormaliseAsync_IsolatesARejectedRecipeFromTheRestOfTheRun()
+    {
+        _options = new RecipeSeedingOptions { MaxLlmRetries = 0 };
+
+        var cache = BuildCache();
+        await GivenCachedPageAsync(cache, "good", RecipePage());
+        await GivenCachedPageAsync(cache, "bad", SaltPage());
+        await GivenCachedPageAsync(cache, "also-good", RecipePage());
+        await BuildSeeder(cache).ParseAsync(ManifestOf("good", "bad", "also-good"));
+
+        // The middle recipe's page states no quantity, and the model invents one for it.
+        var llm = new StubLlmStructuredClient(
+            call => call == 2 ? InventedQuantityAnswer() : RiceAnswer());
+
+        var result = await BuildSeeder(cache, llm)
+            .NormaliseAsync(ManifestOf("good", "bad", "also-good"));
+
+        result.Normalised.Should().Be(2);
+        result.Failed.Should().Be(1);
+        result.Failures["bad"].Should()
+            .Contain(nameof(SeedNormaliseFailure.QuantityRejected))
+            .And.Contain(nameof(SeedQuantityRejection.InventedQuantity));
+        cache.HasNormalised("also-good").Should().BeTrue();
+        cache.HasNormalised("bad").Should().BeFalse("a suspect recipe is never written");
+    }
+
+    [Fact]
+    public async Task NormaliseAsync_CountsARecipeThatNeededARetry()
+    {
+        var cache = BuildCache();
+        await GivenCachedPageAsync(cache, "first", SaltPage());
+        await BuildSeeder(cache).ParseAsync(ManifestOf("first"));
+
+        var corrected = new JsonObject
+        {
+            ["name"]     = "Test Recipe",
+            ["servings"] = 4,
+            ["ingredients"] = new JsonArray(new JsonObject
+            {
+                ["name"] = "salt", ["display_name"] = "Salt",
+                ["amount"] = null, ["unit"] = null,
+            }),
+            ["steps"] = new JsonArray(new JsonObject
+            {
+                ["step_number"] = 1, ["instruction"] = "Season.",
+                ["ingredient_indexes"] = new JsonArray(0),
+            }),
+        };
+
+        var llm = new StubLlmStructuredClient(
+            call => call == 1 ? InventedQuantityAnswer() : corrected);
+
+        var result = await BuildSeeder(cache, llm).NormaliseAsync(ManifestOf("first"));
+
+        result.Normalised.Should().Be(1);
+        result.Retried.Should().Be(1);
+    }
+
+    /// <summary>
+    /// §16's rule is that one bad recipe never aborts a run. A run where nothing else has
+    /// succeeded is not isolating bad recipes — it is a model that will not load.
+    /// </summary>
+    [Fact]
+    public async Task NormaliseAsync_StopsOnceEveryRecipeInARowHasFailed()
+    {
+        _options = new RecipeSeedingOptions { MaxLlmRetries = 0, MaxConsecutiveLlmFailures = 2 };
+
+        var cache = await GivenParsedRecipesAsync("one", "two", "three");
+        var llm   = StubLlmStructuredClient.AlwaysFailing("Local LLM model is not loaded.");
+
+        var result = await BuildSeeder(cache, llm).NormaliseAsync(ManifestOf("one", "two", "three"));
+
+        result.Aborted.Should().BeTrue();
+        result.Failed.Should().Be(2);
+        result.Failures.Should().NotContainKey("three", "the run stopped before reaching it");
+    }
+
+    [Fact]
+    public async Task NormaliseAsync_RecordsAManifestSlugThatIsUnsafeAsAFilenameRatherThanThrowing()
+    {
+        var cache = await GivenParsedRecipesAsync("good");
+
+        var manifest = new SeedManifest
+        {
+            HarvestedAt = DateTime.UtcNow,
+            Recipes =
+            [
+                new SeedManifestEntry("../escape", "20251231013807", "https://example.test"),
+                new SeedManifestEntry("good", "20251231013807",
+                    "https://www.myplate.gov/recipes/good"),
+            ],
+        };
+
+        var result = await BuildSeeder(cache, new StubLlmStructuredClient(RiceAnswer()))
+            .NormaliseAsync(manifest);
+
+        result.Normalised.Should().Be(1);
+        result.Failures.Should().ContainKey("../escape");
+    }
+
+    // ── Stage 4 cache maintenance ─────────────────────────────────────────────
+
+    [Fact]
+    public async Task ClearNormalisedContent_RewindsToParsedAndKeepsTheParsedRecipes()
+    {
+        var cache = await GivenParsedRecipesAsync("first");
+        await BuildSeeder(cache, new StubLlmStructuredClient(RiceAnswer()))
+            .NormaliseAsync(ManifestOf("first"));
+
+        await cache.ClearNormalisedContentAsync();
+
+        cache.HasNormalised("first").Should().BeFalse();
+        cache.HasParsed("first").Should().BeTrue();
+        cache.HasRaw("first").Should().BeTrue();
+
+        var state = await BuildCache().LoadStateAsync();
+        state.Slugs["first"].Stage.Should().Be(SeedStage.Parsed);
+    }
+
+    [Fact]
+    public async Task TryLoadNormalised_ReturnsNullForACorruptFileSoItIsSimplyReNormalised()
+    {
+        var cache = BuildCache();
+        cache.EnsureDirectories();
+        await File.WriteAllTextAsync(cache.NormalisedPath("first"), "{ not json");
+
+        (await cache.TryLoadNormalisedAsync("first")).Should().BeNull();
+    }
+
+    [Fact]
+    public async Task TryComputeParsedFingerprint_ChangesWithTheParsedContentAndIsNullWithout()
+    {
+        var cache = BuildCache();
+        await GivenCachedPageAsync(cache, "first", RecipePage("Original"));
+
+        (await cache.TryComputeParsedFingerprintAsync("first")).Should().BeNull();
+
+        var seeder = BuildSeeder(cache);
+        await seeder.ParseAsync(ManifestOf("first"));
+        var original = await cache.TryComputeParsedFingerprintAsync("first");
+
+        await GivenCachedPageAsync(cache, "first", RecipePage("Corrected"));
+        await seeder.ParseAsync(ManifestOf("first"), force: true);
+
+        (await cache.TryComputeParsedFingerprintAsync("first")).Should().NotBe(original);
     }
 }

@@ -197,4 +197,72 @@ public class SeedQuantityGateTests
         SeedQuantityGate.Check("olive oil", null, null)
             .IsAccepted.Should().BeTrue();
     }
+
+    // ── CheckAgainstStatedNumber ──────────────────────────────────────────────
+
+    /// <summary>
+    /// 7,136 of 8,601 corpus lines (83.0%) state exactly one number, and for those the model's
+    /// amount is checkable by arithmetic rather than by judgement.
+    /// </summary>
+    [Theory]
+    [InlineData("3/4 cup unsalted dry roasted peanuts", 0.75)]
+    [InlineData("1/4 teaspoon cayenne pepper", 0.25)]
+    [InlineData("1 1/2 cups seedless grapes", 1.5)]
+    [InlineData("2 1/2 cups cooked chicken breast, diced", 2.5)]
+    [InlineData("12 ounces lettuce mix", 12)]
+    [InlineData("14.5 ounces crushed tomatoes", 14.5)]
+    [InlineData("¼ cup sliced almonds (optional)", 0.25)]
+    [InlineData("1 ½ cups flour", 1.5)]
+    [InlineData("orange peel, dried (1 teaspoon, optional)", 1)]
+    public void TryReadSoleNumber_ALineStatingOneNumber_ReadsIt(string line, double expected) =>
+        SeedQuantityGate.TryReadSoleNumber(line).Should().BeApproximately((decimal)expected, 0.001m);
+
+    /// <summary>
+    /// Ambiguity is always resolved as "not checkable". A container line's right answer is a choice
+    /// between its numbers or a product of them, and guessing which would reject correct output.
+    /// </summary>
+    [Theory]
+    [InlineData("1 can (14.5 ounces) no salt added diced tomatoes")]
+    [InlineData("2 cans (15 ounces each) low-sodium black beans")]
+    [InlineData("4 (6-inch) corn tortillas")]
+    [InlineData("1/2 cup margarine, 1 stick")]
+    [InlineData("aluminum foil (10x12 inches square)")]
+    [InlineData("2 1/2 medium apples, sliced (14 oz. of sliced apples)")]
+    public void TryReadSoleNumber_ALineStatingSeveral_IsNotCheckable(string line) =>
+        SeedQuantityGate.TryReadSoleNumber(line).Should().BeNull();
+
+    [Theory]
+    [InlineData("salt")]
+    [InlineData("nonstick cooking spray")]
+    [InlineData("")]
+    public void TryReadSoleNumber_ALineStatingNone_IsNotCheckable(string line) =>
+        SeedQuantityGate.TryReadSoleNumber(line).Should().BeNull();
+
+    /// <summary>The live misread: a fivefold error that every other rule waves through.</summary>
+    [Fact]
+    public void CheckAgainstStatedNumber_TheThreeQuartersMisreadAsThreePointSevenFive_IsRejected() =>
+        SeedQuantityGate.CheckAgainstStatedNumber("3/4 cup unsalted dry roasted peanuts", 3.75m)
+            .Should().Be(SeedQuantityRejection.ContradictedQuantity);
+
+    [Theory]
+    [InlineData("1/4 teaspoon salt", 0.25)]
+    [InlineData("1/3 cup plain low-fat yogurt", 0.333)]
+    [InlineData("2/3 cup rice", 0.67)]
+    [InlineData("1 pound lean pork, cut into chunks", 1)]
+    [InlineData("20 cups water", 20)]
+    public void CheckAgainstStatedNumber_AnAmountThatAgreesWithinRounding_IsAccepted(
+        string line, double amount) =>
+        SeedQuantityGate.CheckAgainstStatedNumber(line, (decimal)amount).Should().BeNull();
+
+    /// <summary>Nothing to check against, so nothing is rejected here — <see cref="SeedQuantityGate.Check"/> rules on these.</summary>
+    [Theory]
+    [InlineData("1 can (14.5 ounces) diced tomatoes", 14.5)]
+    [InlineData("2 cans (15 ounces each) black beans", 30.0)]
+    [InlineData("salt", null)]
+    public void CheckAgainstStatedNumber_ALineItCannotCheck_StandsAside(string line, double? amount) =>
+        SeedQuantityGate.CheckAgainstStatedNumber(line, (decimal?)amount).Should().BeNull();
+
+    [Fact]
+    public void CheckAgainstStatedNumber_NoAmountToCheck_StandsAside() =>
+        SeedQuantityGate.CheckAgainstStatedNumber("1/4 teaspoon salt", null).Should().BeNull();
 }

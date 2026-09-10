@@ -1,3 +1,5 @@
+using System.Text.Json.Serialization;
+
 namespace RecipeApp.API.Services.Seeding;
 
 /// <summary>
@@ -121,7 +123,27 @@ public record ParsedSeedRecipe
 /// The parenthetical prep note Drupal renders in its own <c>span.notes</c>, e.g. <c>"(chopped)"</c>.
 /// Present on 2,446 of 8,694 items; never more than one per item.
 /// </param>
-public record ParsedIngredientLine(string Text, string? Note);
+public record ParsedIngredientLine(string Text, string? Note)
+{
+    /// <summary>
+    /// The line as the page publishes it, both spans joined.
+    ///
+    /// <para><b>This, not <see cref="Text"/>, is what "the source line" means.</b> The two spans are
+    /// one printed line, and MyPlate's convention for an optional ingredient puts the food in the
+    /// first and the amount in the second: <c>orange peel, dried</c> + <c>(1 teaspoon, optional)</c>.
+    /// Measured across the corpus, <b>109 lines on 87 recipes (8.0%) state their quantity only in
+    /// the note</b>, and every one of them is a real measurement — not a single case is prep detail
+    /// with an incidental digit. Asking <see cref="SeedQuantityGate"/> about <see cref="Text"/>
+    /// alone would call all 109 unquantified and then reject the model for reading them correctly.
+    /// Same failure as the vulgar-fraction case in Phase 9.1 §2, in a different column.</para>
+    ///
+    /// <para>Not serialised: <c>parsed/</c> already holds both parts, and adding a derived field
+    /// would rewrite all 1,089 cached files for nothing.</para>
+    /// </summary>
+    [JsonIgnore]
+    public string FullText =>
+        string.IsNullOrWhiteSpace(Note) ? Text : $"{Text} {Note.Trim()}";
+}
 
 // ── Stage results ─────────────────────────────────────────────────────────────
 

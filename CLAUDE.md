@@ -4,7 +4,7 @@
 Mobile-first web app for storing recipes, building meal plans, and generating shopping lists.
 
 - **Spec:** `SPEC.md` — read this for feature requirements and data model definitions.
-- **Current phase:** Phase 9 in progress (seed recipe library) — **v1 feature-complete**. Stages 1–3 (Wayback discovery, fetch, parse) done and Phase 9.1 (unquantified ingredients — the Stage 4 prerequisite) done. Stage 4 (LLM normalise) is built and clears its acceptance bar on the 30-recipe benchmark, but **the full-corpus pass has not been run**; stage 5 (persist) next.
+- **Current phase:** Phase 9 in progress (seed recipe library) — **v1 feature-complete**. Stages 1–3 (Wayback discovery, fetch, parse) done and Phase 9.1 (unquantified ingredients — the Stage 4 prerequisite) done. Stage 4 (LLM normalise) is **done: all 1,123 recipes normalised, zero failures**, after a run-abort bug and four quantity repairs took the success rate from 91.3% to 100%. Stage 5 (persist) next — its inputs are `normalised/*.json` plus 1,115 cached photos, and its real work is matching 1,475 distinct ingredient names to the catalogue.
 
 ## Repository structure
 ```
@@ -285,12 +285,18 @@ worth knowing: `CacheDirectory`, `PreferredSnapshotYear`, `FetchDelayMillisecond
   **(2)** images are requested through the `im_` snapshot modifier and validated by magic bytes.
   Without `im_` the archive 302s to its HTML viewer, and it serves interstitial/error pages with
   a **200**, so ~11 KB of markup was being cached as `<slug>.jpg`. Real photos are 50–95 KB.
-  **Harvest is complete**: 1,123/1,123 pages (112 MB) and 1,115 photos (101 MB, 968 JPEG +
-  147 PNG) cached; `state.json` is uniformly `fetched`. It took two passes — the first left 25
-  pages and 81 photos on `HTTP 503 after 4 attempt(s)`, scattered across manifest positions
-  471–683 (an archive load window, not missing content), and simply re-running `--harvest`
-  recovered every one. Zero image-validation rejections across 1,003 photos, so the `im_` fix
-  holds corpus-wide. The 8 recipes with no cached photo genuinely carry no JSON-LD image node.
+  **Harvest is complete**: 1,123/1,123 pages and 1,115 photos cached; `state.json` is uniformly
+  `fetched` or later. It took **three** passes, not the two originally recorded here — each one
+  left a residue of `HTTP 503 after 4 attempt(s)` (25 pages and 81 photos after the first,
+  scattered across manifest positions 471–683), which is an archive load window rather than
+  missing content, and simply re-running `--harvest` recovered every one. **The third pass ran
+  after Stage 3 and Stage 4 had already started**, which is why the parse result below was once
+  recorded against a denominator of 1,089: 34 pages were still outstanding at that point.
+  Re-running `--harvest`, `--parse` and `--normalise` in order folded them in with no special
+  handling — the resume logic is what makes a partially harvested corpus safe to work on.
+  Zero image-validation rejections corpus-wide, so the `im_` fix holds. The 8 recipes with no
+  cached photo genuinely carry no JSON-LD image node, and every recipe that *does* name an image
+  has its file on disk.
   Tests: `Seeding/SeedCacheStoreTests.cs`, `Seeding/WaybackHarvesterTests.cs`, plus
   `Infrastructure/TestHostEnvironment.cs` and `Infrastructure/StubHttpClientFactory.cs`. No
   network in CI.
@@ -302,8 +308,10 @@ worth knowing: `CacheDirectory`, `PreferredSnapshotYear`, `FetchDelayMillisecond
   `SeedCacheStore` gained `HasParsed`/`WriteParsedAsync`/`TryLoadParsedAsync`/
   `ClearParsedContentAsync`; `RecipeSeedingOptions` gained `DefaultServings` (4);
   `SeedRecipesCommand` gained `--parse`, and `--force` now also means "re-derive" for it.
-  **Result: 1,089/1,089 pages parsed, zero failures, ~4 s** — 8,601 ingredient lines and 6,639
-  steps, 1,024 primary + 65 legacy templates.
+  **Result: 1,123/1,123 pages parsed, zero failures, ~4 s** — 8,882 ingredient lines and 6,857
+  steps, 1,058 primary + 65 legacy templates. (Recorded as 1,089 until the last 34 pages were
+  harvested; the hazard measurements below were taken on that first 1,089 and have not been
+  re-run against the full corpus.)
 - **What the corpus settled about Stage 3's hazards** (spec §10.3, all re-measured against the
   1,089 cached pages rather than the single research page they were observed on):
   - **Hazard 2 (mojibake) does not exist here.** Zero `U+FFFD` and zero undecoded entities across
@@ -448,12 +456,133 @@ worth knowing: `CacheDirectory`, `PreferredSnapshotYear`, `FetchDelayMillisecond
     own worked example taught `teaspoon`, because the lenient alias table was private.
     `MeasurementUnit.AcceptedSpellings` now exposes it and the prompt is derived from that; a test
     asserts every unit the example teaches appears in the list.
-  **Two loose ends.** One in 31 recipes still misreads a quantity (`1 tablespoon cinnamon` as
-  `0.25`), and grammar-constrained decoding still lets an unparseable answer through at a low rate —
-  the grammar's number rule admitted `00` and `012`, which is fixed, but that was **not** the cause
-  of the observed failures (a leading zero produces a different parser message; I checked). The
+  **One loose end.** Grammar-constrained decoding still lets an unparseable answer through at a low
+  rate — the grammar's number rule admitted `00` and `012`, which is fixed, but that was **not** the
+  cause of the observed failures (a leading zero produces a different parser message; I checked). The
   client now reports the text either side of the offending character, so the next occurrence names
   itself instead of only giving an offset.
+- **Phase 9 Stage 4 — the first real corpus pass, and what it exposed (2026-09-10).** The run reached
+  manifest position 352 (315 normalised, 30 failed) and then **every re-run died at position 77 with
+  nothing normalised**, which is the headline finding:
+  - **A resumed run failing everything it attempts is the expected state, not a symptom.** The abort
+    guard counted consecutive failures among *attempted* recipes, and cached successes `continue`
+    before the counter is reached. So on resume the only recipes it attempts below the high-water mark
+    are the ones that already failed — and those reproduce byte-identically. The guard fired on the
+    first five of a thirty-recipe backlog and stopped, leaving 744 recipes never tried, forever.
+    `MaxConsecutiveLlmFailures` now counts only **systemic** failures
+    (`SeedNormaliseFailureExtensions.IsSystemic`: `InvalidLlmOutput`, `LlmTimeout` — nothing came
+    back). A content rejection means the model answered, the grammar held and the gate disagreed:
+    evidence the pipeline works, never evidence it is broken. It leaves the counter alone rather than
+    resetting it, so an interleaved bad recipe cannot mask a model that is genuinely unavailable.
+  - **The gate now answers from the line where the line settles the question**, instead of rejecting.
+    It already trusted its own arithmetic enough to discard a whole recipe on it, which is the same
+    thing as trusting it to supply the number. **Four repairs, all source-derived, in this order in
+    `BuildIngredients`. Measured together against the real model they recover 29 of the 30 backlog
+    failures:**
+    1. **A count the model declined to read.** `1 dash black pepper` resembles an unquantified
+       seasoning and the model reads it as one. Phase 9 had already decided an unsized measure counts
+       its things as `pcs`, but **that decision was unreachable**: the `CountWords` rename only ever
+       ran inside `if (returned.Amount is { } …)`, so a null lost the recipe.
+       `SeedQuantityGate.TryReadCountedQuantity` reads the count off the line. 44 lines on 43 recipes.
+       Guarded by `StatesAUnitOfMeasurement`, so `1/2 cup onion, chopped into 4 slices` is never read
+       as four pieces, and a range yields its low end (`4-6 handfuls` is 4).
+    2. **An amount the model left out of a line stating exactly one number.** Closes an inconsistency
+       repair 3 creates rather than granting new licence: on such a line the gate already *requires*
+       the stored amount to equal the line's number, so a wrong one is corrected to it and only a null
+       was treated differently. The class is MyPlate's optional ingredient, which states its quantity
+       in a trailing note — `salt (optional, 1/4 teaspoon)` — and whose `optional` leads the model to
+       report no quantity at all. 146 lines on 119 recipes. Phase 9.1's rule survives: the model still
+       cannot opt itself out by returning null, because the source decides either way. `HasStatedQuantity`
+       gates it, so an unquantified line and a cut-size-only line both stay unquantified.
+    3. **A misread number on a line stating exactly one.** `SeedQuantityGate.TryReadSoleNumber`
+       supplies it. Restricted to a *positive* model amount on purpose — a zero is not a digit read
+       wrongly, and `NonPositiveQuantity` rejects it deliberately. All 15 measured contradictions
+       were plausible positives (`1 tablespoon cinnamon` as `0.25`, `1/4 cup` as `0.125`).
+    4. **A wrong unit — found only by shipping repair 3.** Fixing the amount alone *made one case
+       worse*: `1 tablespoon cinnamon` came back as `1 cup`, sixteenfold, positive, storable, and in
+       agreement with the line's only number, so every other rule admitted it. Rescuing a recipe can
+       carry a wrong unit in with it. `SeedQuantityGate.TryReadSoleStatedUnit` takes the unit named
+       immediately after a line's **sole** number. Measured before trusting it: it applies to 1,703
+       rows of the normalised corpus and agrees with the model on 1,702 — the one disagreement was
+       that error. Both guards are load-bearing: *exactly one number*, because 37 rows name a unit
+       only inside a parenthetical equivalence (`12 large egg whites (about 1 1/2 cups)` is 12 pcs);
+       *immediately after*, because the word after the count in `2 medium apples` is a size. It also
+       recovers a unit the model drops, which used to be an `UnstorableUnit` rejection.
+  - **The one backlog recipe still failing is genuinely ambiguous, and was left alone deliberately.**
+    `chicken-and-dumplings` carries `1 dash black pepper (1/16 of a teaspoon)`, which states both a
+    count and its equivalence. Repair 1 declines because the line names a real unit; repair 2 declines
+    because the line states two numbers. Recovering it means letting a count word that follows the
+    line's *first* number outrank a later unit — which also turns all 329 `1 can (14.5 ounces) …`
+    lines into `1 pcs` when the model returns nothing, trading a protective rejection for one recipe.
+    Not worth it without measuring that trade first.
+  - **`fluid ounce` had no plural while every other customary unit had one**, and
+    `ResolveCountUnit` only ever tested the *leading word*, so no multi-word customary unit could
+    match at all (`us fluid ounces` reads as `us`). The model read `10 3/4 us fluid ounces` correctly
+    and lost its recipe. `UnitConversions` gained the plural and the `us …` forms; both unit resolvers
+    now try the longest leading phrase first, bounded by the longest spelling in the tables.
+    15 lines on 14 recipes, 13 of them plural.
+  - **An incidental digit is real, but only twice.** `carrot, sliced into 3 inch pieces` and
+    `aluminum foil (10x12 inches square)` state nothing but a cut size, and counting it made the gate
+    demand an amount the line never gave. `HasStatedQuantity` strips dimension phrases; the other 117
+    inch-bearing lines carry a real quantity as well and are untouched. Deliberately **not** applied
+    to `TryReadSoleNumber` — widening the one check that can reject a plausible answer is not
+    justified by two lines of evidence.
+  - **`SourceAmount`/`SourceUnit` record the repaired measurement, not the discarded misread.** A
+    source measurement that does not convert to the stored one audits nothing. Every repair is logged
+    at Information with the slug, the line, what the model said and what the line says, so the run log
+    is the audit trail; `SourceText` keeps the line itself.
+  - A failed recipe recorded `attempts: 0` in `state.json`, because the runner only ever added the
+    attempt count of a recipe that *succeeded*. `SeedNormaliseException.Attempts` now carries it.
+  - Suite: **996 tests**, up from 917, no GPU and no network.
+  - **Superseded by the completed pass below.** At the time of writing, 344 of 1,089 recipes were
+    normalised and the walked region had succeeded on only 91.3%.
+- **Phase 9 Stage 4 — the full corpus pass is complete (2026-09-11). 1,123 of 1,123 recipes
+  normalised, zero failures, zero stale fingerprints.** `seed-recipes --report` reads uniformly
+  `Normalised 1123`. The four quantity repairs and the abort-guard fix above were built against a
+  30-recipe backlog and **generalised**: 91.3% became 100%, clearing §20's 95% bar with no recipe
+  left behind and none excluded. Retries stayed cheap — 1,008 recipes (89.8%) succeeded on the
+  first attempt, 95 needed two, 20 needed three, and none exhausted its budget.
+  **Re-verified from the artefacts rather than from the gate that wrote them**, because a gate
+  cannot be its own evidence. Across all 8,882 ingredient rows and 6,857 steps: ingredient and step
+  counts match `parsed/` exactly for every recipe, step numbers are contiguous, no
+  `ingredient_indexes` entry points outside its array, every unit is storable, no amount is zero or
+  negative, no amount/unit pair is half-set, and no name is blank. 98.0% of ingredients are
+  referenced by at least one step, so Cooking Mode's linkage is dense rather than nominal.
+  **Four things the finished corpus settles:**
+  - **Phase 9.1's rule held corpus-wide, and the repairs shrank the class it governs.** 331 rows
+    (3.7%) are unquantified, down from the 5.0% no-digit rate Phase 9.1 measured, because repairs 1
+    and 2 now read the quantity off lines the model declined to read. Independently checked: **every
+    one of the 331 sits on a line that states no number**, once dimension phrases are discounted. No
+    model opted itself out of a line that did state one.
+  - **Single-number lines are exact, by construction.** 7,448 rows (84% of the corpus) sit on a line
+    stating exactly one number and **all 7,448 agree with it** inside the gate's 1% tolerance. The
+    151 that are not bit-exact are decimal truncations of `1/3` and `1/16` (`0.33`, `0.333`,
+    `0.062`), never a different number.
+  - **The multi-number line is the whole residual error surface, and Stage 5 inherits it.** 1,180
+    rows state two or more numbers, which is exactly the shape `TryReadSoleNumber` and
+    `TryReadSoleStatedUnit` decline to judge. 59 of them store a clean count × pack-size product —
+    `2 cans (15.5 ounces each)` → `31 ounces` — which is right and worth keeping. **31 rows (0.35%
+    of the corpus, ~30 recipes) store a number that is neither stated on the line nor a product of
+    two numbers on it**, and no current rule can see them. Three recurring shapes, all arithmetic
+    rather than misreading: a percentage absorbed into the quantity (`1 pound 85% lean ground
+    turkey` → `1.85 pound`), a parenthetical equivalence combined with the amount instead of
+    replacing it (`1/16 cup orange juice (1 tablespoon)` appears on five recipes and is stored as
+    `1.062`, `0.125` or `0.75` — never as `1/16`), and can-count slips (`3 cans (15.5 ounces each)`
+    → `30`). The worst is
+    `sunshine-salad`: `1/3 cup "lite" vinaigrette dressing (around 15 calories per tablespoon)` →
+    `13.333 cups`. These are below any sensible corpus-quality bar but they are visible in a
+    shopping list, so they are a Stage 5 decision, not a Stage 4 defect.
+  - **`HasStatedQuantity` strips `10x12 inches` and `3 inch` but not the inch mark.**
+    `6" bamboo skewers` is stored as `6 pcs`. One row in 8,882 — recorded rather than fixed,
+    because widening a dimension filter on one line of evidence is how the fraction-menu mistake
+    happened.
+  **Quality does not vary by run cohort**, so nothing needs re-running: the 30 benchmark recipes
+  written before the repairs, the 602 from the first corpus pass and the 491 from the completing
+  pass carry unexplained-amount rates of 0.88%, 0.30% and 0.38% — noise at these counts.
+  **What Stage 5 is walking into: 1,475 distinct ingredient names, 56.1% of them appearing exactly
+  once.** Singular and plural still split (`tomato` 63 rows, `tomatoes` 66), so catalogue matching
+  is the Stage 5 workload rather than a lookup. Metadata coverage is high: 8 recipes have no image
+  (they carry no JSON-LD image node), 4 no description, 8 no source credit, 75 no notes.
 
 ---
 ## Project Notes

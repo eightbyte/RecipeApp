@@ -265,4 +265,120 @@ public class SeedQuantityGateTests
     [Fact]
     public void CheckAgainstStatedNumber_NoAmountToCheck_StandsAside() =>
         SeedQuantityGate.CheckAgainstStatedNumber("1/4 teaspoon salt", null).Should().BeNull();
+
+    // ── Cut sizes are not quantities ──────────────────────────────────────────
+
+    /// <summary>
+    /// The two corpus lines whose only number is a dimension. Counting it made the gate demand an
+    /// amount the line never stated, and reject the model for correctly reporting none.
+    /// </summary>
+    [Theory]
+    [InlineData("carrot, sliced into 3 inch pieces")]
+    [InlineData("aluminum foil (10x12 inches square)")]
+    public void HasStatedQuantity_ALineWhoseOnlyNumberIsACutSize_IsUnquantified(string line) =>
+        SeedQuantityGate.HasStatedQuantity(line).Should().BeFalse();
+
+    /// <summary>
+    /// The other 117 inch-bearing lines carry a real quantity as well, and stripping the dimension
+    /// must not reach it. This is the direction that would cause silent data loss.
+    /// </summary>
+    [Theory]
+    [InlineData("6 medium russet potatoes, peeled and sliced into 1/4 inch slices")]
+    [InlineData("10 (6-inch) corn tortillas")]
+    [InlineData("2 large carrots, peeled, cut into very thin 2 1/2 inch strips")]
+    [InlineData("1 medium zucchini, sliced into 1/2-inch thick rounds")]
+    [InlineData("4 flour tortillas (8 inch)")]
+    [InlineData("1 medium red bell pepper (cut into 1 -inch pieces)")]
+    public void HasStatedQuantity_ALineWithBothADimensionAndAQuantity_IsQuantified(string line) =>
+        SeedQuantityGate.HasStatedQuantity(line).Should().BeTrue();
+
+    // ── TryReadCountedQuantity ────────────────────────────────────────────────
+
+    private static readonly HashSet<string> CountWords =
+        new(StringComparer.OrdinalIgnoreCase)
+        { "dash", "dashes", "pinch", "pinches", "handful", "handfuls", "spray", "sprays", "slices" };
+
+    [Theory]
+    [InlineData("1 dash black pepper", 1)]
+    [InlineData("1 dash salt", 1)]
+    [InlineData("2 sprays of nonstick cooking spray", 2)]
+    [InlineData("3 pinches of cayenne", 3)]
+    [InlineData("1/2 dash of nothing sensible", 0.5)]
+    public void TryReadCountedQuantity_ANumberFollowedByAnUnsizedMeasure_IsTheCount(
+        string line, double expected) =>
+        SeedQuantityGate.TryReadCountedQuantity(line, CountWords).Should().Be((decimal)expected);
+
+    /// <summary>Digits are not words, so the next word after <c>4</c> in <c>4-6</c> is the count word.</summary>
+    [Fact]
+    public void TryReadCountedQuantity_ARange_YieldsItsLowEnd() =>
+        SeedQuantityGate.TryReadCountedQuantity("4-6 handfuls corn shucks", CountWords)
+            .Should().Be(4m);
+
+    /// <summary>
+    /// A line naming a real unit is measuring, not counting. Without this guard
+    /// <c>1/2 cup onion, chopped into 4 slices</c> reads as four pieces of onion.
+    /// </summary>
+    [Theory]
+    [InlineData("1/2 cup onion, chopped into 4 slices")]
+    [InlineData("2 cups flour")]
+    [InlineData("1 pound skinless chicken breasts")]
+    public void TryReadCountedQuantity_ALineNamingARealUnit_IsLeftAlone(string line) =>
+        SeedQuantityGate.TryReadCountedQuantity(line, CountWords).Should().BeNull();
+
+    [Theory]
+    [InlineData("nonstick cooking spray")]
+    [InlineData("salt")]
+    [InlineData("7 apples")]
+    [InlineData("carrot, sliced into 3 inch pieces")]
+    [InlineData("")]
+    public void TryReadCountedQuantity_NoNumberImmediatelyBeforeACountWord_IsNull(string line) =>
+        SeedQuantityGate.TryReadCountedQuantity(line, CountWords).Should().BeNull();
+
+    // ── TryReadSoleStatedUnit ─────────────────────────────────────────────────
+
+    [Theory]
+    [InlineData("1 tablespoon cinnamon", "tablespoon")]
+    [InlineData("2 cups flour", "cups")]
+    [InlineData("1/4 teaspoon salt", "teaspoon")]
+    [InlineData("1 pound lean pork, cut into chunks", "pound")]
+    [InlineData("¼ cup sliced almonds (optional)", "cup")]
+    [InlineData("46 us fluid ounces tomato juice, low-sodium", "us fluid ounces")]
+    public void TryReadSoleStatedUnit_AUnitRightAfterTheOnlyNumber_IsTheLinesUnit(
+        string line, string expected) =>
+        SeedQuantityGate.TryReadSoleStatedUnit(line).Should().Be(expected);
+
+    /// <summary>
+    /// The longest phrase wins, so <c>us fluid ounces</c> is not read as the <c>ounces</c> inside it.
+    /// Those differ by a factor of 29.6 against 28.3 and by dimension, mass against volume.
+    /// </summary>
+    [Fact]
+    public void TryReadSoleStatedUnit_PrefersTheLongestUnitPhrase() =>
+        SeedQuantityGate.TryReadSoleStatedUnit("6 us fluid ounces orange juice")
+            .Should().Be("us fluid ounces");
+
+    /// <summary>
+    /// A line stating several numbers names its unit in a parenthetical equivalence rather than for
+    /// its own quantity. 37 corpus rows are this shape, and every one is a count of whole things.
+    /// </summary>
+    [Theory]
+    [InlineData("12 large egg whites (about 1 1/2 cups)")]
+    [InlineData("1 medium head of lettuce (about 10 cups)")]
+    [InlineData("1 can (14.5 ounces) diced tomatoes")]
+    [InlineData("2 large potatoes (about 2 pounds)")]
+    [InlineData("1 clove garlic, minced (or 1/4 teaspoon garlic powder)")]
+    // A percentage in the product name is a second number, so even a line whose unit sits right
+    // after the quantity stands down. Conservative in the safe direction.
+    [InlineData("12 fluid ounces 100% fruit juice concentrate")]
+    public void TryReadSoleStatedUnit_ALineStatingSeveralNumbers_StandsAside(string line) =>
+        SeedQuantityGate.TryReadSoleStatedUnit(line).Should().BeNull();
+
+    /// <summary>The unit must belong to the number, so the search does not run down the line.</summary>
+    [Theory]
+    [InlineData("2 medium apples, pared, cored, sliced")]
+    [InlineData("7 apples")]
+    [InlineData("1 dash black pepper")]
+    [InlineData("salt")]
+    [InlineData("")]
+    public void TryReadSoleStatedUnit_NoUnitImmediatelyAfterTheNumber_IsNull(string line) =>
+        SeedQuantityGate.TryReadSoleStatedUnit(line).Should().BeNull();
 }

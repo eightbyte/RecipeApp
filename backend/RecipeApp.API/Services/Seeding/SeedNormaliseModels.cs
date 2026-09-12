@@ -39,6 +39,36 @@ public enum SeedNormaliseFailure
     LlmTimeout,
 }
 
+/// <summary>
+/// Tells the two kinds of Stage 4 failure apart, which is what the run-abort guard needs and did
+/// not have.
+/// </summary>
+public static class SeedNormaliseFailureExtensions
+{
+    /// <summary>
+    /// Whether this failure says inference itself is unavailable, rather than saying something
+    /// about one recipe.
+    ///
+    /// <para>Only two values qualify. An unloaded model, an exhausted GPU and a broken grammar all
+    /// surface as <see cref="SeedNormaliseFailure.InvalidLlmOutput"/> or
+    /// <see cref="SeedNormaliseFailure.LlmTimeout"/>, because nothing came back that could be read.
+    /// Every other value is a judgement about output that <i>did</i> come back: the model answered,
+    /// the grammar held, and the gate read the answer and disagreed with it. A quantity rejection is
+    /// therefore evidence that the pipeline is working, and it must never be counted as evidence
+    /// that the pipeline is broken.</para>
+    ///
+    /// <para><b>Getting this wrong wedged a run completely.</b> The abort guard counted consecutive
+    /// failures among attempted recipes, and cached successes are skipped before the counter is
+    /// reached. On a resumed run every recipe it attempts below the high-water mark is one that
+    /// already failed, and those failures reproduce — so the guard tripped on the first five of a
+    /// thirty-recipe backlog and stopped at manifest position 77, never reaching the 744 recipes
+    /// that had never been tried. Each re-run did exactly the same thing. Failing everything it
+    /// attempts is the <i>expected</i> state of a resumed run, not a symptom.</para>
+    /// </summary>
+    public static bool IsSystemic(this SeedNormaliseFailure failure) =>
+        failure is SeedNormaliseFailure.InvalidLlmOutput or SeedNormaliseFailure.LlmTimeout;
+}
+
 // ── normalised/{slug}.json (Stage 4 output) ───────────────────────────────────
 
 /// <summary>
@@ -192,6 +222,14 @@ public class SeedNormaliseException(SeedNormaliseFailure failure, string detail)
 
     /// <summary>What went wrong, in enough detail to act on — which line, which rejection.</summary>
     public string Detail { get; } = detail;
+
+    /// <summary>
+    /// LLM calls this recipe consumed before it was excluded, so <c>state.json</c> records the work
+    /// a failure actually cost. It read 0 for every failed recipe before, because the runner only
+    /// ever added the attempt count of a recipe that succeeded — a recipe that burned three passes
+    /// and lost looked untouched in <c>--report</c>.
+    /// </summary>
+    public int Attempts { get; internal set; }
 
     /// <summary>The reason string written to <c>state.json</c> and printed in the run summary.</summary>
     public string StateReason => $"NormaliseFailed: {Failure} — {Detail}";

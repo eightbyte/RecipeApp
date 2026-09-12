@@ -39,9 +39,18 @@ public class MeasurementConverter(IOptions<MeasurementOptions> options)
             ["lbs"]          = (MeasurementUnit.Gram,      453.592),
             ["pound"]        = (MeasurementUnit.Gram,      453.592),
             ["pounds"]       = (MeasurementUnit.Gram,      453.592),
-            ["fl oz"]        = (MeasurementUnit.Millilitre, 29.5735),
-            ["fluid oz"]     = (MeasurementUnit.Millilitre, 29.5735),
-            ["fluid ounce"]  = (MeasurementUnit.Millilitre, 29.5735),
+            // Every spelling the corpus and the model between them produce. The plural was missing
+            // while every other unit here had one, and it cost a recipe: the model read
+            // "10 3/4 us fluid ounces 1% low fat milk" correctly as 10.75 fluid ounces and the gate
+            // rejected the unit as unstorable. 15 lines on 14 recipes spell fluid ounces out, 13 of
+            // them plural and 9 of those prefixed "us".
+            ["fl oz"]             = (MeasurementUnit.Millilitre, 29.5735),
+            ["fl ozs"]            = (MeasurementUnit.Millilitre, 29.5735),
+            ["fluid oz"]          = (MeasurementUnit.Millilitre, 29.5735),
+            ["fluid ounce"]       = (MeasurementUnit.Millilitre, 29.5735),
+            ["fluid ounces"]      = (MeasurementUnit.Millilitre, 29.5735),
+            ["us fluid ounce"]    = (MeasurementUnit.Millilitre, 29.5735),
+            ["us fluid ounces"]   = (MeasurementUnit.Millilitre, 29.5735),
             ["pt"]           = (MeasurementUnit.Millilitre, 473.176),
             ["pint"]         = (MeasurementUnit.Millilitre, 473.176),
             ["pints"]        = (MeasurementUnit.Millilitre, 473.176),

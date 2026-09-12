@@ -2,6 +2,7 @@ using System.Globalization;
 using System.Text;
 using System.Text.Json;
 using System.Text.Json.Nodes;
+using System.Text.RegularExpressions;
 using Microsoft.Extensions.Options;
 using RecipeApp.API.Enums;
 using RecipeApp.API.Services.Llm;
@@ -204,9 +205,12 @@ public class SeedRecipeNormaliser(
         var attemptCap  = 1 + Math.Max(0, _options.MaxLlmRetries);
 
         SeedNormaliseException? lastFailure = null;
+        var attemptsUsed = 0;
 
         for (var attempt = 1; attempt <= attemptCap; attempt++)
         {
+            attemptsUsed = attempt;
+
             JsonNode? answer = null;
             try
             {
@@ -226,7 +230,8 @@ public class SeedRecipeNormaliser(
             }
         }
 
-        throw lastFailure!;
+        lastFailure!.Attempts = attemptsUsed;
+        throw lastFailure;
     }
 
     // ── The model call ────────────────────────────────────────────────────────
@@ -386,7 +391,7 @@ public class SeedRecipeNormaliser(
     /// against what its own source line said, so a row whose source line is a guess would be judged
     /// against a guess. Exact pairing is the stricter reading and the one the gate needs.</para>
     /// </summary>
-    private static List<NormalisedSeedIngredient> BuildIngredients(
+    private List<NormalisedSeedIngredient> BuildIngredients(
         ParsedSeedRecipe parsed, RecipeScrapeService.ExtractedRecipe extracted)
     {
         if (extracted.Ingredients.Count != parsed.Ingredients.Count)
@@ -409,16 +414,105 @@ public class SeedRecipeNormaliser(
                 throw new SeedNormaliseException(SeedNormaliseFailure.MissingIngredientName,
                     $"ingredient {index + 1} ('{sourceText}') came back with no name");
 
-            // Stage A first: the model preserves the unit as stated (§11.1), so 'ounces' has to
-            // become grams before the gate can ask whether the unit is storable. Skipped entirely
-            // when the model reported no quantity — there is nothing to convert, and a unit
-            // measuring nothing is as invented as an amount would be.
-            decimal? statedAmount = null;
-            string?  statedUnit   = returned.Unit;
+            // The raw amount this row will be built from: what the model read, then repaired against
+            // the line itself where the line settles the question on its own. Both repairs below
+            // take their value from the source text, never from the answer (Phase 9.1).
+            var rawAmount = (decimal?)returned.Amount;
+            var rawUnit   = returned.Unit;
 
-            if (returned.Amount is { } modelAmount)
+            // Repair 1 — a count the model declined to read. "1 dash black pepper" resembles an
+            // unquantified seasoning and the model reads it as one, but the line does state a count,
+            // and Phase 9 already decided an unsized measure counts its things as pcs. The unit
+            // follows from ResolveCountUnit below, which sees a line naming no real unit.
+            if (rawAmount is null &&
+                SeedQuantityGate.TryReadCountedQuantity(sourceText, CountWords) is { } counted)
+            {
+                logger.LogDebug(
+                    "{Slug}: ingredient {Position} ('{Line}') — the model read no quantity; the " +
+                    "line counts {Count}, taken as pcs.",
+                    parsed.Slug, index + 1, sourceText, counted);
+
+                rawAmount = counted;
+                rawUnit   = null;
+            }
+
+            // Repair 2 — an amount the model left out of a line that states exactly one number.
+            // Closing an inconsistency the next repair creates rather than a new licence: on such a
+            // line the gate already *requires* the stored amount to equal the line's own number, so a
+            // wrong one is corrected to it and only a null was treated differently. Filling it
+            // produces the one value the gate would have accepted anyway.
+            //
+            // The class this was measured against is MyPlate's optional ingredient, which states its
+            // quantity in a trailing note — "salt (optional, 1/4 teaspoon)" — and whose "optional"
+            // leads the model to report no quantity at all. 146 lines on 119 recipes. Phase 9.1's rule
+            // survives intact: the model still cannot opt itself out by returning null, because the
+            // source decides either way. HasStatedQuantity gates it, so a genuinely unquantified line
+            // and a line whose only number is a cut size both stay unquantified.
+            if (rawAmount is null &&
+                SeedQuantityGate.HasStatedQuantity(sourceText) &&
+                SeedQuantityGate.TryReadSoleNumber(sourceText) is { } statedSole &&
+                statedSole > 0m)
+            {
+                logger.LogInformation(
+                    "{Slug}: ingredient {Position} ('{Line}') — the model read no quantity; the " +
+                    "line states {Stated}. Using the line's own number.",
+                    parsed.Slug, index + 1, sourceText, statedSole);
+
+                rawAmount = statedSole;
+            }
+
+            // Repair 3 — a misread number on a line that states exactly one. The gate already
+            // trusts this arithmetic enough to reject a recipe on it, so it is trusted to supply
+            // the answer instead: the number is parsed off the source by the same reader, and
+            // there is no ambiguity about which number is meant when the line states one. The
+            // model keeps the unit, which it reads reliably. Lines stating several numbers —
+            // container sizes, pack counts — are not checkable and are left untouched.
+            //
+            // Restricted to a positive amount on purpose. A zero or a negative is not a digit read
+            // wrongly, it is an answer that is not a quantity at all, and NonPositiveQuantity
+            // rejects it deliberately — repairing over that would hide a row the model failed on
+            // rather than misread. Every one of the 15 contradictions measured on the corpus was a
+            // positive number, so nothing observed is lost by being strict here.
+            if (rawAmount > 0m &&
+                SeedQuantityGate.CheckAgainstStatedNumber(sourceText, rawAmount) is { } mismatch &&
+                SeedQuantityGate.TryReadSoleNumber(sourceText) is { } sole)
+            {
+                logger.LogInformation(
+                    "{Slug}: ingredient {Position} ('{Line}') — {Rejection}: the model returned " +
+                    "{Returned}, the line states {Stated}. Using the line's own number.",
+                    parsed.Slug, index + 1, sourceText, mismatch, rawAmount, sole);
+
+                rawAmount = sole;
+            }
+
+            // Repair 4 — the unit, on a line that states one number and names its unit immediately
+            // after it. Correcting only the amount is not enough and makes this worse: rescuing a
+            // recipe whose number was wrong can carry a wrong unit in with it, which is how
+            // "1 tablespoon cinnamon" first came back as "1 cup" — sixteen times too much, positive,
+            // storable, and in agreement with the line's only number. Measured, the model's unit
+            // matches the line's on 1,702 of the 1,703 rows this rule applies to, so it corrects
+            // almost nothing and what it does correct is wrong.
+            if (SeedQuantityGate.TryReadSoleStatedUnit(sourceText) is { } lineUnit &&
+                !IsSameMeasurement(ResolveCountUnit(rawUnit, sourceText), lineUnit))
+            {
+                logger.LogInformation(
+                    "{Slug}: ingredient {Position} ('{Line}') — the model's unit was {Returned}, " +
+                    "the line states {Stated}. Using the line's own unit.",
+                    parsed.Slug, index + 1, sourceText, rawUnit ?? "(none)", lineUnit);
+
+                rawUnit = lineUnit;
+            }
+
+            // Stage A: the model preserves the unit as stated (§11.1), so 'ounces' has to become
+            // grams before the gate can ask whether the unit is storable. Skipped entirely when
+            // there is no quantity — there is nothing to convert, and a unit measuring nothing is
+            // as invented as an amount would be.
+            decimal? statedAmount = null;
+            string?  statedUnit   = rawUnit;
+
+            if (rawAmount is { } resolvedAmount)
                 (statedAmount, statedUnit) = MeasurementConverter.ToCanonical(
-                    modelAmount, ResolveCountUnit(returned.Unit, sourceText) ?? string.Empty);
+                    (double)resolvedAmount, ResolveCountUnit(rawUnit, sourceText) ?? string.Empty);
 
             var verdict = SeedQuantityGate.Check(sourceText, statedAmount, statedUnit);
 
@@ -427,18 +521,6 @@ public class SeedRecipeNormaliser(
                     $"ingredient {index + 1} ('{sourceText}') → {verdict.Rejection} " +
                     $"(model said {Describe(returned.Amount, returned.Unit)})");
 
-            // Arithmetic, on the number the model read rather than on the converted one. The only
-            // check here that can catch an answer which looks entirely reasonable — the model read
-            // "3/4 cup peanuts" as 3.75 cup, which is positive, storable, and five times too much.
-            var contradiction = SeedQuantityGate.CheckAgainstStatedNumber(
-                sourceText, (decimal?)returned.Amount);
-
-            if (contradiction is { } mismatch)
-                throw new SeedNormaliseException(SeedNormaliseFailure.QuantityRejected,
-                    $"ingredient {index + 1} ('{sourceText}') → {mismatch} " +
-                    $"(the line states {SeedQuantityGate.TryReadSoleNumber(sourceText)}, " +
-                    $"the model returned {returned.Amount})");
-
             rows.Add(new NormalisedSeedIngredient(
                 Name:         returned.Name.Trim().ToLowerInvariant(),
                 DisplayName:  string.IsNullOrWhiteSpace(returned.DisplayName)
@@ -446,12 +528,14 @@ public class SeedRecipeNormaliser(
                                   : returned.DisplayName.Trim(),
                 Amount:       verdict.Amount,
                 Unit:         verdict.Unit,
-                // Provenance: what the model read off the line, before Stage A touched it. Never
-                // summed and never consolidated — it exists so a conversion can be audited. An
-                // accepted row has a source measurement exactly when it has a stored one, because
-                // the gate rejects every half-set pair in either direction.
-                SourceAmount: returned.Amount is { } raw ? Math.Round((decimal)raw, 3) : null,
-                SourceUnit:   returned.Amount is null ? null : returned.Unit?.Trim(),
+                // Provenance: the measurement this row was read from, before Stage A touched it.
+                // Never summed and never consolidated — it exists so a conversion can be audited,
+                // which is why it records the repaired number rather than a discarded misread: a
+                // SourceAmount that does not convert to Amount audits nothing. The run log names
+                // every repair, and SourceText keeps the line itself. An accepted row has a source
+                // amount exactly when it has a stored one.
+                SourceAmount: rawAmount is { } raw ? Math.Round(raw, 3) : null,
+                SourceUnit:   rawAmount is null ? null : rawUnit?.Trim(),
                 Notes:        string.IsNullOrWhiteSpace(returned.Notes) ? null : returned.Notes.Trim(),
                 SourceText:   sourceText));
         }
@@ -509,11 +593,18 @@ public class SeedRecipeNormaliser(
     /// <c>pcs</c>. Decided from the source, never from the answer: <c>2 cups flour</c> names a unit,
     /// so the same bare number there is a dropped <c>cup</c> and stays a rejection.</item>
     /// <item><b>A leading real unit.</b> The model writes <c>"pound, chunks"</c> when it has
-    /// nowhere else to put the preparation; the measurement is the first word and Stage A converts
-    /// it. Checked before the count words so <c>pound</c> never becomes <c>pcs</c>.</item>
+    /// nowhere else to put the preparation; the measurement is the leading phrase and Stage A
+    /// converts it. Checked before the count words so <c>pound</c> never becomes <c>pcs</c>.</item>
     /// <item><b>A leading count word.</b> <c>"ripe, fresh"</c>, <c>"medium"</c>, <c>"cloves"</c>,
     /// <c>"dash"</c> → <c>pcs</c>.</item>
     /// </list>
+    ///
+    /// <para><b>The leading phrase is tried longest-first, not one word at a time.</b> Half the
+    /// customary table is multi-word — <c>fl oz</c>, <c>fluid ounce</c>, <c>us fluid ounces</c> —
+    /// and a single-word test reads <c>us</c> or <c>fluid</c> off those and matches nothing, so a
+    /// correctly-read measurement fell through to the gate and was rejected as unstorable. Joining
+    /// the words back together also normalises the model's own spacing and punctuation, so
+    /// <c>"fl.  oz"</c> resolves too.</para>
     ///
     /// <para>Anything else is returned untouched, for Stage A and the gate to reject.</para>
     /// </summary>
@@ -522,26 +613,36 @@ public class SeedRecipeNormaliser(
         if (string.IsNullOrWhiteSpace(unit))
             return SeedQuantityGate.StatesAUnitOfMeasurement(sourceText) ? unit : MeasurementUnit.Piece;
 
-        var leading = LeadingWord(unit);
-        if (leading.Length == 0) return unit;
+        var words = UnitWords.Matches(unit).Select(match => match.Value).ToList();
+        if (words.Count == 0) return unit;
 
-        if (MeasurementUnit.TryCanonicalise(leading, out _)) return leading;
-        if (MeasurementConverter.ConvertibleUnits.Contains(leading, StringComparer.OrdinalIgnoreCase))
-            return leading;
+        for (var take = words.Count; take > 0; take--)
+        {
+            var phrase = string.Join(' ', words.Take(take));
 
-        return CountWords.Contains(leading) ? MeasurementUnit.Piece : unit;
+            if (MeasurementUnit.TryCanonicalise(phrase, out _)) return phrase;
+            if (MeasurementConverter.ConvertibleUnits.Contains(phrase, StringComparer.OrdinalIgnoreCase))
+                return phrase;
+        }
+
+        return CountWords.Contains(words[0]) ? MeasurementUnit.Piece : unit;
     }
 
-    /// <summary>The first run of letters in a value the model may have written as a phrase.</summary>
-    private static string LeadingWord(string value)
+    /// <summary>Runs of letters in a value the model may have written as a punctuated phrase.</summary>
+    private static readonly Regex UnitWords = new(@"[A-Za-z]+", RegexOptions.Compiled);
+
+    /// <summary>
+    /// Whether two unit spellings measure the same thing, compared through Stage A so a difference in
+    /// spelling is not mistaken for a difference in measurement. One unit of each is converted and
+    /// both halves of the result are compared: <c>ounce</c> and <c>pound</c> both canonicalise to
+    /// <c>g</c> and are emphatically not the same unit, so comparing the unit alone would miss it.
+    /// </summary>
+    private static bool IsSameMeasurement(string? left, string? right)
     {
-        var start = 0;
-        while (start < value.Length && !char.IsLetter(value[start])) start++;
+        if (string.IsNullOrWhiteSpace(left) || string.IsNullOrWhiteSpace(right))
+            return string.IsNullOrWhiteSpace(left) && string.IsNullOrWhiteSpace(right);
 
-        var end = start;
-        while (end < value.Length && char.IsLetter(value[end])) end++;
-
-        return value[start..end];
+        return MeasurementConverter.ToCanonical(1d, left) == MeasurementConverter.ToCanonical(1d, right);
     }
 
     private static string Describe(double? amount, string? unit) =>

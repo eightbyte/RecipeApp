@@ -284,12 +284,18 @@ public class SeedRecipeNormaliserTests
         rejection.Detail.Should().Contain(nameof(SeedQuantityRejection.InventedUnit));
     }
 
+    /// <summary>
+    /// A container line states several numbers, so nothing in the line settles which one is the
+    /// quantity and it cannot be filled in. A model that reports none still loses the recipe.
+    /// </summary>
     [Fact]
     public async Task NormaliseAsync_RejectsAQuantifiedLineTheModelReportedAsHavingNoQuantity()
     {
-        var rejection = await RejectionOf(Answer(
-            [("chicken breast", null, null, null), ("salt", null, null, null)],
-            [(1, "Wash hands.", []), (2, "Cook.", [0])]));
+        var parsed = ParsedRecipe(
+            ingredientLines: ["1 can (14.5 ounces) diced tomatoes"], steps: ["Add the tomatoes."]);
+
+        var rejection = await RejectionOf(
+            Answer([("diced tomatoes", null, null, null)], [(1, "Add the tomatoes.", [0])]), parsed);
 
         rejection.Detail.Should().Contain(nameof(SeedQuantityRejection.MissingQuantity));
     }
@@ -328,21 +334,65 @@ public class SeedRecipeNormaliserTests
     }
 
     /// <summary>
-    /// The one rejection that catches a plausible answer. Observed live: the model read
-    /// <c>3/4 cup unsalted dry roasted peanuts</c> as <c>3.75 cup</c> — positive, storable, and
-    /// five times too much, so every other rule admitted it.
+    /// The misread that every other rule admits. Observed live: the model read
+    /// <c>3/4 cup unsalted dry roasted peanuts</c> as <c>3.75 cup</c> — positive, storable, and five
+    /// times too much.
+    ///
+    /// <para>The line settles this on its own, so the line answers it. The gate already trusts this
+    /// arithmetic enough to reject a whole recipe on it, which is the same thing as trusting it to
+    /// supply the number; rejecting instead threw away 15 recipes over a digit the source states
+    /// unambiguously. The model keeps the unit, which it reads reliably.</para>
     /// </summary>
     [Fact]
-    public async Task NormaliseAsync_RejectsAnAmountThatContradictsTheOneNumberTheLineStates()
+    public async Task NormaliseAsync_CorrectsAnAmountThatContradictsTheOneNumberTheLineStates()
+    {
+        var parsed = ParsedRecipe(
+            ingredientLines: ["3/4 cup unsalted dry roasted peanuts"], steps: ["Scatter the peanuts."]);
+        var llm = new StubLlmStructuredClient(
+            Answer([("peanuts", 3.75, "cup", null)], [(1, "Scatter the peanuts.", [0])]));
+
+        var recipe = await BuildNormaliser(llm).NormaliseAsync(parsed, Fingerprint);
+
+        recipe.Ingredients[0].Amount.Should().Be(0.75m, "the line states three quarters");
+        recipe.Ingredients[0].Unit.Should().Be("cup");
+        recipe.Ingredients[0].SourceAmount.Should().Be(0.75m,
+            "provenance must convert to the stored amount, or it audits nothing");
+    }
+
+    /// <summary>
+    /// Every quantity misread measured on the corpus was a plausible positive number, and a zero is
+    /// not one of those — it is an answer that is not a quantity. The substitution deliberately
+    /// stops short of it so a row the model failed on outright is still excluded.
+    /// </summary>
+    [Theory]
+    [InlineData(0)]
+    [InlineData(-2)]
+    public async Task NormaliseAsync_DoesNotCorrectANonPositiveAmountIntoTheLinesNumber(double amount)
     {
         var parsed = ParsedRecipe(
             ingredientLines: ["3/4 cup unsalted dry roasted peanuts"], steps: ["Scatter the peanuts."]);
 
         var rejection = await RejectionOf(
-            Answer([("peanuts", 3.75, "cup", null)], [(1, "Scatter the peanuts.", [0])]), parsed);
+            Answer([("peanuts", amount, "cup", null)], [(1, "Scatter the peanuts.", [0])]), parsed);
 
-        rejection.Failure.Should().Be(SeedNormaliseFailure.QuantityRejected);
-        rejection.Detail.Should().Contain(nameof(SeedQuantityRejection.ContradictedQuantity));
+        rejection.Detail.Should().Contain(nameof(SeedQuantityRejection.NonPositiveQuantity));
+    }
+
+    /// <summary>
+    /// A line stating several numbers does not settle which one is the quantity, so the substitution
+    /// has nothing to substitute and must leave a container line alone.
+    /// </summary>
+    [Fact]
+    public async Task NormaliseAsync_LeavesAnAmountAloneOnALineStatingSeveralNumbers()
+    {
+        var parsed = ParsedRecipe(
+            ingredientLines: ["2 cans (15 ounces each) black beans"], steps: ["Drain the beans."]);
+        var llm = new StubLlmStructuredClient(Answer(
+            [("black beans", 30, "ounces", "canned")], [(1, "Drain the beans.", [0])]));
+
+        var recipe = await BuildNormaliser(llm).NormaliseAsync(parsed, Fingerprint);
+
+        recipe.Ingredients[0].SourceAmount.Should().Be(30m, "neither 2 nor 15 is the quantity");
     }
 
     /// <summary>
@@ -409,39 +459,302 @@ public class SeedRecipeNormaliserTests
         recipe.Ingredients[0].Unit.Should().Be("pcs");
     }
 
-    /// <summary>The mirror case, and the reason the rule reads the line rather than the answer.</summary>
+    /// <summary>
+    /// The mirror case, and the reason the rule reads the line rather than the answer. A container
+    /// line states several numbers, so the line does not settle which unit belongs to the quantity
+    /// and a dropped unit cannot be recovered from it — which keeps this a rejection.
+    /// </summary>
     [Fact]
-    public async Task NormaliseAsync_RejectsABareCountWhenTheLineDoesNameAUnit()
+    public async Task NormaliseAsync_RejectsABareCountWhenTheLineNamesAUnitItCannotRecover()
     {
-        var parsed = ParsedRecipe(ingredientLines: ["2 cups flour"], steps: ["Add the flour."]);
+        var parsed = ParsedRecipe(
+            ingredientLines: ["1 can (14.5 ounces) diced tomatoes"], steps: ["Add the tomatoes."]);
 
         var rejection = await RejectionOf(
-            Answer([("flour", 2, null, null)], [(1, "Add the flour.", [0])]), parsed);
+            Answer([("diced tomatoes", 14.5, null, null)], [(1, "Add the tomatoes.", [0])]), parsed);
 
         rejection.Detail.Should().Contain(nameof(SeedQuantityRejection.UnstorableUnit));
     }
 
     /// <summary>
     /// The model writes the preparation into the unit when it has nowhere else to put it. The
-    /// measurement is the first word, and a real unit is resolved before any count word.
+    /// measurement is the leading phrase, and a real unit is resolved before any count word. Each
+    /// case pairs with a source line that states the same unit, so what is under test is the phrase
+    /// parsing rather than the line overriding it.
     /// </summary>
     [Theory]
-    [InlineData("pound, chunks", "g", 453.592)]
-    [InlineData("cups, chopped", "cup", 1)]
-    [InlineData("ripe, fresh", "pcs", 1)]
-    [InlineData("cloves, minced", "pcs", 1)]
-    public async Task NormaliseAsync_ReadsTheLeadingWordOfAUnitTheModelWroteAsAPhrase(
-        string stated, string expectedUnit, decimal expectedAmount)
+    [InlineData("1 pound lean pork, cut into chunks", "pound, chunks",  "g",   453.592)]
+    [InlineData("1 cup flour, sifted",                "cups, chopped",  "cup", 1)]
+    [InlineData("1 ripe banana, mashed",              "ripe, fresh",    "pcs", 1)]
+    [InlineData("1 clove garlic, minced",             "cloves, minced", "pcs", 1)]
+    public async Task NormaliseAsync_ReadsTheLeadingPhraseOfAUnitTheModelWroteAsAPhrase(
+        string line, string stated, string expectedUnit, decimal expectedAmount)
     {
-        var parsed = ParsedRecipe(
-            ingredientLines: ["1 pound lean pork, cut into chunks"], steps: ["Cook the pork."]);
+        var parsed = ParsedRecipe(ingredientLines: [line], steps: ["Cook it."]);
         var llm = new StubLlmStructuredClient(Answer(
-            [("pork", 1, stated, null)], [(1, "Cook the pork.", [0])]));
+            [("pork", 1, stated, null)], [(1, "Cook it.", [0])]));
 
         var recipe = await BuildNormaliser(llm).NormaliseAsync(parsed, Fingerprint);
 
         recipe.Ingredients[0].Unit.Should().Be(expectedUnit);
         recipe.Ingredients[0].Amount.Should().Be(expectedAmount);
+    }
+
+    /// <summary>
+    /// Correcting the amount alone is not enough, and rescuing a recipe can carry a wrong unit in
+    /// with it. Observed live the first time the substitution ran: <c>1 tablespoon cinnamon</c> came
+    /// back as <c>1 cup</c> — sixteen times too much, positive, storable, and in agreement with the
+    /// line's only number, so every other rule in the gate admitted it.
+    /// </summary>
+    [Fact]
+    public async Task NormaliseAsync_CorrectsAUnitThatContradictsTheOneTheLineNames()
+    {
+        var parsed = ParsedRecipe(
+            ingredientLines: ["1 tablespoon cinnamon"], steps: ["Stir in the cinnamon."]);
+        var llm = new StubLlmStructuredClient(Answer(
+            [("cinnamon", 1, "cup", null)], [(1, "Stir in the cinnamon.", [0])]));
+
+        var recipe = await BuildNormaliser(llm).NormaliseAsync(parsed, Fingerprint);
+
+        recipe.Ingredients[0].Unit.Should().Be("tbsp");
+        recipe.Ingredients[0].Amount.Should().Be(1m);
+    }
+
+    /// <summary>
+    /// The same rule recovers a unit the model dropped entirely, where the line names one after its
+    /// only number. This was a rejection, which threw away a recipe over a unit the line states
+    /// plainly.
+    /// </summary>
+    [Fact]
+    public async Task NormaliseAsync_RecoversAUnitTheModelDroppedFromALineThatNamesOne()
+    {
+        var parsed = ParsedRecipe(ingredientLines: ["2 cups flour"], steps: ["Add the flour."]);
+        var llm = new StubLlmStructuredClient(Answer(
+            [("flour", 2, null, null)], [(1, "Add the flour.", [0])]));
+
+        var recipe = await BuildNormaliser(llm).NormaliseAsync(parsed, Fingerprint);
+
+        recipe.Ingredients[0].Amount.Should().Be(2m);
+        recipe.Ingredients[0].Unit.Should().Be("cup");
+    }
+
+    /// <summary>
+    /// MyPlate states an optional ingredient's quantity in a trailing note, and the word
+    /// <c>optional</c> leads the model to report no quantity at all. 146 lines on 119 recipes. On a
+    /// line stating exactly one number the gate already requires the stored amount to equal it, so
+    /// filling the null produces the one value the gate would have accepted — and rejecting instead
+    /// threw the recipe away. The unit comes off the line by the same rule.
+    /// </summary>
+    [Theory]
+    [InlineData("salt (optional, 1/4 teaspoon)", 0.25, "tsp")]
+    [InlineData("powdered sugar, optional (1/3 cup, for glaze)", 0.333, "cup")]
+    [InlineData("orange peel, dried (1 teaspoon, optional)", 1, "tsp")]
+    [InlineData("nuts (1 cup, optional)", 1, "cup")]
+    public async Task NormaliseAsync_FillsAnAmountTheModelLeftOutOfASoleNumberLine(
+        string line, decimal expectedAmount, string expectedUnit)
+    {
+        var parsed = ParsedRecipe(ingredientLines: [line], steps: ["Add it if you like."]);
+        var llm = new StubLlmStructuredClient(Answer(
+            [("the food", null, null, "optional")], [(1, "Add it if you like.", [0])]));
+
+        var recipe = await BuildNormaliser(llm).NormaliseAsync(parsed, Fingerprint);
+
+        recipe.Ingredients[0].Amount.Should().Be(expectedAmount);
+        recipe.Ingredients[0].Unit.Should().Be(expectedUnit);
+    }
+
+    /// <summary>
+    /// A bare count gets the same treatment, and the unit still comes from the line naming none.
+    /// </summary>
+    [Fact]
+    public async Task NormaliseAsync_FillsABareCountTheModelLeftOutAsPieces()
+    {
+        var parsed = ParsedRecipe(ingredientLines: ["7 apples"], steps: ["Peel the apples."]);
+        var llm = new StubLlmStructuredClient(Answer(
+            [("apple", null, null, null)], [(1, "Peel the apples.", [0])]));
+
+        var recipe = await BuildNormaliser(llm).NormaliseAsync(parsed, Fingerprint);
+
+        recipe.Ingredients[0].Amount.Should().Be(7m);
+        recipe.Ingredients[0].Unit.Should().Be("pcs");
+    }
+
+    /// <summary>
+    /// The limits of the fill. A line stating no quantity, or whose only number is a cut size, stays
+    /// unquantified (Phase 9.1); a line stating several numbers does not settle which one is meant.
+    /// </summary>
+    [Theory]
+    [InlineData("nonstick cooking spray")]
+    [InlineData("salt and pepper, to taste")]
+    [InlineData("carrot, sliced into 3 inch pieces")]
+    public async Task NormaliseAsync_DoesNotFillAnAmountForALineStatingNoQuantity(string line)
+    {
+        var parsed = ParsedRecipe(ingredientLines: [line], steps: ["Prepare it."]);
+        var llm = new StubLlmStructuredClient(Answer(
+            [("the food", null, null, null)], [(1, "Prepare it.", [0])]));
+
+        var recipe = await BuildNormaliser(llm).NormaliseAsync(parsed, Fingerprint);
+
+        recipe.Ingredients[0].Amount.Should().BeNull();
+        recipe.Ingredients[0].Unit.Should().BeNull();
+    }
+
+    /// <summary>
+    /// The guard that keeps the unit rule off a parenthetical equivalence. 37 corpus rows name a unit
+    /// only inside one — <c>12 large egg whites (about 1 1/2 cups)</c> is 12 pieces, not cups — and
+    /// every one states more than one number, which is what stands the rule down.
+    /// </summary>
+    [Theory]
+    [InlineData("12 large egg whites (about 1 1/2 cups)")]
+    [InlineData("1 medium head of lettuce (about 10 cups)")]
+    [InlineData("2 large potatoes (about 2 pounds)")]
+    public async Task NormaliseAsync_DoesNotTakeAUnitFromAParentheticalEquivalence(string line)
+    {
+        var parsed = ParsedRecipe(ingredientLines: [line], steps: ["Prepare it."]);
+        var llm = new StubLlmStructuredClient(Answer(
+            [("egg white", 12, "pcs", "large")], [(1, "Prepare it.", [0])]));
+
+        var recipe = await BuildNormaliser(llm).NormaliseAsync(parsed, Fingerprint);
+
+        recipe.Ingredients[0].Unit.Should().Be("pcs", "the count is of whole things, not of cups");
+    }
+
+    /// <summary>
+    /// Half the customary table is multi-word, and a single-word test reads <c>us</c> or
+    /// <c>fluid</c> off these and matches nothing. Observed live on
+    /// <c>10 3/4 us fluid ounces 1% low fat milk</c>: the model read the measurement correctly and
+    /// the recipe was lost to an unstorable unit. 15 lines on 14 recipes spell fluid ounces out.
+    /// </summary>
+    [Theory]
+    [InlineData("fluid ounces")]
+    [InlineData("us fluid ounces")]
+    [InlineData("fluid ounce")]
+    [InlineData("fl oz")]
+    [InlineData("FLUID OUNCES")]
+    public async Task NormaliseAsync_ResolvesAMultiWordCustomaryUnit(string stated)
+    {
+        var parsed = ParsedRecipe(
+            ingredientLines: ["10 3/4 us fluid ounces 1% low fat milk"], steps: ["Warm the milk."]);
+        var llm = new StubLlmStructuredClient(Answer(
+            [("low fat milk", 10.75, stated, null)], [(1, "Warm the milk.", [0])]));
+
+        var recipe = await BuildNormaliser(llm).NormaliseAsync(parsed, Fingerprint);
+
+        recipe.Ingredients[0].Unit.Should().Be("ml");
+        recipe.Ingredients[0].Amount.Should().Be(317.915m);
+    }
+
+    // ── Recovering a count the model declined to read ─────────────────────────
+
+    /// <summary>
+    /// <c>1 dash black pepper</c> resembles an unquantified seasoning and the model reads it as one,
+    /// but the line states a count and Phase 9 already decided an unsized measure counts its things
+    /// as <c>pcs</c>. That decision was unreachable: the count-word rename only ever ran on an answer
+    /// that already had an amount, so a null lost the recipe. 44 lines on 43 recipes are this shape.
+    /// </summary>
+    [Theory]
+    [InlineData("1 dash black pepper", 1)]
+    [InlineData("1 dash salt and black pepper", 1)]
+    [InlineData("2 sprays of nonstick cooking spray", 2)]
+    [InlineData("4 sprays of cooking spray", 4)]
+    [InlineData("3 pinches of cayenne", 3)]
+    public async Task NormaliseAsync_RecoversACountTheModelReadAsUnquantified(
+        string line, decimal expected)
+    {
+        var parsed = ParsedRecipe(ingredientLines: [line], steps: ["Season to finish."]);
+        var llm = new StubLlmStructuredClient(Answer(
+            [("black pepper", null, null, null)], [(1, "Season to finish.", [0])]));
+
+        var recipe = await BuildNormaliser(llm).NormaliseAsync(parsed, Fingerprint);
+
+        recipe.Ingredients[0].Amount.Should().Be(expected);
+        recipe.Ingredients[0].Unit.Should().Be("pcs");
+    }
+
+    /// <summary>A range yields its low end: under-buying corn shucks is the recoverable direction.</summary>
+    [Fact]
+    public async Task NormaliseAsync_RecoversTheLowEndOfACountedRange()
+    {
+        var parsed = ParsedRecipe(
+            ingredientLines: ["4-6 handfuls corn shucks"], steps: ["Soak the shucks."]);
+        var llm = new StubLlmStructuredClient(Answer(
+            [("corn shuck", null, null, null)], [(1, "Soak the shucks.", [0])]));
+
+        var recipe = await BuildNormaliser(llm).NormaliseAsync(parsed, Fingerprint);
+
+        recipe.Ingredients[0].Amount.Should().Be(4m);
+        recipe.Ingredients[0].Unit.Should().Be("pcs");
+    }
+
+    /// <summary>
+    /// The guard that keeps the recovery from inventing anything. A line naming a real unit is
+    /// measuring, not counting, so its amount belongs to that unit and a missing one stays a
+    /// rejection rather than being read off a later <c>slices</c>.
+    /// </summary>
+    [Fact]
+    public async Task NormaliseAsync_DoesNotRecoverACountFromALineThatNamesARealUnit()
+    {
+        var parsed = ParsedRecipe(
+            ingredientLines: ["1/2 cup onion, chopped into 4 slices"], steps: ["Prepare it."]);
+
+        var rejection = await RejectionOf(
+            Answer([("onion", null, null, null)], [(1, "Prepare it.", [0])]), parsed);
+
+        rejection.Detail.Should().Contain(nameof(SeedQuantityRejection.MissingQuantity),
+            "four slices is not the quantity of half a cup of onion");
+    }
+
+    /// <summary>
+    /// The same guard from the other side. A line naming a real unit is measured in that unit, so
+    /// filling its amount must not also turn it into a count of pieces.
+    /// </summary>
+    [Fact]
+    public async Task NormaliseAsync_FillsALineNamingARealUnitInThatUnitRatherThanAsPieces()
+    {
+        var parsed = ParsedRecipe(
+            ingredientLines: ["1 pound skinless chicken breasts"], steps: ["Cook the chicken."]);
+        var llm = new StubLlmStructuredClient(Answer(
+            [("chicken breast", null, null, "skinless")], [(1, "Cook the chicken.", [0])]));
+
+        var recipe = await BuildNormaliser(llm).NormaliseAsync(parsed, Fingerprint);
+
+        recipe.Ingredients[0].Amount.Should().Be(453.592m);
+        recipe.Ingredients[0].Unit.Should().Be("g");
+    }
+
+    /// <summary>A line that genuinely states no quantity must stay unquantified (Phase 9.1).</summary>
+    [Theory]
+    [InlineData("nonstick cooking spray")]
+    [InlineData("salt and pepper, to taste")]
+    public async Task NormaliseAsync_DoesNotRecoverACountFromAnUnquantifiedLine(string line)
+    {
+        var parsed = ParsedRecipe(ingredientLines: [line], steps: ["Prepare it."]);
+        var llm = new StubLlmStructuredClient(Answer(
+            [("cooking spray", null, null, null)], [(1, "Prepare it.", [0])]));
+
+        var recipe = await BuildNormaliser(llm).NormaliseAsync(parsed, Fingerprint);
+
+        recipe.Ingredients[0].Amount.Should().BeNull();
+        recipe.Ingredients[0].Unit.Should().BeNull();
+    }
+
+    /// <summary>
+    /// A cut size is not a quantity. Two corpus lines state nothing but one, and counting it made
+    /// the gate demand an amount the line never gave.
+    /// </summary>
+    [Theory]
+    [InlineData("carrot, sliced into 3 inch pieces")]
+    [InlineData("aluminum foil (10x12 inches square)")]
+    public async Task NormaliseAsync_TreatsALineWhoseOnlyNumberIsACutSizeAsUnquantified(string line)
+    {
+        var parsed = ParsedRecipe(ingredientLines: [line], steps: ["Prepare it."]);
+        var llm = new StubLlmStructuredClient(Answer(
+            [("carrot", null, null, "sliced")], [(1, "Prepare it.", [0])]));
+
+        var recipe = await BuildNormaliser(llm).NormaliseAsync(parsed, Fingerprint);
+
+        recipe.Ingredients[0].Amount.Should().BeNull();
+        recipe.Ingredients[0].Unit.Should().BeNull();
     }
 
     /// <summary>No retry can change what the page said, so this fails before any inference runs.</summary>

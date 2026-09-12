@@ -24,8 +24,14 @@ public class MeasurementConverterTests
     [InlineData("pound",        1.0, 453.592, "g")]
     [InlineData("pounds",       1.0, 453.592, "g")]
     [InlineData("fl oz",        1.0,  29.574, "ml")]
+    [InlineData("fl ozs",       1.0,  29.574, "ml")]
     [InlineData("fluid oz",     1.0,  29.574, "ml")]
     [InlineData("fluid ounce",  1.0,  29.574, "ml")]
+    // The plural was the one missing spelling while every other unit here had both, and it cost a
+    // recipe: the model read "10 3/4 us fluid ounces" correctly and the gate rejected the unit.
+    [InlineData("fluid ounces",    10.75, 317.915, "ml")]
+    [InlineData("us fluid ounce",   1.0,   29.574, "ml")]
+    [InlineData("us fluid ounces",  6.0,  177.441, "ml")]
     [InlineData("pt",           1.0, 473.176, "ml")]
     [InlineData("pint",         1.0, 473.176, "ml")]
     [InlineData("pints",        1.0, 473.176, "ml")]

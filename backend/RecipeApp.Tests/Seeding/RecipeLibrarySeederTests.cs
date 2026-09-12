@@ -515,11 +515,12 @@ public class RecipeLibrarySeederTests : IDisposable
     }
 
     /// <summary>
-    /// §16's rule is that one bad recipe never aborts a run. A run where nothing else has
-    /// succeeded is not isolating bad recipes — it is a model that will not load.
+    /// §16's rule is that one bad recipe never aborts a run. This is the other case: no answer comes
+    /// back at all, so inference itself is unavailable and every remaining recipe would fail the
+    /// same way.
     /// </summary>
     [Fact]
-    public async Task NormaliseAsync_StopsOnceEveryRecipeInARowHasFailed()
+    public async Task NormaliseAsync_StopsOnceNoAnswerHasComeBackForEveryRecipeInARow()
     {
         _options = new RecipeSeedingOptions { MaxLlmRetries = 0, MaxConsecutiveLlmFailures = 2 };
 
@@ -531,6 +532,61 @@ public class RecipeLibrarySeederTests : IDisposable
         result.Aborted.Should().BeTrue();
         result.Failed.Should().Be(2);
         result.Failures.Should().NotContainKey("three", "the run stopped before reaching it");
+    }
+
+    /// <summary>
+    /// The failure that wedged the corpus pass completely, and the reason the abort guard counts only
+    /// systemic failures.
+    ///
+    /// <para>Cached successes are skipped before the counter is reached, so on a resumed run every
+    /// recipe attempted below the high-water mark is one that already failed — and those failures
+    /// reproduce. The guard fired on the first five of a thirty-recipe backlog and stopped at
+    /// manifest position 77 with nothing normalised, leaving 744 recipes that had never been tried,
+    /// and every re-run did the same thing. A gate rejection means the model answered, the grammar
+    /// held and the gate disagreed: the pipeline working, never evidence that it is broken.</para>
+    /// </summary>
+    [Fact]
+    public async Task NormaliseAsync_DoesNotAbortWhenEveryRecipeIsRejectedByTheGate()
+    {
+        _options = new RecipeSeedingOptions { MaxLlmRetries = 0, MaxConsecutiveLlmFailures = 2 };
+
+        var cache = BuildCache();
+        foreach (var slug in new[] { "one", "two", "three" })
+            await GivenCachedPageAsync(cache, slug, SaltPage());
+        await BuildSeeder(cache).ParseAsync(ManifestOf("one", "two", "three"));
+
+        var llm = new StubLlmStructuredClient(InventedQuantityAnswer());
+
+        var result = await BuildSeeder(cache, llm).NormaliseAsync(ManifestOf("one", "two", "three"));
+
+        result.Aborted.Should().BeFalse("the gate disagreeing is not inference being unavailable");
+        result.Failed.Should().Be(3);
+        result.Failures.Should().ContainKey("three", "the run must reach the end of the manifest");
+    }
+
+    /// <summary>
+    /// A recipe that burned its retries and lost read <c>attempts: 0</c> in <c>state.json</c>,
+    /// because the runner only ever added the attempt count of a recipe that succeeded. The GPU time
+    /// a failure cost is exactly what <c>--report</c> needs to show.
+    /// </summary>
+    [Fact]
+    public async Task NormaliseAsync_RecordsTheAttemptsAFailedRecipeConsumed()
+    {
+        _options = new RecipeSeedingOptions { MaxLlmRetries = 1 };
+
+        var cache = BuildCache();
+        await GivenCachedPageAsync(cache, "bad", SaltPage());
+        await BuildSeeder(cache).ParseAsync(ManifestOf("bad"));
+
+        var llm = new StubLlmStructuredClient(InventedQuantityAnswer());
+        await BuildSeeder(cache, llm).NormaliseAsync(ManifestOf("bad"));
+
+        llm.CallCount.Should().Be(2, "one attempt and one retry");
+
+        var state = await BuildCache().LoadStateAsync();
+        state.Slugs["bad"].Stage.Should().Be(SeedStage.Failed);
+        state.Slugs["bad"].Attempts.Should().Be(3,
+            "the one parse attempt plus the two LLM passes the failure actually cost");
     }
 
     [Fact]

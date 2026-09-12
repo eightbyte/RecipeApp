@@ -102,14 +102,43 @@ public static class SeedQuantityGate
     {
         if (string.IsNullOrWhiteSpace(sourceText)) return false;
 
-        foreach (var character in sourceText)
+        var measurable = WithoutDimensions(sourceText);
+
+        foreach (var character in measurable)
         {
             if (char.IsAsciiDigit(character)) return true;
             if (IsVulgarFraction(character)) return true;
         }
 
-        return LeadingNumberWords.Contains(LeadingWord(sourceText));
+        return LeadingNumberWords.Contains(LeadingWord(measurable));
     }
+
+    /// <summary>
+    /// The line with its cut-size phrases removed, so a dimension is not mistaken for a quantity.
+    ///
+    /// <para>119 lines name a size in inches, and on all but two of them a real quantity appears as
+    /// well — <c>6 medium russet potatoes, peeled and sliced into 1/4 inch slices</c> is quantified
+    /// by its leading <c>6</c>, whichever way the inches are read. The two exceptions are the whole
+    /// reason this exists: <c>carrot, sliced into 3 inch pieces</c> and
+    /// <c>aluminum foil (10x12 inches square)</c> state no quantity at all, and counting their
+    /// dimensions as one makes the gate demand an amount the line never gave. The model correctly
+    /// returned none for both and lost its recipe for it.</para>
+    ///
+    /// <para>Deliberately <b>not</b> applied to <see cref="TryReadSoleNumber"/>. Stripping there
+    /// would make more lines arithmetically checkable, which sounds like an improvement and is an
+    /// untested widening of the one check that can reject a plausible answer. Two lines of evidence
+    /// does not justify it.</para>
+    /// </summary>
+    private static string WithoutDimensions(string sourceText) =>
+        DimensionPhrase.Replace(sourceText, " ");
+
+    /// <summary>
+    /// A measurement in inches: <c>3 inch</c>, <c>1/4 inch</c>, <c>2 1/2 inch</c>,
+    /// <c>1/2-inch</c>, <c>(6-inch)</c>, <c>10x12 inches</c>.
+    /// </summary>
+    private static readonly Regex DimensionPhrase = new(
+        @"\d+(?:\s*[xX]\s*\d+)?(?:\s+\d+/\d+|/\d+|\.\d+)?\s*-?\s*inch(?:es)?\b",
+        RegexOptions.Compiled | RegexOptions.IgnoreCase);
 
     /// <summary>
     /// Checks one ingredient line's extracted measurement against what its source text actually
@@ -173,6 +202,116 @@ public static class SeedQuantityGate
         }
 
         return false;
+    }
+
+    /// <summary>
+    /// The count a line states for something it counts rather than measures, or null when the line
+    /// is not that shape. <c>1 dash black pepper</c> is 1, <c>2 sprays of cooking spray</c> is 2,
+    /// <c>4-6 handfuls corn shucks</c> is 4.
+    ///
+    /// <para><b>Why this is needed at all.</b> Stage 4 already resolves a count word the model put
+    /// in the unit column to <c>pcs</c>, but that only runs on an answer that <i>has</i> an amount.
+    /// Measured: on 44 lines across 43 recipes the model returns no amount for these, reading
+    /// <c>1 dash salt</c> as the unquantified seasoning it resembles — and the gate then rejects it
+    /// for a quantity the line does state. The count is recovered from the line here instead, which
+    /// is the Phase 9.1 pattern: read the answer off the source, never off the model.</para>
+    ///
+    /// <para>Two guards keep this from inventing anything. The line must name <b>no</b> real unit of
+    /// measurement, so <c>1/2 cup onion, chopped into 4 slices</c> is left alone rather than read as
+    /// 4 pieces. And the count word must be the <i>next word</i> after the number, so an unrelated
+    /// digit elsewhere on the line cannot supply it. A range yields its low end, since digits are
+    /// not words and <c>4-6 handfuls</c> therefore reads as 4: under-buying corn shucks is the
+    /// recoverable direction.</para>
+    /// </summary>
+    /// <param name="sourceText">The verbatim line, both spans — <c>ParsedIngredientLine.FullText</c>.</param>
+    /// <param name="countWords">
+    /// The closed set of words the corpus writes where a unit would go. Passed in rather than held
+    /// here so the vocabulary stays owned by the one place that documents its corpus counts,
+    /// <c>SeedRecipeNormaliser.CountWords</c>, instead of being restated and drifting.
+    /// </param>
+    public static decimal? TryReadCountedQuantity(string? sourceText, IReadOnlySet<string> countWords)
+    {
+        if (string.IsNullOrWhiteSpace(sourceText)) return null;
+
+        // A line that names a real unit is measuring, not counting, and its amount belongs to that
+        // unit. Decided from the source exactly as StatesAUnitOfMeasurement is used elsewhere.
+        if (StatesAUnitOfMeasurement(sourceText)) return null;
+
+        foreach (Match match in NumericToken.Matches(sourceText))
+        {
+            var following = FirstWordAfter(sourceText, match.Index + match.Length);
+            if (following.Length > 0 && countWords.Contains(following))
+                return ParseNumber(match.Value);
+        }
+
+        return null;
+    }
+
+    /// <summary>
+    /// The unit a line names immediately after the single number it states, or null when the line
+    /// does not settle the question. <c>1 tablespoon cinnamon</c> is <c>tablespoon</c>.
+    ///
+    /// <para><b>Measured before being trusted.</b> Across the normalised corpus this rule applies to
+    /// 1,703 rows, and the model's own unit agrees with it on 1,702. The single disagreement is a
+    /// real error it catches: the model read <c>1 tablespoon cinnamon</c> as <c>1 cup</c>, a
+    /// sixteenfold overstatement that is positive, storable, and arithmetically consistent with the
+    /// line's only number — so every other rule in this gate admits it.</para>
+    ///
+    /// <para>Both guards are load-bearing. <b>Exactly one number</b>, because a line with several
+    /// names a unit inside a parenthetical equivalence rather than for its own quantity —
+    /// <c>12 large egg whites (about 1 1/2 cups)</c> is 12 pieces, not cups, and 37 corpus rows are
+    /// that shape. <b>Immediately after</b>, because the unit has to belong to the number: the word
+    /// following the count in <c>2 medium apples</c> is a size, and searching further along the line
+    /// would find a unit that measures something else.</para>
+    /// </summary>
+    public static string? TryReadSoleStatedUnit(string? sourceText)
+    {
+        if (string.IsNullOrWhiteSpace(sourceText)) return null;
+
+        var numbers = NumericToken.Matches(sourceText);
+        if (numbers.Count != 1) return null;
+
+        var tail  = sourceText[(numbers[0].Index + numbers[0].Length)..];
+        var words = WordRun.Matches(tail).Take(LongestUnitWordCount)
+            .Select(match => match.Value).ToList();
+
+        // Longest phrase first, anchored at the word after the number: 'us fluid ounces' before
+        // 'fluid ounces' before 'fluid'.
+        for (var take = words.Count; take > 0; take--)
+        {
+            var phrase = string.Join(' ', words.Take(take));
+
+            if (MeasurementUnit.TryCanonicalise(phrase, out _)) return phrase;
+            if (MeasurementConverter.ConvertibleUnits.Contains(phrase, StringComparer.OrdinalIgnoreCase))
+                return phrase;
+        }
+
+        return null;
+    }
+
+    /// <summary>One run of letters.</summary>
+    private static readonly Regex WordRun = new(@"[A-Za-z]+", RegexOptions.Compiled);
+
+    /// <summary>
+    /// Words in the longest unit spelling the pipeline accepts, so the phrase search looks exactly
+    /// as far as it must. Derived from the table rather than fixed, so adding <c>us fluid ounces</c>
+    /// cannot leave the search one word short.
+    /// </summary>
+    private static readonly int LongestUnitWordCount =
+        MeasurementConverter.ConvertibleUnits
+            .Concat(MeasurementUnit.AcceptedSpellings)
+            .Max(unit => unit.Split(' ', StringSplitOptions.RemoveEmptyEntries).Length);
+
+    /// <summary>The next run of letters at or after <paramref name="start"/>, or empty if there is none.</summary>
+    private static string FirstWordAfter(string sourceText, int start)
+    {
+        var index = start;
+        while (index < sourceText.Length && !char.IsLetter(sourceText[index])) index++;
+
+        var end = index;
+        while (end < sourceText.Length && char.IsLetter(sourceText[end])) end++;
+
+        return sourceText[index..end];
     }
 
     /// <summary>Anything that is not part of a word — the corpus punctuates units freely.</summary>

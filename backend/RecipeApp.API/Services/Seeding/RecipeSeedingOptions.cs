@@ -81,9 +81,13 @@ public class RecipeSeedingOptions
     public int MaxLlmOutputTokens { get; init; } = 4096;
 
     /// <summary>
-    /// Consecutive recipe failures that stop a Stage 4 run. One bad recipe never aborts a run
-    /// (§16), but an unloaded model, an exhausted GPU or a broken grammar fails every recipe
-    /// identically, and grinding through a thousand of those helps nobody.
+    /// Consecutive <i>systemic</i> recipe failures that stop a Stage 4 run. One bad recipe never
+    /// aborts a run (§16), but an unloaded model, an exhausted GPU or a broken grammar fails every
+    /// recipe identically, and grinding through a thousand of those helps nobody.
+    ///
+    /// <para>Only failures where no readable answer came back are counted — see
+    /// <see cref="SeedNormaliseFailureExtensions.IsSystemic"/> for why counting content rejections
+    /// here made a resumed corpus pass impossible to complete.</para>
     /// </summary>
     public int MaxConsecutiveLlmFailures { get; init; } = 5;
 

@@ -176,9 +176,16 @@ public class RecipeLibrarySeeder(
         var failures   = new Dictionary<string, string>(StringComparer.Ordinal);
 
         // One bad recipe never aborts a run (§16) — but an unloaded model, an exhausted GPU or a
-        // broken grammar fails every recipe the same way, and a run that has failed nothing else
-        // is not isolating a bad recipe, it is broken.
-        var consecutiveFailures = 0;
+        // broken grammar fails every recipe the same way, and grinding through a thousand of those
+        // helps nobody.
+        //
+        // Only a systemic failure counts (SeedNormaliseFailureExtensions.IsSystemic). Counting
+        // content rejections here wedged the corpus pass completely: cached successes are skipped
+        // before this counter is reached, so on a resumed run every recipe attempted below the
+        // high-water mark is one that already failed, and those failures reproduce. The guard fired
+        // on the first five of a thirty-recipe backlog and stopped at manifest position 77 with
+        // nothing normalised, never reaching the 744 recipes never tried — every re-run identically.
+        var consecutiveSystemicFailures = 0;
 
         var total = manifest.Recipes.Count;
         var position = 0;
@@ -250,7 +257,7 @@ public class RecipeLibrarySeeder(
                     slugState.LastError = null;
 
                     normalised++;
-                    consecutiveFailures = 0;
+                    consecutiveSystemicFailures = 0;
                     if (recipe.Attempts > 1) retried++;
 
                     logger.LogInformation(
@@ -266,8 +273,15 @@ public class RecipeLibrarySeeder(
                     // list it appears in.
                     failures[entry.Slug] = ex.StateReason;
                     slugState.Stage     = SeedStage.Failed;
+                    slugState.Attempts += ex.Attempts;
                     slugState.LastError = ex.StateReason;
-                    consecutiveFailures++;
+
+                    // A content rejection means the model answered, the grammar held and the gate
+                    // disagreed with the answer — evidence the pipeline works, never evidence it is
+                    // broken. It leaves the counter alone rather than resetting it, exactly as a
+                    // skip does, so an interleaved bad recipe cannot mask a model that is genuinely
+                    // unavailable.
+                    if (ex.Failure.IsSystemic()) consecutiveSystemicFailures++;
 
                     logger.LogWarning("[{Position}/{Total}] {Slug} → {Reason}",
                         position, total, entry.Slug, ex.StateReason);
@@ -275,14 +289,15 @@ public class RecipeLibrarySeeder(
 
                 await cache.SaveStateAsync(ct);
 
-                if (consecutiveFailures >= _options.MaxConsecutiveLlmFailures)
+                if (consecutiveSystemicFailures >= _options.MaxConsecutiveLlmFailures)
                 {
                     aborted = true;
                     logger.LogError(
-                        "Stopping after {Count} consecutive failures. A run that has failed " +
-                        "nothing else is not isolating bad recipes — check Llm:Local:ModelPath and " +
-                        "re-run; cached output is kept and the run resumes where it stopped.",
-                        consecutiveFailures);
+                        "Stopping after {Count} consecutive failures in which no answer came back " +
+                        "at all — the model is unavailable rather than the recipes being bad. Check " +
+                        "Llm:Local:ModelPath and re-run; cached output is kept and the run resumes " +
+                        "where it stopped.",
+                        consecutiveSystemicFailures);
                     break;
                 }
             }

@@ -150,7 +150,7 @@ public static class IngredientDensitySeeder
         var updated = 0;
         foreach (var ingredient in candidates)
         {
-            if (!ByCatalogueName.TryGetValue(ingredient.Name, out var density)) continue;
+            if (!TryFindDensity(ingredient, out var density)) continue;
             ingredient.GramsPerMillilitre = density;
             updated++;
         }
@@ -162,5 +162,29 @@ public static class IngredientDensitySeeder
             Rows.Count, ByCatalogueName.Count, updated);
 
         return updated;
+    }
+
+    /// <summary>
+    /// Looks a density up by the ingredient's own name first, then by any of its aliases.
+    ///
+    /// <para><b>The alias arm is what keeps this working after Phase 9.3.</b> These 124 names were
+    /// written against the old hand-written starter catalogue — the list said <c>plain flour</c>,
+    /// which is why <c>all-purpose flour</c> carries it as a catalogue name. The corpus-derived
+    /// catalogue renames the entries and folds the old spellings in as aliases, so a
+    /// <c>Name</c>-only match would silently stop attaching densities to rows that used to get
+    /// them.</para>
+    ///
+    /// <para>The name still wins where both match, so a curated figure keyed to the canonical entry
+    /// is never displaced by one keyed to a spelling that entry merely answers to.</para>
+    /// </summary>
+    private static bool TryFindDensity(Models.Ingredient ingredient, out decimal density)
+    {
+        if (ByCatalogueName.TryGetValue(ingredient.Name, out density)) return true;
+
+        foreach (var alias in ingredient.Aliases)
+            if (ByCatalogueName.TryGetValue(alias, out density)) return true;
+
+        density = default;
+        return false;
     }
 }

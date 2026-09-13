@@ -435,11 +435,20 @@ public class RecipeScrapeService(
 
         var dbIngredients = await db.Ingredients
             .AsNoTracking()
-            .Select(i => new { i.Id, i.Name, i.DisplayName, i.Category, i.GramsPerMillilitre })
+            .Select(i => new { i.Id, i.Name, i.DisplayName, i.Category, i.GramsPerMillilitre, i.Aliases })
             .ToListAsync(ct);
 
-        var exactLookup = dbIngredients
-            .ToDictionary(i => i.Name, i => i.Id, StringComparer.OrdinalIgnoreCase);
+        // Keyed by Name and by every alias, so a known synonym resolves here rather than costing a
+        // pass-2 model call (Phase 9.3 §4.6). Names are loaded first and aliases only with TryAdd,
+        // so a name always outranks an alias: the alias invariant forbids the collision, and if a
+        // hand-edited row ever breaks it the entry's own name is the answer that wins.
+        var exactLookup = new Dictionary<string, Guid>(StringComparer.OrdinalIgnoreCase);
+        foreach (var ingredient in dbIngredients)
+            exactLookup[ingredient.Name] = ingredient.Id;
+
+        foreach (var ingredient in dbIngredients)
+            foreach (var alias in ingredient.Aliases)
+                exactLookup.TryAdd(alias, ingredient.Id);
 
         var densityById = dbIngredients
             .Where(i => i.GramsPerMillilitre.HasValue)
@@ -620,6 +629,15 @@ public class RecipeScrapeService(
         var existing = await db.Ingredients
             .FirstOrDefaultAsync(i => i.Name == normalised, ct);
         if (existing != null) return existing.Id;
+
+        // An alias hit resolves to the entry that owns it rather than creating a second row.
+        // Without this, confirming a hand-typed "garbanzo beans" would insert a row whose Name
+        // equals an alias of "chickpeas" — and since the lookup loads names before aliases, that
+        // new row would then permanently shadow the alias. Ordinary use must not be able to break
+        // the invariant §4.7 enforces at build and seed time.
+        var byAlias = await db.Ingredients
+            .FirstOrDefaultAsync(i => i.Aliases.Contains(normalised), ct);
+        if (byAlias != null) return byAlias.Id;
 
         var newIng = new Ingredient
         {

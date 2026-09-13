@@ -10,8 +10,17 @@ using RecipeApp.API.Services.Llm;
 using RecipeApp.API.Services.Seeding;
 using Scalar.AspNetCore;
 
-var isSeedCatalogue = args.Contains("seed-catalogue");
+// Phase 9.3 renamed this. The old token is still recognised so it can be answered with a message
+// naming the replacement, rather than falling through and silently starting the web host.
+const string ImportCatalogueCommand = "import-catalogue";
+const string RetiredSeedCatalogueCommand = "seed-catalogue";
+
+var isImportCatalogue = args.Contains(ImportCatalogueCommand);
+var isRetiredSeedCatalogue = args.Contains(RetiredSeedCatalogueCommand);
 var isSeedDensities = args.Contains("seed-densities");
+
+// --force re-applies the artefact over existing rows instead of only filling nulls.
+var catalogueForce = args.Contains("--force");
 
 // seed-recipes takes flags of its own (--discover, --limit 50, …). Everything after the command
 // token is its argument vector, so it is withheld from the host's command-line configuration
@@ -42,7 +51,6 @@ builder.Services.AddScoped<ImageService>();
 builder.Services.AddScoped<IRecipeScrapeService, RecipeScrapeService>();
 builder.Services.AddScoped<MealPlanService>();
 builder.Services.AddScoped<ShoppingListService>();
-builder.Services.AddScoped<IngredientCatalogueSeeder>();
 builder.Services.AddSingleton<MeasurementConverter>();
 
 // ── Measurement handling ──────────────────────────────────────────────────────
@@ -74,6 +82,13 @@ builder.Services.AddSingleton<IWaybackHarvester, WaybackHarvester>();
 builder.Services.AddSingleton<MyPlateRecipeParser>();
 builder.Services.AddSingleton<SeedRecipeNormaliser>();
 builder.Services.AddSingleton<IRecipeLibrarySeeder, RecipeLibrarySeeder>();
+
+// Stage 4.5 (Phase 9.3) — the corpus-derived ingredient catalogue. The store is needed by every
+// run because `import-catalogue` reads the artefact; the builder only by the one machine that
+// authors it.
+builder.Services.AddSingleton<IngredientCatalogueFileStore>();
+builder.Services.AddSingleton<IngredientCatalogueBuilder>();
+builder.Services.AddScoped<SeedCatalogueResolver>();
 
 builder.Services.AddHttpClient(WaybackHarvester.HttpClientName, (sp, client) =>
 {
@@ -155,23 +170,46 @@ if (isSeedRecipes)
     return;
 }
 
-// ── seed-catalogue command — runs inference then exits ────────────────────────
-if (isSeedCatalogue)
+// ── seed-catalogue — retired by Phase 9.3 ────────────────────────────────────
+// Answered rather than ignored: it used to generate a catalogue with an LLM, and silently starting
+// the web host instead would look like the command had run.
+if (isRetiredSeedCatalogue)
 {
-    var countArg = args.SkipWhile(a => a != "seed-catalogue").Skip(1).FirstOrDefault();
-    var count    = int.TryParse(countArg, out var c) && c > 0 ? c : 200;
+    app.Logger.LogError(
+        "'{Retired}' was retired in Phase 9.3 and no longer exists. It generated a catalogue from " +
+        "a model's idea of common ingredients, which matched only 22.9% of the recipe library. Use " +
+        "'dotnet run -- {Replacement}' instead: it loads the corpus-derived catalogue from " +
+        "seed-data/ingredient-catalogue.json with no LLM and no network. The count argument is " +
+        "gone with it — the catalogue's size is a property of the corpus, not a number you pick.",
+        RetiredSeedCatalogueCommand, ImportCatalogueCommand);
+    Environment.ExitCode = 1;
+    return;
+}
 
-    // Run migrations so the DB is ready
-    using (var scope = app.Services.CreateScope())
+// ── import-catalogue command — loads the committed artefact then exits ───────
+// No LLM, no network, no arguments, idempotent (Phase 9.3 §4.5).
+if (isImportCatalogue)
+{
+    using var scope = app.Services.CreateScope();
+    var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+    await db.Database.MigrateAsync();
+
+    var store = scope.ServiceProvider.GetRequiredService<IngredientCatalogueFileStore>();
+
+    try
     {
-        var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
-        await db.Database.MigrateAsync();
+        var catalogue = await store.LoadAsync();
+        await IngredientCatalogueFileSeeder.SeedAsync(db, catalogue, app.Logger, catalogueForce);
+
+        // Densities attach to catalogue rows, so they can only be applied once the rows exist.
+        // Running them together is what makes the documented catalogue → densities order hard to
+        // get wrong (§4.5).
+        await IngredientDensitySeeder.SeedAsync(db, app.Logger);
     }
-
-    using (var scope = app.Services.CreateScope())
+    catch (Exception ex) when (ex is FileNotFoundException or CatalogueValidationException)
     {
-        var seeder = scope.ServiceProvider.GetRequiredService<IngredientCatalogueSeeder>();
-        await seeder.SeedAsync(count);
+        app.Logger.LogError("{Message}", ex.Message);
+        Environment.ExitCode = 1;
     }
 
     return;
@@ -211,13 +249,40 @@ api.MapMealPlanEndpoints();
 api.MapShoppingListEndpoints();
 
 // ── Startup tasks (development) ───────────────────────────────────────────────
+// Order is load-bearing and enforced here rather than documented and hoped for (Phase 9.3 §4.5):
+// densities attach to catalogue rows, and DataSeeder's sample recipes resolve their ingredients
+// through the catalogue. Each step can only do its job once the one before it has run.
 if (app.Environment.IsDevelopment())
 {
     using var scope = app.Services.CreateScope();
     var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
     await db.Database.MigrateAsync();
-    await DataSeeder.SeedAsync(db);
+
+    var catalogueStore = scope.ServiceProvider.GetRequiredService<IngredientCatalogueFileStore>();
+    if (catalogueStore.Exists())
+    {
+        try
+        {
+            var catalogue = await catalogueStore.LoadAsync();
+            await IngredientCatalogueFileSeeder.SeedAsync(db, catalogue, app.Logger);
+        }
+        catch (CatalogueValidationException ex)
+        {
+            // Startup continues. A broken artefact must be loud, but it must not stop a developer
+            // running the app — the sample recipes below still seed and the API still works.
+            app.Logger.LogError("{Message}", ex.Message);
+        }
+    }
+    else
+    {
+        app.Logger.LogWarning(
+            "No ingredient catalogue at {Path}. The app will start with only the sample recipes' " +
+            "own ingredients. Build one with 'dotnet run -- {Command} --build-catalogue'.",
+            catalogueStore.Path, SeedRecipesCommand.CommandName);
+    }
+
     await IngredientDensitySeeder.SeedAsync(db, app.Logger);
+    await DataSeeder.SeedAsync(db);
 }
 
 // Eagerly resolve the model holder (non-test environments) so a bad path surfaces at startup

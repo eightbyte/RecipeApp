@@ -178,6 +178,41 @@ public class JsonSchemaGrammarTests
     }
 
     [Fact]
+    public void ToGbnf_StringEnum_AdmitsOnlyTheListedValues()
+    {
+        // Phase 9.3: told category "MUST be exactly one value from this list", the model answered
+        // SPICES and CONDIMENT, because a free string admitted them. An enum makes them unreachable.
+        var schema = JsonNode.Parse("""
+            {
+              "type": "object",
+              "properties": {
+                "category": { "type": "string", "enum": ["PRODUCE", "DAIRY"] }
+              },
+              "required": ["category"]
+            }
+            """)!;
+
+        var gbnf = JsonSchemaGrammar.ToGbnf(schema);
+
+        gbnf.Should().Contain("root-category ::= (\"\\\"PRODUCE\\\"\" | \"\\\"DAIRY\\\"\")");
+        gbnf.Should().NotContain("root-category ::= string");
+    }
+
+    [Fact]
+    public void ToGbnf_NonStringEnum_MatchesTheValueWithoutQuotes()
+    {
+        var schema = JsonNode.Parse("""
+            {
+              "type": "object",
+              "properties": { "size": { "type": "integer", "enum": [1, 2] } },
+              "required": ["size"]
+            }
+            """)!;
+
+        JsonSchemaGrammar.ToGbnf(schema).Should().Contain("root-size ::= (\"1\" | \"2\")");
+    }
+
+    [Fact]
     public void ToGbnf_OutputIsNonEmpty_AndContainsRootRule()
     {
         var schema = JsonNode.Parse("""{"type":"object","properties":{"x":{"type":"string"}},"required":["x"]}""")!;

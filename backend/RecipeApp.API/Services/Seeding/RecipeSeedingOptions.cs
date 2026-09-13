@@ -94,6 +94,46 @@ public class RecipeSeedingOptions
     /// <summary>Recipes imported by <c>--trial</c>.</summary>
     public int TrialSize { get; init; } = 20;
 
+    // ── Stage 4.5: the corpus-derived ingredient catalogue (Phase 9.3) ────────
+
+    /// <summary>
+    /// The committed catalogue artefact. Relative paths resolve against the content root.
+    ///
+    /// <para>Deliberately a sibling of the harvest cache rather than a file inside it: the cache is
+    /// scratch that <c>--refresh-cache</c> may delete, and this is reviewed source that must survive
+    /// it (§4.2).</para>
+    /// </summary>
+    public string CatalogueFilePath { get; init; } = "seed-data/ingredient-catalogue.json";
+
+    /// <summary>
+    /// Names per grouping call. Large enough that a head-noun family fits in one call — which is the
+    /// point of batching by head noun at all — and small enough that the model still reads every
+    /// source line it is given.
+    /// </summary>
+    public int CatalogueBatchSize { get; init; } = 40;
+
+    /// <summary>
+    /// The build aborts below this many entries. Mechanical folding alone takes the corpus's 1,475
+    /// distinct names to 1,109, so a much smaller result means the grouping pass collapsed the
+    /// corpus rather than that the corpus is small — the same posture as
+    /// <see cref="MinimumDiscoveredSlugs"/>, and for the same reason.
+    /// </summary>
+    public int CatalogueMinimumEntries { get; init; } = 800;
+
+    /// <summary>
+    /// A grouping answer whose group spans more families than this is treated as degenerate: the
+    /// batch is retried, and if every attempt does it, that group is dissolved and its names stand
+    /// alone.
+    ///
+    /// <para>Measured before choosing it. Of 264 merges on the first full per-name run, 237 stayed
+    /// inside one family, 24 spanned two — every one a spelling (<c>chile</c>/<c>chili</c>,
+    /// <c>fillet</c>/<c>filet</c>, <c>leaves</c>/<c>leaf</c>) — and one spanned three
+    /// (<c>pumpkin</c>, <c>purée</c>, <c>puree</c>). The only group above three was a collapsed
+    /// answer that put <c>toothpicks</c>, <c>tortellini</c> and <c>whipped topping</c> into
+    /// <c>tomatoes</c>, spanning five.</para>
+    /// </summary>
+    public int CatalogueMaxFamiliesPerGroup { get; init; } = 3;
+
     /// <summary>
     /// Discovery aborts below this many slugs. A short manifest means the CDX filter rules have
     /// drifted against a changed archive, not that the archive is genuinely small — and silently

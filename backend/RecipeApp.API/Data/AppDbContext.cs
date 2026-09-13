@@ -27,6 +27,12 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
             e.Property(i => i.Category).HasDefaultValue("OTHER");
             e.Property(i => i.GramsPerMillilitre).HasPrecision(8, 4);
             e.Property(i => i.CreatedAt).HasDefaultValueSql("NOW()");
+
+            // text[], defaulting to empty rather than null so every consumer can enumerate it
+            // without a guard. Deliberately unindexed: every caller already loads the whole
+            // catalogue to build an in-memory dictionary (Phase 9.3 §4.6), so the lookup is never
+            // a query, and at ~1,100 rows a GIN index would cost writes to serve nothing.
+            e.Property(i => i.Aliases).HasDefaultValueSql("'{}'::text[]");
         });
 
         // ── Recipe ────────────────────────────────────────────────────────────

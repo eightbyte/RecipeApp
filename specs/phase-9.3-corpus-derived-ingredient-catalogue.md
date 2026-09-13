@@ -1,11 +1,11 @@
 # Phase 9.3 — Corpus-Derived Ingredient Catalogue
 
-**Version:** 1.0
+**Version:** 1.1
 **Date:** 2026-09-12
-**Status:** Proposed — awaiting review
+**Status:** Accepted — open questions answered (§11), implemented; artefact built, awaiting review (§12.3)
 **Depends on:** Phase 9 Stage 4 complete (1,123 normalised recipes are the evidence base *and* the input)
 **Supersedes:** Phase 9 §12.1 (*Ingredient catalogue growth*) and its "run `seed-catalogue` before `seed-recipes`" instruction
-**Retires:** `IngredientCatalogueSeeder` as an LLM generator; `seed-catalogue` keeps its name and its job but changes its source
+**Retires:** `IngredientCatalogueSeeder` as an LLM generator, and the `seed-catalogue` command name; `import-catalogue` takes over the job from a committed artefact
 **Blocks:** Phase 9 Stage 5 — this changes how Stage 5 resolves ingredients, so it lands first
 
 > **Why this is its own spec and not an edit to Phase 9.** Phase 9 §12.1 assumed the catalogue was
@@ -262,7 +262,7 @@ A new **Stage 4.5**, between normalise and persist, with two halves that run at 
 ```
 normalised/*.json ──►  --build-catalogue  ──►  seed-data/ingredient-catalogue.json   [authoring: GPU, once, committed]
                                                           │
-seed-catalogue ◄──────────────────────────────────────────┘                          [seeding: no GPU, idempotent]
+import-catalogue ◄──────────────────────────────────────────┘                          [seeding: no GPU, idempotent]
      │
      ├──► seed-densities        (unchanged, now alias-aware)
      └──► seed-recipes --persist  (Stage 5: deterministic lookup, zero LLM calls)
@@ -369,11 +369,17 @@ recipe.
 | `corpusRows` / `corpusRecipes` | **Corpus count** | Provenance |
 | `gramsPerMillilitre` | **Never** — curated seeder owns it | Settled in Phase 8.5.1 (§2.6) |
 
-### 4.5 Seeding it — `seed-catalogue`, re-pointed
+### 4.5 Seeding it — `import-catalogue`
 
-`seed-catalogue` **keeps its name and its job — populate the ingredient catalogue — and changes its
-source from an LLM to the committed artefact.** It becomes: no LLM, no network, no arguments,
-idempotent, and fast enough to run at Development startup beside `seed-densities`.
+> **Resolved (§11 Q2): `seed-catalogue` is renamed to `import-catalogue`.** The old token is still
+> recognised, and answered with an error naming the replacement rather than ignored — silently
+> starting the web host instead would look like the command had run. The rename covers *every* form,
+> not just `seed-catalogue <count>`: the count argument is gone because the catalogue's size is a
+> property of the corpus, not a number anyone picks.
+
+`import-catalogue` **keeps the job — populate the ingredient catalogue — and changes its source from
+an LLM to the committed artefact.** It is: no LLM, no network, no arguments, idempotent, and fast
+enough to run at Development startup beside `seed-densities`.
 
 - Insert an entry whose `Name` is absent.
 - If `Name` is present, fill only the nulls (`DefaultUnit`, `Category` where it is the `"OTHER"`
@@ -382,7 +388,7 @@ idempotent, and fast enough to run at Development startup beside `seed-densities
 - `--force` re-applies the artefact over existing rows, for a deliberate refresh.
 
 `IngredientCatalogueSeeder.cs` and `IngredientCatalogueSeederTests.cs` are deleted. The `count`
-argument (`seed-catalogue 200`) goes with them; passing it is an error naming the replacement.
+argument goes with them; `seed-catalogue` in any form is an error naming `import-catalogue`.
 
 **Order matters and the command enforces it**: catalogue → densities → recipes. `seed-densities`
 cannot attach a density to a row that does not exist, and Stage 5 cannot resolve a cup without one.
@@ -461,7 +467,7 @@ logic" holds. Only preview *construction* changes, and only for seeding.
 
 `DataSeeder` keeps its role — two sample recipes so a fresh install is not empty — but stops being a
 second source of catalogue truth. Its 41-name block is removed. Its two recipes resolve their
-ingredients through the same alias-aware lookup after `seed-catalogue` has run, and insert a row
+ingredients through the same alias-aware lookup after `import-catalogue` has run, and insert a row
 only if nothing matches.
 
 This is what fixes §2.2's real problem: `capsicum` resolves to `bell pepper`, `plain flour` to
@@ -525,7 +531,7 @@ tomatoes into a punnet of fresh ones, which they cannot.
 | `Services/RecipeScrapeService.cs` | Pass-1 `exactLookup` includes aliases (§4.6); extract the measurement helpers Stage 5 reuses |
 | `Services/Seeding/SeedRecipesCommand.cs` | `+ --build-catalogue`; `--persist` wiring |
 | `Services/Seeding/RecipeSeedingOptions.cs` | `+ CatalogueFilePath`, `CatalogueBatchSize` (40), `CatalogueMinimumEntries` |
-| `Program.cs` | Re-point `seed-catalogue`; register the new services; enforce catalogue → densities order at Development startup |
+| `Program.cs` | Replace `seed-catalogue` with `import-catalogue`; register the new services; enforce catalogue → densities → recipes order at Development startup |
 | `CLAUDE.md` | New files, config keys, changed CLI semantics |
 
 ### Backend — deleted
@@ -605,21 +611,22 @@ Run once against the real artefact, and recorded in §10 the way Phase 9 §23 re
 
 ## 9. Definition of done
 
-- [ ] `seed-recipes --build-catalogue` writes a valid `ingredient-catalogue.json` from the 1,123
-      normalised recipes, and passes all six §4.7 validations
-- [ ] All 1,475 corpus names are reachable as a `name` or an `alias` — **100%, no exceptions**
-- [ ] The artefact is reviewed against §5 and committed
-- [ ] `seed-catalogue` loads it into an empty database with no LLM and no network, and re-running is
+- [x] `seed-recipes --build-catalogue` writes a valid `ingredient-catalogue.json` from the 1,123
+      normalised recipes, and passes all six §4.7 validations — 1,190 entries, see §12.1
+- [x] All 1,475 corpus names are reachable as a `name` or an `alias` — **100%, no exceptions**
+      (verified against the written file, §12.3)
+- [ ] The artefact is reviewed against §5 and committed — **awaiting review, §12.3**
+- [x] `import-catalogue` loads it into an empty database with no LLM and no network, and re-running is
       a no-op
 - [ ] `seed-densities` still attaches every density it did before, via the new names or their aliases
 - [ ] `Ingredient.Aliases` migration applies and rolls back cleanly
 - [ ] Scrape pass 1 resolves a known alias (`garbanzo beans` → `chickpeas`) without an LLM call
 - [ ] `DataSeeder`'s two sample recipes seed with no duplicate catalogue rows, and `capsicum`,
       `plain flour` and `beef stock` each resolve to their American entry
-- [ ] `IngredientCatalogueSeeder` and its tests are deleted; `seed-catalogue <count>` errors with a
+- [x] `IngredientCatalogueSeeder` and its tests are deleted; `seed-catalogue` errors with a
       message naming the replacement
 - [ ] Full suite green; CI needs no GPU and no network
-- [ ] `CLAUDE.md` updated — new files, new config keys, changed `seed-catalogue` semantics, the
+- [x] `CLAUDE.md` updated — new files, new config keys, the `import-catalogue` rename, the
       catalogue → densities → recipes ordering
 - [ ] Phase 9 §12.1 and §18 Q-list annotated to point here
 
@@ -631,7 +638,7 @@ Run once against the real artefact, and recorded in §10 the way Phase 9 §23 re
    scraping on its own.
 2. `IngredientCatalogueBuilder` + `--build-catalogue`, tested against the stub client.
 3. Run the real build. Review the artefact against §5. Commit it.
-4. `IngredientCatalogueFileSeeder`, re-point `seed-catalogue`, delete the generator.
+4. `IngredientCatalogueFileSeeder`, replace `seed-catalogue` with `import-catalogue`, delete the generator.
 5. `DataSeeder` reconciliation + `IngredientDensitySeeder` alias matching.
 6. `SeedCatalogueResolver` — then **Phase 9 Stage 5 builds on it.**
 
@@ -639,7 +646,7 @@ Steps 1–5 are reviewable without a GPU. Only step 3 needs one, and only once.
 
 ---
 
-## 11. Open questions
+## 11. Open questions — all answered
 
 1. **Do fat/sodium variants really merge?** §5 says yes and §2.3 gives the reason — the corpus
    already records the variant in the notes half the time. The counter-argument is that someone
@@ -647,23 +654,199 @@ Steps 1–5 are reviewable without a GPU. Only step 3 needs one, and only once.
    survives in `SourceText` and `Notes` and is visible on the recipe; a shopping list that says
    "3 cups milk" is more useful than three lines. Worth a second opinion before the artefact is
    committed, because it is expensive to reverse afterwards.
-   - Merge
+   - **Answered: merge.** Implemented as stated — the MERGE half of the pass-2 prompt lists fat,
+     sodium and sugar variants, and `SourceText`/`Notes` keep every line verbatim.
 
 2. **Is `seed-catalogue` the right name for a command that no longer generates anything?** It still
    seeds the catalogue, so the name is honest, and keeping it avoids breaking anyone's habits. The
    alternative is `import-catalogue` with `seed-catalogue` erroring as removed. **Recommend keeping
    the name**, with the behaviour change called out in `CLAUDE.md`.
-   - change the name to `import-catalogue`
+   - **Answered: rename to `import-catalogue`.** §4.5 rewritten. `seed-catalogue` is still
+     *recognised* — it errors with a message naming the replacement rather than falling through and
+     silently starting the web host, which would look like the command had run. The rename covers
+     every form, not only `seed-catalogue <count>` as §9 originally said.
 
 3. **What happens when a user's own recipe introduces a name the catalogue lacks?** Today
    `ResolveOrCreateIngredientAsync` creates a bare row. That stays true for scraping and hand entry
    and is out of scope here — but it means the catalogue drifts from the artefact over time, and
    `--force` would then overwrite user data. §4.5's fill-nulls-only rule is what protects them;
    **confirm that is the intended contract** before `--force` ships.
+   - **Answered: the fill-nulls-only contract is confirmed, and `--force` ships.** No design
+     change. Verbatim:
    - the general purpose of the artifacts are to provide starting data.  Drift over time is on the user to ensure they fix and currate any scraping issues or manual entry.  That should remain true, unless there is something im not understanding from this question. If we have files that have clean reliable data then generation of the initial database structure will be consistent upon first run.  This product is not installed anywhere yet, even if labled 1.0 (1.0 just indicates the original specs being achieved); so there is no risk of any user data loss or functionality for any changes.
 
 4. **Should the builder be re-runnable against a corpus that has changed?** As specified it fails if
    any `parsedFingerprint` is stale, which is right for a one-shot phase. If a Phase 10 ever adds a
    second source, the artefact needs a merge strategy rather than a regenerate. **Deferred** — noted
    so it is a decision rather than a surprise.
+   - **Answered: deferred as specified.** A stale `parsedFingerprint` fails the build, and a
+     changed corpus means regenerate rather than merge. Verbatim:
    - As with question 3 above, any seed data is intended as a initialization step on first run, not as a patch for current systems.
+
+---
+
+## 12. Implementation record — what the build changed about this spec
+
+Five things were settled by writing the code and running the corpus rather than by reading §4.
+
+- **`DataSeeder`'s entry guard had to move from ingredients to recipes, and §4.9 did not say so.**
+  It opened `if (await db.Ingredients.AnyAsync()) return;`, which was a sound "already seeded" test
+  while it was the only seeder. §4.5's mandated catalogue → densities → recipes order makes it
+  always true, so the two sample recipes would have silently stopped appearing. Covered by
+  `DataSeederTests.StillSeedsWhenTheCatalogueHasAlreadyBeenLoaded`.
+
+- **§4.7's six rules cannot all run in both places.** Rules 5 (every corpus name reachable) and 6
+  (`corpusRows` sums to 8,882) need the corpus, which the seeder does not have. Split into
+  `IngredientCatalogueValidator.Validate` (rules 1–4, run at build *and* seed time) and
+  `ValidateAgainstCorpus` (rules 5–6, build only).
+
+- **The grouping pass needed a retry, which §4.3 did not give it.** Measured on the first real run:
+  one batch of nine names returned `{"groups": []}` — valid JSON, no exception — and those nine
+  names were silently demoted to the keyword categoriser this phase exists to stop relying on.
+  Placing every label is the prompt's central instruction, so failing to do so is detectable and
+  worth another call. The builder now retries a batch that leaves names unplaced, up to
+  `MaxLlmRetries`, and reports what it could not place.
+
+- **The canonical-name choice cannot be made inside a batch — so the model no longer makes it.**
+  A name the model proposes may be another *batch's* corpus name, and accepting it would make one
+  string both an entry's name and another entry's alias — §4.7 rule 4's exact subject. It first
+  moved to the pass that sees the whole corpus as a vetted suggestion; with the §12.1 redesign the
+  model is not asked for a name at all. An entry is named after its **most-used member**, ties going
+  to the shorter name (`onion` before `onions`, `milk` before `skim milk`), derived exactly the way
+  `defaultUnit` is. §4.3's "the model returns, per group: canonical `name`" and §4.4's table are
+  superseded on this point. A consequence worth knowing: `beets` can name an entry whose alias is
+  `beet`, so regional spellings now find their target by name **or** alias — by name alone,
+  `beetroot` would have been skipped silently.
+
+- **`ResolveOrCreateIngredientAsync` is alias-aware too, which §4.6 scoped to pass 1 only.**
+  Without it, confirming a hand-typed `garbanzo beans` inserts a row whose `Name` equals an alias of
+  `chickpeas` — and since the lookup loads names before aliases, that row then permanently shadows
+  the alias. Ordinary use must not be able to break the invariant the artefact is validated against.
+
+### 12.1 Pass 2 — how the grouping pass was made trustworthy
+
+**Status (2026-09-12): the artefact is built and awaiting human review; it is not committed.**
+`seed-recipes --build-catalogue` wrote `seed-data/ingredient-catalogue.json` — **1,190 entries from
+1,475 names, all six §4.7 validations passing, 52 model calls.** §10 step 3's review is the remaining
+step, and §12.3 lists what it should look at first.
+
+Six full or partial corpus runs and three benchmark previews:
+
+| Run | Change | Result |
+|---|---|---|
+| 1 | §4.3 as specified — one object per *group* | One batch returned `{"groups": []}` — valid JSON, no exception. Nine names silently demoted to the keyword categoriser. **No retry existed.** |
+| 2 | + coverage gate and retry | 212 names → 64 groups (30% retention). One batch put **all 39 of its names in a single group**. |
+| 3 | + anti-merge framing and a worked example | ~40% retention; the cereals batch still collapsed 17 names to 2. |
+| 4–5 | **one object per *name*** with `same_as`, union-find, plural-folded batching, merge logging | 737 entries (50%) — refused by the 800 floor, but **every other §4.7 rule passed.** Heterogeneous batches were fixed (batch 4: 1 group → 29); the tomato batch collapsed 36 names, toothpicks included, into one. |
+| preview | + prompt rules for "a particular kind" and "a choice", category enum, tolerant echo, collapse guard | On the benchmark: names wrongly merged **119 → 57** of 245. |
+| preview | + §5 merge vocabulary refinement (offline, against runs 5 and the preview) | **0 of 245** wrongly merged. |
+| **6** | **all of the above, full corpus** | **1,190 entries (80.7%), 0 of 245 benchmark names wrongly merged, 55 of 120 must-merge pairs missed.** Written. |
+
+**1. The task was the wrong shape.** Asking for a **partition** of 40 names is one global,
+combinatorial judgement. Inspecting the real batches disproved the first theory — that head-noun
+batching makes a batch *look* homogeneous — because batch 4 spans beef, beets, berries, bouillon and
+bread and the model merged them anyway. Pass 2 now asks the way Phase 9 §23 proved: one object per
+labelled name — `label`, `name`, `same_as`, `display_name`, `category`, in that decode order — and
+groups are the connected components of `same_as`. Copying `name` back puts the name being judged
+directly in front of the decision, and doubles as the drift check Stage 4 lacked. The canonical name
+is no longer asked for at all (§12's bullet above).
+
+**2. Batching was splitting singular from plural.** Keyed on the raw final word, `tomato` and
+`tomatoes` are different families, and greedy packing put a batch boundary between them in **8
+families** (`tomato`, `mushroom`, `bean`, `pea` among them) — making §2.3's best-evidenced merge rule
+one the model could never apply. §4.3 had specified the opposite. Family keys now fold a plural onto a
+singular **the corpus itself uses** (68 folds, none wrong; `molasses` and `hummus` have nothing to fold
+into), and only `pepper` spans batches, because it is larger than the cap.
+
+**3. A count cannot review a catalogue.** Batch 1 is 37 names that honestly form about 20 purchases,
+so "37 → 14" alone could not say whether the model was wrong. The builder now logs every merge and
+every refusal. A hand-labelled benchmark of **8 batches, 245 names** — each pair must-merge,
+must-not, or arguable per §5 — scored every change after run 5. It is deliberately failure-weighted:
+six of its batches were chosen *because* they failed, so it measures the failure shapes, not the
+corpus-wide rate.
+
+**4. Every error was an over-merge, and prompt wording stopped paying.** Across the benchmark the
+per-name model missed **1** must-merge pair while wrongly merging **119** names. The shape was
+always the same — a general name absorbing particular kinds that share its final word: `egg noodles ←
+lasagna | fettuccine | ramen`, `mustard ← dijon | spicy brown`, `flour ← whole wheat | rye | cake`,
+fourteen cereals into `cereal`, `bacon` into `turkey bacon`, `green beans ← frozen green beans`. A
+rule naming that exact shape, plus a worked example teaching it, halved the count to 57 — and left
+noodles, mustard and cereals untouched.
+
+**5. §5's MERGE list became a closed vocabulary that refines, and never proposes.**
+`CatalogueMergeVocabulary` holds exactly §5's merge list: plural forms, fat/sodium/sugar variants, size
+and cut words, redundant freshness qualifiers, three spellings (`filet`, `chile`, `purée`) and two
+context rewrites (`whole milk`, `head of`). A merge the model proposed stands only where the names
+differ by nothing else; the rest of the group is split in the over-split direction §5's tie-break
+already chose. **It cannot create a merge the model did not make**, so the judgement §2.3 says no
+mechanical rule can make — `diced tomatoes` is canned — stays the model's, and §4.3's "mechanical
+folding only routes" still holds. Measured: 0 of 245 wrongly merged, at the cost of about half the
+must-merge pairs. **This is the decision in this record most worth a second opinion**, because the
+vocabulary is where precision was bought: words were left out *because* each would admit a real false
+merge seen in the logs — `ground` (`ginger ← ground ginger`), `dried` (`cranberries ← dried
+cranberries`), `white` (`beans ← white beans`), `cooked` (§5 keeps cooked and raw apart). The price
+is visible: `ground cinnamon` is its own entry beside `cinnamon`.
+
+**6. Degenerate answers are detected structurally.** In run 5, **263 of 264** merges spanned three
+families or fewer, every two-family span a spelling (`chile`/`chili`, `fillet`/`filet`,
+`leaves`/`leaf`). The one above was the tomato collapse, spanning five. A group spanning more than
+`CatalogueMaxFamiliesPerGroup` (3) now marks the attempt defective, so the batch is retried; one still
+collapsed after every attempt is dissolved. Run 6 needed no dissolving.
+
+**7. Smaller things found only by running it.**
+- **`category` is an enum.** As a free string, the model answered `SPICES` and `CONDIMENT` despite
+  "MUST be exactly one value from this list". `JsonSchemaGrammar` gained `enum` support; run 6 had
+  zero invalid categories. The prompt also states that spices and dried herbs are `CONDIMENTS`, which
+  is the keyword table's existing convention, not a new one.
+- **The name echo tolerates asides.** Stage 4 left `paprika (optional)` in the corpus and the model
+  copies it as `paprika`; an exact check called that drift and spent two retries on a correct answer.
+  An echo that is exactly *another* label's name is still refused.
+- **The worked example is a family the corpus lacks** (plums), rendered by the same code as a real
+  batch and run through the real reader in a test. The first example used the tomato family, which
+  handed the tomato batch its answer.
+- **`--build-catalogue --batch <n>`** runs pass 2 on named batches and writes nothing — `--slug`'s
+  counterpart. A full build is ~45 minutes; the benchmark preview is ~10.
+
+**8. §8's expected range was right; the floor stays.** §8 predicted 1,000–1,150 from mechanical
+folding's 1,109. Run 6 lands at 1,190, slightly above, because the vocabulary errs towards splitting.
+The 800 floor caught run 5's 737 exactly as intended.
+
+### 12.2 Other deviations
+
+Three files exist that §6 does not list. Two avoid duplicating logic across the build and seed
+halves: `Services/Seeding/IngredientCatalogueFileStore.cs` (path resolution, atomic write, versioned
+read) and `Services/Seeding/IngredientCatalogueValidator.cs` (§4.7). The third is
+`Services/Seeding/CatalogueMergeVocabulary.cs` (§12.1 item 5). `RecipeSeedingOptions` gained
+`CatalogueMaxFamiliesPerGroup` beside the three §6 lists, `SeedRecipesCommand` gained `--batch`, and
+`JsonSchemaGrammar` gained `enum`. §6's "`--persist` wiring" line is left for Stage 5, which this
+spec blocks rather than contains.
+
+### 12.3 What the review should look at first
+
+Corpus verification (§8) against the written artefact, not the builder's own checks:
+
+| §8 item | Result |
+|---|---|
+| 1. Every corpus name reachable | **1,475 of 1,475** |
+| 2. No alias collision, no alias equal to a name | **0 collisions** |
+| 3. Category spot-check | **Human review** — 175 names cover 72% of rows |
+| 4. §2.4's categoriser failures | `egg noodles` DRY_GOODS, `cream of mushroom soup` CANNED, `tomato juice` BEVERAGES, `chicken broth` CANNED — defensible. **`peanut butter` DAIRY and `egg substitute` DRY_GOODS are wrong**; the prompt names peanut butter explicitly and the model still chose DAIRY. |
+| 5. §5's named cases | `diced tomatoes`, `frozen spinach`, `dried cranberries` kept separate; `skim milk`, `onions` merged. **`fat-free plain yogurt`** joined `low-fat plain yogurt` but not `plain yogurt` — the model's choice; the vocabulary would have allowed it. |
+| 6. Entry count | **1,190** (§8 expected 1,000–1,150) |
+| §9 densities | **41 of 50** curated rows attach, to 56 entries — two only through an alias (`oatmeal` via `porridge oats`, `coconut` via `shredded coconut`), which is `TryFindDensity`'s alias arm earning its place. The 9 that attach to nothing name ingredients absent from this corpus under every spelling: self-raising flour, almond flour, brown sugar (loose), demerara sugar, arborio rice, panko, and three dried beans. Measured offline against the file; not yet run through `import-catalogue`. |
+
+Worth a reviewer's eye, in order of consequence:
+
+1. **The vocabulary's omissions** (§12.1 item 5). `ground`, `dried`, `white` and `cooked` are out
+   on measured evidence; whether a word like `plain`, `creamy`/`chunky` or `nonstick` belongs in is a
+   judgement about this app's shopping lists, and the build log's `kept apart:` lines — 162 of them —
+   are the list to decide from.
+2. **46 entries in OTHER.** Most are corpus noise Stage 3 and 4 carried as ingredients —
+   `toothpicks`, `spoon`, `instruction`, `bugs`, `ice cube tray or small paper cups` — which §4.7 rule
+   5 requires to stay reachable. Some are real miscategorisations: `honey`, eleven cooking-spray
+   variants, bouillon.
+3. **`tomatoes` is canned in this corpus.** 66 rows, mostly `1 can (14.5 ounces) tomatoes`, and it
+   merged with the fresh `tomato` (63 rows) into one PRODUCE entry. That is a Stage 4 naming fact the
+   catalogue can only inherit.
+4. **Missed merges are visible, not silent** — `ground cinnamon`/`cinnamon`, `mustard`/`yellow
+   mustard`, the cooking sprays. Each is a second shopping-list line a user can see.

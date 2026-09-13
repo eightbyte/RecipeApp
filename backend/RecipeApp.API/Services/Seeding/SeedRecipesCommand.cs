@@ -43,6 +43,12 @@ public static class SeedRecipesCommand
         /// <summary>Stage 4 — run parsed recipes through the LLM pass. Needs a model, not a database.</summary>
         public bool Normalise { get; init; }
 
+        /// <summary>
+        /// Stage 4.5 — derive the committed ingredient catalogue from <c>normalised/</c>.
+        /// Needs a model, not a database (Phase 9.3 §4.3).
+        /// </summary>
+        public bool BuildCatalogue { get; init; }
+
         /// <summary>Print the cached progress summary and do no work.</summary>
         public bool Report { get; init; }
 
@@ -67,9 +73,19 @@ public static class SeedRecipesCommand
         /// </summary>
         public IReadOnlyList<string> Slugs { get; init; } = [];
 
+        /// <summary>
+        /// With <c>--build-catalogue</c>: run the grouping pass on these batches only (1-based), log
+        /// what each one merged, and write nothing. Empty means a real build.
+        ///
+        /// <para><c>--slug</c>'s counterpart for Stage 4.5. A full build is 45 calls and most of an
+        /// hour, while the grouping prompt's failures cluster in a handful of family-dense batches —
+        /// the cereals batch collapsed 17 names to 2 on two different prompts.</para>
+        /// </summary>
+        public IReadOnlyList<int> CatalogueBatches { get; init; } = [];
+
         /// <summary>Whether this invocation needs Stage 5, which is not yet implemented.</summary>
         public bool RequiresFullPipeline =>
-            !Discover && !Harvest && !Parse && !Normalise && !Report;
+            !Discover && !Harvest && !Parse && !Normalise && !BuildCatalogue && !Report;
     }
 
     /// <summary>Parses the command's own arguments, or returns null after reporting a usage error.</summary>
@@ -85,6 +101,7 @@ public static class SeedRecipesCommand
                 case "--harvest":       arguments = arguments with { Harvest = true }; break;
                 case "--parse":         arguments = arguments with { Parse = true }; break;
                 case "--normalise":     arguments = arguments with { Normalise = true }; break;
+                case "--build-catalogue": arguments = arguments with { BuildCatalogue = true }; break;
                 case "--report":        arguments = arguments with { Report = true }; break;
                 case "--refresh-cache": arguments = arguments with { RefreshCache = true }; break;
                 case "--trial":         arguments = arguments with { Trial = true }; break;
@@ -114,10 +131,30 @@ public static class SeedRecipesCommand
                     index++;
                     break;
 
+                case "--batch":
+                    if (index + 1 >= commandArgs.Length
+                        || !int.TryParse(commandArgs[index + 1], out var batch)
+                        || batch <= 0)
+                    {
+                        logger.LogError("--batch requires a positive batch number, e.g. --batch 7.");
+                        return null;
+                    }
+                    arguments = arguments with { CatalogueBatches = [.. arguments.CatalogueBatches, batch] };
+                    index++;
+                    break;
+
                 default:
                     logger.LogError("Unrecognised argument '{Argument}'.\n{Usage}", commandArgs[index], Usage);
                     return null;
             }
+        }
+
+        // A batch number means nothing to any other stage, and silently ignoring it would run a
+        // full, hour-long build that the caller asked to preview.
+        if (arguments.CatalogueBatches.Count > 0 && !arguments.BuildCatalogue)
+        {
+            logger.LogError("--batch only applies to --build-catalogue.");
+            return null;
         }
 
         return arguments;
@@ -130,6 +167,10 @@ public static class SeedRecipesCommand
           --harvest         Stages 1-2 — download and cache pages and images, no LLM
           --parse           Stage 3 — parse cached pages into recipes, offline
           --normalise       Stage 4 — LLM quantity extraction and step linkage
+          --build-catalogue Stage 4.5 — derive seed-data/ingredient-catalogue.json from
+                            normalised/. Run once, review the result, commit it.
+          --batch <n>       With --build-catalogue: group only batch n, log its merges and
+                            write nothing; repeatable
           --report          Print the cached progress summary and do no work
           --refresh-cache   Discard cached pages and images, then re-harvest
           --limit <n>       Process at most n recipes this run
@@ -169,14 +210,25 @@ public static class SeedRecipesCommand
             if (arguments.Normalise)
                 return await NormaliseAsync(services, harvester, cache, logger, arguments, ct);
 
+            if (arguments.BuildCatalogue)
+                return await BuildCatalogueAsync(services, harvester, logger, arguments, ct);
+
             logger.LogError(
                 "Stage 5 (persist) is not implemented yet, so this mode cannot run. " +
-                "Use --discover, --harvest, --parse, --normalise or --report.\n{Usage}", Usage);
+                "Use --discover, --harvest, --parse, --normalise, --build-catalogue or --report.\n{Usage}",
+                Usage);
             return NotImplementedExitCode;
         }
         catch (SeedHarvestException ex)
         {
             logger.LogError("Seed harvest aborted: {Message}", ex.Message);
+            return FailureExitCode;
+        }
+        catch (CatalogueValidationException ex)
+        {
+            // Nothing was written. A catalogue that contradicts itself is worse than no catalogue,
+            // and every consumer downstream treats this file as authoritative (§4.7).
+            logger.LogError("Catalogue build aborted: {Message}", ex.Message);
             return FailureExitCode;
         }
         catch (OperationCanceledException)
@@ -320,6 +372,70 @@ public static class SeedRecipesCommand
 
         // An aborted run is not a successful one, even though everything it did is cached.
         return result.Aborted ? FailureExitCode : 0;
+    }
+
+    /// <summary>
+    /// Stage 4.5 (Phase 9.3). Derives the committed ingredient catalogue from the normalised corpus.
+    ///
+    /// <para>Runs once, on whoever has the GPU; its output is reviewed and committed, and every
+    /// other machine reads the file. <c>--slug</c> deliberately does not narrow it: a catalogue
+    /// derived from part of the corpus cannot resolve the rest of it, which is the failure §4.7
+    /// rule 5 exists to catch.</para>
+    /// </summary>
+    private static async Task<int> BuildCatalogueAsync(
+        IServiceProvider services,
+        IWaybackHarvester harvester,
+        ILogger logger,
+        SeedRecipesArguments arguments,
+        CancellationToken ct)
+    {
+        if (arguments.Slugs.Count > 0)
+        {
+            logger.LogError(
+                "--build-catalogue reads the whole corpus and cannot be narrowed with --slug. " +
+                "Every recipe's ingredient names must be reachable or Stage 5 cannot persist them.");
+            return FailureExitCode;
+        }
+
+        var builder  = services.GetRequiredService<IngredientCatalogueBuilder>();
+        var manifest = await harvester.EnsureManifestAsync(ct);
+
+        if (arguments.CatalogueBatches.Count > 0)
+        {
+            var preview = await builder.PreviewAsync(manifest, arguments.CatalogueBatches, ct);
+
+            logger.LogInformation(
+                "Preview: {Names} names → {Groups} groups over {Batches} of {Total} batches " +
+                "({Calls} model calls). Nothing was written.",
+                preview.Names, preview.Groups, preview.BatchesRun, preview.TotalBatches, preview.LlmCalls);
+
+            return 0;
+        }
+
+        var result = await builder.BuildAsync(manifest, ct);
+
+        if (!result.Succeeded)
+        {
+            logger.LogError(
+                "Catalogue build failed {Count} validation check(s); nothing was written.",
+                result.ValidationErrors.Count);
+            return FailureExitCode;
+        }
+
+        logger.LogInformation(
+            "Catalogue built: {Entries} entries from {Names} distinct names over {Rows} rows in " +
+            "{Recipes} recipes ({Calls} model calls).",
+            result.Entries, result.DistinctNames, result.IngredientRows, result.Recipes, result.LlmCalls);
+
+        if (result.NamesRecoveredFromGaps > 0)
+            logger.LogWarning(
+                "{Count} names were not grouped by the model and became single-name entries.",
+                result.NamesRecoveredFromGaps);
+
+        logger.LogInformation(
+            "Written to {Path}. Review it against the merge rules, then commit it.", result.Path);
+
+        return 0;
     }
 
     private static async Task<int> ReportAsync(

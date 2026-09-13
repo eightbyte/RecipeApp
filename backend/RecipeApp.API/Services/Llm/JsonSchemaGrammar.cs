@@ -5,7 +5,7 @@ namespace RecipeApp.API.Services.Llm;
 
 /// <summary>
 /// Converts a JSON Schema subset to a GBNF grammar string for grammar-constrained decoding.
-/// Supports objects, arrays, string/integer/number/boolean primitives, nullable unions, and required fields.
+/// Supports objects, arrays, string/integer/number/boolean primitives, nullable unions, enums, and required fields.
 /// </summary>
 public static class JsonSchemaGrammar
 {
@@ -57,6 +57,20 @@ public static class JsonSchemaGrammar
         HashSet<string> ruleSet)
     {
         if (ruleSet.Contains(ruleName)) return ruleName;
+
+        // A closed set of values: exactly one of the listed JSON literals, and nothing else.
+        //
+        // Phase 9.3 added this because a prompt instruction is not a constraint. Told that category
+        // "MUST be exactly one value from this list", the model answered SPICES and CONDIMENT — each
+        // valid JSON, each a string, so the grammar admitted it and a keyword-table guess replaced
+        // the judgement the call existed to get. Constrained decoding exists to make invalid output
+        // unreachable; a rule the grammar could state but does not is a hole in the guard.
+        if (schema["enum"] is JsonArray allowed && allowed.Count > 0)
+        {
+            var literals = allowed.Select(value => GbnfLiteral(value?.ToJsonString() ?? "null"));
+            AddRule(ruleName, "(" + string.Join(" | ", literals) + ")", rules, ruleSet);
+            return ruleName;
+        }
 
         var typeNode = schema["type"];
 
@@ -165,6 +179,11 @@ public static class JsonSchemaGrammar
         var escaped = key.Replace("\\", "\\\\").Replace("\"", "\\\"");
         return "\"\\\"" + escaped + "\\\"\"";
     }
+
+    // Produces a GBNF string literal that matches the given text verbatim — for an enum value, its
+    // JSON form, so "PRODUCE" matches with its quotes and 3 matches without any
+    private static string GbnfLiteral(string text) =>
+        "\"" + text.Replace("\\", "\\\\").Replace("\"", "\\\"") + "\"";
 
     private static string Slug(string key) =>
         key.Replace("_", "-").ToLowerInvariant();

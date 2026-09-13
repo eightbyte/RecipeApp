@@ -4,7 +4,7 @@
 Mobile-first web app for storing recipes, building meal plans, and generating shopping lists.
 
 - **Spec:** `SPEC.md` — read this for feature requirements and data model definitions.
-- **Current phase:** Phase 9 in progress (seed recipe library) — **v1 feature-complete**. Stages 1–3 (Wayback discovery, fetch, parse) done and Phase 9.1 (unquantified ingredients — the Stage 4 prerequisite) done. Stage 4 (LLM normalise) is **done: all 1,123 recipes normalised, zero failures**, after a run-abort bug and four quantity repairs took the success rate from 91.3% to 100%. Stage 5 (persist) next — its inputs are `normalised/*.json` plus 1,115 cached photos, and its real work is matching 1,475 distinct ingredient names to the catalogue.
+- **Current phase:** Phase 9 in progress (seed recipe library) — **v1 feature-complete**. Stages 1–3 (Wayback discovery, fetch, parse) done and Phase 9.1 (unquantified ingredients — the Stage 4 prerequisite) done. Stage 4 (LLM normalise) is **done: all 1,123 recipes normalised, zero failures**, after a run-abort bug and four quantity repairs took the success rate from 91.3% to 100%. Stage 5 (persist) next — its inputs are `normalised/*.json` plus 1,115 cached photos. **Phase 9.3 (corpus-derived ingredient catalogue) is implemented and its artefact built — 1,190 entries, every one of the 1,475 corpus names reachable — and awaiting human review before commit** (`specs/phase-9.3-corpus-derived-ingredient-catalogue.md` §12.3). It turns Stage 5's ingredient matching into a dictionary lookup.
 
 ## Repository structure
 ```
@@ -18,6 +18,7 @@ RecipeApp/
 │   ├── Services/            Business logic services (added from Phase 2)
 │   │   └── Seeding/         (Phase 9) USDA MyPlate seed import — harvester, parser, cache, CLI
 │   ├── seed-data/myplate/   (Phase 9) On-disk harvest cache; only manifest.json is committed
+│   ├── seed-data/ingredient-catalogue.json  (Phase 9.3) Reviewed catalogue artefact; committed
 │   └── Enums/               Shared enum/constant classes
 ├── frontend/                Vue 3 SPA
 │   └── src/
@@ -87,7 +88,9 @@ Readiness check: `http://localhost:5000/health/ready`
 Each detects its argument, runs, and exits without starting Kestrel. Run from `backend/RecipeApp.API`.
 
 ```bash
-dotnet run -- seed-catalogue [count]   # LLM-generated starter ingredient catalogue (default 200)
+dotnet run -- import-catalogue         # Load the committed ingredient catalogue. No LLM, no
+                                       # network, no arguments, idempotent. Also runs seed-densities.
+dotnet run -- import-catalogue --force # Re-apply the artefact over existing rows (discards corrections)
 dotnet run -- seed-densities           # Curated bulk densities; idempotent, only fills nulls
 
 # Phase 9 — USDA MyPlate seed library. Stages 1-4 implemented; 5 pending.
@@ -102,7 +105,19 @@ dotnet run -- seed-recipes --normalise     # Stage 4 — parsed/ → normalised/
 dotnet run -- seed-recipes --normalise --limit 30
 dotnet run -- seed-recipes --normalise --force  # Discard normalised/ and re-run the LLM pass
 dotnet run -- seed-recipes --normalise --slug apple-carrot-soup   # One recipe; repeatable
+
+# Phase 9.3 — Stage 4.5, the corpus-derived ingredient catalogue.
+dotnet run -- seed-recipes --build-catalogue  # normalised/ → seed-data/ingredient-catalogue.json
+                                              # (LLM, 45 batches, ~45 min). Run once, review, commit.
+dotnet run -- seed-recipes --build-catalogue --batch 7 --batch 24
+                                              # Grouping pass on named batches only; logs every
+                                              # merge and refusal, writes nothing (~1-2 min a batch)
 ```
+
+**Catalogue ordering is load-bearing: catalogue → densities → recipes.** `seed-densities` cannot
+attach a density to a row that does not exist, and Stage 5 cannot resolve a `cup` without one.
+`import-catalogue` runs the first two together, and the Development startup path runs all three in
+order, so the ordering is enforced rather than documented and hoped for.
 
 `seed-recipes` needs no database — stages 1-2 touch only the archive and the local cache, stage 3
 only the cache, and stage 4 the cache plus the local model. Ctrl+C stops it cooperatively;
@@ -583,6 +598,54 @@ worth knowing: `CacheDirectory`, `PreferredSnapshotYear`, `FetchDelayMillisecond
   once.** Singular and plural still split (`tomato` 63 rows, `tomatoes` 66), so catalogue matching
   is the Stage 5 workload rather than a lookup. Metadata coverage is high: 8 recipes have no image
   (they carry no JSON-LD image node), 4 no description, 8 no source credit, 75 no notes.
+- **Phase 9.3 — corpus-derived ingredient catalogue (2026-09-12). Built, not yet committed.**
+  (`specs/phase-9.3-corpus-derived-ingredient-catalogue.md`; §12 is the implementation record.)
+  Backend-only, no new packages. Added `Ingredient.Aliases` (`text[]`, default `{}`, unindexed) with
+  migration `AddIngredientAliases`; alias-aware lookup in scrape pass 1 **and**
+  `ResolveOrCreateIngredientAsync` (names load first, aliases via `TryAdd`, so a name always wins).
+  Added `Services/Seeding/`: `IngredientCatalogueBuilder` (`--build-catalogue`), `SeedCatalogueModels`,
+  `IngredientCatalogueFileStore`, `IngredientCatalogueValidator` (§4.7 rules 1–4 at build and seed time,
+  5–6 at build only), `CatalogueMergeVocabulary`, `SeedCatalogueResolver` (Stage 5's lookup). Added
+  `Data/IngredientCatalogueFileSeeder` behind `import-catalogue`. **Deleted** `IngredientCatalogueSeeder`;
+  `seed-catalogue` is still recognised and exits 1 naming its replacement. `DataSeeder`'s guard moved
+  from ingredients to recipes (the mandated catalogue-first order made the old guard always true) and
+  its sample recipes use the American corpus spellings. Config: `CatalogueFilePath`,
+  `CatalogueBatchSize` (40), `CatalogueMinimumEntries` (800), `CatalogueMaxFamiliesPerGroup` (3).
+  `JsonSchemaGrammar` gained `enum`. Suite: **1,141 tests**, no GPU, no network.
+  **The artefact: 1,190 entries from 1,475 names, 100% reachable, 0 alias collisions, 52 model calls.**
+  **Seven things worth knowing, each found by running the corpus:**
+  - **Ask one object per name, never one per group.** A 40-name partition is a global judgement and
+    the model collapsed batches wholesale (39 names → 1 group). One object per labelled name —
+    `label`, `name`, `same_as`, `display_name`, `category`, in that decode order — with groups as
+    union-find components fixed every heterogeneous batch. Echoing `name` is also the drift check.
+  - **Batch by family with plurals folded, or singular and plural never meet.** Raw final-word keys
+    put `tomato` and `tomatoes` in different families and packing split 8 such pairs across batches.
+    Keys now fold a plural only onto a singular the corpus itself uses.
+  - **Every remaining error was an over-merge of a particular kind into a general name** — noodles,
+    mustards, cereals, flours, lettuces all absorbed into the bare head noun. Prompt rules naming that
+    shape halved it and stopped. **`CatalogueMergeVocabulary` is §5's closed MERGE list as a table**:
+    a model-proposed merge stands only where the names differ by plural, fat/sodium/sugar level, size,
+    cut or freshness words. It refines and never proposes, so `diced tomatoes` (canned) is still the
+    model's call. Benchmark of 245 hand-labelled names: 119 wrongly merged → 57 (prompt) → **0**
+    (vocabulary), at the cost of about half the must-merge pairs — the over-split direction §5 chose.
+    `ground`, `dried`, `white` and `cooked` are **deliberately absent**; each admits a false merge seen
+    in the logs. Adding a word is a review decision; the build log's `kept apart:` lines are the list.
+  - **A count cannot review a catalogue.** The builder logs every `merged:` and `kept apart:` line, and
+    `--batch` previews named batches in minutes. Score a preview against hand-labelled batches before
+    and after any prompt change — impressions of a few merges were wrong twice in this phase.
+  - **Free-string categories drift; enums do not.** The model answered `SPICES` and `CONDIMENT` under
+    "MUST be exactly one value". Zero invalid categories after the enum. Spices are `CONDIMENTS`, the
+    keyword table's existing convention.
+  - **A collapsed answer looks complete.** The tomato batch put `toothpicks` and `whipped topping` into
+    `tomatoes` with every name answered. 263 of 264 real merges span ≤ 3 families; more marks the attempt
+    defective, and a group still collapsed after retries is dissolved.
+  - **The model does not name the entry.** A proposed canonical name can be another batch's corpus
+    name, breaking the alias invariant. The entry is its most-used member, ties to the shorter name.
+  **Known in the artefact, for review:** `peanut butter` is DAIRY despite the prompt naming it;
+  46 OTHER entries, mostly Stage 3/4 noise that must stay reachable (`toothpicks`, `spoon`,
+  `instruction`) plus real miscategorisations (`honey`, cooking sprays); `tomatoes` (66 rows) is
+  mostly canned in this corpus but merged with fresh `tomato`. 41 of 50 curated densities attach; the
+  other 9 name ingredients the corpus does not contain.
 
 ---
 ## Project Notes

@@ -29,10 +29,23 @@ public class SeedRecipesCommandTests
     [InlineData("--harvest")]
     [InlineData("--parse")]
     [InlineData("--normalise")]
+    [InlineData("--build-catalogue")]
     [InlineData("--report")]
     public void TryParse_AnImplementedStage_DoesNotNeedTheUnbuiltStages(string flag)
     {
         Parse(flag)!.RequiresFullPipeline.Should().BeFalse();
+    }
+
+    [Fact]
+    public void TryParse_BuildCatalogue_SetsOnlyThatStage()
+    {
+        var arguments = Parse("--build-catalogue")!;
+
+        arguments.BuildCatalogue.Should().BeTrue();
+        arguments.Normalise.Should().BeFalse();
+        arguments.Parse.Should().BeFalse();
+        arguments.Harvest.Should().BeFalse();
+        arguments.Discover.Should().BeFalse();
     }
 
     [Fact]
@@ -90,6 +103,26 @@ public class SeedRecipesCommandTests
         arguments.Force.Should().BeTrue();
         arguments.Slugs.Should().Equal("apple-carrot-soup");
     }
+
+    [Fact]
+    public void TryParse_RepeatedBatch_CollectsEveryOneInOrder()
+    {
+        var arguments = Parse("--build-catalogue", "--batch", "7", "--batch", "2")!;
+
+        arguments.CatalogueBatches.Should().Equal(7, 2);
+    }
+
+    [Theory]
+    [InlineData("0")]
+    [InlineData("-1")]
+    [InlineData("seven")]
+    public void TryParse_ANonPositiveBatch_IsAUsageError(string batch) =>
+        Parse("--build-catalogue", "--batch", batch).Should().BeNull();
+
+    [Fact]
+    public void TryParse_BatchWithoutBuildCatalogue_IsAUsageError() =>
+        Parse("--normalise", "--batch", "3").Should().BeNull(
+            "ignoring it would run a full pass the caller only asked to preview");
 
     // ── Manifest narrowing ────────────────────────────────────────────────────
 

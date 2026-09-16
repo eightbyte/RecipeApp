@@ -121,9 +121,11 @@ ingredients
   id               UUID  PK
   name             TEXT  NOT NULL UNIQUE  (normalised, lowercase e.g. "onion")
   display_name     TEXT  NOT NULL         (e.g. "Onion")
-  category         TEXT  NOT NULL         (shopping group: PRODUCE, MEAT_SEAFOOD, DAIRY,
-                                           CANNED, FROZEN, DRY_GOODS, BAKERY, CONDIMENTS,
-                                           BEVERAGES, OTHER)
+  category         TEXT  NOT NULL         (shopping group, in aisle order: PRODUCE, MEAT_SEAFOOD,
+                                           DAIRY, CANNED, FROZEN, DRY_GOODS, GRAINS_RICE,
+                                           PASTA_SAUCES, BAKING_SPICES, BAKERY, CONDIMENTS,
+                                           JAM_NUT_BUTTER, BEVERAGES, COFFEE_TEA, KITCHEN,
+                                           HOUSEHOLD, OTHER)
   default_unit     TEXT                   (e.g. "g", "ml", "pcs")
   grams_per_millilitre  DECIMAL(8,4)      (bulk density; NULL means no reliable density is
                                            known — volume measurements are then kept as
@@ -396,7 +398,7 @@ Base URL: `/api/v1`
 5. Group items by `category` for display.
 
 #### 6.3.2 Shopping List Display
-- Items grouped under category headings: **Produce**, **Meat & Seafood**, **Dairy**, **Canned Goods**, **Frozen**, **Dry Goods & Pasta**, **Bakery**, **Condiments & Sauces**, **Beverages**, **Other**.
+- Items grouped under category headings, in aisle order: **Produce**, **Meat & Seafood**, **Dairy**, **Canned Goods**, **Frozen**, **Dry Goods**, **Grains & Rice**, **Pasta & Sauces**, **Baking & Spices**, **Bakery**, **Condiments & Oils**, **Jams & Nut Butters**, **Beverages**, **Coffee & Tea**, **Kitchen Supplies**, **Household**, **Other**.
 - Each item shows: ingredient name, combined amount + unit.
 - Custom user-added items appear in their category with a distinct visual indicator (e.g. user icon badge).
 

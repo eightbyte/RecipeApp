@@ -4,7 +4,7 @@
 Mobile-first web app for storing recipes, building meal plans, and generating shopping lists.
 
 - **Spec:** `SPEC.md` — read this for feature requirements and data model definitions.
-- **Current phase:** Phase 9 in progress (seed recipe library) — **v1 feature-complete**. Stages 1–3 (Wayback discovery, fetch, parse) done and Phase 9.1 (unquantified ingredients — the Stage 4 prerequisite) done. Stage 4 (LLM normalise) is **done: all 1,123 recipes normalised, zero failures**, after a run-abort bug and four quantity repairs took the success rate from 91.3% to 100%. Stage 5 (persist) next — its inputs are `normalised/*.json` plus 1,115 cached photos. **Phase 9.3 (corpus-derived ingredient catalogue) is implemented and its artefact built — 1,190 entries, every one of the 1,475 corpus names reachable — and awaiting human review before commit** (`specs/phase-9.3-corpus-derived-ingredient-catalogue.md` §12.3). It turns Stage 5's ingredient matching into a dictionary lookup.
+- **Current phase:** Phase 9 in progress (seed recipe library) — **v1 feature-complete**. Stages 1–3 (Wayback discovery, fetch, parse) done and Phase 9.1 (unquantified ingredients — the Stage 4 prerequisite) done. Stage 4 (LLM normalise) is **done: all 1,123 recipes normalised, zero failures**, after a run-abort bug and four quantity repairs took the success rate from 91.3% to 100%. Stage 5 (persist) next — its inputs are `normalised/*.json` plus 1,115 cached photos. **Phase 9.3 (corpus-derived ingredient catalogue) is implemented and its artefact rebuilt on the widened 17-category set — 1,194 entries, every one of the 1,475 corpus names reachable — and awaiting human review before commit** (`specs/phase-9.3-corpus-derived-ingredient-catalogue.md` §12.3). It turns Stage 5's ingredient matching into a dictionary lookup.
 
 ## Repository structure
 ```
@@ -32,7 +32,8 @@ RecipeApp/
 │       │   ├── ErrorState.vue             (Phase 7) reusable error + Try again
 │       │   └── AppSnackbar.vue            (Phase 7) global feedback snackbar
 │       ├── composables/     (Phase 7) useWakeLock.js — Screen Wake Lock wrapper
-│       ├── constants/       (Phase 8.5.1) units.js — storable units + measurement formatting
+│       ├── constants/       (Phase 8.5.1) units.js — storable units + measurement formatting;
+│       │                    (Phase 9.3) categories.js — ingredient categories, aisle order, labels
 │       ├── plugins/         vuetify.js
 │       ├── router/          index.js — all routes defined here
 │       ├── services/        api.js — Axios instance
@@ -171,6 +172,11 @@ dotnet test RecipeApp.Tests/RecipeApp.Tests.csproj --coverage --coverage-output-
 - **Route names** (defined in `router/index.js`): `home`, `recipes`, `meal-plan`, `shopping`.
 
 ## Measurements
+- The ingredient category set lives in **one place**: `Enums/IngredientCategory.cs` (backend)
+  mirrored by `src/constants/categories.js` (frontend). **The order of `IngredientCategory.All` is
+  the shopping list's aisle order** — `ShoppingListService` sorts by index — so a new category goes
+  beside its nearest relative, not at the end. Adding one also means a line in
+  `IngredientCatalogueBuilder.CategoryAisleRules` and a place in `RecipeScrapeService`'s keyword table.
 - The storable unit set lives in **one place**: `Enums/MeasurementUnit.cs` (backend) mirrored by
   `src/constants/units.js` (frontend). Never hardcode a unit array — consume those.
   Current set: `g`, `kg`, `ml`, `L`, `pcs`, `tsp`, `tbsp`, `cup`.
@@ -641,11 +647,45 @@ worth knowing: `CacheDirectory`, `PreferredSnapshotYear`, `FetchDelayMillisecond
     defective, and a group still collapsed after retries is dissolved.
   - **The model does not name the entry.** A proposed canonical name can be another batch's corpus
     name, breaking the alias invariant. The entry is its most-used member, ties to the shorter name.
-  **Known in the artefact, for review:** `peanut butter` is DAIRY despite the prompt naming it;
-  46 OTHER entries, mostly Stage 3/4 noise that must stay reachable (`toothpicks`, `spoon`,
-  `instruction`) plus real miscategorisations (`honey`, cooking sprays); `tomatoes` (66 rows) is
-  mostly canned in this corpus but merged with fresh `tomato`. 41 of 50 curated densities attach; the
-  other 9 name ingredients the corpus does not contain.
+  **The review list above is superseded by the category rebuild below.**
+- **Phase 9.3 — category set widened from 10 to 17, artefact rebuilt (2026-09-13).** Added
+  `GRAINS_RICE`, `PASTA_SAUCES`, `BAKING_SPICES`, `JAM_NUT_BUTTER`, `COFFEE_TEA`, `KITCHEN` and
+  `HOUSEHOLD`, each slotted beside its nearest relative in `IngredientCategory.All`. No migration —
+  `Category` is a string column and no existing value was renamed. Boundaries chosen by the user:
+  BAKING_SPICES is the whole baking-and-spices aisle (flour, sugar, leaveners, spices, dried herbs,
+  **salt and pepper**); KITCHEN is non-food a recipe uses (foil, skewers, straws), HOUSEHOLD is
+  non-food it never does; **cooking spray is CONDIMENTS**, beside the oils; JAM_NUT_BUTTER includes
+  **honey and syrups**; plain canned tomato sauce stays CANNED, only pasta/pizza sauce moves.
+  Frontend: `constants/categories.js` replaced three hand-copied lists (`ShoppingView` labels,
+  `AddCustomItemDialog`, and a hardcoded array in `RecipeScrapePreviewView`); `DRY_GOODS` is now
+  labelled "Dry Goods" and `CONDIMENTS` "Condiments & Oils". `--build-catalogue --batch` now logs
+  one line per category per batch, so a preview shows every name's aisle, not only its merges.
+  Suite: **1,183 backend tests, 211 frontend**.
+  **Result: 1,194 entries, 51 model calls, 1 name from the keyword fallback.** 469 of 1,475 names
+  (3,094 rows) changed category; OTHER fell from 46 entries to 13. 41 of 50 curated densities still
+  attach — regrouping lost none. Headline moves hold by name: `salt` (357 rows), `black pepper`,
+  `sugar`, `flour` → BAKING_SPICES; `honey`, `peanut butter`, `maple syrup` → JAM_NUT_BUTTER;
+  cooking sprays OTHER → CONDIMENTS; `water` BEVERAGES and `chicken broth` CANNED, unchanged.
+  **Three things worth knowing:**
+  - **A category name does not carry its boundary; a line in `CategoryAisleRules` does, and the
+    most-missed item goes first.** With salt listed last in the baking line the model filed all six
+    salts under DRY_GOODS, every syrup under CONDIMENTS and `dried thyme` under PRODUCE — each against
+    a rule it had been given. Leading with salt and syrups fixed all of them on re-preview.
+  - **Catch-all categories need a boundary too, including ones the change did not touch.** DRY_GOODS
+    and CONDIMENTS absorbed whatever a new category's line did not name. The first full rebuild also
+    moved broth to BEVERAGES and spreads and egg substitute to OTHER — the old artefact had them right
+    only by chance — so CANNED, DAIRY, BAKERY and BEVERAGES now have lines as well.
+  - **A whole batch can still fail by chance.** That rebuild's batch 43 returned `{"names":[]}` twice
+    and then collapsed, sending 38 names (all the waters and vinegars) to the keyword fallback, where
+    `boiling water` is CONDIMENTS because it contains "oil". The same batch previewed alone was fully
+    correct, so it was sampling, not the prompt. **After any full build, check the log for
+    `were still unanswered after` before trusting the artefact.**
+  **Known in the artefact, for review:** `lemon juice`/`lime juice` (134 rows) are CONDIMENTS;
+  `corn` (33), `green beans` (21) and `green chiles` (12) are CANNED because their source lines are
+  mostly cans; pudding mixes and `golden raisins` are DAIRY; `ice` (10) is KITCHEN; `spoon` is
+  HOUSEHOLD; `shortening` and the typo `black peppeer` are OTHER; `tomatoes` (136 rows) is still one
+  PRODUCE entry despite being mostly canned. Local databases imported from the old artefact keep their
+  old categories until `import-catalogue --force`.
 
 ---
 ## Project Notes

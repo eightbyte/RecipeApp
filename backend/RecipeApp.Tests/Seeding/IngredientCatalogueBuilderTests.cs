@@ -370,14 +370,48 @@ public class IngredientCatalogueBuilderTests : IDisposable
     [Fact]
     public void Prompt_FilesSpicesWhereTheKeywordTableAlreadyDoes()
     {
-        // Measured: with no rule for them, the model invented SPICES. The rule stated is the
-        // codebase's existing convention, not a new one — paprika and cumin are already CONDIMENTS
-        // in the keyword table a user-scraped name falls back to.
-        IngredientCatalogueBuilder.SystemPrompt.Should().Contain(
-            $"Spices, dried herbs, seasonings and extracts are {IngredientCategory.Condiments}.");
+        // Measured: with no rule for them, the model invented SPICES. The prompt and the keyword
+        // table a user-scraped name falls back to must agree on the aisle, or a scraped paprika and
+        // a seeded one land in different parts of the same shopping list.
+        IngredientCatalogueBuilder.SystemPrompt.Should().Contain(IngredientCatalogueBuilder.CategoryAisleRules);
+        IngredientCatalogueBuilder.CategoryAisleRules.Should().Contain(
+            $"- {IngredientCategory.BakingSpices}: salt of every kind");
+        IngredientCatalogueBuilder.CategoryAisleRules.Should().Contain("pepper, spices, seasoning blends");
 
-        RecipeApp.API.Services.RecipeScrapeService.CategoriseIngredient("paprika")
-            .Should().Be(IngredientCategory.Condiments);
+        foreach (var spice in new[] { "paprika", "salt", "black pepper" })
+            RecipeApp.API.Services.RecipeScrapeService.CategoriseIngredient(spice)
+                .Should().Be(IngredientCategory.BakingSpices, "'{0}' is in the baking and spices aisle", spice);
+    }
+
+    [Fact]
+    public void Prompt_StatesAnAisleBoundaryForEveryCategoryItsNameDoesNotSettle()
+    {
+        // The ten original categories straddled these boundaries and the artefact showed it: salt
+        // DRY_GOODS but pepper CONDIMENTS, honey OTHER, peanut butter DAIRY, maple syrup BEVERAGES.
+        // DRY_GOODS and CONDIMENTS need one too: without a stated boundary each acted as a catch-all,
+        // and a preview filed salt under DRY_GOODS and syrups under CONDIMENTS despite rules naming both.
+        // And the untouched categories drift between runs: a full build moved broth to BEVERAGES and
+        // spreads to OTHER, which the previous artefact had right only by chance.
+        string[] needsABoundary =
+        [
+            IngredientCategory.BakingSpices, IngredientCategory.DryGoods,     IngredientCategory.GrainsRice,
+            IngredientCategory.PastaSauces,  IngredientCategory.JamNutButter, IngredientCategory.Canned,
+            IngredientCategory.Dairy,        IngredientCategory.Bakery,       IngredientCategory.Beverages,
+            IngredientCategory.CoffeeTea,    IngredientCategory.Condiments,   IngredientCategory.Kitchen,
+            IngredientCategory.Household,
+        ];
+
+        foreach (var category in needsABoundary)
+            IngredientCatalogueBuilder.CategoryAisleRules.Should().Contain($"- {category}: ",
+                "category '{0}' needs its boundary stated, not only its name", category);
+
+        // The two boundaries chosen deliberately rather than read off the category names.
+        IngredientCatalogueBuilder.CategoryAisleRules.Should().Contain("cooking sprays",
+            "cooking spray is shelved with the oils, not with foil and skewers");
+        IngredientCatalogueBuilder.CategoryAisleRules.Should().Contain(
+            $"Plain canned tomato sauce is {IngredientCategory.Canned}");
+        IngredientCatalogueBuilder.CategoryAisleRules.Should().Contain(
+            $"Broth and stock are {IngredientCategory.Canned}.");
     }
 
     [Fact]

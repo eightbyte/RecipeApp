@@ -57,23 +57,13 @@
 
 <script setup>
 import { ref, reactive, watch } from 'vue'
+import { INGREDIENT_CATEGORIES, DEFAULT_CATEGORY } from '@/constants/categories'
 
 const model = defineModel({ default: false })
 
-const categoryItems = [
-  { title: 'Produce',             value: 'PRODUCE'     },
-  { title: 'Meat & Seafood',      value: 'MEAT_SEAFOOD' },
-  { title: 'Dairy',               value: 'DAIRY'       },
-  { title: 'Canned Goods',        value: 'CANNED'      },
-  { title: 'Frozen',              value: 'FROZEN'      },
-  { title: 'Dry Goods & Pasta',   value: 'DRY_GOODS'   },
-  { title: 'Bakery',              value: 'BAKERY'      },
-  { title: 'Condiments & Sauces', value: 'CONDIMENTS'  },
-  { title: 'Beverages',           value: 'BEVERAGES'   },
-  { title: 'Other',               value: 'OTHER'       },
-]
+const categoryItems = INGREDIENT_CATEGORIES.map(({ title, value }) => ({ title, value }))
 
-const defaultForm = () => ({ name: '', amount: null, unit: '', category: 'OTHER' })
+const defaultForm = () => ({ name: '', amount: null, unit: '', category: DEFAULT_CATEGORY })
 const form = reactive(defaultForm())
 
 watch(model, open => {

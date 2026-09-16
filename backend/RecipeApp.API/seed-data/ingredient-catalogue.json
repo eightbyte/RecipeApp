@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "generatedAt": "2026-09-13T01:21:42.9999838Z",
+  "generatedAt": "2026-09-14T05:57:16.5865279Z",
   "source": {
     "corpus": "myplate",
     "recipes": 1123,
@@ -38,7 +38,7 @@
     {
       "name": "active dry yeast",
       "displayName": "Active Dry Yeast",
-      "category": "DRY_GOODS",
+      "category": "BAKING_SPICES",
       "defaultUnit": "pcs",
       "aliases": [],
       "corpusRows": 2,
@@ -47,7 +47,7 @@
     {
       "name": "adobo seasoning",
       "displayName": "Adobo Seasoning",
-      "category": "CONDIMENTS",
+      "category": "BAKING_SPICES",
       "defaultUnit": "tsp",
       "aliases": [],
       "corpusRows": 2,
@@ -74,7 +74,7 @@
     {
       "name": "all-purpose baking mix for biscuits",
       "displayName": "All-Purpose Baking Mix For Biscuits",
-      "category": "BAKERY",
+      "category": "BAKING_SPICES",
       "defaultUnit": "cup",
       "aliases": [],
       "corpusRows": 1,
@@ -83,7 +83,7 @@
     {
       "name": "all-purpose flour",
       "displayName": "All-Purpose Flour",
-      "category": "DRY_GOODS",
+      "category": "BAKING_SPICES",
       "defaultUnit": "cup",
       "aliases": [
         "all purpose flour",
@@ -95,7 +95,7 @@
     {
       "name": "allspice",
       "displayName": "Allspice",
-      "category": "CONDIMENTS",
+      "category": "BAKING_SPICES",
       "defaultUnit": "tsp",
       "aliases": [],
       "corpusRows": 7,
@@ -104,7 +104,7 @@
     {
       "name": "almond butter",
       "displayName": "Almond Butter",
-      "category": "DAIRY",
+      "category": "JAM_NUT_BUTTER",
       "defaultUnit": "cup",
       "aliases": [],
       "corpusRows": 1,
@@ -113,9 +113,12 @@
     {
       "name": "almond slivers",
       "displayName": "Almond Slivers",
-      "category": "DAIRY",
+      "category": "DRY_GOODS",
       "defaultUnit": "cup",
-      "aliases": [],
+      "aliases": [
+        "chopped almonds",
+        "sliced almonds"
+      ],
       "corpusRows": 1,
       "corpusRecipes": 1
     },
@@ -124,17 +127,14 @@
       "displayName": "Almonds",
       "category": "DRY_GOODS",
       "defaultUnit": "cup",
-      "aliases": [
-        "chopped almonds",
-        "sliced almonds"
-      ],
+      "aliases": [],
       "corpusRows": 13,
       "corpusRecipes": 13
     },
     {
       "name": "aluminum foil",
       "displayName": "Aluminum Foil",
-      "category": "OTHER",
+      "category": "KITCHEN",
       "defaultUnit": null,
       "aliases": [],
       "corpusRows": 3,
@@ -161,17 +161,8 @@
     {
       "name": "angel food cake mix",
       "displayName": "Angel Food Cake Mix",
-      "category": "DRY_GOODS",
+      "category": "BAKING_SPICES",
       "defaultUnit": "g",
-      "aliases": [],
-      "corpusRows": 1,
-      "corpusRecipes": 1
-    },
-    {
-      "name": "any flavor broth",
-      "displayName": "Any Flavor Broth",
-      "category": "CANNED",
-      "defaultUnit": "cup",
       "aliases": [],
       "corpusRows": 1,
       "corpusRecipes": 1
@@ -183,7 +174,8 @@
       "defaultUnit": "pcs",
       "aliases": [
         "apples",
-        "diced apple"
+        "diced apple",
+        "apple slices"
       ],
       "corpusRows": 64,
       "corpusRecipes": 64
@@ -191,7 +183,7 @@
     {
       "name": "apple butter",
       "displayName": "Apple Butter",
-      "category": "DAIRY",
+      "category": "JAM_NUT_BUTTER",
       "defaultUnit": "tbsp",
       "aliases": [],
       "corpusRows": 1,
@@ -211,81 +203,38 @@
       "displayName": "Apple Juice",
       "category": "BEVERAGES",
       "defaultUnit": "cup",
-      "aliases": [],
+      "aliases": ["apple juice or cider",
+      "apple juice or white grape juice"
+    ],
       "corpusRows": 8,
       "corpusRecipes": 8
     },
     {
-      "name": "apple juice or cider",
-      "displayName": "Apple Juice Or Cider",
-      "category": "BEVERAGES",
-      "defaultUnit": "cup",
-      "aliases": [],
-      "corpusRows": 1,
-      "corpusRecipes": 1
-    },
-    {
-      "name": "apple juice or white grape juice",
-      "displayName": "Apple Juice Or White Grape Juice",
-      "category": "BEVERAGES",
-      "defaultUnit": "cup",
-      "aliases": [],
-      "corpusRows": 1,
-      "corpusRecipes": 1
-    },
-    {
       "name": "apple pie spice",
       "displayName": "Apple Pie Spice",
-      "category": "CONDIMENTS",
+      "category": "BAKING_SPICES",
       "defaultUnit": "tsp",
       "aliases": [],
       "corpusRows": 1,
       "corpusRecipes": 1
     },
     {
-      "name": "apple slices",
-      "displayName": "Apple Slices",
-      "category": "PRODUCE",
-      "defaultUnit": "cup",
-      "aliases": [],
-      "corpusRows": 2,
-      "corpusRecipes": 2
-    },
-    {
       "name": "applesauce",
       "displayName": "Applesauce",
-      "category": "PRODUCE",
+      "category": "JAM_NUT_BUTTER",
       "defaultUnit": "cup",
       "aliases": [
         "unsweetened applesauce"
       ],
-      "corpusRows": 13,
-      "corpusRecipes": 13
-    },
-    {
-      "name": "applesauce and yogurt",
-      "displayName": "Applesauce And Yogurt",
-      "category": "DAIRY",
-      "defaultUnit": null,
-      "aliases": [],
-      "corpusRows": 1,
-      "corpusRecipes": 1
+      "corpusRows": 14,
+      "corpusRecipes": 14
     },
     {
       "name": "apricot jam",
       "displayName": "Apricot Jam",
-      "category": "CONDIMENTS",
+      "category": "JAM_NUT_BUTTER",
       "defaultUnit": "cup",
-      "aliases": [],
-      "corpusRows": 1,
-      "corpusRecipes": 1
-    },
-    {
-      "name": "apricot spread",
-      "displayName": "Apricot Spread",
-      "category": "DAIRY",
-      "defaultUnit": "tbsp",
-      "aliases": [],
+      "aliases": ["apricot spread"],
       "corpusRows": 1,
       "corpusRecipes": 1
     },
@@ -304,7 +253,8 @@
       "category": "PRODUCE",
       "defaultUnit": "cup",
       "aliases": [
-        "rocket"
+        "rocket",
+        "baby arugula leaves"
       ],
       "corpusRows": 3,
       "corpusRecipes": 3
@@ -314,18 +264,9 @@
       "displayName": "Asparagus",
       "category": "PRODUCE",
       "defaultUnit": "cup",
-      "aliases": [],
+      "aliases": ["asparagus piece"],
       "corpusRows": 3,
       "corpusRecipes": 3
-    },
-    {
-      "name": "asparagus piece",
-      "displayName": "Asparagus Piece",
-      "category": "PRODUCE",
-      "defaultUnit": "cup",
-      "aliases": [],
-      "corpusRows": 1,
-      "corpusRecipes": 1
     },
     {
       "name": "avocado",
@@ -335,15 +276,6 @@
       "aliases": [],
       "corpusRows": 19,
       "corpusRecipes": 18
-    },
-    {
-      "name": "baby arugula leaves",
-      "displayName": "Baby Arugula Leaves",
-      "category": "PRODUCE",
-      "defaultUnit": null,
-      "aliases": [],
-      "corpusRows": 1,
-      "corpusRecipes": 1
     },
     {
       "name": "baby carrots",
@@ -362,26 +294,18 @@
       "category": "PRODUCE",
       "defaultUnit": "cup",
       "aliases": [
-        "fresh baby spinach"
+        "fresh baby spinach",
+        "baby spinach leaves"
       ],
       "corpusRows": 6,
       "corpusRecipes": 6
-    },
-    {
-      "name": "baby spinach leaves",
-      "displayName": "Baby Spinach Leaves",
-      "category": "PRODUCE",
-      "defaultUnit": "cup",
-      "aliases": [],
-      "corpusRows": 1,
-      "corpusRecipes": 1
     },
     {
       "name": "bacon",
       "displayName": "Bacon",
       "category": "MEAT_SEAFOOD",
       "defaultUnit": "pcs",
-      "aliases": [],
+      "aliases": ["bacon slices"],
       "corpusRows": 1,
       "corpusRecipes": 1
     },
@@ -395,58 +319,34 @@
       "corpusRecipes": 2
     },
     {
-      "name": "bacon slices",
-      "displayName": "Bacon Slices",
-      "category": "MEAT_SEAFOOD",
-      "defaultUnit": "pcs",
-      "aliases": [],
-      "corpusRows": 1,
-      "corpusRecipes": 1
-    },
-    {
       "name": "baguette",
       "displayName": "Baguette",
       "category": "BAKERY",
       "defaultUnit": "pcs",
-      "aliases": [],
-      "corpusRows": 1,
-      "corpusRecipes": 1
-    },
-    {
-      "name": "baguette bread",
-      "displayName": "Baguette Bread",
-      "category": "BAKERY",
-      "defaultUnit": "pcs",
-      "aliases": [],
+      "aliases": [
+        "baguette bread",
+        "french bread baguette"
+      ],
       "corpusRows": 1,
       "corpusRecipes": 1
     },
     {
       "name": "bakery mix",
       "displayName": "Bakery Mix",
-      "category": "DRY_GOODS",
+      "category": "BAKERY",
       "defaultUnit": "cup",
-      "aliases": [],
+      "aliases": ["baking mix"],
       "corpusRows": 1,
       "corpusRecipes": 1
     },
     {
       "name": "baking apples",
-      "displayName": "Apple",
+      "displayName": "Baking Apples",
       "category": "PRODUCE",
       "defaultUnit": "pcs",
       "aliases": [],
       "corpusRows": 1,
       "corpusRecipes": 1
-    },
-    {
-      "name": "baking mix",
-      "displayName": "Baking Mix",
-      "category": "DRY_GOODS",
-      "defaultUnit": "cup",
-      "aliases": [],
-      "corpusRows": 2,
-      "corpusRecipes": 2
     },
     {
       "name": "baking potato",
@@ -462,7 +362,7 @@
     {
       "name": "baking powder",
       "displayName": "Baking Powder",
-      "category": "CONDIMENTS",
+      "category": "BAKING_SPICES",
       "defaultUnit": "tsp",
       "aliases": [],
       "corpusRows": 51,
@@ -471,7 +371,7 @@
     {
       "name": "baking soda",
       "displayName": "Baking Soda",
-      "category": "CONDIMENTS",
+      "category": "BAKING_SPICES",
       "defaultUnit": "tsp",
       "aliases": [
         "bicarb soda",
@@ -479,15 +379,6 @@
       ],
       "corpusRows": 35,
       "corpusRecipes": 35
-    },
-    {
-      "name": "balsamic maple mushrooms",
-      "displayName": "Balsamic Maple Mushrooms",
-      "category": "PRODUCE",
-      "defaultUnit": null,
-      "aliases": [],
-      "corpusRows": 1,
-      "corpusRecipes": 1
     },
     {
       "name": "balsamic vinegar",
@@ -510,7 +401,7 @@
     {
       "name": "bamboo skewers",
       "displayName": "Bamboo Skewers",
-      "category": "BAKERY",
+      "category": "KITCHEN",
       "defaultUnit": "pcs",
       "aliases": [],
       "corpusRows": 3,
@@ -523,7 +414,8 @@
       "defaultUnit": "pcs",
       "aliases": [
         "bananas",
-        "medium banana"
+        "medium banana",
+        "banana slices"
       ],
       "corpusRows": 70,
       "corpusRecipes": 69
@@ -531,20 +423,11 @@
     {
       "name": "banana chip",
       "displayName": "Banana Chip",
-      "category": "PRODUCE",
+      "category": "DRY_GOODS",
       "defaultUnit": "cup",
       "aliases": [],
       "corpusRows": 1,
       "corpusRecipes": 1
-    },
-    {
-      "name": "banana slices",
-      "displayName": "Banana Slices",
-      "category": "PRODUCE",
-      "defaultUnit": "cup",
-      "aliases": [],
-      "corpusRows": 3,
-      "corpusRecipes": 3
     },
     {
       "name": "barbecue sauce",
@@ -558,7 +441,7 @@
     {
       "name": "barley",
       "displayName": "Barley",
-      "category": "DRY_GOODS",
+      "category": "GRAINS_RICE",
       "defaultUnit": "cup",
       "aliases": [],
       "corpusRows": 3,
@@ -566,18 +449,9 @@
     },
     {
       "name": "basic soup and sauce mix",
-      "displayName": "Basic Soup And Sauce Mix",
-      "category": "DRY_GOODS",
+      "displayName": "Basic Soup And Sauce Mix (See Recipe)",
+      "category": "OTHER",
       "defaultUnit": "cup",
-      "aliases": [],
-      "corpusRows": 1,
-      "corpusRecipes": 1
-    },
-    {
-      "name": "basic vinaigrette",
-      "displayName": "Basic Vinaigrette",
-      "category": "CONDIMENTS",
-      "defaultUnit": null,
       "aliases": [],
       "corpusRows": 1,
       "corpusRecipes": 1
@@ -585,29 +459,19 @@
     {
       "name": "basil",
       "displayName": "Basil",
-      "category": "CONDIMENTS",
+      "category": "BAKING_SPICES",
       "defaultUnit": "tsp",
       "aliases": [
-        "fresh basil"
+        "fresh basil",
+        "basil leaves"
       ],
       "corpusRows": 37,
       "corpusRecipes": 37
     },
     {
-      "name": "basil leaves",
-      "displayName": "Basil Leaves",
-      "category": "CONDIMENTS",
-      "defaultUnit": "cup",
-      "aliases": [
-        "basil leaf"
-      ],
-      "corpusRows": 3,
-      "corpusRecipes": 3
-    },
-    {
       "name": "bay leaf",
       "displayName": "Bay Leaf",
-      "category": "CONDIMENTS",
+      "category": "BAKING_SPICES",
       "defaultUnit": "pcs",
       "aliases": [
         "bay leaves"
@@ -618,7 +482,7 @@
     {
       "name": "bean liquid",
       "displayName": "Bean Liquid",
-      "category": "DAIRY",
+      "category": "CANNED",
       "defaultUnit": "cup",
       "aliases": [],
       "corpusRows": 1,
@@ -638,9 +502,11 @@
       "displayName": "Beans",
       "category": "CANNED",
       "defaultUnit": "g",
-      "aliases": [],
-      "corpusRows": 6,
-      "corpusRecipes": 6
+      "aliases": [
+        "low-sodium beans"
+      ],
+      "corpusRows": 7,
+      "corpusRecipes": 7
     },
     {
       "name": "beef",
@@ -656,20 +522,11 @@
     {
       "name": "beef bouillon",
       "displayName": "Beef Bouillon",
-      "category": "OTHER",
+      "category": "CANNED",
       "defaultUnit": "tsp",
-      "aliases": [],
+      "aliases": ["beef bouillon cube"],
       "corpusRows": 2,
       "corpusRecipes": 2
-    },
-    {
-      "name": "beef bouillon cube",
-      "displayName": "Beef Bouillon Cube",
-      "category": "CONDIMENTS",
-      "defaultUnit": "pcs",
-      "aliases": [],
-      "corpusRows": 1,
-      "corpusRecipes": 1
     },
     {
       "name": "beef broth",
@@ -706,7 +563,7 @@
     {
       "name": "beef or chicken bouillon cubes",
       "displayName": "Beef Or Chicken Bouillon Cubes",
-      "category": "CONDIMENTS",
+      "category": "CANNED",
       "defaultUnit": "pcs",
       "aliases": [],
       "corpusRows": 1,
@@ -783,8 +640,8 @@
     },
     {
       "name": "better baking mix",
-      "displayName": "Better Baking Mix",
-      "category": "DRY_GOODS",
+      "displayName": "Better Baking Mix (See Recipe)",
+      "category": "BAKING_SPICES",
       "defaultUnit": "pcs",
       "aliases": [],
       "corpusRows": 5,
@@ -802,7 +659,7 @@
     {
       "name": "biscuit mix",
       "displayName": "Biscuit Mix",
-      "category": "DRY_GOODS",
+      "category": "BAKING_SPICES",
       "defaultUnit": "cup",
       "aliases": [],
       "corpusRows": 3,
@@ -831,27 +688,18 @@
       "corpusRecipes": 1
     },
     {
-      "name": "black peppeer",
-      "displayName": "Black Peppeer",
-      "category": "CONDIMENTS",
-      "defaultUnit": "tsp",
-      "aliases": [],
-      "corpusRows": 1,
-      "corpusRecipes": 1
-    },
-    {
       "name": "black pepper",
       "displayName": "Black Pepper",
-      "category": "CONDIMENTS",
+      "category": "BAKING_SPICES",
       "defaultUnit": "tsp",
-      "aliases": [],
+      "aliases": ["black peppeer"],
       "corpusRows": 227,
       "corpusRecipes": 226
     },
     {
       "name": "black pepper and garlic salt with herbs",
       "displayName": "Black Pepper And Garlic Salt With Herbs",
-      "category": "CONDIMENTS",
+      "category": "BAKING_SPICES",
       "defaultUnit": null,
       "aliases": [],
       "corpusRows": 1,
@@ -860,13 +708,11 @@
     {
       "name": "black peppercorn",
       "displayName": "Black Peppercorn",
-      "category": "CONDIMENTS",
+      "category": "BAKING_SPICES",
       "defaultUnit": "pcs",
-      "aliases": [
-        "black peppercorns"
-      ],
-      "corpusRows": 2,
-      "corpusRecipes": 2
+      "aliases": ["black peppercorns"],
+      "corpusRows": 1,
+      "corpusRecipes": 1
     },
     {
       "name": "black-eyed peas",
@@ -891,7 +737,7 @@
     {
       "name": "blue cornmeal",
       "displayName": "Blue Cornmeal",
-      "category": "DRY_GOODS",
+      "category": "BAKING_SPICES",
       "defaultUnit": "cup",
       "aliases": [],
       "corpusRows": 2,
@@ -956,7 +802,7 @@
     },
     {
       "name": "boneless leg of lamb",
-      "displayName": "Boneless Leg Of Lamb",
+      "displayName": "Boneless Leg of Lamb",
       "category": "MEAT_SEAFOOD",
       "defaultUnit": "g",
       "aliases": [],
@@ -966,16 +812,7 @@
     {
       "name": "bow-tie pasta",
       "displayName": "Bow-Tie Pasta",
-      "category": "DRY_GOODS",
-      "defaultUnit": "cup",
-      "aliases": [],
-      "corpusRows": 1,
-      "corpusRecipes": 1
-    },
-    {
-      "name": "bran and wheat flakes ready-to-eat cereal",
-      "displayName": "Bran And Wheat Flakes Ready-To-Eat Cereal",
-      "category": "DRY_GOODS",
+      "category": "PASTA_SAUCES",
       "defaultUnit": "cup",
       "aliases": [],
       "corpusRows": 1,
@@ -993,7 +830,7 @@
     {
       "name": "bran flake cereal with raisins",
       "displayName": "Bran Flake Cereal With Raisins",
-      "category": "BAKERY",
+      "category": "DRY_GOODS",
       "defaultUnit": "cup",
       "aliases": [],
       "corpusRows": 1,
@@ -1004,7 +841,7 @@
       "displayName": "Bran Flakes",
       "category": "DRY_GOODS",
       "defaultUnit": "cup",
-      "aliases": [],
+      "aliases": ["Bran And Wheat Flakes Ready-To-Eat Cereal"],
       "corpusRows": 1,
       "corpusRecipes": 1
     },
@@ -1013,7 +850,8 @@
       "displayName": "Bread",
       "category": "BAKERY",
       "defaultUnit": "pcs",
-      "aliases": [],
+      "aliases": ["bread slice",
+        "bread slices"],
       "corpusRows": 15,
       "corpusRecipes": 13
     },
@@ -1023,53 +861,26 @@
       "category": "BAKERY",
       "defaultUnit": "cup",
       "aliases": [
-        "bread crumb"
+        "bread crumb",
+        "bread crumbs or cracker crumbs",
+        "breadcrumbs"
       ],
       "corpusRows": 14,
       "corpusRecipes": 14
     },
     {
-      "name": "bread crumbs or cracker crumbs",
-      "displayName": "Bread Crumbs Or Cracker Crumbs",
-      "category": "BAKERY",
-      "defaultUnit": "cup",
-      "aliases": [],
-      "corpusRows": 1,
-      "corpusRecipes": 1
-    },
-    {
       "name": "bread flour",
       "displayName": "Bread Flour",
-      "category": "DRY_GOODS",
+      "category": "BAKING_SPICES",
       "defaultUnit": "cup",
       "aliases": [],
       "corpusRows": 2,
       "corpusRecipes": 2
     },
     {
-      "name": "bread slice",
-      "displayName": "Bread Slice",
-      "category": "BAKERY",
-      "defaultUnit": "pcs",
-      "aliases": [
-        "bread slices"
-      ],
-      "corpusRows": 5,
-      "corpusRecipes": 4
-    },
-    {
-      "name": "breadcrumbs",
-      "displayName": "Breadcrumbs",
-      "category": "BAKERY",
-      "defaultUnit": "cup",
-      "aliases": [],
-      "corpusRows": 3,
-      "corpusRecipes": 3
-    },
-    {
       "name": "brewed coffee",
-      "displayName": "Coffee",
-      "category": "BEVERAGES",
+      "displayName": "Brewed Coffee",
+      "category": "COFFEE_TEA",
       "defaultUnit": "cup",
       "aliases": [],
       "corpusRows": 1,
@@ -1080,38 +891,11 @@
       "displayName": "Broccoli",
       "category": "PRODUCE",
       "defaultUnit": "cup",
-      "aliases": [],
+      "aliases": ["broccoli florets",
+        "broccoli head",
+        "broccoli stalk"],
       "corpusRows": 34,
       "corpusRecipes": 34
-    },
-    {
-      "name": "broccoli florets",
-      "displayName": "Broccoli Florets",
-      "category": "PRODUCE",
-      "defaultUnit": "cup",
-      "aliases": [
-        "broccoli floret"
-      ],
-      "corpusRows": 6,
-      "corpusRecipes": 6
-    },
-    {
-      "name": "broccoli head",
-      "displayName": "Broccoli Head",
-      "category": "PRODUCE",
-      "defaultUnit": "pcs",
-      "aliases": [],
-      "corpusRows": 1,
-      "corpusRecipes": 1
-    },
-    {
-      "name": "broccoli stalk",
-      "displayName": "Broccoli Stalk",
-      "category": "PRODUCE",
-      "defaultUnit": "pcs",
-      "aliases": [],
-      "corpusRows": 3,
-      "corpusRecipes": 3
     },
     {
       "name": "broth",
@@ -1119,7 +903,8 @@
       "category": "CANNED",
       "defaultUnit": "g",
       "aliases": [
-        "low-sodium broth"
+        "low-sodium broth",
+        "any flavor broth"
       ],
       "corpusRows": 2,
       "corpusRecipes": 2
@@ -1145,7 +930,7 @@
     {
       "name": "brown rice",
       "displayName": "Brown Rice",
-      "category": "DRY_GOODS",
+      "category": "GRAINS_RICE",
       "defaultUnit": "cup",
       "aliases": [],
       "corpusRows": 47,
@@ -1154,7 +939,7 @@
     {
       "name": "brown sugar",
       "displayName": "Brown Sugar",
-      "category": "DRY_GOODS",
+      "category": "BAKING_SPICES",
       "defaultUnit": "cup",
       "aliases": [],
       "corpusRows": 54,
@@ -1170,18 +955,9 @@
       "corpusRecipes": 7
     },
     {
-      "name": "bugs",
-      "displayName": "Bugs",
-      "category": "OTHER",
-      "defaultUnit": null,
-      "aliases": [],
-      "corpusRows": 1,
-      "corpusRecipes": 1
-    },
-    {
       "name": "bulgur",
       "displayName": "Bulgur",
-      "category": "DRY_GOODS",
+      "category": "GRAINS_RICE",
       "defaultUnit": "cup",
       "aliases": [],
       "corpusRows": 2,
@@ -1205,28 +981,12 @@
       "defaultUnit": "tbsp",
       "aliases": [
         "light butter",
-        "unsalted butter"
+        "unsalted butter",
+        "butter alternative spread",
+        "butter or margarine"
       ],
       "corpusRows": 42,
       "corpusRecipes": 42
-    },
-    {
-      "name": "butter alternative spread",
-      "displayName": "Butter Alternative Spread",
-      "category": "DAIRY",
-      "defaultUnit": "tbsp",
-      "aliases": [],
-      "corpusRows": 1,
-      "corpusRecipes": 1
-    },
-    {
-      "name": "butter or margarine",
-      "displayName": "Butter Or Margarine",
-      "category": "DAIRY",
-      "defaultUnit": "tsp",
-      "aliases": [],
-      "corpusRows": 2,
-      "corpusRecipes": 2
     },
     {
       "name": "buttermilk",
@@ -1262,24 +1022,16 @@
       "defaultUnit": "cup",
       "aliases": [
         "head of cabbage",
-        "shredded cabbage"
+        "shredded cabbage",
+        "cabbage head"
       ],
       "corpusRows": 24,
       "corpusRecipes": 24
     },
     {
-      "name": "cabbage head",
-      "displayName": "Cabbage Head",
-      "category": "PRODUCE",
-      "defaultUnit": "pcs",
-      "aliases": [],
-      "corpusRows": 1,
-      "corpusRecipes": 1
-    },
-    {
       "name": "cake flour",
       "displayName": "Cake Flour",
-      "category": "DRY_GOODS",
+      "category": "BAKING_SPICES",
       "defaultUnit": "cup",
       "aliases": [],
       "corpusRows": 1,
@@ -1288,7 +1040,7 @@
     {
       "name": "cake mix",
       "displayName": "Cake Mix",
-      "category": "DRY_GOODS",
+      "category": "BAKING_SPICES",
       "defaultUnit": "pcs",
       "aliases": [],
       "corpusRows": 1,
@@ -1297,7 +1049,7 @@
     {
       "name": "canned chicken",
       "displayName": "Canned Chicken",
-      "category": "CANNED",
+      "category": "MEAT_SEAFOOD",
       "defaultUnit": "cup",
       "aliases": [],
       "corpusRows": 1,
@@ -1315,15 +1067,6 @@
     {
       "name": "canned low-sodium sweet corn",
       "displayName": "Canned Low-Sodium Sweet Corn",
-      "category": "CANNED",
-      "defaultUnit": "cup",
-      "aliases": [],
-      "corpusRows": 1,
-      "corpusRecipes": 1
-    },
-    {
-      "name": "canned low-sodium tomatoes",
-      "displayName": "Canned Low-Sodium Tomatoes",
       "category": "CANNED",
       "defaultUnit": "cup",
       "aliases": [],
@@ -1351,17 +1094,8 @@
     {
       "name": "canned or cooked beans",
       "displayName": "Canned Or Cooked Beans",
-      "category": "OTHER",
-      "defaultUnit": "cup",
-      "aliases": [],
-      "corpusRows": 1,
-      "corpusRecipes": 1
-    },
-    {
-      "name": "canned peach halves",
-      "displayName": "Canned Peach Halves",
       "category": "CANNED",
-      "defaultUnit": "pcs",
+      "defaultUnit": "cup",
       "aliases": [],
       "corpusRows": 1,
       "corpusRecipes": 1
@@ -1371,7 +1105,9 @@
       "displayName": "Canned Peaches",
       "category": "CANNED",
       "defaultUnit": "cup",
-      "aliases": [],
+      "aliases": [
+        "canned peach halves"
+      ],
       "corpusRows": 1,
       "corpusRecipes": 1
     },
@@ -1395,8 +1131,8 @@
     },
     {
       "name": "canned pineapple chunks (in juice), drained (or fresh orange segments)",
-      "displayName": "Canned Pineapple Chunks (In Juice), Drained (Or Fresh Orange Segments)",
-      "category": "PRODUCE",
+      "displayName": "Canned Pineapple Chunks (In Juice)",
+      "category": "CANNED",
       "defaultUnit": "cup",
       "aliases": [],
       "corpusRows": 1,
@@ -1405,7 +1141,7 @@
     {
       "name": "canned pumpkin",
       "displayName": "Canned Pumpkin",
-      "category": "PRODUCE",
+      "category": "CANNED",
       "defaultUnit": "cup",
       "aliases": [],
       "corpusRows": 3,
@@ -1421,21 +1157,12 @@
       "corpusRecipes": 1
     },
     {
-      "name": "canned tomato sauce",
-      "displayName": "Canned Tomato Sauce",
-      "category": "CANNED",
-      "defaultUnit": "cup",
-      "aliases": [],
-      "corpusRows": 1,
-      "corpusRecipes": 1
-    },
-    {
       "name": "canned tomatoes",
       "displayName": "Canned Tomatoes",
       "category": "CANNED",
       "defaultUnit": "cup",
       "aliases": [
-        "canned low-sodium diced tomatoes"
+        "canned low-sodium tomatoes"
       ],
       "corpusRows": 3,
       "corpusRecipes": 3
@@ -1461,7 +1188,7 @@
     {
       "name": "canola cooking spray",
       "displayName": "Canola Cooking Spray",
-      "category": "OTHER",
+      "category": "CONDIMENTS",
       "defaultUnit": "pcs",
       "aliases": [],
       "corpusRows": 1,
@@ -1472,59 +1199,26 @@
       "displayName": "Canola Oil",
       "category": "CONDIMENTS",
       "defaultUnit": "tbsp",
-      "aliases": [],
+      "aliases": [
+        "canola or corn oil",
+        "canola or peanut oil"
+      ],
       "corpusRows": 32,
       "corpusRecipes": 32
-    },
-    {
-      "name": "canola or corn oil",
-      "displayName": "Canola Or Corn Oil",
-      "category": "CONDIMENTS",
-      "defaultUnit": "tbsp",
-      "aliases": [],
-      "corpusRows": 1,
-      "corpusRecipes": 1
-    },
-    {
-      "name": "canola or peanut oil",
-      "displayName": "Canola Or Peanut Oil",
-      "category": "CONDIMENTS",
-      "defaultUnit": "tbsp",
-      "aliases": [],
-      "corpusRows": 1,
-      "corpusRecipes": 1
     },
     {
       "name": "cantaloupe",
       "displayName": "Cantaloupe",
       "category": "PRODUCE",
       "defaultUnit": "pcs",
-      "aliases": [],
+      "aliases": ["cantaloupe chunks", "cantaloupe or watermelon"],
       "corpusRows": 4,
       "corpusRecipes": 4
     },
     {
-      "name": "cantaloupe chunks",
-      "displayName": "Cantaloupe Chunks",
-      "category": "PRODUCE",
-      "defaultUnit": "cup",
-      "aliases": [],
-      "corpusRows": 1,
-      "corpusRecipes": 1
-    },
-    {
-      "name": "cantaloupe or watermelon",
-      "displayName": "Cantaloupe Or Watermelon",
-      "category": "PRODUCE",
-      "defaultUnit": "cup",
-      "aliases": [],
-      "corpusRows": 1,
-      "corpusRecipes": 1
-    },
-    {
       "name": "capers",
       "displayName": "Capers",
-      "category": "PRODUCE",
+      "category": "CONDIMENTS",
       "defaultUnit": "tsp",
       "aliases": [],
       "corpusRows": 1,
@@ -1533,7 +1227,7 @@
     {
       "name": "caraway seeds",
       "displayName": "Caraway Seeds",
-      "category": "CONDIMENTS",
+      "category": "DRY_GOODS",
       "defaultUnit": "tsp",
       "aliases": [],
       "corpusRows": 1,
@@ -1553,8 +1247,8 @@
     },
     {
       "name": "carrots, raisins, and/or walnuts",
-      "displayName": "Carrots, Raisins, And/Or Walnuts",
-      "category": "PRODUCE",
+      "displayName": "Carrots, Raisins, And/or Walnuts",
+      "category": "DRY_GOODS",
       "defaultUnit": null,
       "aliases": [],
       "corpusRows": 1,
@@ -1585,20 +1279,9 @@
       "displayName": "Cauliflower",
       "category": "PRODUCE",
       "defaultUnit": "pcs",
-      "aliases": [],
+      "aliases": ["cauliflower florets"],
       "corpusRows": 11,
       "corpusRecipes": 11
-    },
-    {
-      "name": "cauliflower florets",
-      "displayName": "Cauliflower Florets",
-      "category": "PRODUCE",
-      "defaultUnit": "cup",
-      "aliases": [
-        "cauliflower floret"
-      ],
-      "corpusRows": 3,
-      "corpusRecipes": 3
     },
     {
       "name": "cauliflower rice",
@@ -1621,7 +1304,7 @@
     {
       "name": "cayenne pepper",
       "displayName": "Cayenne Pepper",
-      "category": "CONDIMENTS",
+      "category": "BAKING_SPICES",
       "defaultUnit": "tsp",
       "aliases": [],
       "corpusRows": 15,
@@ -1642,7 +1325,9 @@
       "category": "PRODUCE",
       "defaultUnit": "cup",
       "aliases": [
-        "sliced celery"
+        "sliced celery", 
+        "celery stalk", 
+        "celery stick"
       ],
       "corpusRows": 73,
       "corpusRecipes": 73
@@ -1650,7 +1335,7 @@
     {
       "name": "celery flakes",
       "displayName": "Celery Flakes",
-      "category": "CONDIMENTS",
+      "category": "BAKING_SPICES",
       "defaultUnit": "tsp",
       "aliases": [],
       "corpusRows": 1,
@@ -1658,8 +1343,8 @@
     },
     {
       "name": "celery salt",
-      "displayName": "Celery Salt",
-      "category": "CONDIMENTS",
+      "displayName": "Salt",
+      "category": "BAKING_SPICES",
       "defaultUnit": "tsp",
       "aliases": [],
       "corpusRows": 2,
@@ -1668,28 +1353,8 @@
     {
       "name": "celery seed",
       "displayName": "Celery Seed",
-      "category": "CONDIMENTS",
+      "category": "BAKING_SPICES",
       "defaultUnit": "tsp",
-      "aliases": [],
-      "corpusRows": 1,
-      "corpusRecipes": 1
-    },
-    {
-      "name": "celery stalk",
-      "displayName": "Celery Stalk",
-      "category": "PRODUCE",
-      "defaultUnit": "pcs",
-      "aliases": [
-        "celery stalks"
-      ],
-      "corpusRows": 36,
-      "corpusRecipes": 36
-    },
-    {
-      "name": "celery stick",
-      "displayName": "Celery Stick",
-      "category": "PRODUCE",
-      "defaultUnit": "pcs",
       "aliases": [],
       "corpusRows": 1,
       "corpusRecipes": 1
@@ -1756,9 +1421,11 @@
       "displayName": "Cheddar Or Monterey Jack Cheese",
       "category": "DAIRY",
       "defaultUnit": "cup",
-      "aliases": [],
-      "corpusRows": 1,
-      "corpusRecipes": 1
+      "aliases": [
+        "monterey jack or cheddar cheese"
+      ],
+      "corpusRows": 2,
+      "corpusRecipes": 2
     },
     {
       "name": "cheese",
@@ -1766,13 +1433,10 @@
       "category": "DAIRY",
       "defaultUnit": "cup",
       "aliases": [
-        "fat-free cheese",
-        "low-fat cheese",
-        "reduced-fat cheese",
         "shredded cheese"
       ],
-      "corpusRows": 34,
-      "corpusRecipes": 33
+      "corpusRows": 31,
+      "corpusRecipes": 30
     },
     {
       "name": "cheese spread",
@@ -1804,20 +1468,11 @@
       "corpusRecipes": 13
     },
     {
-      "name": "chia or flax seeds",
-      "displayName": "Chia Or Flax Seeds",
-      "category": "DRY_GOODS",
-      "defaultUnit": "tsp",
-      "aliases": [],
-      "corpusRows": 1,
-      "corpusRecipes": 1
-    },
-    {
       "name": "chia seeds",
       "displayName": "Chia Seeds",
       "category": "DRY_GOODS",
       "defaultUnit": "tbsp",
-      "aliases": [],
+      "aliases": ["chia or flax seeds"],
       "corpusRows": 1,
       "corpusRecipes": 1
     },
@@ -1835,20 +1490,13 @@
     {
       "name": "chicken bouillon",
       "displayName": "Chicken Bouillon",
-      "category": "OTHER",
+      "category": "CANNED",
       "defaultUnit": "tsp",
-      "aliases": [],
+      "aliases": [
+        "chicken bouillon cube"
+      ],
       "corpusRows": 5,
       "corpusRecipes": 5
-    },
-    {
-      "name": "chicken bouillon cube",
-      "displayName": "Chicken Bouillon Cube",
-      "category": "CONDIMENTS",
-      "defaultUnit": "pcs",
-      "aliases": [],
-      "corpusRows": 3,
-      "corpusRecipes": 3
     },
     {
       "name": "chicken breast",
@@ -1859,19 +1507,11 @@
         "boneless chicken breast",
         "boneless, skinless chicken breast",
         "chicken breasts",
-        "skinless chicken breast"
+        "skinless chicken breast",
+        "chicken breast half"
       ],
       "corpusRows": 44,
       "corpusRecipes": 44
-    },
-    {
-      "name": "chicken breast half",
-      "displayName": "Chicken Breast Half",
-      "category": "MEAT_SEAFOOD",
-      "defaultUnit": "pcs",
-      "aliases": [],
-      "corpusRows": 1,
-      "corpusRecipes": 1
     },
     {
       "name": "chicken broth",
@@ -1880,28 +1520,14 @@
       "defaultUnit": "cup",
       "aliases": [
         "low-sodium chicken broth",
-        "reduced-sodium chicken broth"
+        "reduced-sodium chicken broth",
+        "Chicken Broth Granules",
+        "chicken broth or vegetable broth",
+        "chicken or vegetable broth",
+        "chicken or turkey broth"
       ],
       "corpusRows": 44,
       "corpusRecipes": 44
-    },
-    {
-      "name": "chicken broth granules",
-      "displayName": "Chicken Broth Granules",
-      "category": "DAIRY",
-      "defaultUnit": "tsp",
-      "aliases": [],
-      "corpusRows": 1,
-      "corpusRecipes": 1
-    },
-    {
-      "name": "chicken broth or vegetable broth",
-      "displayName": "Chicken Broth Or Vegetable Broth",
-      "category": "CANNED",
-      "defaultUnit": "cup",
-      "aliases": [],
-      "corpusRows": 1,
-      "corpusRecipes": 1
     },
     {
       "name": "chicken drumstick",
@@ -1920,26 +1546,6 @@
       "aliases": [],
       "corpusRows": 1,
       "corpusRecipes": 1
-    },
-    {
-      "name": "chicken or turkey broth",
-      "displayName": "Chicken Or Turkey Broth",
-      "category": "CANNED",
-      "defaultUnit": "cup",
-      "aliases": [],
-      "corpusRows": 1,
-      "corpusRecipes": 1
-    },
-    {
-      "name": "chicken or vegetable broth",
-      "displayName": "Chicken Or Vegetable Broth",
-      "category": "CANNED",
-      "defaultUnit": "g",
-      "aliases": [
-        "vegetable or chicken broth"
-      ],
-      "corpusRows": 2,
-      "corpusRecipes": 2
     },
     {
       "name": "chicken pieces",
@@ -1962,7 +1568,7 @@
     {
       "name": "chicken stock",
       "displayName": "Chicken Stock",
-      "category": "BEVERAGES",
+      "category": "CANNED",
       "defaultUnit": "cup",
       "aliases": [
         "low-sodium chicken stock"
@@ -1996,6 +1602,7 @@
       "aliases": [
         "chickpea",
         "garbanzo bean",
+        "garbanzo beans",
         "low sodium chickpeas"
       ],
       "corpusRows": 11,
@@ -2004,7 +1611,7 @@
     {
       "name": "chili and spice seasoning",
       "displayName": "Chili And Spice Seasoning",
-      "category": "CONDIMENTS",
+      "category": "BAKING_SPICES",
       "defaultUnit": "tbsp",
       "aliases": [],
       "corpusRows": 3,
@@ -2013,7 +1620,7 @@
     {
       "name": "chili paste",
       "displayName": "Chili Paste",
-      "category": "CANNED",
+      "category": "CONDIMENTS",
       "defaultUnit": "tsp",
       "aliases": [],
       "corpusRows": 1,
@@ -2031,7 +1638,7 @@
     {
       "name": "chili pepper flakes",
       "displayName": "Chili Pepper Flakes",
-      "category": "CONDIMENTS",
+      "category": "BAKING_SPICES",
       "defaultUnit": "tsp",
       "aliases": [],
       "corpusRows": 2,
@@ -2040,7 +1647,7 @@
     {
       "name": "chili powder",
       "displayName": "Chili Powder",
-      "category": "CONDIMENTS",
+      "category": "BAKING_SPICES",
       "defaultUnit": "tsp",
       "aliases": [],
       "corpusRows": 56,
@@ -2061,7 +1668,8 @@
       "category": "PRODUCE",
       "defaultUnit": "tbsp",
       "aliases": [
-        "fresh chives"
+        "fresh chives",
+        "chopped chives or green onions (scallions)"
       ],
       "corpusRows": 4,
       "corpusRecipes": 4
@@ -2069,7 +1677,7 @@
     {
       "name": "chocolate chips",
       "displayName": "Chocolate Chips",
-      "category": "BAKERY",
+      "category": "BAKING_SPICES",
       "defaultUnit": "cup",
       "aliases": [],
       "corpusRows": 3,
@@ -2087,7 +1695,7 @@
     {
       "name": "chocolate pudding mix",
       "displayName": "Chocolate Pudding Mix",
-      "category": "DRY_GOODS",
+      "category": "DAIRY",
       "defaultUnit": "pcs",
       "aliases": [],
       "corpusRows": 1,
@@ -2096,17 +1704,8 @@
     {
       "name": "chocolate syrup",
       "displayName": "Chocolate Syrup",
-      "category": "BEVERAGES",
+      "category": "CONDIMENTS",
       "defaultUnit": null,
-      "aliases": [],
-      "corpusRows": 1,
-      "corpusRecipes": 1
-    },
-    {
-      "name": "chopped chives or green onions (scallions)",
-      "displayName": "Chopped Chives Or Green Onions (Scallions)",
-      "category": "PRODUCE",
-      "defaultUnit": "tbsp",
       "aliases": [],
       "corpusRows": 1,
       "corpusRecipes": 1
@@ -2114,15 +1713,6 @@
     {
       "name": "chopped flat-leaf parsley",
       "displayName": "Chopped Flat-Leaf Parsley",
-      "category": "CONDIMENTS",
-      "defaultUnit": "cup",
-      "aliases": [],
-      "corpusRows": 1,
-      "corpusRecipes": 1
-    },
-    {
-      "name": "chopped green peppers",
-      "displayName": "Chopped Green Peppers",
       "category": "PRODUCE",
       "defaultUnit": "cup",
       "aliases": [],
@@ -2150,27 +1740,18 @@
     {
       "name": "chunky peanut butter",
       "displayName": "Chunky Peanut Butter",
-      "category": "DAIRY",
+      "category": "JAM_NUT_BUTTER",
       "defaultUnit": "g",
       "aliases": [],
       "corpusRows": 2,
       "corpusRecipes": 2
     },
     {
-      "name": "cider or white vinegar",
-      "displayName": "Cider Or White Vinegar",
-      "category": "CONDIMENTS",
-      "defaultUnit": "cup",
-      "aliases": [],
-      "corpusRows": 1,
-      "corpusRecipes": 1
-    },
-    {
       "name": "cider vinegar",
       "displayName": "Cider Vinegar",
       "category": "CONDIMENTS",
       "defaultUnit": "tbsp",
-      "aliases": [],
+      "aliases": ["cider or white vinegar"],
       "corpusRows": 10,
       "corpusRecipes": 10
     },
@@ -2184,7 +1765,8 @@
         "coriander leaves",
         "fresh cilantro",
         "fresh coriander",
-        "fresh, chopped cilantro"
+        "fresh, chopped cilantro",
+        "cilantro sprigs"
       ],
       "corpusRows": 49,
       "corpusRecipes": 49
@@ -2192,7 +1774,7 @@
     {
       "name": "cilantro leaves",
       "displayName": "Cilantro Leaves",
-      "category": "CONDIMENTS",
+      "category": "PRODUCE",
       "defaultUnit": "tbsp",
       "aliases": [
         "fresh cilantro leaves"
@@ -2212,27 +1794,20 @@
     {
       "name": "cilantro or parsley",
       "displayName": "Cilantro Or Parsley",
-      "category": "CONDIMENTS",
+      "category": "PRODUCE",
       "defaultUnit": "tbsp",
       "aliases": [],
       "corpusRows": 2,
       "corpusRecipes": 2
     },
     {
-      "name": "cilantro sprigs",
-      "displayName": "Cilantro Sprigs",
-      "category": "PRODUCE",
-      "defaultUnit": null,
-      "aliases": [],
-      "corpusRows": 1,
-      "corpusRecipes": 1
-    },
-    {
       "name": "cinnamon",
       "displayName": "Cinnamon",
-      "category": "CONDIMENTS",
+      "category": "BAKING_SPICES",
       "defaultUnit": "tsp",
-      "aliases": [],
+      "aliases": [
+        "cinnamon or other flavorings"
+      ],
       "corpusRows": 86,
       "corpusRecipes": 86
     },
@@ -2240,15 +1815,6 @@
       "name": "cinnamon graham cracker",
       "displayName": "Cinnamon Graham Cracker",
       "category": "BAKERY",
-      "defaultUnit": null,
-      "aliases": [],
-      "corpusRows": 1,
-      "corpusRecipes": 1
-    },
-    {
-      "name": "cinnamon or other flavorings",
-      "displayName": "Cinnamon Or Other Flavorings",
-      "category": "CONDIMENTS",
       "defaultUnit": null,
       "aliases": [],
       "corpusRows": 1,
@@ -2274,7 +1840,7 @@
     },
     {
       "name": "clove garlic",
-      "displayName": "Garlic",
+      "displayName": "Clove Garlic",
       "category": "PRODUCE",
       "defaultUnit": "pcs",
       "aliases": [],
@@ -2284,37 +1850,20 @@
     {
       "name": "cloves",
       "displayName": "Cloves",
-      "category": "CONDIMENTS",
+      "category": "BAKING_SPICES",
       "defaultUnit": "tsp",
       "aliases": [],
       "corpusRows": 2,
       "corpusRecipes": 2
     },
     {
-      "name": "coarsely chopped walnuts",
-      "displayName": "Coarsely Chopped Walnuts",
-      "category": "DRY_GOODS",
-      "defaultUnit": "cup",
-      "aliases": [],
-      "corpusRows": 1,
-      "corpusRecipes": 1
-    },
-    {
-      "name": "cocoa",
-      "displayName": "Cocoa",
-      "category": "DRY_GOODS",
-      "defaultUnit": "tsp",
-      "aliases": [],
-      "corpusRows": 1,
-      "corpusRecipes": 1
-    },
-    {
       "name": "cocoa powder",
       "displayName": "Cocoa Powder",
-      "category": "CONDIMENTS",
+      "category": "BAKING_SPICES",
       "defaultUnit": "tbsp",
       "aliases": [
-        "unsweetened cocoa powder"
+        "unsweetened cocoa powder",
+        "cocoa"
       ],
       "corpusRows": 6,
       "corpusRecipes": 6
@@ -2346,33 +1895,17 @@
       "defaultUnit": "g",
       "aliases": [
         "cod fillet",
-        "skinless cod fillets"
+        "skinless cod fillets",
+        "cod fish fillets",
+        "cod or white fish fillets"
       ],
       "corpusRows": 5,
       "corpusRecipes": 5
     },
     {
-      "name": "cod fish fillets",
-      "displayName": "Cod Fish Fillets",
-      "category": "MEAT_SEAFOOD",
-      "defaultUnit": "g",
-      "aliases": [],
-      "corpusRows": 1,
-      "corpusRecipes": 1
-    },
-    {
-      "name": "cod or white fish fillets",
-      "displayName": "Cod Or White Fish Fillets",
-      "category": "MEAT_SEAFOOD",
-      "defaultUnit": "g",
-      "aliases": [],
-      "corpusRows": 1,
-      "corpusRecipes": 1
-    },
-    {
       "name": "coffee",
       "displayName": "Coffee",
-      "category": "BEVERAGES",
+      "category": "COFFEE_TEA",
       "defaultUnit": "cup",
       "aliases": [],
       "corpusRows": 1,
@@ -2407,7 +1940,7 @@
     },
     {
       "name": "condensed cream of chicken soup",
-      "displayName": "Condensed Cream Of Chicken Soup",
+      "displayName": "Condensed Cream of Chicken Soup",
       "category": "CANNED",
       "defaultUnit": "pcs",
       "aliases": [],
@@ -2416,7 +1949,7 @@
     },
     {
       "name": "condensed cream of mushroom soup",
-      "displayName": "Condensed Cream Of Mushroom Soup",
+      "displayName": "Condensed Cream of Mushroom Soup",
       "category": "CANNED",
       "defaultUnit": "g",
       "aliases": [],
@@ -2426,7 +1959,7 @@
     {
       "name": "confectioners sugar",
       "displayName": "Confectioners Sugar",
-      "category": "DRY_GOODS",
+      "category": "BAKING_SPICES",
       "defaultUnit": "cup",
       "aliases": [],
       "corpusRows": 1,
@@ -2435,7 +1968,7 @@
     {
       "name": "cooked beans",
       "displayName": "Cooked Beans",
-      "category": "OTHER",
+      "category": "CANNED",
       "defaultUnit": "cup",
       "aliases": [],
       "corpusRows": 3,
@@ -2444,7 +1977,7 @@
     {
       "name": "cooked brown rice",
       "displayName": "Cooked Brown Rice",
-      "category": "DRY_GOODS",
+      "category": "CANNED",
       "defaultUnit": "cup",
       "aliases": [],
       "corpusRows": 7,
@@ -2452,7 +1985,7 @@
     },
     {
       "name": "cooked chicken",
-      "displayName": "Chicken",
+      "displayName": "Cooked Chicken",
       "category": "MEAT_SEAFOOD",
       "defaultUnit": "cup",
       "aliases": [
@@ -2476,7 +2009,7 @@
     {
       "name": "cooked egg noodles",
       "displayName": "Cooked Egg Noodles",
-      "category": "DRY_GOODS",
+      "category": "PASTA_SAUCES",
       "defaultUnit": "cup",
       "aliases": [],
       "corpusRows": 1,
@@ -2485,7 +2018,7 @@
     {
       "name": "cooked macaroni",
       "displayName": "Cooked Macaroni",
-      "category": "DRY_GOODS",
+      "category": "PASTA_SAUCES",
       "defaultUnit": "cup",
       "aliases": [],
       "corpusRows": 1,
@@ -2503,7 +2036,7 @@
     {
       "name": "cooked rice",
       "displayName": "Cooked Rice",
-      "category": "DRY_GOODS",
+      "category": "CANNED",
       "defaultUnit": "cup",
       "aliases": [],
       "corpusRows": 2,
@@ -2521,7 +2054,7 @@
     {
       "name": "cooked white rice",
       "displayName": "Cooked White Rice",
-      "category": "DRY_GOODS",
+      "category": "CANNED",
       "defaultUnit": "cup",
       "aliases": [],
       "corpusRows": 1,
@@ -2530,7 +2063,7 @@
     {
       "name": "cooked whole grain penne pasta",
       "displayName": "Cooked Whole Grain Penne Pasta",
-      "category": "DRY_GOODS",
+      "category": "PASTA_SAUCES",
       "defaultUnit": "cup",
       "aliases": [],
       "corpusRows": 1,
@@ -2557,7 +2090,7 @@
     {
       "name": "cooking oil of choice",
       "displayName": "Cooking Oil Of Choice",
-      "category": "OTHER",
+      "category": "CONDIMENTS",
       "defaultUnit": "tbsp",
       "aliases": [],
       "corpusRows": 1,
@@ -2566,7 +2099,7 @@
     {
       "name": "cooking oil spray",
       "displayName": "Cooking Oil Spray",
-      "category": "OTHER",
+      "category": "CONDIMENTS",
       "defaultUnit": "pcs",
       "aliases": [],
       "corpusRows": 5,
@@ -2575,7 +2108,7 @@
     {
       "name": "cooking spray",
       "displayName": "Cooking Spray",
-      "category": "OTHER",
+      "category": "CONDIMENTS",
       "defaultUnit": "pcs",
       "aliases": [],
       "corpusRows": 28,
@@ -2584,16 +2117,19 @@
     {
       "name": "coriander",
       "displayName": "Coriander",
-      "category": "CONDIMENTS",
+      "category": "BAKING_SPICES",
       "defaultUnit": "tsp",
-      "aliases": [],
+      "aliases": [
+        "dried cilantro",
+        "dried cilantro or coriander"
+      ],
       "corpusRows": 1,
       "corpusRecipes": 1
     },
     {
       "name": "corn",
       "displayName": "Corn",
-      "category": "PRODUCE",
+      "category": "CANNED",
       "defaultUnit": "g",
       "aliases": [
         "low-sodium corn"
@@ -2606,16 +2142,7 @@
       "displayName": "Corn Cob",
       "category": "PRODUCE",
       "defaultUnit": "pcs",
-      "aliases": [],
-      "corpusRows": 1,
-      "corpusRecipes": 1
-    },
-    {
-      "name": "corn ear",
-      "displayName": "Corn Ear",
-      "category": "PRODUCE",
-      "defaultUnit": "pcs",
-      "aliases": [],
+      "aliases": ["corn ear"],
       "corpusRows": 1,
       "corpusRecipes": 1
     },
@@ -2631,7 +2158,7 @@
     {
       "name": "corn kernels",
       "displayName": "Corn Kernels",
-      "category": "DRY_GOODS",
+      "category": "PRODUCE",
       "defaultUnit": "cup",
       "aliases": [],
       "corpusRows": 6,
@@ -2667,7 +2194,7 @@
     {
       "name": "corn starch",
       "displayName": "Corn Starch",
-      "category": "DRY_GOODS",
+      "category": "BAKING_SPICES",
       "defaultUnit": "tbsp",
       "aliases": [],
       "corpusRows": 1,
@@ -2696,7 +2223,7 @@
     {
       "name": "cornflake crumbs",
       "displayName": "Cornflake Crumbs",
-      "category": "BAKERY",
+      "category": "DRY_GOODS",
       "defaultUnit": "cup",
       "aliases": [],
       "corpusRows": 1,
@@ -2705,7 +2232,7 @@
     {
       "name": "cornflakes",
       "displayName": "Cornflakes",
-      "category": "BAKERY",
+      "category": "DRY_GOODS",
       "defaultUnit": "cup",
       "aliases": [],
       "corpusRows": 2,
@@ -2714,7 +2241,7 @@
     {
       "name": "cornmeal",
       "displayName": "Cornmeal",
-      "category": "DRY_GOODS",
+      "category": "BAKING_SPICES",
       "defaultUnit": "cup",
       "aliases": [],
       "corpusRows": 16,
@@ -2723,7 +2250,7 @@
     {
       "name": "cornstarch",
       "displayName": "Cornstarch",
-      "category": "DRY_GOODS",
+      "category": "BAKING_SPICES",
       "defaultUnit": "tbsp",
       "aliases": [
         "cornflour"
@@ -2745,7 +2272,7 @@
     {
       "name": "couscous",
       "displayName": "Couscous",
-      "category": "DRY_GOODS",
+      "category": "GRAINS_RICE",
       "defaultUnit": "cup",
       "aliases": [],
       "corpusRows": 3,
@@ -2756,9 +2283,12 @@
       "displayName": "Cracker",
       "category": "BAKERY",
       "defaultUnit": "cup",
-      "aliases": [],
-      "corpusRows": 1,
-      "corpusRecipes": 1
+      "aliases": [
+        "crackers",
+        "crushed crackers"
+      ],
+      "corpusRows": 3,
+      "corpusRecipes": 3
     },
     {
       "name": "cracker crumbs",
@@ -2770,20 +2300,9 @@
       "corpusRecipes": 2
     },
     {
-      "name": "crackers",
-      "displayName": "Crackers",
-      "category": "BAKERY",
-      "defaultUnit": "pcs",
-      "aliases": [
-        "crushed crackers"
-      ],
-      "corpusRows": 2,
-      "corpusRecipes": 2
-    },
-    {
       "name": "craft sticks",
       "displayName": "Craft Sticks",
-      "category": "OTHER",
+      "category": "KITCHEN",
       "defaultUnit": null,
       "aliases": [],
       "corpusRows": 1,
@@ -2795,10 +2314,11 @@
       "category": "PRODUCE",
       "defaultUnit": "cup",
       "aliases": [
-        "cranberry"
+        "cranberry",
+        "fresh cranberries"
       ],
-      "corpusRows": 7,
-      "corpusRecipes": 7
+      "corpusRows": 8,
+      "corpusRecipes": 8
     },
     {
       "name": "cranberry juice",
@@ -2812,7 +2332,7 @@
     {
       "name": "cranberry sauce",
       "displayName": "Cranberry Sauce",
-      "category": "CANNED",
+      "category": "CONDIMENTS",
       "defaultUnit": "g",
       "aliases": [],
       "corpusRows": 3,
@@ -2831,7 +2351,7 @@
     },
     {
       "name": "cream of chicken soup",
-      "displayName": "Cream Of Chicken Soup",
+      "displayName": "Cream of Chicken Soup",
       "category": "CANNED",
       "defaultUnit": "g",
       "aliases": [],
@@ -2840,7 +2360,7 @@
     },
     {
       "name": "cream of mushroom soup",
-      "displayName": "Cream Of Mushroom Soup",
+      "displayName": "Cream of Mushroom Soup",
       "category": "CANNED",
       "defaultUnit": "g",
       "aliases": [],
@@ -2850,7 +2370,7 @@
     {
       "name": "cream of tartar",
       "displayName": "Cream Of Tartar",
-      "category": "DRY_GOODS",
+      "category": "BAKING_SPICES",
       "defaultUnit": "tsp",
       "aliases": [],
       "corpusRows": 3,
@@ -2872,7 +2392,7 @@
     {
       "name": "creamy peanut butter",
       "displayName": "Creamy Peanut Butter",
-      "category": "DAIRY",
+      "category": "JAM_NUT_BUTTER",
       "defaultUnit": "tbsp",
       "aliases": [
         "reduced-fat creamy peanut butter"
@@ -2928,27 +2448,27 @@
       "corpusRecipes": 1
     },
     {
-      "name": "crushed ice",
-      "displayName": "Crushed Ice",
-      "category": "OTHER",
-      "defaultUnit": "cup",
-      "aliases": [],
-      "corpusRows": 2,
-      "corpusRecipes": 2
-    },
-    {
       "name": "crushed pepper flakes",
       "displayName": "Crushed Pepper Flakes",
-      "category": "CONDIMENTS",
+      "category": "BAKING_SPICES",
       "defaultUnit": "tsp",
       "aliases": [],
       "corpusRows": 1,
       "corpusRecipes": 1
     },
     {
+      "name": "crushed pineapple",
+      "displayName": "Crushed Pineapple",
+      "category": "CANNED",
+      "defaultUnit": "cup",
+      "aliases": [],
+      "corpusRows": 3,
+      "corpusRecipes": 3
+    },
+    {
       "name": "crushed red pepper",
       "displayName": "Crushed Red Pepper",
-      "category": "CONDIMENTS",
+      "category": "BAKING_SPICES",
       "defaultUnit": "tsp",
       "aliases": [],
       "corpusRows": 4,
@@ -2986,25 +2506,18 @@
     {
       "name": "cumin",
       "displayName": "Cumin",
-      "category": "CONDIMENTS",
+      "category": "BAKING_SPICES",
       "defaultUnit": "tsp",
-      "aliases": [],
+      "aliases": [
+        "cumin powder"
+      ],
       "corpusRows": 32,
       "corpusRecipes": 32
     },
     {
-      "name": "cumin powder",
-      "displayName": "Cumin Powder",
-      "category": "CONDIMENTS",
-      "defaultUnit": "tsp",
-      "aliases": [],
-      "corpusRows": 3,
-      "corpusRecipes": 3
-    },
-    {
       "name": "curry powder",
       "displayName": "Curry Powder",
-      "category": "CONDIMENTS",
+      "category": "BAKING_SPICES",
       "defaultUnit": "tbsp",
       "aliases": [],
       "corpusRows": 13,
@@ -3013,7 +2526,7 @@
     {
       "name": "cut green beans",
       "displayName": "Cut Green Beans",
-      "category": "PRODUCE",
+      "category": "CANNED",
       "defaultUnit": "g",
       "aliases": [],
       "corpusRows": 2,
@@ -3040,7 +2553,7 @@
     {
       "name": "dehydrated potatoes",
       "displayName": "Dehydrated Potatoes",
-      "category": "DRY_GOODS",
+      "category": "PRODUCE",
       "defaultUnit": "cup",
       "aliases": [],
       "corpusRows": 1,
@@ -3071,11 +2584,12 @@
       "defaultUnit": "g",
       "aliases": [
         "diced tomato",
-        "low-sodium chopped tomatoes",
-        "low-sodium diced tomatoes"
+        "low-sodium diced tomatoes",
+        "canned low-sodium diced tomatoes",
+        "no salt added crushed or diced tomatoes"
       ],
-      "corpusRows": 40,
-      "corpusRecipes": 40
+      "corpusRows": 39,
+      "corpusRecipes": 39
     },
     {
       "name": "diced tomatoes with green chiles",
@@ -3109,7 +2623,7 @@
     {
       "name": "dill",
       "displayName": "Dill",
-      "category": "CONDIMENTS",
+      "category": "BAKING_SPICES",
       "defaultUnit": "tbsp",
       "aliases": [
         "fresh dill"
@@ -3120,36 +2634,20 @@
     {
       "name": "dill weed",
       "displayName": "Dill Weed",
-      "category": "CONDIMENTS",
+      "category": "BAKING_SPICES",
       "defaultUnit": "tsp",
       "aliases": [],
       "corpusRows": 10,
       "corpusRecipes": 10
     },
     {
-      "name": "dipping sauce",
-      "displayName": "Dipping Sauce",
-      "category": "OTHER",
-      "defaultUnit": null,
-      "aliases": [],
-      "corpusRows": 1,
-      "corpusRecipes": 1
-    },
-    {
-      "name": "distilled vinegar",
-      "displayName": "Distilled Vinegar",
-      "category": "CONDIMENTS",
-      "defaultUnit": "tbsp",
-      "aliases": [],
-      "corpusRows": 1,
-      "corpusRecipes": 1
-    },
-    {
       "name": "distilled white vinegar",
       "displayName": "Distilled White Vinegar",
       "category": "CONDIMENTS",
       "defaultUnit": "tbsp",
-      "aliases": [],
+      "aliases": [
+        "distilled vinegar"
+      ],
       "corpusRows": 1,
       "corpusRecipes": 1
     },
@@ -3174,29 +2672,14 @@
     {
       "name": "dried basil",
       "displayName": "Dried Basil",
-      "category": "CONDIMENTS",
+      "category": "BAKING_SPICES",
       "defaultUnit": "tsp",
-      "aliases": [],
+      "aliases": [
+        "dried basil leaves",
+        "dried basil or parsley leaves"
+      ],
       "corpusRows": 17,
       "corpusRecipes": 17
-    },
-    {
-      "name": "dried basil leaves",
-      "displayName": "Dried Basil Leaves",
-      "category": "CONDIMENTS",
-      "defaultUnit": "tsp",
-      "aliases": [],
-      "corpusRows": 1,
-      "corpusRecipes": 1
-    },
-    {
-      "name": "dried basil or parsley leaves",
-      "displayName": "Dried Basil Or Parsley Leaves",
-      "category": "CONDIMENTS",
-      "defaultUnit": "tbsp",
-      "aliases": [],
-      "corpusRows": 1,
-      "corpusRecipes": 1
     },
     {
       "name": "dried beans",
@@ -3210,26 +2693,8 @@
     {
       "name": "dried bulgur",
       "displayName": "Dried Bulgur",
-      "category": "DRY_GOODS",
+      "category": "GRAINS_RICE",
       "defaultUnit": "cup",
-      "aliases": [],
-      "corpusRows": 1,
-      "corpusRecipes": 1
-    },
-    {
-      "name": "dried cilantro",
-      "displayName": "Dried Cilantro",
-      "category": "DRY_GOODS",
-      "defaultUnit": "tsp",
-      "aliases": [],
-      "corpusRows": 1,
-      "corpusRecipes": 1
-    },
-    {
-      "name": "dried cilantro or coriander",
-      "displayName": "Dried Cilantro Or Coriander",
-      "category": "CONDIMENTS",
-      "defaultUnit": "tsp",
       "aliases": [],
       "corpusRows": 1,
       "corpusRecipes": 1
@@ -3248,7 +2713,7 @@
     {
       "name": "dried dill",
       "displayName": "Dried Dill",
-      "category": "CONDIMENTS",
+      "category": "BAKING_SPICES",
       "defaultUnit": "tsp",
       "aliases": [],
       "corpusRows": 4,
@@ -3257,7 +2722,7 @@
     {
       "name": "dried dill weed",
       "displayName": "Dried Dill Weed",
-      "category": "CONDIMENTS",
+      "category": "BAKING_SPICES",
       "defaultUnit": "tsp",
       "aliases": [],
       "corpusRows": 1,
@@ -3266,7 +2731,7 @@
     {
       "name": "dried dillweed",
       "displayName": "Dried Dillweed",
-      "category": "CONDIMENTS",
+      "category": "BAKING_SPICES",
       "defaultUnit": "tsp",
       "aliases": [],
       "corpusRows": 1,
@@ -3275,7 +2740,7 @@
     {
       "name": "dried egg mix",
       "displayName": "Dried Egg Mix",
-      "category": "DRY_GOODS",
+      "category": "DAIRY",
       "defaultUnit": "tbsp",
       "aliases": [],
       "corpusRows": 4,
@@ -3286,18 +2751,9 @@
       "displayName": "Dried Figs",
       "category": "DRY_GOODS",
       "defaultUnit": "g",
-      "aliases": [],
+      "aliases": ["dried figs or dates"],
       "corpusRows": 3,
       "corpusRecipes": 3
-    },
-    {
-      "name": "dried figs or dates",
-      "displayName": "Dried Figs Or Dates",
-      "category": "DRY_GOODS",
-      "defaultUnit": "pcs",
-      "aliases": [],
-      "corpusRows": 1,
-      "corpusRecipes": 1
     },
     {
       "name": "dried fruit",
@@ -3311,7 +2767,7 @@
     {
       "name": "dried italian seasoning",
       "displayName": "Dried Italian Seasoning",
-      "category": "CONDIMENTS",
+      "category": "BAKING_SPICES",
       "defaultUnit": "tsp",
       "aliases": [],
       "corpusRows": 1,
@@ -3320,7 +2776,7 @@
     {
       "name": "dried marjoram",
       "displayName": "Dried Marjoram",
-      "category": "CONDIMENTS",
+      "category": "BAKING_SPICES",
       "defaultUnit": "tsp",
       "aliases": [],
       "corpusRows": 2,
@@ -3331,63 +2787,32 @@
       "displayName": "Dried Minced Onion",
       "category": "DRY_GOODS",
       "defaultUnit": "tbsp",
-      "aliases": [],
-      "corpusRows": 2,
-      "corpusRecipes": 2
-    },
-    {
-      "name": "dried onion",
-      "displayName": "Dried Onion",
-      "category": "DRY_GOODS",
-      "defaultUnit": "tbsp",
-      "aliases": [],
-      "corpusRows": 1,
-      "corpusRecipes": 1
+      "aliases": [
+        "dried onion"
+      ],
+      "corpusRows": 3,
+      "corpusRecipes": 3
     },
     {
       "name": "dried oregano",
       "displayName": "Dried Oregano",
-      "category": "CONDIMENTS",
+      "category": "BAKING_SPICES",
       "defaultUnit": "tsp",
-      "aliases": [],
+      "aliases": [
+        "dried oregano leaves",
+        "dried oregano or basil"
+      ],
       "corpusRows": 29,
       "corpusRecipes": 29
     },
     {
-      "name": "dried oregano leaves",
-      "displayName": "Dried Oregano Leaves",
-      "category": "CONDIMENTS",
-      "defaultUnit": "tsp",
-      "aliases": [],
-      "corpusRows": 1,
-      "corpusRecipes": 1
-    },
-    {
-      "name": "dried oregano or basil",
-      "displayName": "Dried Oregano Or Basil",
-      "category": "CONDIMENTS",
-      "defaultUnit": "tsp",
-      "aliases": [],
-      "corpusRows": 1,
-      "corpusRecipes": 1
-    },
-    {
       "name": "dried parsley",
       "displayName": "Dried Parsley",
-      "category": "CONDIMENTS",
+      "category": "BAKING_SPICES",
       "defaultUnit": "tsp",
-      "aliases": [],
+      "aliases": ["dried parsley flakes"],
       "corpusRows": 13,
       "corpusRecipes": 13
-    },
-    {
-      "name": "dried parsley flakes",
-      "displayName": "Dried Parsley Flakes",
-      "category": "CONDIMENTS",
-      "defaultUnit": "tbsp",
-      "aliases": [],
-      "corpusRows": 1,
-      "corpusRecipes": 1
     },
     {
       "name": "dried red chiles",
@@ -3399,18 +2824,9 @@
       "corpusRecipes": 1
     },
     {
-      "name": "dried red lentils",
-      "displayName": "Dried Red Lentils",
-      "category": "DRY_GOODS",
-      "defaultUnit": "cup",
-      "aliases": [],
-      "corpusRows": 1,
-      "corpusRecipes": 1
-    },
-    {
       "name": "dried rosemary",
-      "displayName": "Dried Rosemary",
-      "category": "CONDIMENTS",
+      "displayName": "Rosemary",
+      "category": "BAKING_SPICES",
       "defaultUnit": "tsp",
       "aliases": [],
       "corpusRows": 4,
@@ -3418,8 +2834,8 @@
     },
     {
       "name": "dried sage",
-      "displayName": "Dried Sage",
-      "category": "CONDIMENTS",
+      "displayName": "Sage",
+      "category": "BAKING_SPICES",
       "defaultUnit": "tsp",
       "aliases": [],
       "corpusRows": 4,
@@ -3428,7 +2844,7 @@
     {
       "name": "dried thyme",
       "displayName": "Dried Thyme",
-      "category": "CONDIMENTS",
+      "category": "BAKING_SPICES",
       "defaultUnit": "tsp",
       "aliases": [],
       "corpusRows": 16,
@@ -3437,7 +2853,7 @@
     {
       "name": "dried whole wheat shell pasta",
       "displayName": "Dried Whole Wheat Shell Pasta",
-      "category": "DRY_GOODS",
+      "category": "PASTA_SAUCES",
       "defaultUnit": "g",
       "aliases": [],
       "corpusRows": 1,
@@ -3446,7 +2862,7 @@
     {
       "name": "dry egg mix",
       "displayName": "Dry Egg Mix",
-      "category": "DRY_GOODS",
+      "category": "DAIRY",
       "defaultUnit": "cup",
       "aliases": [],
       "corpusRows": 1,
@@ -3455,7 +2871,7 @@
     {
       "name": "dry lasagna noodles",
       "displayName": "Dry Lasagna Noodles",
-      "category": "DRY_GOODS",
+      "category": "PASTA_SAUCES",
       "defaultUnit": "g",
       "aliases": [],
       "corpusRows": 1,
@@ -3466,14 +2882,17 @@
       "displayName": "Dry Lentils",
       "category": "DRY_GOODS",
       "defaultUnit": "cup",
-      "aliases": [],
+      "aliases": [
+        "dried red lentils", 
+        "dry red lentils"
+      ],
       "corpusRows": 1,
       "corpusRecipes": 1
     },
     {
       "name": "dry mustard",
       "displayName": "Dry Mustard",
-      "category": "CONDIMENTS",
+      "category": "BAKING_SPICES",
       "defaultUnit": "tsp",
       "aliases": [],
       "corpusRows": 4,
@@ -3482,7 +2901,7 @@
     {
       "name": "dry oats",
       "displayName": "Dry Oats",
-      "category": "DRY_GOODS",
+      "category": "GRAINS_RICE",
       "defaultUnit": "cup",
       "aliases": [],
       "corpusRows": 1,
@@ -3491,7 +2910,7 @@
     {
       "name": "dry onion mix",
       "displayName": "Dry Onion Mix",
-      "category": "CONDIMENTS",
+      "category": "BAKING_SPICES",
       "defaultUnit": "tsp",
       "aliases": [],
       "corpusRows": 1,
@@ -3502,15 +2921,6 @@
       "displayName": "Dry Or Prepared Mustard",
       "category": "CONDIMENTS",
       "defaultUnit": "tsp",
-      "aliases": [],
-      "corpusRows": 1,
-      "corpusRecipes": 1
-    },
-    {
-      "name": "dry red lentils",
-      "displayName": "Dry Red Lentils",
-      "category": "DRY_GOODS",
-      "defaultUnit": "cup",
       "aliases": [],
       "corpusRows": 1,
       "corpusRecipes": 1
@@ -3536,7 +2946,7 @@
     {
       "name": "eating smart seasoning mix",
       "displayName": "Eating Smart Seasoning Mix",
-      "category": "CONDIMENTS",
+      "category": "BAKING_SPICES",
       "defaultUnit": "pcs",
       "aliases": [],
       "corpusRows": 4,
@@ -3566,7 +2976,7 @@
     {
       "name": "egg mix",
       "displayName": "Egg Mix",
-      "category": "DRY_GOODS",
+      "category": "DAIRY",
       "defaultUnit": "tbsp",
       "aliases": [],
       "corpusRows": 2,
@@ -3575,7 +2985,7 @@
     {
       "name": "egg noodles",
       "displayName": "Egg Noodles",
-      "category": "DRY_GOODS",
+      "category": "PASTA_SAUCES",
       "defaultUnit": "cup",
       "aliases": [],
       "corpusRows": 5,
@@ -3584,7 +2994,7 @@
     {
       "name": "egg substitute",
       "displayName": "Egg Substitute",
-      "category": "DRY_GOODS",
+      "category": "DAIRY",
       "defaultUnit": "cup",
       "aliases": [],
       "corpusRows": 3,
@@ -3614,7 +3024,7 @@
     {
       "name": "egg-white substitute",
       "displayName": "Egg-White Substitute",
-      "category": "DRY_GOODS",
+      "category": "DAIRY",
       "defaultUnit": "cup",
       "aliases": [],
       "corpusRows": 2,
@@ -3635,7 +3045,7 @@
     {
       "name": "elbow macaroni",
       "displayName": "Elbow Macaroni",
-      "category": "DRY_GOODS",
+      "category": "PASTA_SAUCES",
       "defaultUnit": "g",
       "aliases": [],
       "corpusRows": 2,
@@ -3682,20 +3092,11 @@
       "corpusRecipes": 11
     },
     {
-      "name": "extra virgin olive",
-      "displayName": "Extra Virgin Olive",
-      "category": "PRODUCE",
-      "defaultUnit": "tbsp",
-      "aliases": [],
-      "corpusRows": 1,
-      "corpusRecipes": 1
-    },
-    {
       "name": "extra virgin olive oil",
       "displayName": "Extra Virgin Olive Oil",
       "category": "CONDIMENTS",
       "defaultUnit": "tsp",
-      "aliases": [],
+      "aliases": ["extra virgin olive"],
       "corpusRows": 11,
       "corpusRecipes": 11
     },
@@ -3723,35 +3124,18 @@
       "category": "DAIRY",
       "defaultUnit": "cup",
       "aliases": [
-        "reduced-fat feta cheese"
+        "reduced-fat feta cheese",
+        "feta cheese crumbles"
       ],
       "corpusRows": 8,
       "corpusRecipes": 8
     },
     {
-      "name": "feta cheese crumbles",
-      "displayName": "Feta Cheese Crumbles",
-      "category": "DAIRY",
-      "defaultUnit": "cup",
-      "aliases": [],
-      "corpusRows": 2,
-      "corpusRecipes": 2
-    },
-    {
-      "name": "fettuccine noodles",
-      "displayName": "Fettuccine Noodles",
-      "category": "DRY_GOODS",
-      "defaultUnit": "g",
-      "aliases": [],
-      "corpusRows": 1,
-      "corpusRecipes": 1
-    },
-    {
       "name": "fettuccine pasta",
       "displayName": "Fettuccine Pasta",
-      "category": "DRY_GOODS",
+      "category": "PASTA_SAUCES",
       "defaultUnit": "g",
-      "aliases": [],
+      "aliases": ["fettuccine noodles"],
       "corpusRows": 1,
       "corpusRecipes": 1
     },
@@ -3760,15 +3144,6 @@
       "displayName": "Field Greens",
       "category": "PRODUCE",
       "defaultUnit": "cup",
-      "aliases": [],
-      "corpusRows": 1,
-      "corpusRecipes": 1
-    },
-    {
-      "name": "final sauce",
-      "displayName": "Final Sauce",
-      "category": "OTHER",
-      "defaultUnit": null,
       "aliases": [],
       "corpusRows": 1,
       "corpusRecipes": 1
@@ -3795,7 +3170,7 @@
     },
     {
       "name": "flaked coconut",
-      "displayName": "Coconut",
+      "displayName": "Flaked Coconut",
       "category": "DRY_GOODS",
       "defaultUnit": "cup",
       "aliases": [],
@@ -3805,7 +3180,7 @@
     {
       "name": "flat-leaf parsley",
       "displayName": "Flat-Leaf Parsley",
-      "category": "CONDIMENTS",
+      "category": "PRODUCE",
       "defaultUnit": "cup",
       "aliases": [],
       "corpusRows": 1,
@@ -3814,7 +3189,7 @@
     {
       "name": "flavored gelatin",
       "displayName": "Flavored Gelatin",
-      "category": "DAIRY",
+      "category": "BAKING_SPICES",
       "defaultUnit": "tbsp",
       "aliases": [],
       "corpusRows": 1,
@@ -3832,7 +3207,7 @@
     {
       "name": "flour",
       "displayName": "Flour",
-      "category": "DRY_GOODS",
+      "category": "BAKING_SPICES",
       "defaultUnit": "cup",
       "aliases": [],
       "corpusRows": 75,
@@ -3851,18 +3226,9 @@
     },
     {
       "name": "foil",
-      "displayName": "Aluminum Foil",
-      "category": "OTHER",
+      "displayName": "Foil",
+      "category": "KITCHEN",
       "defaultUnit": null,
-      "aliases": [],
-      "corpusRows": 1,
-      "corpusRecipes": 1
-    },
-    {
-      "name": "french bread baguette",
-      "displayName": "Baguette",
-      "category": "BAKERY",
-      "defaultUnit": "pcs",
       "aliases": [],
       "corpusRows": 1,
       "corpusRecipes": 1
@@ -3879,7 +3245,7 @@
     {
       "name": "fresh basil leaves",
       "displayName": "Fresh Basil Leaves",
-      "category": "CONDIMENTS",
+      "category": "PRODUCE",
       "defaultUnit": "cup",
       "aliases": [
         "fresh basil leaf"
@@ -3897,15 +3263,6 @@
       "corpusRecipes": 1
     },
     {
-      "name": "fresh cranberries",
-      "displayName": "Fresh Cranberries",
-      "category": "PRODUCE",
-      "defaultUnit": "cup",
-      "aliases": [],
-      "corpusRows": 1,
-      "corpusRecipes": 1
-    },
-    {
       "name": "fresh grated peeled gingerroot",
       "displayName": "Fresh Grated Peeled Gingerroot",
       "category": "PRODUCE",
@@ -3915,8 +3272,8 @@
       "corpusRecipes": 1
     },
     {
-      "name": "fresh greens",
-      "displayName": "Fresh Greens",
+      "name": "fresh green beans",
+      "displayName": "Fresh Green Beans",
       "category": "PRODUCE",
       "defaultUnit": "cup",
       "aliases": [],
@@ -3926,7 +3283,7 @@
     {
       "name": "fresh ground pepper",
       "displayName": "Fresh Ground Pepper",
-      "category": "CONDIMENTS",
+      "category": "BAKING_SPICES",
       "defaultUnit": null,
       "aliases": [],
       "corpusRows": 1,
@@ -3942,6 +3299,33 @@
       "corpusRecipes": 1
     },
     {
+      "name": "fresh lemon juice",
+      "displayName": "Fresh Lemon Juice",
+      "category": "CONDIMENTS",
+      "defaultUnit": "tbsp",
+      "aliases": [],
+      "corpusRows": 3,
+      "corpusRecipes": 3
+    },
+    {
+      "name": "fresh lime juice",
+      "displayName": "Fresh Lime Juice",
+      "category": "CONDIMENTS",
+      "defaultUnit": "tbsp",
+      "aliases": [],
+      "corpusRows": 3,
+      "corpusRecipes": 3
+    },
+    {
+      "name": "fresh orange juice",
+      "displayName": "Fresh Orange Juice",
+      "category": "BEVERAGES",
+      "defaultUnit": "cup",
+      "aliases": [],
+      "corpusRows": 1,
+      "corpusRecipes": 1
+    },
+    {
       "name": "fresh oregano",
       "displayName": "Fresh Oregano",
       "category": "PRODUCE",
@@ -3951,19 +3335,39 @@
       "corpusRecipes": 1
     },
     {
+      "name": "fresh parsley",
+      "displayName": "Fresh Parsley",
+      "category": "PRODUCE",
+      "defaultUnit": "tbsp",
+      "aliases": [],
+      "corpusRows": 11,
+      "corpusRecipes": 11
+    },
+    {
       "name": "fresh parsley or cilantro",
       "displayName": "Fresh Parsley Or Cilantro",
       "category": "PRODUCE",
       "defaultUnit": "cup",
-      "aliases": [],
-      "corpusRows": 3,
-      "corpusRecipes": 3
+      "aliases": [
+        "parsley or cilantro"
+      ],
+      "corpusRows": 5,
+      "corpusRecipes": 5
     },
     {
       "name": "fresh parsley or green onions",
       "displayName": "Fresh Parsley Or Green Onions",
       "category": "PRODUCE",
       "defaultUnit": "tbsp",
+      "aliases": [],
+      "corpusRows": 1,
+      "corpusRecipes": 1
+    },
+    {
+      "name": "fresh thyme",
+      "displayName": "Fresh Thyme",
+      "category": "PRODUCE",
+      "defaultUnit": "tsp",
       "aliases": [],
       "corpusRows": 1,
       "corpusRecipes": 1
@@ -3980,7 +3384,7 @@
     {
       "name": "freshly ground pepper",
       "displayName": "Freshly Ground Pepper",
-      "category": "CONDIMENTS",
+      "category": "BAKING_SPICES",
       "defaultUnit": "tsp",
       "aliases": [],
       "corpusRows": 2,
@@ -3989,7 +3393,7 @@
     {
       "name": "freshly squeezed lemon juice",
       "displayName": "Freshly Squeezed Lemon Juice",
-      "category": "BEVERAGES",
+      "category": "CONDIMENTS",
       "defaultUnit": "cup",
       "aliases": [],
       "corpusRows": 1,
@@ -4019,24 +3423,16 @@
       "category": "FROZEN",
       "defaultUnit": "g",
       "aliases": [
-        "frozen chopped broccoli"
+        "frozen chopped broccoli",
+        "frozen broccoli or cauliflower or mixed vegetables"
       ],
       "corpusRows": 2,
       "corpusRecipes": 2
     },
     {
-      "name": "frozen broccoli or cauliflower or mixed vegetables",
-      "displayName": "Frozen Broccoli Or Cauliflower Or Mixed Vegetables",
-      "category": "FROZEN",
-      "defaultUnit": "cup",
-      "aliases": [],
-      "corpusRows": 1,
-      "corpusRecipes": 1
-    },
-    {
       "name": "frozen butternut squash",
       "displayName": "Frozen Butternut Squash",
-      "category": "FROZEN",
+      "category": "CANNED",
       "defaultUnit": "cup",
       "aliases": [],
       "corpusRows": 1,
@@ -4054,20 +3450,11 @@
     {
       "name": "frozen corn",
       "displayName": "Frozen Corn",
-      "category": "FROZEN",
+      "category": "CANNED",
       "defaultUnit": "cup",
-      "aliases": [],
+      "aliases": ["frozen corn kernels"],
       "corpusRows": 5,
       "corpusRecipes": 5
-    },
-    {
-      "name": "frozen corn kernels",
-      "displayName": "Frozen Corn Kernels",
-      "category": "FROZEN",
-      "defaultUnit": "cup",
-      "aliases": [],
-      "corpusRows": 1,
-      "corpusRecipes": 1
     },
     {
       "name": "frozen cut okra",
@@ -4162,7 +3549,7 @@
     {
       "name": "frozen peas",
       "displayName": "Frozen Peas",
-      "category": "FROZEN",
+      "category": "PRODUCE",
       "defaultUnit": "cup",
       "aliases": [],
       "corpusRows": 6,
@@ -4171,7 +3558,7 @@
     {
       "name": "frozen pollock",
       "displayName": "Frozen Pollock",
-      "category": "FROZEN",
+      "category": "MEAT_SEAFOOD",
       "defaultUnit": "g",
       "aliases": [],
       "corpusRows": 1,
@@ -4189,7 +3576,7 @@
     {
       "name": "frozen spinach",
       "displayName": "Frozen Spinach",
-      "category": "FROZEN",
+      "category": "PRODUCE",
       "defaultUnit": "g",
       "aliases": [
         "frozen chopped spinach"
@@ -4264,7 +3651,7 @@
     },
     {
       "name": "fryer chicken",
-      "displayName": "Chicken",
+      "displayName": "Fryer Chicken",
       "category": "MEAT_SEAFOOD",
       "defaultUnit": "pcs",
       "aliases": [],
@@ -4274,7 +3661,7 @@
     {
       "name": "fusilli pasta",
       "displayName": "Fusilli Pasta",
-      "category": "DRY_GOODS",
+      "category": "PASTA_SAUCES",
       "defaultUnit": "g",
       "aliases": [],
       "corpusRows": 1,
@@ -4290,15 +3677,6 @@
       "corpusRecipes": 1
     },
     {
-      "name": "garbanzo beans",
-      "displayName": "Garbanzo Beans",
-      "category": "CANNED",
-      "defaultUnit": "g",
-      "aliases": [],
-      "corpusRows": 8,
-      "corpusRecipes": 8
-    },
-    {
       "name": "garlic",
       "displayName": "Garlic",
       "category": "PRODUCE",
@@ -4310,7 +3688,7 @@
     {
       "name": "garlic \u0026 herb blend",
       "displayName": "Garlic \u0026 Herb Blend",
-      "category": "CONDIMENTS",
+      "category": "BAKING_SPICES",
       "defaultUnit": "tsp",
       "aliases": [],
       "corpusRows": 1,
@@ -4319,7 +3697,7 @@
     {
       "name": "garlic and herb seasoning mix",
       "displayName": "Garlic And Herb Seasoning Mix",
-      "category": "CONDIMENTS",
+      "category": "BAKING_SPICES",
       "defaultUnit": "tbsp",
       "aliases": [],
       "corpusRows": 3,
@@ -4332,42 +3710,28 @@
       "defaultUnit": "pcs",
       "aliases": [
         "fresh garlic clove",
-        "large garlic clove"
+        "large garlic clove",
+        "garlic cloves"
       ],
       "corpusRows": 153,
       "corpusRecipes": 153
     },
     {
-      "name": "garlic cloves",
-      "displayName": "Garlic Clove",
-      "category": "PRODUCE",
-      "defaultUnit": "pcs",
-      "aliases": [],
-      "corpusRows": 5,
-      "corpusRecipes": 5
-    },
-    {
       "name": "garlic powder",
       "displayName": "Garlic Powder",
-      "category": "CONDIMENTS",
+      "category": "BAKING_SPICES",
       "defaultUnit": "tsp",
-      "aliases": [],
+      "aliases": [
+        "garlic powder or dry herbs",
+        "granulated garlic"
+      ],
       "corpusRows": 99,
       "corpusRecipes": 99
     },
     {
-      "name": "garlic powder or dry herbs",
-      "displayName": "Garlic Powder Or Dry Herbs",
-      "category": "CONDIMENTS",
-      "defaultUnit": null,
-      "aliases": [],
-      "corpusRows": 1,
-      "corpusRecipes": 1
-    },
-    {
       "name": "garlic salt",
-      "displayName": "Garlic Salt",
-      "category": "CONDIMENTS",
+      "displayName": "Salt",
+      "category": "BAKING_SPICES",
       "defaultUnit": "tsp",
       "aliases": [],
       "corpusRows": 8,
@@ -4376,7 +3740,7 @@
     {
       "name": "gelatin",
       "displayName": "Gelatin",
-      "category": "DAIRY",
+      "category": "BAKING_SPICES",
       "defaultUnit": "pcs",
       "aliases": [],
       "corpusRows": 1,
@@ -4394,19 +3758,16 @@
     {
       "name": "ginger",
       "displayName": "Ginger",
-      "category": "PRODUCE",
+      "category": "BAKING_SPICES",
       "defaultUnit": "tsp",
-      "aliases": [
-        "fresh ginger",
-        "minced ginger"
-      ],
+      "aliases": [],
       "corpusRows": 17,
       "corpusRecipes": 17
     },
     {
       "name": "ginger bread mix",
       "displayName": "Ginger Bread Mix",
-      "category": "DRY_GOODS",
+      "category": "BAKING_SPICES",
       "defaultUnit": "cup",
       "aliases": [],
       "corpusRows": 1,
@@ -4417,7 +3778,10 @@
       "displayName": "Ginger Root",
       "category": "PRODUCE",
       "defaultUnit": "pcs",
-      "aliases": [],
+      "aliases": [
+        "fresh ginger",
+        "minced ginger"
+      ],
       "corpusRows": 1,
       "corpusRecipes": 1
     },
@@ -4431,27 +3795,18 @@
       "corpusRecipes": 1
     },
     {
-      "name": "ginger snap cookie",
-      "displayName": "Ginger Snap Cookie",
-      "category": "BAKERY",
-      "defaultUnit": "pcs",
-      "aliases": [],
-      "corpusRows": 1,
-      "corpusRecipes": 1
-    },
-    {
       "name": "gingersnaps",
       "displayName": "Gingersnaps",
       "category": "BAKERY",
       "defaultUnit": "cup",
-      "aliases": [],
+      "aliases": ["ginger snap cookie"],
       "corpusRows": 1,
       "corpusRecipes": 1
     },
     {
       "name": "golden raisins",
       "displayName": "Golden Raisins",
-      "category": "DRY_GOODS",
+      "category": "DAIRY",
       "defaultUnit": "cup",
       "aliases": [],
       "corpusRows": 1,
@@ -4472,7 +3827,8 @@
       "category": "BAKERY",
       "defaultUnit": "pcs",
       "aliases": [
-        "graham crackers"
+        "graham crackers",
+        "graham cracker rectangle"
       ],
       "corpusRows": 3,
       "corpusRecipes": 3
@@ -4480,15 +3836,6 @@
     {
       "name": "graham cracker pie crust",
       "displayName": "Graham Cracker Pie Crust",
-      "category": "BAKERY",
-      "defaultUnit": "pcs",
-      "aliases": [],
-      "corpusRows": 1,
-      "corpusRecipes": 1
-    },
-    {
-      "name": "graham cracker rectangle",
-      "displayName": "Graham Cracker Rectangle",
       "category": "BAKERY",
       "defaultUnit": "pcs",
       "aliases": [],
@@ -4523,18 +3870,9 @@
       "corpusRecipes": 1
     },
     {
-      "name": "granulated garlic",
-      "displayName": "Granulated Garlic",
-      "category": "CONDIMENTS",
-      "defaultUnit": "tsp",
-      "aliases": [],
-      "corpusRows": 1,
-      "corpusRecipes": 1
-    },
-    {
       "name": "granulated sugar",
       "displayName": "Granulated Sugar",
-      "category": "DRY_GOODS",
+      "category": "BAKING_SPICES",
       "defaultUnit": "cup",
       "aliases": [],
       "corpusRows": 2,
@@ -4605,21 +3943,22 @@
       "displayName": "Greek Yogurt",
       "category": "DAIRY",
       "defaultUnit": "cup",
-      "aliases": [],
-      "corpusRows": 6,
-      "corpusRecipes": 6
+      "aliases": [
+        "non-fat greek yogurt"
+      ],
+      "corpusRows": 7,
+      "corpusRecipes": 7
     },
     {
       "name": "green beans",
       "displayName": "Green Beans",
-      "category": "PRODUCE",
+      "category": "CANNED",
       "defaultUnit": "cup",
       "aliases": [
-        "fresh green beans",
         "green bean"
       ],
-      "corpusRows": 22,
-      "corpusRecipes": 22
+      "corpusRows": 21,
+      "corpusRecipes": 21
     },
     {
       "name": "green bell pepper",
@@ -4642,24 +3981,23 @@
     {
       "name": "green chiles",
       "displayName": "Green Chiles",
-      "category": "PRODUCE",
+      "category": "CANNED",
       "defaultUnit": "g",
       "aliases": [
         "chopped green chiles",
         "diced green chiles",
         "diced green chilies",
-        "green chili",
         "green chilies"
       ],
-      "corpusRows": 13,
-      "corpusRecipes": 13
+      "corpusRows": 12,
+      "corpusRecipes": 12
     },
     {
       "name": "green chili pepper",
       "displayName": "Green Chili Pepper",
       "category": "PRODUCE",
       "defaultUnit": "g",
-      "aliases": [
+      "aliases": ["green chili",
         "green chili peppers"
       ],
       "corpusRows": 2,
@@ -4668,7 +4006,7 @@
     {
       "name": "green enchilada sauce",
       "displayName": "Green Enchilada Sauce",
-      "category": "CANNED",
+      "category": "CONDIMENTS",
       "defaultUnit": "g",
       "aliases": [],
       "corpusRows": 2,
@@ -4689,6 +4027,7 @@
       "category": "PRODUCE",
       "defaultUnit": "pcs",
       "aliases": [
+        "green onions (scallions)",
         "green onions",
         "spring onion",
         "spring onions"
@@ -4697,38 +4036,21 @@
       "corpusRecipes": 53
     },
     {
-      "name": "green onions (scallions)",
-      "displayName": "Green Onions (Scallions)",
-      "category": "PRODUCE",
-      "defaultUnit": "pcs",
-      "aliases": [],
-      "corpusRows": 1,
-      "corpusRecipes": 1
-    },
-    {
       "name": "green or red bell pepper",
       "displayName": "Green Or Red Bell Pepper",
       "category": "PRODUCE",
       "defaultUnit": "cup",
       "aliases": [
+        "green or red pepper",
         "green or red bell peppers"
       ],
       "corpusRows": 2,
       "corpusRecipes": 2
     },
     {
-      "name": "green or red pepper",
-      "displayName": "Green Or Red Pepper",
-      "category": "PRODUCE",
-      "defaultUnit": "cup",
-      "aliases": [],
-      "corpusRows": 3,
-      "corpusRecipes": 3
-    },
-    {
       "name": "green peas",
       "displayName": "Green Peas",
-      "category": "FROZEN",
+      "category": "PRODUCE",
       "defaultUnit": "cup",
       "aliases": [
         "low-sodium green peas"
@@ -4741,18 +4063,12 @@
       "displayName": "Green Pepper",
       "category": "PRODUCE",
       "defaultUnit": "pcs",
-      "aliases": [],
-      "corpusRows": 56,
-      "corpusRecipes": 56
-    },
-    {
-      "name": "green peppers",
-      "displayName": "Green Peppers",
-      "category": "PRODUCE",
-      "defaultUnit": "cup",
-      "aliases": [],
-      "corpusRows": 4,
-      "corpusRecipes": 4
+      "aliases": [
+        "green peppers",
+        "chopped green peppers"
+      ],
+      "corpusRows": 60,
+      "corpusRecipes": 60
     },
     {
       "name": "green split peas",
@@ -4777,9 +4093,11 @@
       "displayName": "Greens",
       "category": "PRODUCE",
       "defaultUnit": "cup",
-      "aliases": [],
-      "corpusRows": 1,
-      "corpusRecipes": 1
+      "aliases": [
+        "fresh greens"
+      ],
+      "corpusRows": 2,
+      "corpusRecipes": 2
     },
     {
       "name": "grilled chicken strip",
@@ -4793,7 +4111,7 @@
     {
       "name": "grits",
       "displayName": "Grits",
-      "category": "DRY_GOODS",
+      "category": "GRAINS_RICE",
       "defaultUnit": "cup",
       "aliases": [],
       "corpusRows": 1,
@@ -4802,7 +4120,7 @@
     {
       "name": "ground allspice",
       "displayName": "Allspice",
-      "category": "CONDIMENTS",
+      "category": "BAKING_SPICES",
       "defaultUnit": "tsp",
       "aliases": [],
       "corpusRows": 2,
@@ -4833,7 +4151,7 @@
     {
       "name": "ground black pepper",
       "displayName": "Ground Black Pepper",
-      "category": "CONDIMENTS",
+      "category": "BAKING_SPICES",
       "defaultUnit": "tsp",
       "aliases": [
         "black ground pepper"
@@ -4844,7 +4162,7 @@
     {
       "name": "ground cayenne pepper",
       "displayName": "Ground Cayenne Pepper",
-      "category": "CONDIMENTS",
+      "category": "BAKING_SPICES",
       "defaultUnit": "tsp",
       "aliases": [],
       "corpusRows": 1,
@@ -4852,8 +4170,8 @@
     },
     {
       "name": "ground cinnamon",
-      "displayName": "Cinnamon",
-      "category": "CONDIMENTS",
+      "displayName": "Ground Cinnamon",
+      "category": "BAKING_SPICES",
       "defaultUnit": "tsp",
       "aliases": [],
       "corpusRows": 12,
@@ -4861,8 +4179,8 @@
     },
     {
       "name": "ground cloves",
-      "displayName": "Cloves",
-      "category": "CONDIMENTS",
+      "displayName": "Ground Cloves",
+      "category": "BAKING_SPICES",
       "defaultUnit": "tsp",
       "aliases": [],
       "corpusRows": 1,
@@ -4871,7 +4189,7 @@
     {
       "name": "ground cumin",
       "displayName": "Ground Cumin",
-      "category": "CONDIMENTS",
+      "category": "BAKING_SPICES",
       "defaultUnit": "tsp",
       "aliases": [],
       "corpusRows": 18,
@@ -4879,8 +4197,8 @@
     },
     {
       "name": "ground ginger",
-      "displayName": "Ginger",
-      "category": "PRODUCE",
+      "displayName": "Ground Ginger",
+      "category": "BAKING_SPICES",
       "defaultUnit": "tsp",
       "aliases": [],
       "corpusRows": 10,
@@ -4889,7 +4207,7 @@
     {
       "name": "ground mustard",
       "displayName": "Ground Mustard",
-      "category": "CONDIMENTS",
+      "category": "BAKING_SPICES",
       "defaultUnit": "tsp",
       "aliases": [],
       "corpusRows": 1,
@@ -4898,7 +4216,7 @@
     {
       "name": "ground nutmeg",
       "displayName": "Ground Nutmeg",
-      "category": "CONDIMENTS",
+      "category": "BAKING_SPICES",
       "defaultUnit": "tsp",
       "aliases": [],
       "corpusRows": 3,
@@ -4916,7 +4234,7 @@
     {
       "name": "ground red pepper",
       "displayName": "Ground Red Pepper",
-      "category": "CONDIMENTS",
+      "category": "BAKING_SPICES",
       "defaultUnit": "tsp",
       "aliases": [],
       "corpusRows": 1,
@@ -4924,8 +4242,8 @@
     },
     {
       "name": "ground sage",
-      "displayName": "Ground Sage",
-      "category": "CONDIMENTS",
+      "displayName": "Sage",
+      "category": "BAKING_SPICES",
       "defaultUnit": "tsp",
       "aliases": [],
       "corpusRows": 1,
@@ -4954,7 +4272,7 @@
     {
       "name": "ground white pepper",
       "displayName": "Ground White Pepper",
-      "category": "CONDIMENTS",
+      "category": "BAKING_SPICES",
       "defaultUnit": "tsp",
       "aliases": [],
       "corpusRows": 1,
@@ -5042,15 +4360,6 @@
       "corpusRecipes": 1
     },
     {
-      "name": "head of lettuce",
-      "displayName": "Head Of Lettuce",
-      "category": "PRODUCE",
-      "defaultUnit": "pcs",
-      "aliases": [],
-      "corpusRows": 1,
-      "corpusRecipes": 1
-    },
-    {
       "name": "heirloom cherry tomatoes",
       "displayName": "Heirloom Cherry Tomatoes",
       "category": "PRODUCE",
@@ -5062,7 +4371,7 @@
     {
       "name": "herb seasoning",
       "displayName": "Herb Seasoning",
-      "category": "CONDIMENTS",
+      "category": "BAKING_SPICES",
       "defaultUnit": "tsp",
       "aliases": [],
       "corpusRows": 2,
@@ -5071,7 +4380,7 @@
     {
       "name": "herbs",
       "displayName": "Herbs",
-      "category": "CONDIMENTS",
+      "category": "BAKING_SPICES",
       "defaultUnit": "tsp",
       "aliases": [],
       "corpusRows": 2,
@@ -5089,45 +4398,23 @@
     {
       "name": "honey",
       "displayName": "Honey",
-      "category": "OTHER",
+      "category": "JAM_NUT_BUTTER",
       "defaultUnit": "tbsp",
-      "aliases": [],
+      "aliases": [
+        "honey or maple syrup"
+      ],
       "corpusRows": 42,
       "corpusRecipes": 42
-    },
-    {
-      "name": "honey or maple syrup",
-      "displayName": "Honey Or Maple Syrup",
-      "category": "BEVERAGES",
-      "defaultUnit": "tbsp",
-      "aliases": [],
-      "corpusRows": 1,
-      "corpusRecipes": 1
-    },
-    {
-      "name": "honeydew cubes",
-      "displayName": "Honeydew Cubes",
-      "category": "PRODUCE",
-      "defaultUnit": "cup",
-      "aliases": [],
-      "corpusRows": 1,
-      "corpusRecipes": 1
     },
     {
       "name": "honeydew melon",
       "displayName": "Honeydew Melon",
       "category": "PRODUCE",
       "defaultUnit": "pcs",
-      "aliases": [],
-      "corpusRows": 1,
-      "corpusRecipes": 1
-    },
-    {
-      "name": "honeydew melon chunks",
-      "displayName": "Honeydew Melon Chunks",
-      "category": "PRODUCE",
-      "defaultUnit": "cup",
-      "aliases": [],
+      "aliases": [
+        "honeydew cubes",
+        "honeydew melon chunks"
+      ],
       "corpusRows": 1,
       "corpusRecipes": 1
     },
@@ -5152,7 +4439,7 @@
     {
       "name": "hot cooked brown rice",
       "displayName": "Hot Cooked Brown Rice",
-      "category": "DRY_GOODS",
+      "category": "CANNED",
       "defaultUnit": "cup",
       "aliases": [],
       "corpusRows": 1,
@@ -5161,7 +4448,7 @@
     {
       "name": "hot cooked wild rice",
       "displayName": "Hot Cooked Wild Rice",
-      "category": "DRY_GOODS",
+      "category": "CANNED",
       "defaultUnit": "cup",
       "aliases": [],
       "corpusRows": 1,
@@ -5170,7 +4457,7 @@
     {
       "name": "hot pepper",
       "displayName": "Hot Pepper",
-      "category": "CONDIMENTS",
+      "category": "PRODUCE",
       "defaultUnit": "tsp",
       "aliases": [
         "hot peppers"
@@ -5181,7 +4468,7 @@
     {
       "name": "hot pepper flakes",
       "displayName": "Hot Pepper Flakes",
-      "category": "CONDIMENTS",
+      "category": "BAKING_SPICES",
       "defaultUnit": "tsp",
       "aliases": [],
       "corpusRows": 4,
@@ -5217,16 +4504,18 @@
     {
       "name": "ice",
       "displayName": "Ice",
-      "category": "OTHER",
+      "category": "KITCHEN",
       "defaultUnit": "cup",
-      "aliases": [],
-      "corpusRows": 8,
-      "corpusRecipes": 8
+      "aliases": [
+        "crushed ice"
+      ],
+      "corpusRows": 10,
+      "corpusRecipes": 10
     },
     {
       "name": "ice cube tray or small paper cups",
       "displayName": "Ice Cube Tray Or Small Paper Cups",
-      "category": "OTHER",
+      "category": "KITCHEN",
       "defaultUnit": null,
       "aliases": [],
       "corpusRows": 4,
@@ -5235,7 +4524,7 @@
     {
       "name": "ice cubes",
       "displayName": "Ice Cubes",
-      "category": "OTHER",
+      "category": "BEVERAGES",
       "defaultUnit": "pcs",
       "aliases": [
         "ice cube"
@@ -5257,23 +4546,14 @@
       "displayName": "Iceberg Lettuce",
       "category": "PRODUCE",
       "defaultUnit": "cup",
-      "aliases": [],
+      "aliases": ["iceberg lettuce leaf"],
       "corpusRows": 2,
       "corpusRecipes": 2
     },
     {
-      "name": "iceberg lettuce leaf",
-      "displayName": "Iceberg Lettuce Leaf",
-      "category": "PRODUCE",
-      "defaultUnit": "pcs",
-      "aliases": [],
-      "corpusRows": 1,
-      "corpusRecipes": 1
-    },
-    {
       "name": "instant brown rice",
       "displayName": "Instant Brown Rice",
-      "category": "DRY_GOODS",
+      "category": "GRAINS_RICE",
       "defaultUnit": "cup",
       "aliases": [],
       "corpusRows": 4,
@@ -5282,7 +4562,7 @@
     {
       "name": "instant mashed potatoes",
       "displayName": "Instant Mashed Potatoes",
-      "category": "DRY_GOODS",
+      "category": "PRODUCE",
       "defaultUnit": "cup",
       "aliases": [],
       "corpusRows": 1,
@@ -5290,8 +4570,8 @@
     },
     {
       "name": "instant pearl barley",
-      "displayName": "Barley",
-      "category": "DRY_GOODS",
+      "displayName": "Instant Pearl Barley",
+      "category": "GRAINS_RICE",
       "defaultUnit": "cup",
       "aliases": [],
       "corpusRows": 1,
@@ -5300,7 +4580,7 @@
     {
       "name": "instant pudding mix",
       "displayName": "Instant Pudding Mix",
-      "category": "DRY_GOODS",
+      "category": "DAIRY",
       "defaultUnit": "g",
       "aliases": [],
       "corpusRows": 2,
@@ -5309,7 +4589,7 @@
     {
       "name": "instant ramen-style noodles",
       "displayName": "Instant Ramen-Style Noodles",
-      "category": "DRY_GOODS",
+      "category": "PASTA_SAUCES",
       "defaultUnit": "pcs",
       "aliases": [],
       "corpusRows": 1,
@@ -5318,7 +4598,7 @@
     {
       "name": "instant vanilla pudding mix",
       "displayName": "Instant Vanilla Pudding Mix",
-      "category": "DRY_GOODS",
+      "category": "DAIRY",
       "defaultUnit": "g",
       "aliases": [],
       "corpusRows": 1,
@@ -5336,7 +4616,7 @@
     {
       "name": "instant whole-grain rice",
       "displayName": "Instant Whole-Grain Rice",
-      "category": "DRY_GOODS",
+      "category": "GRAINS_RICE",
       "defaultUnit": "cup",
       "aliases": [],
       "corpusRows": 1,
@@ -5345,17 +4625,8 @@
     {
       "name": "instant yeast",
       "displayName": "Instant Yeast",
-      "category": "DRY_GOODS",
+      "category": "BAKING_SPICES",
       "defaultUnit": "tbsp",
-      "aliases": [],
-      "corpusRows": 1,
-      "corpusRecipes": 1
-    },
-    {
-      "name": "instruction",
-      "displayName": "Instruction",
-      "category": "OTHER",
-      "defaultUnit": null,
       "aliases": [],
       "corpusRows": 1,
       "corpusRecipes": 1
@@ -5373,49 +4644,18 @@
       "corpusRecipes": 8
     },
     {
-      "name": "italian herb blend",
-      "displayName": "Italian Herb Blend",
-      "category": "CONDIMENTS",
-      "defaultUnit": "tbsp",
-      "aliases": [],
-      "corpusRows": 1,
-      "corpusRecipes": 1
-    },
-    {
-      "name": "italian herb mix",
-      "displayName": "Italian Herb Mix",
-      "category": "CONDIMENTS",
-      "defaultUnit": "tsp",
-      "aliases": [],
-      "corpusRows": 1,
-      "corpusRecipes": 1
-    },
-    {
-      "name": "italian herb mix and black pepper",
-      "displayName": "Italian Herb Mix And Black Pepper",
-      "category": "CONDIMENTS",
-      "defaultUnit": null,
-      "aliases": [],
-      "corpusRows": 1,
-      "corpusRecipes": 1
-    },
-    {
       "name": "italian herb seasoning",
       "displayName": "Italian Herb Seasoning",
-      "category": "CONDIMENTS",
+      "category": "BAKING_SPICES",
       "defaultUnit": "tsp",
-      "aliases": [],
+      "aliases": [
+        "italian herbs",
+        "italian herb blend",
+        "italian herb mix",
+        "italian herb mix and black pepper"
+      ],
       "corpusRows": 2,
       "corpusRecipes": 2
-    },
-    {
-      "name": "italian herbs",
-      "displayName": "Italian Herbs",
-      "category": "CONDIMENTS",
-      "defaultUnit": "tsp",
-      "aliases": [],
-      "corpusRows": 1,
-      "corpusRecipes": 1
     },
     {
       "name": "italian kale",
@@ -5450,7 +4690,7 @@
     {
       "name": "italian seasoning",
       "displayName": "Italian Seasoning",
-      "category": "CONDIMENTS",
+      "category": "BAKING_SPICES",
       "defaultUnit": "tsp",
       "aliases": [],
       "corpusRows": 17,
@@ -5468,48 +4708,8 @@
     {
       "name": "italian tomatoes",
       "displayName": "Italian Tomatoes",
-      "category": "PRODUCE",
+      "category": "CANNED",
       "defaultUnit": "g",
-      "aliases": [],
-      "corpusRows": 1,
-      "corpusRecipes": 1
-    },
-    {
-      "name": "jalapeno chile",
-      "displayName": "Jalapeno Chile",
-      "category": "PRODUCE",
-      "defaultUnit": "pcs",
-      "aliases": [
-        "jalapeno chili"
-      ],
-      "corpusRows": 3,
-      "corpusRecipes": 3
-    },
-    {
-      "name": "jalapeno pepper",
-      "displayName": "Jalapeno Pepper",
-      "category": "PRODUCE",
-      "defaultUnit": "pcs",
-      "aliases": [],
-      "corpusRows": 10,
-      "corpusRecipes": 10
-    },
-    {
-      "name": "jalape\u00F1o",
-      "displayName": "Jalape\u00F1o",
-      "category": "PRODUCE",
-      "defaultUnit": "pcs",
-      "aliases": [
-        "fresh jalape\u00F1o"
-      ],
-      "corpusRows": 3,
-      "corpusRecipes": 3
-    },
-    {
-      "name": "jalape\u00F1o chile pepper",
-      "displayName": "Jalape\u00F1o Pepper",
-      "category": "PRODUCE",
-      "defaultUnit": "pcs",
       "aliases": [],
       "corpusRows": 1,
       "corpusRecipes": 1
@@ -5519,7 +4719,13 @@
       "displayName": "Jalape\u00F1o Pepper",
       "category": "PRODUCE",
       "defaultUnit": "pcs",
-      "aliases": [],
+      "aliases": [
+        "jalapeno pepper",
+        "jalape\u00F1o",
+        "jalapeno chile",
+        "jalape\u00F1o chile pepper",
+        "fresh jalape\u00F1o"
+      ],
       "corpusRows": 5,
       "corpusRecipes": 5
     },
@@ -5580,7 +4786,7 @@
     {
       "name": "kernel corn",
       "displayName": "Kernel Corn",
-      "category": "PRODUCE",
+      "category": "CANNED",
       "defaultUnit": "cup",
       "aliases": [],
       "corpusRows": 1,
@@ -5601,6 +4807,8 @@
       "category": "CANNED",
       "defaultUnit": "g",
       "aliases": [
+        "kidney or pinto beans",
+        "kidney beans or garbanzo beans",
         "kidney bean",
         "low-sodium kidney beans"
       ],
@@ -5608,47 +4816,21 @@
       "corpusRecipes": 27
     },
     {
-      "name": "kidney beans or garbanzo beans",
-      "displayName": "Kidney Beans Or Garbanzo Beans",
-      "category": "CANNED",
-      "defaultUnit": "g",
-      "aliases": [],
-      "corpusRows": 1,
-      "corpusRecipes": 1
-    },
-    {
-      "name": "kidney or pinto beans",
-      "displayName": "Kidney Or Pinto Beans",
-      "category": "CANNED",
-      "defaultUnit": "cup",
-      "aliases": [],
-      "corpusRows": 2,
-      "corpusRecipes": 2
-    },
-    {
       "name": "kiwi",
       "displayName": "Kiwi",
       "category": "PRODUCE",
       "defaultUnit": "pcs",
-      "aliases": [],
+      "aliases": [
+        "kiwifruit",
+        "kiwifruits"
+      ],
       "corpusRows": 1,
       "corpusRecipes": 1
     },
     {
-      "name": "kiwifruit",
-      "displayName": "Kiwifruit",
-      "category": "PRODUCE",
-      "defaultUnit": "pcs",
-      "aliases": [
-        "kiwifruits"
-      ],
-      "corpusRows": 5,
-      "corpusRecipes": 5
-    },
-    {
       "name": "kosher salt",
       "displayName": "Salt",
-      "category": "DRY_GOODS",
+      "category": "BAKING_SPICES",
       "defaultUnit": "tsp",
       "aliases": [],
       "corpusRows": 10,
@@ -5666,7 +4848,7 @@
     {
       "name": "lasagna noodles",
       "displayName": "Lasagna Noodles",
-      "category": "DRY_GOODS",
+      "category": "PASTA_SAUCES",
       "defaultUnit": "g",
       "aliases": [],
       "corpusRows": 1,
@@ -5695,13 +4877,11 @@
     {
       "name": "lemon juice",
       "displayName": "Lemon Juice",
-      "category": "BEVERAGES",
+      "category": "CONDIMENTS",
       "defaultUnit": "tbsp",
-      "aliases": [
-        "fresh lemon juice"
-      ],
-      "corpusRows": 93,
-      "corpusRecipes": 92
+      "aliases": [],
+      "corpusRows": 90,
+      "corpusRecipes": 89
     },
     {
       "name": "lemon non-fat yogurt",
@@ -5724,19 +4904,16 @@
     {
       "name": "lemon or lime juice",
       "displayName": "Lemon Or Lime Juice",
-      "category": "BEVERAGES",
+      "category": "CONDIMENTS",
       "defaultUnit": "tbsp",
-      "aliases": [
-        "lime juice or lemon juice",
-        "lime or lemon juice"
-      ],
-      "corpusRows": 4,
-      "corpusRecipes": 4
+      "aliases": [],
+      "corpusRows": 2,
+      "corpusRecipes": 2
     },
     {
       "name": "lemon peel",
       "displayName": "Lemon Peel",
-      "category": "CONDIMENTS",
+      "category": "BAKING_SPICES",
       "defaultUnit": "tsp",
       "aliases": [],
       "corpusRows": 5,
@@ -5745,29 +4922,14 @@
     {
       "name": "lemon pepper",
       "displayName": "Lemon Pepper",
-      "category": "CONDIMENTS",
+      "category": "BAKING_SPICES",
       "defaultUnit": "tsp",
-      "aliases": [],
+      "aliases": [
+        "lemon pepper seasoning",
+        "lemon pepper seasoning blend"
+      ],
       "corpusRows": 2,
       "corpusRecipes": 2
-    },
-    {
-      "name": "lemon pepper seasoning",
-      "displayName": "Lemon Pepper Seasoning",
-      "category": "CONDIMENTS",
-      "defaultUnit": "tsp",
-      "aliases": [],
-      "corpusRows": 4,
-      "corpusRecipes": 4
-    },
-    {
-      "name": "lemon pepper seasoning blend",
-      "displayName": "Lemon Pepper Seasoning Blend",
-      "category": "CONDIMENTS",
-      "defaultUnit": "tbsp",
-      "aliases": [],
-      "corpusRows": 1,
-      "corpusRecipes": 1
     },
     {
       "name": "lemon rind",
@@ -5821,9 +4983,13 @@
       "displayName": "Lettuce",
       "category": "PRODUCE",
       "defaultUnit": "pcs",
-      "aliases": [],
-      "corpusRows": 17,
-      "corpusRecipes": 17
+      "aliases": [
+        "head of lettuce",
+        "lettuce leaf",
+        "lettuce leaves"
+      ],
+      "corpusRows": 18,
+      "corpusRecipes": 18
     },
     {
       "name": "lettuce and tomato",
@@ -5833,17 +4999,6 @@
       "aliases": [],
       "corpusRows": 1,
       "corpusRecipes": 1
-    },
-    {
-      "name": "lettuce leaves",
-      "displayName": "Lettuce Leaves",
-      "category": "PRODUCE",
-      "defaultUnit": "pcs",
-      "aliases": [
-        "lettuce leaf"
-      ],
-      "corpusRows": 11,
-      "corpusRecipes": 11
     },
     {
       "name": "lettuce mix",
@@ -5893,7 +5048,7 @@
     {
       "name": "light tortilla chips",
       "displayName": "Light Tortilla Chips",
-      "category": "BAKERY",
+      "category": "DRY_GOODS",
       "defaultUnit": "cup",
       "aliases": [],
       "corpusRows": 2,
@@ -5902,7 +5057,7 @@
     {
       "name": "lima beans",
       "displayName": "Lima Beans",
-      "category": "FROZEN",
+      "category": "CANNED",
       "defaultUnit": "cup",
       "aliases": [
         "lima bean"
@@ -5924,13 +5079,11 @@
     {
       "name": "lime juice",
       "displayName": "Lime Juice",
-      "category": "BEVERAGES",
+      "category": "CONDIMENTS",
       "defaultUnit": "tbsp",
-      "aliases": [
-        "fresh lime juice"
-      ],
-      "corpusRows": 34,
-      "corpusRecipes": 33
+      "aliases": [],
+      "corpusRows": 31,
+      "corpusRecipes": 30
     },
     {
       "name": "lime or lemon",
@@ -5942,9 +5095,18 @@
       "corpusRecipes": 1
     },
     {
+      "name": "lime or lemon juice",
+      "displayName": "Lime Or Lemon Juice",
+      "category": "CONDIMENTS",
+      "defaultUnit": "tbsp",
+      "aliases": ["lime juice or lemon juice"],
+      "corpusRows": 1,
+      "corpusRecipes": 1
+    },
+    {
       "name": "lime or orange juice",
       "displayName": "Lime Or Orange Juice",
-      "category": "BEVERAGES",
+      "category": "CONDIMENTS",
       "defaultUnit": "tsp",
       "aliases": [],
       "corpusRows": 1,
@@ -5978,15 +5140,6 @@
       "corpusRecipes": 1
     },
     {
-      "name": "logs",
-      "displayName": "Logs",
-      "category": "OTHER",
-      "defaultUnit": null,
-      "aliases": [],
-      "corpusRows": 1,
-      "corpusRecipes": 1
-    },
-    {
       "name": "low sodium whole wheat crackers",
       "displayName": "Low Sodium Whole Wheat Crackers",
       "category": "BAKERY",
@@ -5994,6 +5147,18 @@
       "aliases": [],
       "corpusRows": 1,
       "corpusRecipes": 1
+    },
+    {
+      "name": "low-fat cheese",
+      "displayName": "Low-Fat Cheese",
+      "category": "DAIRY",
+      "defaultUnit": "cup",
+      "aliases": [
+        "fat-free cheese",
+        "reduced-fat cheese"
+      ],
+      "corpusRows": 3,
+      "corpusRecipes": 3
     },
     {
       "name": "low-fat fruit yogurt",
@@ -6005,17 +5170,16 @@
       "corpusRecipes": 1
     },
     {
-      "name": "low-fat plain yogurt",
-      "displayName": "Low-Fat Plain Yogurt",
+      "name": "low-fat milk",
+      "displayName": "Low-Fat Milk",
       "category": "DAIRY",
       "defaultUnit": "cup",
       "aliases": [
-        "fat-free plain yogurt",
-        "non-fat plain yogurt",
-        "plain low-fat yogurt"
+        "1% low-fat milk",
+        "low-fat 1% milk"
       ],
-      "corpusRows": 12,
-      "corpusRecipes": 12
+      "corpusRows": 8,
+      "corpusRecipes": 8
     },
     {
       "name": "low-fat ricotta",
@@ -6038,57 +5202,44 @@
     {
       "name": "low-fat vanilla frozen yogurt",
       "displayName": "Low-Fat Vanilla Frozen Yogurt",
-      "category": "FROZEN",
+      "category": "DAIRY",
       "defaultUnit": "cup",
       "aliases": [],
       "corpusRows": 1,
       "corpusRecipes": 1
     },
     {
-      "name": "low-fat vanilla yogurt",
-      "displayName": "Low-Fat Vanilla Yogurt",
-      "category": "DAIRY",
-      "defaultUnit": "cup",
-      "aliases": [
-        "fat-free vanilla yogurt",
-        "low fat vanilla yogurt",
-        "nonfat vanilla yogurt"
-      ],
-      "corpusRows": 7,
-      "corpusRecipes": 7
-    },
-    {
       "name": "low-sodium adobo seasoning",
       "displayName": "Low-Sodium Adobo Seasoning",
-      "category": "CONDIMENTS",
+      "category": "BAKING_SPICES",
       "defaultUnit": "tsp",
       "aliases": [],
       "corpusRows": 3,
       "corpusRecipes": 2
     },
     {
-      "name": "low-sodium beans",
-      "displayName": "Low-Sodium Beans",
-      "category": "CANNED",
-      "defaultUnit": "g",
-      "aliases": [],
-      "corpusRows": 1,
-      "corpusRecipes": 1
-    },
-    {
       "name": "low-sodium bouillon",
       "displayName": "Low-Sodium Bouillon",
-      "category": "OTHER",
+      "category": "CANNED",
       "defaultUnit": "tsp",
-      "aliases": [],
+      "aliases": [ "low-sodium vegetable bouillon cube"],
       "corpusRows": 2,
       "corpusRecipes": 2
     },
     {
       "name": "low-sodium bouillon granules",
       "displayName": "Low-Sodium Bouillon Granules",
-      "category": "DAIRY",
+      "category": "CANNED",
       "defaultUnit": "tsp",
+      "aliases": [],
+      "corpusRows": 1,
+      "corpusRecipes": 1
+    },
+    {
+      "name": "low-sodium chopped tomatoes",
+      "displayName": "Low-Sodium Chopped Tomatoes",
+      "category": "CANNED",
+      "defaultUnit": "g",
       "aliases": [],
       "corpusRows": 1,
       "corpusRecipes": 1
@@ -6107,15 +5258,6 @@
       "displayName": "Low-Sodium Sliced Potatoes",
       "category": "CANNED",
       "defaultUnit": "g",
-      "aliases": [],
-      "corpusRows": 1,
-      "corpusRecipes": 1
-    },
-    {
-      "name": "low-sodium vegetable bouillon cube",
-      "displayName": "Low-Sodium Vegetable Bouillon Cube",
-      "category": "CONDIMENTS",
-      "defaultUnit": "pcs",
       "aliases": [],
       "corpusRows": 1,
       "corpusRecipes": 1
@@ -6141,11 +5283,20 @@
     {
       "name": "macaroni",
       "displayName": "Macaroni",
-      "category": "DRY_GOODS",
+      "category": "PASTA_SAUCES",
       "defaultUnit": "cup",
       "aliases": [],
       "corpusRows": 11,
       "corpusRecipes": 11
+    },
+    {
+      "name": "mandarin orange",
+      "displayName": "Mandarin Orange",
+      "category": "CANNED",
+      "defaultUnit": "cup",
+      "aliases": [],
+      "corpusRows": 2,
+      "corpusRecipes": 2
     },
     {
       "name": "mandarin orange juice",
@@ -6157,47 +5308,27 @@
       "corpusRecipes": 1
     },
     {
-      "name": "mandarin orange sections",
-      "displayName": "Mandarin Orange Sections",
-      "category": "PRODUCE",
-      "defaultUnit": "g",
-      "aliases": [],
-      "corpusRows": 2,
-      "corpusRecipes": 2
-    },
-    {
       "name": "mandarin oranges",
       "displayName": "Mandarin Oranges",
       "category": "CANNED",
-      "defaultUnit": "cup",
-      "aliases": [
-        "mandarin orange"
-      ],
-      "corpusRows": 8,
-      "corpusRecipes": 8
+      "defaultUnit": "g",
+      "aliases": ["mandarin orange sections"],
+      "corpusRows": 6,
+      "corpusRecipes": 6
     },
     {
       "name": "mango",
       "displayName": "Mango",
       "category": "PRODUCE",
       "defaultUnit": "pcs",
-      "aliases": [],
+      "aliases": ["mango pieces"],
       "corpusRows": 10,
       "corpusRecipes": 10
     },
     {
-      "name": "mango pieces",
-      "displayName": "Mango Pieces",
-      "category": "PRODUCE",
-      "defaultUnit": "cup",
-      "aliases": [],
-      "corpusRows": 1,
-      "corpusRecipes": 1
-    },
-    {
       "name": "maple syrup",
       "displayName": "Maple Syrup",
-      "category": "BEVERAGES",
+      "category": "JAM_NUT_BUTTER",
       "defaultUnit": "tbsp",
       "aliases": [],
       "corpusRows": 6,
@@ -6206,7 +5337,7 @@
     {
       "name": "maple syrup or honey",
       "displayName": "Maple Syrup Or Honey",
-      "category": "OTHER",
+      "category": "JAM_NUT_BUTTER",
       "defaultUnit": "tbsp",
       "aliases": [],
       "corpusRows": 1,
@@ -6227,24 +5358,16 @@
       "category": "DAIRY",
       "defaultUnit": "tbsp",
       "aliases": [
-        "unsalted margarine or butter"
+        "unsalted margarine or butter",
+        "margarine or butter, to grease the muffin cups"
       ],
       "corpusRows": 13,
       "corpusRecipes": 13
     },
     {
-      "name": "margarine or butter, to grease the muffin cups",
-      "displayName": "Margarine Or Butter To Grease The Muffin Cups",
-      "category": "CONDIMENTS",
-      "defaultUnit": "tsp",
-      "aliases": [],
-      "corpusRows": 1,
-      "corpusRecipes": 1
-    },
-    {
       "name": "marinara sauce",
       "displayName": "Marinara Sauce",
-      "category": "CANNED",
+      "category": "PASTA_SAUCES",
       "defaultUnit": "cup",
       "aliases": [],
       "corpusRows": 2,
@@ -6253,7 +5376,7 @@
     {
       "name": "marjoram",
       "displayName": "Marjoram",
-      "category": "CONDIMENTS",
+      "category": "BAKING_SPICES",
       "defaultUnit": "tsp",
       "aliases": [],
       "corpusRows": 1,
@@ -6262,7 +5385,7 @@
     {
       "name": "masa harina",
       "displayName": "Masa Harina",
-      "category": "DRY_GOODS",
+      "category": "GRAINS_RICE",
       "defaultUnit": "cup",
       "aliases": [],
       "corpusRows": 1,
@@ -6295,16 +5418,7 @@
       "displayName": "Melon",
       "category": "PRODUCE",
       "defaultUnit": "cup",
-      "aliases": [],
-      "corpusRows": 1,
-      "corpusRecipes": 1
-    },
-    {
-      "name": "melon slices",
-      "displayName": "Melon Slices",
-      "category": "PRODUCE",
-      "defaultUnit": "cup",
-      "aliases": [],
+      "aliases": ["melon slices"],
       "corpusRows": 1,
       "corpusRecipes": 1
     },
@@ -6320,7 +5434,7 @@
     {
       "name": "mild chiles",
       "displayName": "Mild Chiles",
-      "category": "PRODUCE",
+      "category": "CANNED",
       "defaultUnit": "cup",
       "aliases": [],
       "corpusRows": 1,
@@ -6332,19 +5446,15 @@
       "category": "DAIRY",
       "defaultUnit": "cup",
       "aliases": [
-        "1% low-fat milk",
         "fat free (skim) milk",
         "fat-free (skim) milk",
         "fat-free milk",
-        "low-fat 1% milk",
-        "low-fat milk",
         "non-fat milk",
         "nonfat milk",
-        "skim milk",
-        "whole milk"
+        "skim milk"
       ],
-      "corpusRows": 152,
-      "corpusRecipes": 150
+      "corpusRows": 142,
+      "corpusRecipes": 140
     },
     {
       "name": "milk powder",
@@ -6367,7 +5477,7 @@
     {
       "name": "mini muffin cups",
       "displayName": "Mini Muffin Cups",
-      "category": "OTHER",
+      "category": "KITCHEN",
       "defaultUnit": null,
       "aliases": [],
       "corpusRows": 1,
@@ -6376,7 +5486,7 @@
     {
       "name": "miniature marshmallows",
       "displayName": "Miniature Marshmallows",
-      "category": "FROZEN",
+      "category": "DAIRY",
       "defaultUnit": "cup",
       "aliases": [],
       "corpusRows": 1,
@@ -6394,7 +5504,7 @@
     {
       "name": "mint leaves",
       "displayName": "Mint Leaves",
-      "category": "CONDIMENTS",
+      "category": "PRODUCE",
       "defaultUnit": "cup",
       "aliases": [
         "fresh mint leaves"
@@ -6405,7 +5515,7 @@
     {
       "name": "minute brown rice",
       "displayName": "Minute Brown Rice",
-      "category": "DRY_GOODS",
+      "category": "GRAINS_RICE",
       "defaultUnit": "cup",
       "aliases": [],
       "corpusRows": 1,
@@ -6432,7 +5542,7 @@
     {
       "name": "molasses",
       "displayName": "Molasses",
-      "category": "CONDIMENTS",
+      "category": "JAM_NUT_BUTTER",
       "defaultUnit": "cup",
       "aliases": [
         "treacle"
@@ -6453,37 +5563,19 @@
       "corpusRecipes": 4
     },
     {
-      "name": "monterey jack or cheddar cheese",
-      "displayName": "Monterey Jack Or Cheddar Cheese",
-      "category": "DAIRY",
-      "defaultUnit": "cup",
-      "aliases": [],
-      "corpusRows": 1,
-      "corpusRecipes": 1
-    },
-    {
       "name": "mozzarella",
       "displayName": "Mozzarella",
       "category": "DAIRY",
       "defaultUnit": "cup",
       "aliases": [
         "low-fat mozzarella",
-        "part-skim mozzarella"
-      ],
-      "corpusRows": 3,
-      "corpusRecipes": 3
-    },
-    {
-      "name": "mozzarella cheese",
-      "displayName": "Mozzarella Cheese",
-      "category": "DAIRY",
-      "defaultUnit": "cup",
-      "aliases": [
+        "part-skim mozzarella",
+        "mozzarella cheese",
         "part skim mozzarella cheese",
         "part-skim mozzarella cheese"
       ],
-      "corpusRows": 28,
-      "corpusRecipes": 28
+      "corpusRows": 3,
+      "corpusRecipes": 3
     },
     {
       "name": "mozzarella string cheese",
@@ -6537,7 +5629,7 @@
     {
       "name": "mustard powder",
       "displayName": "Mustard Powder",
-      "category": "CONDIMENTS",
+      "category": "BAKING_SPICES",
       "defaultUnit": "tsp",
       "aliases": [],
       "corpusRows": 1,
@@ -6562,18 +5654,9 @@
       "corpusRecipes": 1
     },
     {
-      "name": "no salt added crushed or diced tomatoes",
-      "displayName": "No Salt Added Crushed Or Diced Tomatoes",
-      "category": "CANNED",
-      "defaultUnit": "g",
-      "aliases": [],
-      "corpusRows": 1,
-      "corpusRecipes": 1
-    },
-    {
       "name": "no-salt fiesta lime seasoning",
       "displayName": "No-Salt Fiesta Lime Seasoning",
-      "category": "CONDIMENTS",
+      "category": "BAKING_SPICES",
       "defaultUnit": "tbsp",
       "aliases": [],
       "corpusRows": 1,
@@ -6589,64 +5672,19 @@
       "corpusRecipes": 1
     },
     {
-      "name": "non-fat dried milk",
-      "displayName": "Non-Fat Dried Milk",
-      "category": "DAIRY",
-      "defaultUnit": "cup",
-      "aliases": [],
-      "corpusRows": 1,
-      "corpusRecipes": 1
-    },
-    {
       "name": "non-fat dry milk",
       "displayName": "Non-Fat Dry Milk",
       "category": "DAIRY",
       "defaultUnit": "cup",
       "aliases": [
+        "non-fat dry milk powder",
+        "non-fat dried milk",
         "dry milk",
         "fat-free dry milk",
         "nonfat dry milk"
       ],
       "corpusRows": 15,
       "corpusRecipes": 15
-    },
-    {
-      "name": "non-fat dry milk powder",
-      "displayName": "Non-Fat Dry Milk Powder",
-      "category": "DAIRY",
-      "defaultUnit": "cup",
-      "aliases": [
-        "dry milk powder"
-      ],
-      "corpusRows": 4,
-      "corpusRecipes": 4
-    },
-    {
-      "name": "non-fat greek yogurt",
-      "displayName": "Non-Fat Greek Yogurt",
-      "category": "DAIRY",
-      "defaultUnit": "cup",
-      "aliases": [],
-      "corpusRows": 1,
-      "corpusRecipes": 1
-    },
-    {
-      "name": "non-fat strawberry yogurt",
-      "displayName": "Non-Fat Strawberry Yogurt",
-      "category": "DAIRY",
-      "defaultUnit": "cup",
-      "aliases": [],
-      "corpusRows": 1,
-      "corpusRecipes": 1
-    },
-    {
-      "name": "non-stick cooking spray",
-      "displayName": "Non-Stick Cooking Spray",
-      "category": "OTHER",
-      "defaultUnit": "pcs",
-      "aliases": [],
-      "corpusRows": 6,
-      "corpusRecipes": 6
     },
     {
       "name": "nonfat honey greek yogurt",
@@ -6658,27 +5696,21 @@
       "corpusRecipes": 1
     },
     {
-      "name": "nonstick cooking spray",
-      "displayName": "Nonstick Cooking Spray",
-      "category": "OTHER",
-      "defaultUnit": "pcs",
-      "aliases": [],
-      "corpusRows": 5,
-      "corpusRecipes": 5
-    },
-    {
       "name": "nonstick vegetable spray",
       "displayName": "Nonstick Vegetable Spray",
-      "category": "OTHER",
+      "category": "CONDIMENTS",
       "defaultUnit": null,
-      "aliases": [],
+      "aliases": [
+        "nonstick cooking spray",
+        "non-stick cooking spray"
+      ],
       "corpusRows": 1,
       "corpusRecipes": 1
     },
     {
       "name": "noodles",
       "displayName": "Noodles",
-      "category": "DRY_GOODS",
+      "category": "PASTA_SAUCES",
       "defaultUnit": "cup",
       "aliases": [],
       "corpusRows": 2,
@@ -6687,7 +5719,7 @@
     {
       "name": "nutmeg",
       "displayName": "Nutmeg",
-      "category": "CONDIMENTS",
+      "category": "BAKING_SPICES",
       "defaultUnit": "tsp",
       "aliases": [],
       "corpusRows": 26,
@@ -6696,7 +5728,7 @@
     {
       "name": "nutmeg, allspice, or ginger",
       "displayName": "Nutmeg, Allspice, Or Ginger",
-      "category": "CONDIMENTS",
+      "category": "BAKING_SPICES",
       "defaultUnit": "tsp",
       "aliases": [],
       "corpusRows": 1,
@@ -6747,7 +5779,7 @@
     {
       "name": "oats",
       "displayName": "Oats",
-      "category": "DRY_GOODS",
+      "category": "GRAINS_RICE",
       "defaultUnit": "cup",
       "aliases": [],
       "corpusRows": 11,
@@ -6767,74 +5799,33 @@
       "displayName": "Okra",
       "category": "PRODUCE",
       "defaultUnit": "cup",
-      "aliases": [],
+      "aliases": ["okra pods","okra pod"],
       "corpusRows": 1,
       "corpusRecipes": 1
-    },
-    {
-      "name": "okra pod",
-      "displayName": "Okra Pod",
-      "category": "PRODUCE",
-      "defaultUnit": "pcs",
-      "aliases": [
-        "okra pods"
-      ],
-      "corpusRows": 2,
-      "corpusRecipes": 2
     },
     {
       "name": "old fashion oats",
       "displayName": "Old Fashion Oats",
-      "category": "DRY_GOODS",
+      "category": "GRAINS_RICE",
       "defaultUnit": "cup",
-      "aliases": [],
+      "aliases": [
+        "old fashioned oats",
+        "old fashioned rolled oats"
+      ],
       "corpusRows": 2,
       "corpusRecipes": 2
-    },
-    {
-      "name": "old fashioned oats",
-      "displayName": "Old Fashioned Oats",
-      "category": "DRY_GOODS",
-      "defaultUnit": "cup",
-      "aliases": [],
-      "corpusRows": 1,
-      "corpusRecipes": 1
-    },
-    {
-      "name": "old fashioned rolled oats",
-      "displayName": "Old Fashioned Rolled Oats",
-      "category": "DRY_GOODS",
-      "defaultUnit": "cup",
-      "aliases": [],
-      "corpusRows": 4,
-      "corpusRecipes": 4
     },
     {
       "name": "olive oil",
       "displayName": "Olive Oil",
       "category": "CONDIMENTS",
       "defaultUnit": "tbsp",
-      "aliases": [],
+      "aliases": [
+        "olive oil or cooking oil",
+        "olive or vegetable oil"
+      ],
       "corpusRows": 142,
       "corpusRecipes": 136
-    },
-    {
-      "name": "olive oil or cooking oil",
-      "displayName": "Olive Oil Or Cooking Oil",
-      "category": "CONDIMENTS",
-      "defaultUnit": "tbsp",
-      "aliases": [],
-      "corpusRows": 1,
-      "corpusRecipes": 1
-    },
-    {
-      "name": "olive or vegetable oil",
-      "displayName": "Olive Or Vegetable Oil",
-      "category": "CONDIMENTS",
-      "defaultUnit": "tbsp",
-      "aliases": [],
-      "corpusRows": 1,
-      "corpusRecipes": 1
     },
     {
       "name": "olives",
@@ -6863,7 +5854,7 @@
     {
       "name": "onion flakes",
       "displayName": "Onion Flakes",
-      "category": "CONDIMENTS",
+      "category": "DRY_GOODS",
       "defaultUnit": "tbsp",
       "aliases": [],
       "corpusRows": 1,
@@ -6872,29 +5863,11 @@
     {
       "name": "onion powder",
       "displayName": "Onion Powder",
-      "category": "CONDIMENTS",
+      "category": "BAKING_SPICES",
       "defaultUnit": "tsp",
       "aliases": [],
       "corpusRows": 22,
       "corpusRecipes": 22
-    },
-    {
-      "name": "optional gravy",
-      "displayName": "Optional Gravy",
-      "category": "CONDIMENTS",
-      "defaultUnit": null,
-      "aliases": [],
-      "corpusRows": 1,
-      "corpusRecipes": 1
-    },
-    {
-      "name": "optional seasonings",
-      "displayName": "Optional Seasonings",
-      "category": "CONDIMENTS",
-      "defaultUnit": null,
-      "aliases": [],
-      "corpusRows": 1,
-      "corpusRecipes": 1
     },
     {
       "name": "orange",
@@ -6912,11 +5885,9 @@
       "displayName": "Orange Juice",
       "category": "BEVERAGES",
       "defaultUnit": "cup",
-      "aliases": [
-        "fresh orange juice"
-      ],
-      "corpusRows": 42,
-      "corpusRecipes": 42
+      "aliases": [],
+      "corpusRows": 41,
+      "corpusRecipes": 41
     },
     {
       "name": "orange juice concentrate",
@@ -6930,7 +5901,7 @@
     {
       "name": "orange marmalade",
       "displayName": "Orange Marmalade",
-      "category": "CONDIMENTS",
+      "category": "JAM_NUT_BUTTER",
       "defaultUnit": "cup",
       "aliases": [],
       "corpusRows": 1,
@@ -6946,20 +5917,11 @@
       "corpusRecipes": 1
     },
     {
-      "name": "orange peel",
-      "displayName": "Orange Peel",
-      "category": "CONDIMENTS",
-      "defaultUnit": "tsp",
-      "aliases": [],
-      "corpusRows": 7,
-      "corpusRecipes": 7
-    },
-    {
       "name": "orange peel rind",
       "displayName": "Orange Peel Rind",
       "category": "PRODUCE",
       "defaultUnit": "tbsp",
-      "aliases": [],
+      "aliases": ["orange peel"],
       "corpusRows": 1,
       "corpusRecipes": 1
     },
@@ -6993,7 +5955,7 @@
     {
       "name": "oregano",
       "displayName": "Oregano",
-      "category": "CONDIMENTS",
+      "category": "BAKING_SPICES",
       "defaultUnit": "tsp",
       "aliases": [],
       "corpusRows": 43,
@@ -7002,7 +5964,7 @@
     {
       "name": "oregano leaf",
       "displayName": "Oregano Leaf",
-      "category": "CONDIMENTS",
+      "category": "BAKING_SPICES",
       "defaultUnit": "tsp",
       "aliases": [
         "oregano leaves"
@@ -7013,7 +5975,7 @@
     {
       "name": "oregano, basil, or hot pepper",
       "displayName": "Oregano, Basil, Or Hot Pepper",
-      "category": "CONDIMENTS",
+      "category": "BAKING_SPICES",
       "defaultUnit": null,
       "aliases": [],
       "corpusRows": 1,
@@ -7022,7 +5984,7 @@
     {
       "name": "oregano, basil, or other herbs",
       "displayName": "Oregano, Basil, Or Other Herbs",
-      "category": "CONDIMENTS",
+      "category": "BAKING_SPICES",
       "defaultUnit": "tsp",
       "aliases": [],
       "corpusRows": 1,
@@ -7031,7 +5993,7 @@
     {
       "name": "orzo pasta",
       "displayName": "Orzo Pasta",
-      "category": "DRY_GOODS",
+      "category": "PASTA_SAUCES",
       "defaultUnit": "cup",
       "aliases": [],
       "corpusRows": 1,
@@ -7040,17 +6002,8 @@
     {
       "name": "other necessary tools/equipment",
       "displayName": "Other Necessary Tools/Equipment",
-      "category": "OTHER",
+      "category": "KITCHEN",
       "defaultUnit": null,
-      "aliases": [],
-      "corpusRows": 1,
-      "corpusRecipes": 1
-    },
-    {
-      "name": "pancake and waffle mix",
-      "displayName": "Pancake And Waffle Mix",
-      "category": "DRY_GOODS",
-      "defaultUnit": "cup",
       "aliases": [],
       "corpusRows": 1,
       "corpusRecipes": 1
@@ -7058,9 +6011,9 @@
     {
       "name": "pancake mix",
       "displayName": "Pancake Mix",
-      "category": "DRY_GOODS",
+      "category": "BAKING_SPICES",
       "defaultUnit": "cup",
-      "aliases": [],
+      "aliases": ["pancake and waffle mix"],
       "corpusRows": 1,
       "corpusRecipes": 1
     },
@@ -7094,7 +6047,7 @@
     {
       "name": "paper cup",
       "displayName": "Paper Cup",
-      "category": "OTHER",
+      "category": "KITCHEN",
       "defaultUnit": "g",
       "aliases": [
         "paper cups"
@@ -7104,8 +6057,8 @@
     },
     {
       "name": "paper straws",
-      "displayName": "Paper Straws",
-      "category": "OTHER",
+      "displayName": "Paper Straws Or Popsicle Sticks",
+      "category": "KITCHEN",
       "defaultUnit": null,
       "aliases": [],
       "corpusRows": 1,
@@ -7114,7 +6067,7 @@
     {
       "name": "paper straws or popsicle sticks",
       "displayName": "Paper Straws Or Popsicle Sticks",
-      "category": "OTHER",
+      "category": "KITCHEN",
       "defaultUnit": null,
       "aliases": [],
       "corpusRows": 3,
@@ -7123,25 +6076,16 @@
     {
       "name": "paprika",
       "displayName": "Paprika",
-      "category": "CONDIMENTS",
+      "category": "BAKING_SPICES",
       "defaultUnit": "tsp",
-      "aliases": [],
+      "aliases": ["paprika (optional)"],
       "corpusRows": 25,
       "corpusRecipes": 25
     },
     {
-      "name": "paprika (optional)",
-      "displayName": "Paprika (Optional)",
-      "category": "CONDIMENTS",
-      "defaultUnit": "tsp",
-      "aliases": [],
-      "corpusRows": 1,
-      "corpusRecipes": 1
-    },
-    {
       "name": "parfait cup",
       "displayName": "Parfait Cup",
-      "category": "OTHER",
+      "category": "KITCHEN",
       "defaultUnit": null,
       "aliases": [],
       "corpusRows": 1,
@@ -7172,18 +6116,16 @@
     {
       "name": "parsley",
       "displayName": "Parsley",
-      "category": "CONDIMENTS",
+      "category": "BAKING_SPICES",
       "defaultUnit": "tbsp",
-      "aliases": [
-        "fresh parsley"
-      ],
-      "corpusRows": 58,
-      "corpusRecipes": 58
+      "aliases": [],
+      "corpusRows": 47,
+      "corpusRecipes": 47
     },
     {
       "name": "parsley flakes",
       "displayName": "Parsley Flakes",
-      "category": "CONDIMENTS",
+      "category": "BAKING_SPICES",
       "defaultUnit": "tbsp",
       "aliases": [],
       "corpusRows": 6,
@@ -7192,20 +6134,11 @@
     {
       "name": "parsley leaf",
       "displayName": "Parsley Leaf",
-      "category": "CONDIMENTS",
+      "category": "BAKING_SPICES",
       "defaultUnit": "cup",
       "aliases": [],
       "corpusRows": 1,
       "corpusRecipes": 1
-    },
-    {
-      "name": "parsley or cilantro",
-      "displayName": "Parsley Or Cilantro",
-      "category": "PRODUCE",
-      "defaultUnit": "tbsp",
-      "aliases": [],
-      "corpusRows": 2,
-      "corpusRecipes": 2
     },
     {
       "name": "parsnips",
@@ -7219,7 +6152,7 @@
     {
       "name": "pasta",
       "displayName": "Pasta",
-      "category": "DRY_GOODS",
+      "category": "PASTA_SAUCES",
       "defaultUnit": "cup",
       "aliases": [],
       "corpusRows": 16,
@@ -7228,7 +6161,7 @@
     {
       "name": "pasta sauce",
       "displayName": "Pasta Sauce",
-      "category": "CANNED",
+      "category": "PASTA_SAUCES",
       "defaultUnit": "cup",
       "aliases": [],
       "corpusRows": 2,
@@ -7237,7 +6170,7 @@
     {
       "name": "pasta shell",
       "displayName": "Pasta Shell",
-      "category": "DRY_GOODS",
+      "category": "PASTA_SAUCES",
       "defaultUnit": "g",
       "aliases": [
         "large pasta shells",
@@ -7261,7 +6194,9 @@
       "category": "PRODUCE",
       "defaultUnit": "pcs",
       "aliases": [
-        "fresh peaches"
+        "fresh peaches",
+        "peaches",
+        "sliced peaches"
       ],
       "corpusRows": 6,
       "corpusRecipes": 6
@@ -7269,7 +6204,7 @@
     {
       "name": "peach halves",
       "displayName": "Peach Halves",
-      "category": "CANNED",
+      "category": "PRODUCE",
       "defaultUnit": "g",
       "aliases": [],
       "corpusRows": 1,
@@ -7294,20 +6229,9 @@
       "corpusRecipes": 1
     },
     {
-      "name": "peaches",
-      "displayName": "Peaches",
-      "category": "CANNED",
-      "defaultUnit": "g",
-      "aliases": [
-        "sliced peaches"
-      ],
-      "corpusRows": 8,
-      "corpusRecipes": 8
-    },
-    {
       "name": "peanut butter",
       "displayName": "Peanut Butter",
-      "category": "DAIRY",
+      "category": "JAM_NUT_BUTTER",
       "defaultUnit": "cup",
       "aliases": [],
       "corpusRows": 27,
@@ -7329,14 +6253,16 @@
       "displayName": "Pear",
       "category": "PRODUCE",
       "defaultUnit": "pcs",
-      "aliases": [],
-      "corpusRows": 10,
-      "corpusRecipes": 10
+      "aliases": [
+        "pears"
+      ],
+      "corpusRows": 11,
+      "corpusRecipes": 11
     },
     {
       "name": "pear halves",
       "displayName": "Pear Halves",
-      "category": "CANNED",
+      "category": "PRODUCE",
       "defaultUnit": "pcs",
       "aliases": [
         "pear half"
@@ -7364,18 +6290,9 @@
     },
     {
       "name": "pearl barley",
-      "displayName": "Barley",
-      "category": "DRY_GOODS",
+      "displayName": "Pearl Barley",
+      "category": "GRAINS_RICE",
       "defaultUnit": "cup",
-      "aliases": [],
-      "corpusRows": 1,
-      "corpusRecipes": 1
-    },
-    {
-      "name": "pears",
-      "displayName": "Pears",
-      "category": "CANNED",
-      "defaultUnit": "g",
       "aliases": [],
       "corpusRows": 1,
       "corpusRecipes": 1
@@ -7407,13 +6324,11 @@
     {
       "name": "pepper",
       "displayName": "Pepper",
-      "category": "CONDIMENTS",
+      "category": "BAKING_SPICES",
       "defaultUnit": "tsp",
-      "aliases": [
-        "peppers"
-      ],
-      "corpusRows": 24,
-      "corpusRecipes": 24
+      "aliases": [],
+      "corpusRows": 23,
+      "corpusRecipes": 23
     },
     {
       "name": "pepper jack cheese",
@@ -7427,7 +6342,7 @@
     {
       "name": "peppercorn",
       "displayName": "Peppercorn",
-      "category": "CONDIMENTS",
+      "category": "BAKING_SPICES",
       "defaultUnit": "tsp",
       "aliases": [],
       "corpusRows": 2,
@@ -7438,6 +6353,15 @@
       "displayName": "Pepperoni",
       "category": "MEAT_SEAFOOD",
       "defaultUnit": "pcs",
+      "aliases": [],
+      "corpusRows": 1,
+      "corpusRecipes": 1
+    },
+    {
+      "name": "peppers",
+      "displayName": "Peppers",
+      "category": "PRODUCE",
+      "defaultUnit": "cup",
       "aliases": [],
       "corpusRows": 1,
       "corpusRecipes": 1
@@ -7463,7 +6387,7 @@
     {
       "name": "picante sauce",
       "displayName": "Picante Sauce",
-      "category": "CANNED",
+      "category": "CONDIMENTS",
       "defaultUnit": "cup",
       "aliases": [],
       "corpusRows": 1,
@@ -7481,7 +6405,7 @@
     {
       "name": "pico de gallo",
       "displayName": "Pico De Gallo",
-      "category": "PRODUCE",
+      "category": "CONDIMENTS",
       "defaultUnit": "pcs",
       "aliases": [],
       "corpusRows": 1,
@@ -7499,7 +6423,7 @@
     {
       "name": "pimiento",
       "displayName": "Pimiento",
-      "category": "PRODUCE",
+      "category": "CANNED",
       "defaultUnit": "tbsp",
       "aliases": [],
       "corpusRows": 1,
@@ -7519,11 +6443,9 @@
       "displayName": "Pineapple",
       "category": "PRODUCE",
       "defaultUnit": "cup",
-      "aliases": [
-        "crushed pineapple"
-      ],
-      "corpusRows": 14,
-      "corpusRecipes": 14
+      "aliases": [],
+      "corpusRows": 11,
+      "corpusRecipes": 11
     },
     {
       "name": "pineapple chunks",
@@ -7566,7 +6488,7 @@
     {
       "name": "pineapple tidbits",
       "displayName": "Pineapple Tidbits",
-      "category": "PRODUCE",
+      "category": "CANNED",
       "defaultUnit": "pcs",
       "aliases": [],
       "corpusRows": 1,
@@ -7575,7 +6497,7 @@
     {
       "name": "pinto beans",
       "displayName": "Pinto Beans",
-      "category": "DRY_GOODS",
+      "category": "CANNED",
       "defaultUnit": "g",
       "aliases": [],
       "corpusRows": 9,
@@ -7656,7 +6578,7 @@
     {
       "name": "pizza or spaghetti sauce",
       "displayName": "Pizza Or Spaghetti Sauce",
-      "category": "CANNED",
+      "category": "PASTA_SAUCES",
       "defaultUnit": "cup",
       "aliases": [],
       "corpusRows": 1,
@@ -7665,7 +6587,7 @@
     {
       "name": "pizza sauce",
       "displayName": "Pizza Sauce",
-      "category": "CANNED",
+      "category": "PASTA_SAUCES",
       "defaultUnit": "cup",
       "aliases": [],
       "corpusRows": 5,
@@ -7697,20 +6619,32 @@
       "displayName": "Plain Yogurt",
       "category": "DAIRY",
       "defaultUnit": "cup",
-      "aliases": [],
-      "corpusRows": 6,
-      "corpusRecipes": 6
+      "aliases": [
+        "fat-free plain yogurt",
+        "low-fat plain yogurt",
+        "non-fat plain yogurt",
+        "plain low-fat yogurt"
+      ],
+      "corpusRows": 19,
+      "corpusRecipes": 19
     },
     {
       "name": "plantain",
       "displayName": "Plantain",
       "category": "PRODUCE",
       "defaultUnit": "pcs",
-      "aliases": [
-        "plantains"
-      ],
-      "corpusRows": 2,
-      "corpusRecipes": 2
+      "aliases": [],
+      "corpusRows": 1,
+      "corpusRecipes": 1
+    },
+    {
+      "name": "plantains",
+      "displayName": "Plantains",
+      "category": "PRODUCE",
+      "defaultUnit": "pcs",
+      "aliases": [],
+      "corpusRows": 1,
+      "corpusRecipes": 1
     },
     {
       "name": "plum tomato",
@@ -7742,7 +6676,7 @@
     {
       "name": "pomegranate seeds",
       "displayName": "Pomegranate Seeds",
-      "category": "PRODUCE",
+      "category": "DRY_GOODS",
       "defaultUnit": "cup",
       "aliases": [],
       "corpusRows": 2,
@@ -7751,7 +6685,7 @@
     {
       "name": "popcorn",
       "displayName": "Popcorn",
-      "category": "FROZEN",
+      "category": "DRY_GOODS",
       "defaultUnit": "cup",
       "aliases": [],
       "corpusRows": 3,
@@ -7831,7 +6765,7 @@
     },
     {
       "name": "pork top loin",
-      "displayName": "Pork Loin",
+      "displayName": "Pork Top Loin",
       "category": "MEAT_SEAFOOD",
       "defaultUnit": "g",
       "aliases": [],
@@ -7861,7 +6795,7 @@
     {
       "name": "poultry seasoning",
       "displayName": "Poultry Seasoning",
-      "category": "CONDIMENTS",
+      "category": "BAKING_SPICES",
       "defaultUnit": "tsp",
       "aliases": [],
       "corpusRows": 4,
@@ -7879,7 +6813,7 @@
     {
       "name": "powdered sugar",
       "displayName": "Powdered Sugar",
-      "category": "DRY_GOODS",
+      "category": "BAKING_SPICES",
       "defaultUnit": "cup",
       "aliases": [
         "icing sugar"
@@ -7908,7 +6842,7 @@
     {
       "name": "prepared rice",
       "displayName": "Prepared Rice",
-      "category": "DRY_GOODS",
+      "category": "CANNED",
       "defaultUnit": "cup",
       "aliases": [],
       "corpusRows": 1,
@@ -7926,7 +6860,7 @@
     {
       "name": "pretzel",
       "displayName": "Pretzel",
-      "category": "BAKERY",
+      "category": "DRY_GOODS",
       "defaultUnit": "pcs",
       "aliases": [],
       "corpusRows": 2,
@@ -7944,7 +6878,7 @@
     {
       "name": "prunes",
       "displayName": "Prunes",
-      "category": "PRODUCE",
+      "category": "DRY_GOODS",
       "defaultUnit": "pcs",
       "aliases": [],
       "corpusRows": 1,
@@ -7953,7 +6887,7 @@
     {
       "name": "pudding mix",
       "displayName": "Pudding Mix",
-      "category": "DRY_GOODS",
+      "category": "DAIRY",
       "defaultUnit": "g",
       "aliases": [],
       "corpusRows": 2,
@@ -7971,7 +6905,7 @@
     {
       "name": "pumpkin pie spice",
       "displayName": "Pumpkin Pie Spice",
-      "category": "CONDIMENTS",
+      "category": "BAKING_SPICES",
       "defaultUnit": "tsp",
       "aliases": [],
       "corpusRows": 6,
@@ -8002,7 +6936,7 @@
     {
       "name": "pure maple syrup",
       "displayName": "Pure Maple Syrup",
-      "category": "BEVERAGES",
+      "category": "JAM_NUT_BUTTER",
       "defaultUnit": "tbsp",
       "aliases": [],
       "corpusRows": 1,
@@ -8011,7 +6945,7 @@
     {
       "name": "quick cooking oats",
       "displayName": "Quick Cooking Oats",
-      "category": "DRY_GOODS",
+      "category": "GRAINS_RICE",
       "defaultUnit": "cup",
       "aliases": [
         "quick-cooking oats"
@@ -8022,7 +6956,7 @@
     {
       "name": "quick oats",
       "displayName": "Quick Oats",
-      "category": "DRY_GOODS",
+      "category": "GRAINS_RICE",
       "defaultUnit": "cup",
       "aliases": [],
       "corpusRows": 3,
@@ -8031,7 +6965,7 @@
     {
       "name": "quick rolled oats",
       "displayName": "Quick Rolled Oats",
-      "category": "DRY_GOODS",
+      "category": "GRAINS_RICE",
       "defaultUnit": "cup",
       "aliases": [],
       "corpusRows": 1,
@@ -8040,7 +6974,7 @@
     {
       "name": "quinoa",
       "displayName": "Quinoa",
-      "category": "DRY_GOODS",
+      "category": "GRAINS_RICE",
       "defaultUnit": "cup",
       "aliases": [],
       "corpusRows": 5,
@@ -8096,7 +7030,7 @@
     {
       "name": "raisins or dried cranberries",
       "displayName": "Raisins Or Dried Cranberries",
-      "category": "DRY_GOODS",
+      "category": "PRODUCE",
       "defaultUnit": "cup",
       "aliases": [],
       "corpusRows": 1,
@@ -8114,7 +7048,7 @@
     {
       "name": "ramen noodle flavor packet",
       "displayName": "Ramen Noodle Flavor Packet",
-      "category": "DRY_GOODS",
+      "category": "OTHER",
       "defaultUnit": "tsp",
       "aliases": [],
       "corpusRows": 1,
@@ -8123,7 +7057,7 @@
     {
       "name": "ramen noodles",
       "displayName": "Ramen Noodles",
-      "category": "DRY_GOODS",
+      "category": "PASTA_SAUCES",
       "defaultUnit": "pcs",
       "aliases": [],
       "corpusRows": 1,
@@ -8132,7 +7066,7 @@
     {
       "name": "ramen-style noodles",
       "displayName": "Ramen-Style Noodles",
-      "category": "DRY_GOODS",
+      "category": "PASTA_SAUCES",
       "defaultUnit": "g",
       "aliases": [],
       "corpusRows": 1,
@@ -8152,7 +7086,7 @@
     {
       "name": "rapid rise yeast",
       "displayName": "Rapid Rise Yeast",
-      "category": "DRY_GOODS",
+      "category": "BAKING_SPICES",
       "defaultUnit": "tsp",
       "aliases": [],
       "corpusRows": 2,
@@ -8196,7 +7130,7 @@
     },
     {
       "name": "red apple",
-      "displayName": "Apple",
+      "displayName": "Red Apple",
       "category": "PRODUCE",
       "defaultUnit": "pcs",
       "aliases": [
@@ -8208,7 +7142,7 @@
     {
       "name": "red beans",
       "displayName": "Red Beans",
-      "category": "DRY_GOODS",
+      "category": "CANNED",
       "defaultUnit": "g",
       "aliases": [],
       "corpusRows": 2,
@@ -8291,15 +7225,6 @@
       "corpusRecipes": 1
     },
     {
-      "name": "red or green pepper",
-      "displayName": "Red Or Green Pepper",
-      "category": "PRODUCE",
-      "defaultUnit": "pcs",
-      "aliases": [],
-      "corpusRows": 1,
-      "corpusRecipes": 1
-    },
-    {
       "name": "red or white onion",
       "displayName": "Red Or White Onion",
       "category": "PRODUCE",
@@ -8332,7 +7257,7 @@
     {
       "name": "red pepper flakes",
       "displayName": "Red Pepper Flakes",
-      "category": "CONDIMENTS",
+      "category": "BAKING_SPICES",
       "defaultUnit": "tsp",
       "aliases": [
         "chopped red pepper flakes",
@@ -8355,7 +7280,7 @@
     {
       "name": "red quinoa",
       "displayName": "Red Quinoa",
-      "category": "DRY_GOODS",
+      "category": "GRAINS_RICE",
       "defaultUnit": "cup",
       "aliases": [],
       "corpusRows": 1,
@@ -8364,7 +7289,7 @@
     {
       "name": "red taco sauce",
       "displayName": "Red Taco Sauce",
-      "category": "CANNED",
+      "category": "CONDIMENTS",
       "defaultUnit": "tbsp",
       "aliases": [],
       "corpusRows": 1,
@@ -8445,7 +7370,7 @@
     {
       "name": "rice",
       "displayName": "Rice",
-      "category": "DRY_GOODS",
+      "category": "GRAINS_RICE",
       "defaultUnit": "cup",
       "aliases": [],
       "corpusRows": 15,
@@ -8501,7 +7426,7 @@
     {
       "name": "rolled oats",
       "displayName": "Rolled Oats",
-      "category": "DRY_GOODS",
+      "category": "GRAINS_RICE",
       "defaultUnit": "cup",
       "aliases": [],
       "corpusRows": 6,
@@ -8557,7 +7482,7 @@
     {
       "name": "rosemary",
       "displayName": "Rosemary",
-      "category": "CONDIMENTS",
+      "category": "BAKING_SPICES",
       "defaultUnit": "tsp",
       "aliases": [
         "chopped fresh rosemary"
@@ -8568,7 +7493,7 @@
     {
       "name": "rotini or macaroni pasta",
       "displayName": "Rotini Or Macaroni Pasta",
-      "category": "DRY_GOODS",
+      "category": "PASTA_SAUCES",
       "defaultUnit": "g",
       "aliases": [],
       "corpusRows": 1,
@@ -8577,7 +7502,7 @@
     {
       "name": "rotini pasta",
       "displayName": "Rotini Pasta",
-      "category": "DRY_GOODS",
+      "category": "PASTA_SAUCES",
       "defaultUnit": "cup",
       "aliases": [],
       "corpusRows": 1,
@@ -8606,7 +7531,7 @@
     {
       "name": "rye flour",
       "displayName": "Rye Flour",
-      "category": "DRY_GOODS",
+      "category": "BAKING_SPICES",
       "defaultUnit": "cup",
       "aliases": [],
       "corpusRows": 1,
@@ -8615,7 +7540,7 @@
     {
       "name": "sage",
       "displayName": "Sage",
-      "category": "CONDIMENTS",
+      "category": "BAKING_SPICES",
       "defaultUnit": "tsp",
       "aliases": [
         "fresh sage"
@@ -8682,7 +7607,7 @@
     {
       "name": "salt",
       "displayName": "Salt",
-      "category": "DRY_GOODS",
+      "category": "BAKING_SPICES",
       "defaultUnit": "tsp",
       "aliases": [],
       "corpusRows": 357,
@@ -8691,7 +7616,7 @@
     {
       "name": "salt \u0026 pepper",
       "displayName": "Salt \u0026 Pepper",
-      "category": "CONDIMENTS",
+      "category": "BAKING_SPICES",
       "defaultUnit": null,
       "aliases": [],
       "corpusRows": 2,
@@ -8700,7 +7625,7 @@
     {
       "name": "salt and black pepper",
       "displayName": "Salt And Black Pepper",
-      "category": "CONDIMENTS",
+      "category": "BAKING_SPICES",
       "defaultUnit": "pcs",
       "aliases": [],
       "corpusRows": 2,
@@ -8709,7 +7634,7 @@
     {
       "name": "salt and freshly ground black pepper",
       "displayName": "Salt And Freshly Ground Black Pepper",
-      "category": "CONDIMENTS",
+      "category": "BAKING_SPICES",
       "defaultUnit": null,
       "aliases": [],
       "corpusRows": 1,
@@ -8718,7 +7643,7 @@
     {
       "name": "salt and ground black pepper",
       "displayName": "Salt And Ground Black Pepper",
-      "category": "CONDIMENTS",
+      "category": "BAKING_SPICES",
       "defaultUnit": null,
       "aliases": [],
       "corpusRows": 1,
@@ -8727,7 +7652,7 @@
     {
       "name": "salt and ground pepper",
       "displayName": "Salt And Ground Pepper",
-      "category": "CONDIMENTS",
+      "category": "BAKING_SPICES",
       "defaultUnit": null,
       "aliases": [],
       "corpusRows": 1,
@@ -8736,7 +7661,7 @@
     {
       "name": "salt and lemon pepper",
       "displayName": "Salt And Lemon Pepper",
-      "category": "CONDIMENTS",
+      "category": "BAKING_SPICES",
       "defaultUnit": null,
       "aliases": [],
       "corpusRows": 1,
@@ -8745,7 +7670,7 @@
     {
       "name": "salt and pepper",
       "displayName": "Salt And Pepper",
-      "category": "CONDIMENTS",
+      "category": "BAKING_SPICES",
       "defaultUnit": null,
       "aliases": [],
       "corpusRows": 38,
@@ -8754,7 +7679,7 @@
     {
       "name": "salt and pepper to taste",
       "displayName": "Salt And Pepper To Taste",
-      "category": "CONDIMENTS",
+      "category": "BAKING_SPICES",
       "defaultUnit": null,
       "aliases": [],
       "corpusRows": 1,
@@ -8763,7 +7688,7 @@
     {
       "name": "salt free seasoning",
       "displayName": "Salt Free Seasoning",
-      "category": "CONDIMENTS",
+      "category": "BAKING_SPICES",
       "defaultUnit": "tsp",
       "aliases": [],
       "corpusRows": 1,
@@ -8772,7 +7697,7 @@
     {
       "name": "salt-free caribbean citrus seasoning",
       "displayName": "Salt-Free Caribbean Citrus Seasoning",
-      "category": "CONDIMENTS",
+      "category": "BAKING_SPICES",
       "defaultUnit": "tbsp",
       "aliases": [],
       "corpusRows": 1,
@@ -8781,7 +7706,7 @@
     {
       "name": "salt-free caribbean citrus seasoning blend",
       "displayName": "Salt-Free Caribbean Citrus Seasoning Blend",
-      "category": "CONDIMENTS",
+      "category": "BAKING_SPICES",
       "defaultUnit": "tbsp",
       "aliases": [],
       "corpusRows": 1,
@@ -8799,7 +7724,7 @@
     {
       "name": "sardines",
       "displayName": "Sardines",
-      "category": "MEAT_SEAFOOD",
+      "category": "CANNED",
       "defaultUnit": "pcs",
       "aliases": [],
       "corpusRows": 1,
@@ -8817,7 +7742,7 @@
     {
       "name": "sazon seasoning",
       "displayName": "Sazon Seasoning",
-      "category": "CONDIMENTS",
+      "category": "BAKING_SPICES",
       "defaultUnit": "pcs",
       "aliases": [],
       "corpusRows": 1,
@@ -8845,8 +7770,8 @@
     },
     {
       "name": "seasoned salt",
-      "displayName": "Seasoned Salt",
-      "category": "CONDIMENTS",
+      "displayName": "Salt",
+      "category": "BAKING_SPICES",
       "defaultUnit": "tsp",
       "aliases": [],
       "corpusRows": 2,
@@ -8855,7 +7780,7 @@
     {
       "name": "seasoning",
       "displayName": "Seasoning",
-      "category": "CONDIMENTS",
+      "category": "BAKING_SPICES",
       "defaultUnit": "tsp",
       "aliases": [],
       "corpusRows": 3,
@@ -8864,7 +7789,7 @@
     {
       "name": "seasonings",
       "displayName": "Seasonings",
-      "category": "CONDIMENTS",
+      "category": "BAKING_SPICES",
       "defaultUnit": null,
       "aliases": [],
       "corpusRows": 2,
@@ -8900,7 +7825,7 @@
     {
       "name": "semolina",
       "displayName": "Semolina",
-      "category": "DRY_GOODS",
+      "category": "GRAINS_RICE",
       "defaultUnit": "cup",
       "aliases": [],
       "corpusRows": 1,
@@ -8947,7 +7872,7 @@
     {
       "name": "sesame tahini",
       "displayName": "Sesame Tahini",
-      "category": "DAIRY",
+      "category": "DRY_GOODS",
       "defaultUnit": "tbsp",
       "aliases": [],
       "corpusRows": 1,
@@ -8974,7 +7899,7 @@
     {
       "name": "shortening",
       "displayName": "Shortening",
-      "category": "DAIRY",
+      "category": "OTHER",
       "defaultUnit": "cup",
       "aliases": [],
       "corpusRows": 2,
@@ -9031,7 +7956,7 @@
     {
       "name": "single-serving bags of green tea",
       "displayName": "Single-Serving Bags Of Green Tea",
-      "category": "BEVERAGES",
+      "category": "COFFEE_TEA",
       "defaultUnit": "pcs",
       "aliases": [],
       "corpusRows": 1,
@@ -9058,7 +7983,7 @@
     {
       "name": "skewers",
       "displayName": "Skewers",
-      "category": "BAKERY",
+      "category": "KITCHEN",
       "defaultUnit": null,
       "aliases": [],
       "corpusRows": 1,
@@ -9121,7 +8046,7 @@
     {
       "name": "smoked paprika or ground chipotle pepper",
       "displayName": "Smoked Paprika Or Ground Chipotle Pepper",
-      "category": "CONDIMENTS",
+      "category": "BAKING_SPICES",
       "defaultUnit": "tsp",
       "aliases": [],
       "corpusRows": 1,
@@ -9139,7 +8064,7 @@
     {
       "name": "sodium-free seasoning blend",
       "displayName": "Sodium-Free Seasoning Blend",
-      "category": "CONDIMENTS",
+      "category": "BAKING_SPICES",
       "defaultUnit": "tsp",
       "aliases": [],
       "corpusRows": 1,
@@ -9181,7 +8106,7 @@
     {
       "name": "southwest chipotle seasoning",
       "displayName": "Southwest Chipotle Seasoning",
-      "category": "CONDIMENTS",
+      "category": "BAKING_SPICES",
       "defaultUnit": "tsp",
       "aliases": [],
       "corpusRows": 1,
@@ -9221,7 +8146,7 @@
     {
       "name": "spaghetti",
       "displayName": "Spaghetti",
-      "category": "DRY_GOODS",
+      "category": "PASTA_SAUCES",
       "defaultUnit": "g",
       "aliases": [],
       "corpusRows": 4,
@@ -9230,7 +8155,7 @@
     {
       "name": "spaghetti noodles",
       "displayName": "Spaghetti Noodles",
-      "category": "DRY_GOODS",
+      "category": "PASTA_SAUCES",
       "defaultUnit": "g",
       "aliases": [],
       "corpusRows": 3,
@@ -9239,7 +8164,7 @@
     {
       "name": "spaghetti sauce",
       "displayName": "Spaghetti Sauce",
-      "category": "CANNED",
+      "category": "PASTA_SAUCES",
       "defaultUnit": "g",
       "aliases": [
         "low-sodium spaghetti sauce"
@@ -9259,7 +8184,7 @@
     {
       "name": "spices",
       "displayName": "Spices",
-      "category": "CONDIMENTS",
+      "category": "BAKING_SPICES",
       "defaultUnit": null,
       "aliases": [],
       "corpusRows": 1,
@@ -9309,7 +8234,7 @@
     {
       "name": "spoon",
       "displayName": "Spoon",
-      "category": "OTHER",
+      "category": "HOUSEHOLD",
       "defaultUnit": "pcs",
       "aliases": [],
       "corpusRows": 1,
@@ -9318,7 +8243,7 @@
     {
       "name": "spray",
       "displayName": "Spray",
-      "category": "OTHER",
+      "category": "CONDIMENTS",
       "defaultUnit": "pcs",
       "aliases": [],
       "corpusRows": 1,
@@ -9327,7 +8252,7 @@
     {
       "name": "spread",
       "displayName": "Spread",
-      "category": "OTHER",
+      "category": "JAM_NUT_BUTTER",
       "defaultUnit": null,
       "aliases": [],
       "corpusRows": 1,
@@ -9428,7 +8353,7 @@
     {
       "name": "strawberry gelatin",
       "displayName": "Strawberry Gelatin",
-      "category": "DAIRY",
+      "category": "BAKING_SPICES",
       "defaultUnit": "pcs",
       "aliases": [],
       "corpusRows": 1,
@@ -9437,7 +8362,7 @@
     {
       "name": "strawberry preserves",
       "displayName": "Strawberry Preserves",
-      "category": "CONDIMENTS",
+      "category": "JAM_NUT_BUTTER",
       "defaultUnit": "tbsp",
       "aliases": [],
       "corpusRows": 2,
@@ -9449,15 +8374,16 @@
       "category": "DAIRY",
       "defaultUnit": "cup",
       "aliases": [
-        "low-fat strawberry yogurt"
+        "low-fat strawberry yogurt",
+        "non-fat strawberry yogurt"
       ],
-      "corpusRows": 3,
-      "corpusRecipes": 3
+      "corpusRows": 4,
+      "corpusRecipes": 4
     },
     {
       "name": "straws or popsicle sticks",
-      "displayName": "Straws Or Popsicle Sticks",
-      "category": "OTHER",
+      "displayName": "Paper Straws Or Popsicle Sticks",
+      "category": "KITCHEN",
       "defaultUnit": null,
       "aliases": [],
       "corpusRows": 1,
@@ -9466,7 +8392,7 @@
     {
       "name": "string beans",
       "displayName": "String Beans",
-      "category": "PRODUCE",
+      "category": "CANNED",
       "defaultUnit": "cup",
       "aliases": [],
       "corpusRows": 1,
@@ -9475,7 +8401,7 @@
     {
       "name": "sugar",
       "displayName": "Sugar",
-      "category": "DRY_GOODS",
+      "category": "BAKING_SPICES",
       "defaultUnit": "cup",
       "aliases": [],
       "corpusRows": 145,
@@ -9529,7 +8455,7 @@
     {
       "name": "sweet basil",
       "displayName": "Sweet Basil",
-      "category": "CONDIMENTS",
+      "category": "PRODUCE",
       "defaultUnit": "tbsp",
       "aliases": [],
       "corpusRows": 1,
@@ -9556,7 +8482,7 @@
     {
       "name": "sweet corn",
       "displayName": "Sweet Corn",
-      "category": "PRODUCE",
+      "category": "CANNED",
       "defaultUnit": "pcs",
       "aliases": [],
       "corpusRows": 1,
@@ -9666,7 +8592,7 @@
     {
       "name": "syrup",
       "displayName": "Syrup",
-      "category": "BEVERAGES",
+      "category": "JAM_NUT_BUTTER",
       "defaultUnit": null,
       "aliases": [],
       "corpusRows": 1,
@@ -9684,7 +8610,7 @@
     {
       "name": "table salt",
       "displayName": "Salt",
-      "category": "DRY_GOODS",
+      "category": "BAKING_SPICES",
       "defaultUnit": "tsp",
       "aliases": [],
       "corpusRows": 2,
@@ -9693,7 +8619,7 @@
     {
       "name": "taco sauce",
       "displayName": "Taco Sauce",
-      "category": "CANNED",
+      "category": "CONDIMENTS",
       "defaultUnit": "tbsp",
       "aliases": [],
       "corpusRows": 2,
@@ -9702,7 +8628,7 @@
     {
       "name": "taco seasoning",
       "displayName": "Taco Seasoning",
-      "category": "CONDIMENTS",
+      "category": "BAKING_SPICES",
       "defaultUnit": "pcs",
       "aliases": [],
       "corpusRows": 4,
@@ -9711,7 +8637,7 @@
     {
       "name": "taco seasoning mix",
       "displayName": "Taco Seasoning Mix",
-      "category": "CONDIMENTS",
+      "category": "BAKING_SPICES",
       "defaultUnit": "tbsp",
       "aliases": [],
       "corpusRows": 1,
@@ -9747,7 +8673,7 @@
     {
       "name": "tarragon",
       "displayName": "Tarragon",
-      "category": "CONDIMENTS",
+      "category": "BAKING_SPICES",
       "defaultUnit": "tsp",
       "aliases": [],
       "corpusRows": 1,
@@ -9756,7 +8682,7 @@
     {
       "name": "tarragon or parsley",
       "displayName": "Tarragon Or Parsley",
-      "category": "CONDIMENTS",
+      "category": "PRODUCE",
       "defaultUnit": "tsp",
       "aliases": [],
       "corpusRows": 1,
@@ -9764,7 +8690,7 @@
     },
     {
       "name": "tart apple",
-      "displayName": "Apple",
+      "displayName": "Tart Apple",
       "category": "PRODUCE",
       "defaultUnit": "pcs",
       "aliases": [
@@ -9812,18 +8738,16 @@
     {
       "name": "thyme",
       "displayName": "Thyme",
-      "category": "CONDIMENTS",
+      "category": "BAKING_SPICES",
       "defaultUnit": "tsp",
-      "aliases": [
-        "fresh thyme"
-      ],
-      "corpusRows": 30,
-      "corpusRecipes": 30
+      "aliases": [],
+      "corpusRows": 29,
+      "corpusRecipes": 29
     },
     {
       "name": "thyme leaves",
       "displayName": "Thyme Leaves",
-      "category": "CONDIMENTS",
+      "category": "BAKING_SPICES",
       "defaultUnit": "tsp",
       "aliases": [
         "thyme leaf"
@@ -9834,7 +8758,7 @@
     {
       "name": "thyme or sage",
       "displayName": "Thyme Or Sage",
-      "category": "CONDIMENTS",
+      "category": "BAKING_SPICES",
       "defaultUnit": null,
       "aliases": [],
       "corpusRows": 1,
@@ -9843,7 +8767,7 @@
     {
       "name": "thyme sprigs",
       "displayName": "Thyme Sprigs",
-      "category": "CONDIMENTS",
+      "category": "BAKING_SPICES",
       "defaultUnit": "tsp",
       "aliases": [],
       "corpusRows": 1,
@@ -9851,7 +8775,7 @@
     },
     {
       "name": "tilapia fillet",
-      "displayName": "Tilapia Filet",
+      "displayName": "Tilapia Fillet",
       "category": "MEAT_SEAFOOD",
       "defaultUnit": "g",
       "aliases": [
@@ -9891,7 +8815,7 @@
     {
       "name": "toasted, shelled pepitas (pumpkin seeds), lime wedges, crumbled queso fresco",
       "displayName": "Toasted, Shelled Pepitas (Pumpkin Seeds), Lime Wedges, Crumbled Queso Fresco",
-      "category": "OTHER",
+      "category": "DRY_GOODS",
       "defaultUnit": null,
       "aliases": [],
       "corpusRows": 1,
@@ -9920,7 +8844,7 @@
     {
       "name": "tomato basil garlic seasoning blend",
       "displayName": "Tomato Basil Garlic Seasoning Blend",
-      "category": "CONDIMENTS",
+      "category": "BAKING_SPICES",
       "defaultUnit": "tbsp",
       "aliases": [],
       "corpusRows": 1,
@@ -9976,7 +8900,8 @@
       "category": "CANNED",
       "defaultUnit": "g",
       "aliases": [
-        "low-sodium tomato sauce"
+        "low-sodium tomato sauce",
+        "canned tomato sauce"
       ],
       "corpusRows": 28,
       "corpusRecipes": 28
@@ -9993,7 +8918,7 @@
     {
       "name": "tomato-based pasta sauce",
       "displayName": "Tomato-Based Pasta Sauce",
-      "category": "CANNED",
+      "category": "PASTA_SAUCES",
       "defaultUnit": "cup",
       "aliases": [],
       "corpusRows": 1,
@@ -10034,7 +8959,7 @@
     {
       "name": "toothpicks",
       "displayName": "Toothpicks",
-      "category": "OTHER",
+      "category": "KITCHEN",
       "defaultUnit": null,
       "aliases": [],
       "corpusRows": 1,
@@ -10042,7 +8967,7 @@
     },
     {
       "name": "top loin pork chop",
-      "displayName": "Pork Chop",
+      "displayName": "Top Loin Pork Chop",
       "category": "MEAT_SEAFOOD",
       "defaultUnit": "pcs",
       "aliases": [],
@@ -10052,7 +8977,7 @@
     {
       "name": "topping",
       "displayName": "Topping",
-      "category": "DAIRY",
+      "category": "OTHER",
       "defaultUnit": null,
       "aliases": [],
       "corpusRows": 1,
@@ -10070,7 +8995,7 @@
     {
       "name": "tortellini",
       "displayName": "Tortellini",
-      "category": "DRY_GOODS",
+      "category": "PASTA_SAUCES",
       "defaultUnit": "cup",
       "aliases": [],
       "corpusRows": 1,
@@ -10180,7 +9105,7 @@
     {
       "name": "turmeric",
       "displayName": "Turmeric",
-      "category": "CONDIMENTS",
+      "category": "BAKING_SPICES",
       "defaultUnit": "tsp",
       "aliases": [],
       "corpusRows": 2,
@@ -10189,7 +9114,7 @@
     {
       "name": "turmeric powder",
       "displayName": "Turmeric Powder",
-      "category": "CONDIMENTS",
+      "category": "BAKING_SPICES",
       "defaultUnit": "tsp",
       "aliases": [],
       "corpusRows": 1,
@@ -10218,7 +9143,7 @@
     {
       "name": "uncooked pasta",
       "displayName": "Uncooked Pasta",
-      "category": "DRY_GOODS",
+      "category": "PASTA_SAUCES",
       "defaultUnit": "g",
       "aliases": [],
       "corpusRows": 1,
@@ -10227,7 +9152,7 @@
     {
       "name": "uncooked rice",
       "displayName": "Uncooked Rice",
-      "category": "DRY_GOODS",
+      "category": "GRAINS_RICE",
       "defaultUnit": "cup",
       "aliases": [],
       "corpusRows": 2,
@@ -10236,7 +9161,7 @@
     {
       "name": "uncooked rice, macaroni, or small noodles",
       "displayName": "Uncooked Rice, Macaroni, Or Small Noodles",
-      "category": "DRY_GOODS",
+      "category": "PASTA_SAUCES",
       "defaultUnit": "cup",
       "aliases": [],
       "corpusRows": 1,
@@ -10245,7 +9170,7 @@
     {
       "name": "uncooked white rice",
       "displayName": "Uncooked White Rice",
-      "category": "DRY_GOODS",
+      "category": "GRAINS_RICE",
       "defaultUnit": "cup",
       "aliases": [],
       "corpusRows": 1,
@@ -10254,7 +9179,7 @@
     {
       "name": "uncooked whole wheat pasta",
       "displayName": "Uncooked Whole Wheat Pasta",
-      "category": "DRY_GOODS",
+      "category": "PASTA_SAUCES",
       "defaultUnit": "g",
       "aliases": [],
       "corpusRows": 1,
@@ -10270,18 +9195,9 @@
       "corpusRecipes": 1
     },
     {
-      "name": "unsweetened whole grain cereal",
-      "displayName": "Unsweetened Whole Grain Cereal",
-      "category": "DRY_GOODS",
-      "defaultUnit": null,
-      "aliases": [],
-      "corpusRows": 1,
-      "corpusRecipes": 1
-    },
-    {
       "name": "vanilla",
       "displayName": "Vanilla",
-      "category": "CONDIMENTS",
+      "category": "BAKING_SPICES",
       "defaultUnit": "tsp",
       "aliases": [],
       "corpusRows": 26,
@@ -10290,7 +9206,7 @@
     {
       "name": "vanilla extract",
       "displayName": "Vanilla Extract",
-      "category": "CONDIMENTS",
+      "category": "BAKING_SPICES",
       "defaultUnit": "tsp",
       "aliases": [],
       "corpusRows": 30,
@@ -10299,7 +9215,7 @@
     {
       "name": "vanilla flavoring",
       "displayName": "Vanilla Flavoring",
-      "category": "CONDIMENTS",
+      "category": "BAKING_SPICES",
       "defaultUnit": "tsp",
       "aliases": [],
       "corpusRows": 1,
@@ -10337,9 +9253,14 @@
       "displayName": "Vanilla Yogurt",
       "category": "DAIRY",
       "defaultUnit": "cup",
-      "aliases": [],
-      "corpusRows": 9,
-      "corpusRecipes": 9
+      "aliases": [
+        "fat-free vanilla yogurt",
+        "low fat vanilla yogurt",
+        "low-fat vanilla yogurt",
+        "nonfat vanilla yogurt"
+      ],
+      "corpusRows": 16,
+      "corpusRecipes": 16
     },
     {
       "name": "vegetable broth",
@@ -10355,7 +9276,7 @@
     {
       "name": "vegetable cooking spray",
       "displayName": "Vegetable Cooking Spray",
-      "category": "OTHER",
+      "category": "CONDIMENTS",
       "defaultUnit": null,
       "aliases": [],
       "corpusRows": 4,
@@ -10382,7 +9303,7 @@
     {
       "name": "vegetable oil spray",
       "displayName": "Vegetable Oil Spray",
-      "category": "OTHER",
+      "category": "CONDIMENTS",
       "defaultUnit": "pcs",
       "aliases": [],
       "corpusRows": 3,
@@ -10391,7 +9312,7 @@
     {
       "name": "vegetable spray",
       "displayName": "Vegetable Spray",
-      "category": "OTHER",
+      "category": "CONDIMENTS",
       "defaultUnit": null,
       "aliases": [],
       "corpusRows": 1,
@@ -10400,7 +9321,7 @@
     {
       "name": "vegetable stock",
       "displayName": "Vegetable Stock",
-      "category": "BEVERAGES",
+      "category": "CANNED",
       "defaultUnit": "cup",
       "aliases": [],
       "corpusRows": 1,
@@ -10497,7 +9418,8 @@
       "category": "DRY_GOODS",
       "defaultUnit": "cup",
       "aliases": [
-        "walnut"
+        "walnut",
+        "coarsely chopped walnuts"
       ],
       "corpusRows": 32,
       "corpusRecipes": 32
@@ -10588,7 +9510,7 @@
     {
       "name": "wheat berries",
       "displayName": "Wheat Berries",
-      "category": "DRY_GOODS",
+      "category": "GRAINS_RICE",
       "defaultUnit": "cup",
       "aliases": [],
       "corpusRows": 1,
@@ -10635,7 +9557,7 @@
     {
       "name": "white flour",
       "displayName": "White Flour",
-      "category": "DRY_GOODS",
+      "category": "BAKING_SPICES",
       "defaultUnit": "cup",
       "aliases": [],
       "corpusRows": 1,
@@ -10680,7 +9602,7 @@
     {
       "name": "white pepper",
       "displayName": "White Pepper",
-      "category": "CONDIMENTS",
+      "category": "BAKING_SPICES",
       "defaultUnit": "tsp",
       "aliases": [],
       "corpusRows": 3,
@@ -10689,7 +9611,7 @@
     {
       "name": "white rice",
       "displayName": "White Rice",
-      "category": "DRY_GOODS",
+      "category": "GRAINS_RICE",
       "defaultUnit": "cup",
       "aliases": [],
       "corpusRows": 8,
@@ -10698,7 +9620,7 @@
     {
       "name": "white sugar",
       "displayName": "White Sugar",
-      "category": "DRY_GOODS",
+      "category": "BAKING_SPICES",
       "defaultUnit": "cup",
       "aliases": [],
       "corpusRows": 1,
@@ -10725,7 +9647,7 @@
     {
       "name": "white-wheat rotini pasta",
       "displayName": "White-Wheat Rotini Pasta",
-      "category": "DRY_GOODS",
+      "category": "PASTA_SAUCES",
       "defaultUnit": "cup",
       "aliases": [],
       "corpusRows": 1,
@@ -10742,7 +9664,7 @@
     },
     {
       "name": "whole chicken",
-      "displayName": "Chicken",
+      "displayName": "Whole Chicken",
       "category": "MEAT_SEAFOOD",
       "defaultUnit": "g",
       "aliases": [],
@@ -10753,6 +9675,15 @@
       "name": "whole eggs",
       "displayName": "Whole Eggs",
       "category": "DAIRY",
+      "defaultUnit": "pcs",
+      "aliases": [],
+      "corpusRows": 1,
+      "corpusRecipes": 1
+    },
+    {
+      "name": "whole grain bread",
+      "displayName": "Whole Grain Bread",
+      "category": "BAKERY",
       "defaultUnit": "pcs",
       "aliases": [],
       "corpusRows": 1,
@@ -10770,7 +9701,7 @@
     {
       "name": "whole grain pasta",
       "displayName": "Whole Grain Pasta",
-      "category": "DRY_GOODS",
+      "category": "PASTA_SAUCES",
       "defaultUnit": "cup",
       "aliases": [],
       "corpusRows": 2,
@@ -10779,7 +9710,7 @@
     {
       "name": "whole kernel corn",
       "displayName": "Whole Kernel Corn",
-      "category": "PRODUCE",
+      "category": "CANNED",
       "defaultUnit": "g",
       "aliases": [
         "low-sodium whole kernel corn",
@@ -10796,6 +9727,15 @@
       "aliases": [],
       "corpusRows": 1,
       "corpusRecipes": 1
+    },
+    {
+      "name": "whole milk",
+      "displayName": "Whole Milk",
+      "category": "DAIRY",
+      "defaultUnit": "cup",
+      "aliases": [],
+      "corpusRows": 2,
+      "corpusRecipes": 2
     },
     {
       "name": "whole tomatoes",
@@ -10831,7 +9771,7 @@
     {
       "name": "whole wheat couscous",
       "displayName": "Whole Wheat Couscous",
-      "category": "DRY_GOODS",
+      "category": "GRAINS_RICE",
       "defaultUnit": "cup",
       "aliases": [],
       "corpusRows": 2,
@@ -10849,7 +9789,7 @@
     {
       "name": "whole wheat flour",
       "displayName": "Whole Wheat Flour",
-      "category": "DRY_GOODS",
+      "category": "BAKING_SPICES",
       "defaultUnit": "cup",
       "aliases": [],
       "corpusRows": 27,
@@ -10876,7 +9816,7 @@
     {
       "name": "whole wheat pasta",
       "displayName": "Whole Wheat Pasta",
-      "category": "DRY_GOODS",
+      "category": "PASTA_SAUCES",
       "defaultUnit": "g",
       "aliases": [],
       "corpusRows": 5,
@@ -10885,7 +9825,7 @@
     {
       "name": "whole wheat pasta shells",
       "displayName": "Whole Wheat Pasta Shells",
-      "category": "DRY_GOODS",
+      "category": "PASTA_SAUCES",
       "defaultUnit": "g",
       "aliases": [],
       "corpusRows": 1,
@@ -10894,7 +9834,7 @@
     {
       "name": "whole wheat spaghetti",
       "displayName": "Whole Wheat Spaghetti",
-      "category": "DRY_GOODS",
+      "category": "PASTA_SAUCES",
       "defaultUnit": "g",
       "aliases": [],
       "corpusRows": 3,
@@ -10927,11 +9867,9 @@
       "displayName": "Whole-Grain Bread",
       "category": "BAKERY",
       "defaultUnit": "pcs",
-      "aliases": [
-        "whole grain bread"
-      ],
-      "corpusRows": 4,
-      "corpusRecipes": 4
+      "aliases": [],
+      "corpusRows": 3,
+      "corpusRecipes": 3
     },
     {
       "name": "whole-grain bread slices",
@@ -10947,9 +9885,11 @@
       "displayName": "Whole-Grain Cereal",
       "category": "DRY_GOODS",
       "defaultUnit": "cup",
-      "aliases": [],
-      "corpusRows": 1,
-      "corpusRecipes": 1
+      "aliases": [
+        "unsweetened whole grain cereal"
+      ],
+      "corpusRows": 2,
+      "corpusRecipes": 2
     },
     {
       "name": "whole-grain or dijon mustard",
@@ -10963,7 +9903,7 @@
     {
       "name": "whole-wheat fettuccine",
       "displayName": "Whole-Wheat Fettuccine",
-      "category": "DRY_GOODS",
+      "category": "PASTA_SAUCES",
       "defaultUnit": "g",
       "aliases": [],
       "corpusRows": 1,
@@ -10972,7 +9912,7 @@
     {
       "name": "whole-wheat flour",
       "displayName": "Whole-Wheat Flour",
-      "category": "DRY_GOODS",
+      "category": "BAKING_SPICES",
       "defaultUnit": "cup",
       "aliases": [],
       "corpusRows": 1,
@@ -10981,7 +9921,7 @@
     {
       "name": "whole-wheat rotini pasta",
       "displayName": "Whole-Wheat Rotini Pasta",
-      "category": "DRY_GOODS",
+      "category": "PASTA_SAUCES",
       "defaultUnit": "cup",
       "aliases": [],
       "corpusRows": 1,
@@ -10990,7 +9930,7 @@
     {
       "name": "wild rice",
       "displayName": "Wild Rice",
-      "category": "DRY_GOODS",
+      "category": "GRAINS_RICE",
       "defaultUnit": "cup",
       "aliases": [],
       "corpusRows": 2,
@@ -11016,8 +9956,8 @@
     },
     {
       "name": "wooden sticks",
-      "displayName": "Wooden Sticks",
-      "category": "OTHER",
+      "displayName": "Craft Sticks",
+      "category": "KITCHEN",
       "defaultUnit": null,
       "aliases": [],
       "corpusRows": 1,
@@ -11044,7 +9984,7 @@
     {
       "name": "yeast",
       "displayName": "Yeast",
-      "category": "DRY_GOODS",
+      "category": "BAKING_SPICES",
       "defaultUnit": "tbsp",
       "aliases": [],
       "corpusRows": 6,
@@ -11071,7 +10011,7 @@
     {
       "name": "yellow corn",
       "displayName": "Yellow Corn",
-      "category": "PRODUCE",
+      "category": "CANNED",
       "defaultUnit": "cup",
       "aliases": [],
       "corpusRows": 2,
@@ -11080,7 +10020,7 @@
     {
       "name": "yellow corn kernels",
       "displayName": "Yellow Corn Kernels",
-      "category": "DRY_GOODS",
+      "category": "PRODUCE",
       "defaultUnit": "g",
       "aliases": [],
       "corpusRows": 1,
@@ -11098,7 +10038,7 @@
     {
       "name": "yellow cornmeal",
       "displayName": "Yellow Cornmeal",
-      "category": "DRY_GOODS",
+      "category": "BAKING_SPICES",
       "defaultUnit": "cup",
       "aliases": [],
       "corpusRows": 4,
@@ -11170,7 +10110,7 @@
     {
       "name": "yellow wax beans",
       "displayName": "Yellow Wax Beans",
-      "category": "PRODUCE",
+      "category": "CANNED",
       "defaultUnit": "cup",
       "aliases": [],
       "corpusRows": 1,

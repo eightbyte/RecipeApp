@@ -797,7 +797,8 @@ collapsed after every attempt is dissolved. Run 6 needed no dissolving.
 - **`category` is an enum.** As a free string, the model answered `SPICES` and `CONDIMENT` despite
   "MUST be exactly one value from this list". `JsonSchemaGrammar` gained `enum` support; run 6 had
   zero invalid categories. The prompt also states that spices and dried herbs are `CONDIMENTS`, which
-  is the keyword table's existing convention, not a new one.
+  is the keyword table's existing convention, not a new one. *(Superseded by §12.4: spices are now
+  `BAKING_SPICES`.)*
 - **The name echo tolerates asides.** Stage 4 left `paprika (optional)` in the corpus and the model
   copies it as `paprika`; an exact check called that drift and spent two retries on a correct answer.
   An echo that is exactly *another* label's name is still refused.
@@ -850,3 +851,54 @@ Worth a reviewer's eye, in order of consequence:
    catalogue can only inherit.
 4. **Missed merges are visible, not silent** — `ground cinnamon`/`cinnamon`, `mustard`/`yellow
    mustard`, the cooking sprays. Each is a second shopping-list line a user can see.
+
+*§12.3 describes the 1,190-entry artefact. The artefact under review is now §12.4's rebuild.*
+
+### 12.4 Category set widened to 17, artefact rebuilt (2026-09-13)
+
+Before review began, the category set grew from ten to seventeen: `GRAINS_RICE`, `PASTA_SAUCES`,
+`BAKING_SPICES`, `JAM_NUT_BUTTER`, `COFFEE_TEA`, `KITCHEN`, `HOUSEHOLD`. `IngredientCategory.All` is
+the shopping list's aisle order, so each sits beside its nearest relative. No migration: `Category` is
+a string column and no value was renamed.
+
+**Boundaries, as decided rather than inferred from the names:**
+
+| Category | Holds | Deliberately not |
+|---|---|---|
+| `BAKING_SPICES` | salt, pepper, spices, dried herbs, seasoning blends, extracts, flour, sugar, leaveners, cornmeal, cocoa, gelatin | fresh herbs (`PRODUCE`) |
+| `GRAINS_RICE` | rice, oats, quinoa, couscous, barley, bulgur | breakfast cereal (`DRY_GOODS`) |
+| `PASTA_SAUCES` | dried pasta, noodles, pasta and pizza sauce | plain canned tomato sauce (`CANNED`); salsa, taco, enchilada sauce (`CONDIMENTS`) |
+| `JAM_NUT_BUTTER` | jams, preserves, nut butters, **honey and syrups** | |
+| `CONDIMENTS` | oils, **cooking sprays**, vinegars, savoury sauces, dressings | syrups |
+| `KITCHEN` | non-food a recipe uses — foil, skewers, toothpicks, straws, paper cups | cooking spray |
+| `HOUSEHOLD` | non-food a recipe never uses — cleaning, paper towels | anything in the corpus |
+
+The boundaries live in `IngredientCatalogueBuilder.CategoryAisleRules`, the keyword table in
+`RecipeScrapeService` was reordered to agree with them, and the frontend's three hand-copied lists
+became `constants/categories.js`. `--batch` now logs one line per category per batch.
+
+**How the rules were arrived at — three previews and two full builds:**
+
+| Run | Scope | Finding |
+|---|---|---|
+| preview 1 | 9 boundary batches | New categories used as intended, but **all six salts → `DRY_GOODS`**, every syrup → `CONDIMENTS`, `dried thyme` → `PRODUCE`, taco sauce → `PASTA_SAUCES` — each against a stated rule. |
+| preview 2 | 5 batches | Salt and syrups moved to the front of their lines; `DRY_GOODS` and `CONDIMENTS` given boundaries; herbs judged from source lines. **All five misses fixed**, and fresh sage and rosemary moved to `PRODUCE`. |
+| build 1 | full | 1,187 entries. **Batch 43 failed by chance** (empty answer twice, then collapsed) — 38 names, including all waters and vinegars, fell to the keyword table. Separately, broth → `BEVERAGES`, spreads and egg substitute → `OTHER`, pizza shell → `KITCHEN`: categories this change never touched. |
+| preview 3 | 8 batches | Batch 43 alone was fully correct. `CANNED`, `DAIRY`, `BAKERY`, `BEVERAGES` given boundaries; every regression fixed. |
+| **build 2** | **full** | **1,194 entries, 51 calls, no failed batch, 1 name from the keyword fallback.** |
+
+**Build 2 against the §12.3 artefact:** 469 of 1,475 names (3,094 rows) changed category. `OTHER` fell
+from 46 entries to 13. 41 of 50 curated densities still attach, the same 41. `salt` (357 rows),
+`black pepper`, `sugar`, `flour` → `BAKING_SPICES`; `honey`, `peanut butter`, `maple syrup` →
+`JAM_NUT_BUTTER`; cooking sprays `OTHER` → `CONDIMENTS`; `water` and `chicken broth` unchanged.
+
+**What the review should look at first, replacing §12.3's list:**
+
+1. `lemon juice` / `lime juice` (134 rows) are `CONDIMENTS`, previously `BEVERAGES`. Neither is the
+   produce aisle a fresh lemon comes from.
+2. `corn` (33), `green beans` (21), `green chiles` (12) moved `PRODUCE` → `CANNED`, because their
+   source lines are mostly cans. `tomatoes` (136 rows, mostly canned) stayed one `PRODUCE` entry.
+3. Single-row misfiles: pudding mixes and `golden raisins` `DAIRY`, `ice` (10 rows) `KITCHEN`, `spoon`
+   `HOUSEHOLD`, `shortening` `OTHER`.
+4. §12.3 items 1 and 4 (vocabulary omissions, visible missed merges) still apply; groupings were
+   re-derived, so the specific `kept apart:` lines are in the new build log, not the old one.

@@ -132,6 +132,70 @@ public class IngredientCatalogueBuilder(
     ];
 
     /// <summary>
+    /// Where each aisle's boundary falls, for the categories whose names alone do not settle it.
+    ///
+    /// <para><b>Declared before <see cref="GroupingSystemPrompt"/> on purpose</b> — static
+    /// initialisers run in textual order, and the prompt is built from this.</para>
+    ///
+    /// <para><b>Each line is a boundary, not a menu of this corpus's names.</b> The rule that
+    /// replaced a missing one measurably worked: with nothing said about spices the model invented
+    /// <c>SPICES</c>. The boundaries that most need stating are the ones the old ten categories
+    /// straddled — salt was <c>DRY_GOODS</c> while pepper was <c>CONDIMENTS</c>, honey came back
+    /// <c>OTHER</c>, cooking spray <c>OTHER</c>, maple syrup <c>BEVERAGES</c>.</para>
+    ///
+    /// <para><b>The catch-all categories need boundaries too, and the most-missed item goes first.</b>
+    /// Measured on a nine-batch preview: with salt named last in the baking line, and no line at all
+    /// for <c>DRY_GOODS</c> or <c>CONDIMENTS</c>, the model filed all six salts under <c>DRY_GOODS</c>,
+    /// every syrup under <c>CONDIMENTS</c> and <c>dried thyme</c> under <c>PRODUCE</c> — each against
+    /// a rule it had been given. Leading with salt and syrups, stating what <c>DRY_GOODS</c> and
+    /// <c>CONDIMENTS</c> hold, and telling the model to read the source lines for herbs fixed all of
+    /// them on re-preview, and moved fresh sage and rosemary to <c>PRODUCE</c> in the same pass.</para>
+    ///
+    /// <para><b>Unstated boundaries drift between runs, not only between categories.</b> The first full
+    /// build on these rules moved broth from <c>CANNED</c> to <c>BEVERAGES</c>, spreads and egg
+    /// substitute from <c>DAIRY</c> to <c>OTHER</c>, and pizza shells to <c>KITCHEN</c> — none of them
+    /// categories this change touched. The previous artefact had them right by chance, so each now has
+    /// a line.</para>
+    ///
+    /// <para><b>Cooking spray is <see cref="IngredientCategory.Condiments"/></b>, beside the oils it is
+    /// shelved with, not <see cref="IngredientCategory.Kitchen"/>. Plain canned tomato sauce is
+    /// <see cref="IngredientCategory.Canned"/>; only jarred pasta sauce is pasta. Breakfast cereal
+    /// stays <see cref="IngredientCategory.DryGoods"/> even when it is made of rice.</para>
+    /// </summary>
+    internal static readonly string CategoryAisleRules =
+        $"- {IngredientCategory.BakingSpices}: salt of every kind (table, kosher, garlic, celery, seasoned), " +
+        "pepper, spices, seasoning blends, extracts, flour, sugar, baking powder and soda, yeast, " +
+        "cornstarch, cornmeal, cocoa and chocolate chips. A name combining salt and pepper is here too.\n" +
+        $"- Herbs: dried or ground herbs, or herbs the source lines measure by the teaspoon, are " +
+        $"{IngredientCategory.BakingSpices} whether or not the name says dried. Fresh sprigs, bunches and " +
+        $"leaves are {IngredientCategory.Produce}.\n" +
+        $"- {IngredientCategory.DryGoods}: nuts, seeds, dried fruit, dried beans and lentils, breakfast " +
+        "cereal, crackers and snacks. Not salt, not flour, not sugar.\n" +
+        $"- {IngredientCategory.GrainsRice}: rice, oats, quinoa, couscous, barley and bulgur. Breakfast " +
+        $"cereal is {IngredientCategory.DryGoods}.\n" +
+        $"- {IngredientCategory.PastaSauces}: dried pasta, noodles, and pasta or pizza sauce. Plain canned " +
+        $"tomato sauce is {IngredientCategory.Canned}; salsa, taco, picante and enchilada sauces are " +
+        $"{IngredientCategory.Condiments}.\n" +
+        $"- {IngredientCategory.JamNutButter}: honey, maple syrup and every other syrup, jams, jellies, " +
+        "preserves, and peanut and other nut butters.\n" +
+        $"- {IngredientCategory.Canned}: canned vegetables, beans, fruit and tomatoes, soups, and broth, " +
+        "stock and bouillon in any packaging.\n" +
+        $"- {IngredientCategory.Dairy}: milk, cream, cheese and cheese spreads, yogurt, butter, margarine " +
+        "and buttery spreads, eggs and egg substitutes.\n" +
+        $"- {IngredientCategory.BakingSpices} also holds gelatin.\n" +
+        $"- {IngredientCategory.Bakery}: bread, rolls, buns, tortillas, pita and pizza crusts or shells.\n" +
+        $"- {IngredientCategory.Beverages}: water of any temperature, drinks, wine and beer. Broth and " +
+        $"stock are {IngredientCategory.Canned}.\n" +
+        $"- {IngredientCategory.CoffeeTea}: coffee and tea.\n" +
+        $"- {IngredientCategory.Condiments}: oils, cooking sprays, vinegars, savoury sauces, salsa, " +
+        "dressings, mustard, ketchup and mayonnaise. Not syrups.\n" +
+        $"- {IngredientCategory.Kitchen}: things used to cook or serve that are not eaten — foil, " +
+        "parchment, skewers, toothpicks, straws, popsicle and craft sticks, paper cups, muffin liners.\n" +
+        $"- {IngredientCategory.Household}: cleaning supplies, paper towels and toiletries — never " +
+        "anything a recipe uses.\n" +
+        $"- {IngredientCategory.Other}: only when no other value fits.\n";
+
+    /// <summary>
     /// The §5 rules, each derived from a measured corpus case rather than from taste, phrased as the
     /// per-name <c>same_as</c> decision the schema asks for.
     ///
@@ -185,8 +249,8 @@ public class IngredientCatalogueBuilder(
             "\n" +
             $"category: MUST be exactly one value from this list: {string.Join(", ", IngredientCategory.All)}.\n" +
             "Judge it by the aisle the item is bought from, not by a word inside its name. Peanut " +
-            "butter is not dairy. Chicken broth is not meat. Egg noodles are not dairy. Spices, " +
-            $"dried herbs, seasonings and extracts are {IngredientCategory.Condiments}.\n" +
+            "butter is not dairy. Chicken broth is not meat. Egg noodles are not dairy.\n" +
+            CategoryAisleRules +
             "\n" +
             "Read the source lines before deciding same_as, because the name alone is often not " +
             "enough evidence.\n" +
@@ -573,6 +637,22 @@ public class IngredientCatalogueBuilder(
                     "[{Index}/{Total}] merged: {Canonical} ← {Absorbed} ({Category})",
                     index + 1, batches.Count, merge.Members[0],
                     string.Join(" | ", merge.Members.Skip(1)), merge.Category);
+
+            // Every category, one line per aisle in shopping-list order. A category is as much a
+            // judgement for review as a merge is, and the merge lines above only name the categories
+            // of groups — most names stand alone, so their aisle was otherwise invisible until the
+            // artefact was written.
+            foreach (var category in IngredientCategory.All)
+            {
+                var named = batchGroups.Where(group => group.Category == category)
+                                       .Select(group => group.Members[0])
+                                       .ToList();
+
+                if (named.Count > 0)
+                    logger.LogInformation(
+                        "[{Index}/{Total}] {Category}: {Names}",
+                        index + 1, batches.Count, category, string.Join(" | ", named));
+            }
 
             logger.LogInformation(
                 "[{Index}/{Total}] {Names} names → {Groups} groups ({Attempts} attempt(s)).",

@@ -184,16 +184,14 @@ import { reactive, ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useRecipeStore } from '@/stores/recipes'
 import { MEASUREMENT_UNITS, toPayloadMeasurement } from '@/constants/units'
+import { INGREDIENT_CATEGORY_VALUES } from '@/constants/categories'
 
 const router = useRouter()
 const store  = useRecipeStore()
 
 const units = MEASUREMENT_UNITS
 
-const categories = [
-  'PRODUCE', 'MEAT_SEAFOOD', 'DAIRY', 'CANNED',
-  'FROZEN', 'DRY_GOODS', 'BAKERY', 'CONDIMENTS', 'BEVERAGES', 'OTHER',
-]
+const categories = INGREDIENT_CATEGORY_VALUES
 
 const submitError = ref(null)
 

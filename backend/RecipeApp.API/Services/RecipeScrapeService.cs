@@ -148,17 +148,29 @@ public class RecipeScrapeService(
 
     // ── Ingredient category heuristic ─────────────────────────────────────────
 
+    // First match wins, so order is where substring collisions are settled: JAM_NUT_BUTTER precedes
+    // DAIRY ("peanut butter"), PASTA_SAUCES precedes DAIRY ("egg noodles"), KITCHEN precedes
+    // CONDIMENTS ("foil" contains "oil"), CONDIMENTS precedes GRAINS_RICE ("rice vinegar"),
+    // BAKING_SPICES precedes GRAINS_RICE ("rice flour"), DRY_GOODS ("nutmeg") and PRODUCE
+    // ("garlic powder", "black pepper"), and GRAINS_RICE precedes BAKERY ("rolled oats"). Broth,
+    // stock and bouillon are CANNED, matching the catalogue builder's aisle rules.
     private static readonly (string Category, string[] Keywords)[] CategoryPriority =
     [
-        (IngredientCategory.MeatSeafood, ["chicken", "beef", "pork", "lamb", "turkey", "duck", "bacon", "ham", "sausage", "mince", "steak", "fillet", "breast", "thigh", "salmon", "tuna", "cod", "prawn", "shrimp", "crab", "lobster", "mussel", "anchovy", "chorizo", "salami", "pepperoni"]),
-        (IngredientCategory.Dairy,       ["milk", "cream", "butter", "cheese", "yogurt", "yoghurt", "egg", "parmesan", "mozzarella", "cheddar", "ricotta", "brie", "ghee", "crème fraîche", "sour cream"]),
-        (IngredientCategory.Canned,      ["canned", "tinned", "kidney bean", "chickpea", "black bean", "cannellini", "coconut milk", "chopped tomato", "diced tomato", "tomato paste"]),
-        (IngredientCategory.Frozen,      ["frozen"]),
-        (IngredientCategory.Bakery,      ["bread", "roll", "bun", "baguette", "pita", "tortilla", "wrap", "crumpet", "croissant"]),
-        (IngredientCategory.Beverages,   ["stock", "broth", "wine", "beer", "juice", "coffee", "tea"]),
-        (IngredientCategory.Condiments,  ["oil", "vinegar", "sauce", "soy", "fish sauce", "worcestershire", "mustard", "ketchup", "mayonnaise", "honey", "miso", "tahini", "paprika", "cumin", "turmeric", "cinnamon", "nutmeg", "curry", "chilli flake", "cayenne", "vanilla", "extract", "seasoning", "spice", "herb"]),
-        (IngredientCategory.DryGoods,    ["flour", "sugar", "salt", "rice", "pasta", "noodle", "oat", "breadcrumb", "lentil", "quinoa", "couscous", "baking powder", "baking soda", "yeast", "cornstarch", "cornflour", "cocoa", "chocolate", "almond", "walnut", "cashew", "peanut", "sesame", "seed", "nut"]),
-        (IngredientCategory.Produce,     ["onion", "garlic", "carrot", "celery", "tomato", "potato", "lettuce", "spinach", "kale", "broccoli", "pepper", "capsicum", "zucchini", "cucumber", "avocado", "lemon", "lime", "orange", "apple", "banana", "mushroom", "corn", "asparagus", "pea", "parsley", "basil", "coriander", "thyme", "rosemary", "mint", "dill", "chive", "scallion", "leek", "shallot", "ginger", "chilli", "eggplant", "beetroot", "pumpkin", "squash", "berry"]),
+        (IngredientCategory.MeatSeafood,  ["chicken", "beef", "pork", "lamb", "turkey", "duck", "bacon", "ham", "sausage", "mince", "steak", "fillet", "breast", "thigh", "salmon", "tuna", "cod", "prawn", "shrimp", "crab", "lobster", "mussel", "anchovy", "chorizo", "salami", "pepperoni"]),
+        (IngredientCategory.JamNutButter, ["peanut butter", "almond butter", "cashew butter", "nut butter", "seed butter", "jam", "jelly", "preserves", "marmalade", "honey", "syrup"]),
+        (IngredientCategory.PastaSauces,  ["pasta", "spaghetti", "macaroni", "noodle", "penne", "lasagna", "linguine", "fettuccine", "rotini", "fusilli", "orzo", "marinara", "pizza sauce"]),
+        (IngredientCategory.Dairy,        ["milk", "cream", "butter", "margarine", "cheese", "yogurt", "yoghurt", "egg", "parmesan", "mozzarella", "cheddar", "ricotta", "brie", "ghee", "crème fraîche", "sour cream"]),
+        (IngredientCategory.Canned,       ["canned", "tinned", "kidney bean", "chickpea", "black bean", "cannellini", "coconut milk", "chopped tomato", "diced tomato", "tomato paste", "tomato sauce", "stock", "broth", "bouillon"]),
+        (IngredientCategory.Frozen,       ["frozen"]),
+        (IngredientCategory.Kitchen,      ["foil", "parchment", "wax paper", "plastic wrap", "skewer", "toothpick", "muffin liner", "cupcake liner", "paper cup", "popsicle stick", "craft stick"]),
+        (IngredientCategory.CoffeeTea,    ["coffee", "espresso", "tea"]),
+        (IngredientCategory.Beverages,    ["wine", "beer", "juice"]),
+        (IngredientCategory.Condiments,   ["oil", "cooking spray", "vinegar", "sauce", "soy", "fish sauce", "worcestershire", "mustard", "ketchup", "mayonnaise", "miso", "tahini", "curry paste"]),
+        (IngredientCategory.BakingSpices, ["flour", "sugar", "salt", "baking powder", "baking soda", "yeast", "cornstarch", "cornflour", "cornmeal", "cocoa", "chocolate", "gelatin", "vanilla", "extract", "black pepper", "peppercorn", "paprika", "cumin", "turmeric", "cinnamon", "nutmeg", "curry powder", "chili powder", "chilli flake", "pepper flake", "cayenne", "garlic powder", "onion powder", "oregano", "seasoning", "spice", "herb"]),
+        (IngredientCategory.GrainsRice,   ["rice", "oat", "quinoa", "couscous", "barley", "bulgur", "farro", "millet", "grits", "polenta"]),
+        (IngredientCategory.Bakery,       ["bread", "roll", "bun", "baguette", "pita", "tortilla", "wrap", "crumpet", "croissant", "pizza crust", "pizza shell"]),
+        (IngredientCategory.DryGoods,     ["breadcrumb", "lentil", "almond", "walnut", "cashew", "peanut", "sesame", "seed", "nut"]),
+        (IngredientCategory.Produce,      ["onion", "garlic", "carrot", "celery", "tomato", "potato", "lettuce", "spinach", "kale", "broccoli", "pepper", "capsicum", "zucchini", "cucumber", "avocado", "lemon", "lime", "orange", "apple", "banana", "mushroom", "corn", "asparagus", "pea", "parsley", "basil", "coriander", "thyme", "rosemary", "mint", "dill", "chive", "scallion", "leek", "shallot", "ginger", "chilli", "eggplant", "beetroot", "pumpkin", "squash", "berry"]),
     ];
 
     /// <summary>How every response to a RecipeSchemaJson-shaped prompt is read. Shared with the

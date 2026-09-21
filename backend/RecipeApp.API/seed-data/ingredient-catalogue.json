@@ -459,8 +459,8 @@
     {
       "name": "basil",
       "displayName": "Basil",
-      "category": "BAKING_SPICES",
-      "defaultUnit": "tsp",
+      "category": "PRODUCE",
+      "defaultUnit": "pcs",
       "aliases": [
         "fresh basil",
         "basil leaves"
@@ -841,7 +841,7 @@
       "displayName": "Bran Flakes",
       "category": "DRY_GOODS",
       "defaultUnit": "cup",
-      "aliases": ["Bran And Wheat Flakes Ready-To-Eat Cereal"],
+      "aliases": ["bran and wheat flakes ready-to-eat cereal"],
       "corpusRows": 1,
       "corpusRecipes": 1
     },
@@ -1343,7 +1343,7 @@
     },
     {
       "name": "celery salt",
-      "displayName": "Salt",
+      "displayName": "Celery Salt",
       "category": "BAKING_SPICES",
       "defaultUnit": "tsp",
       "aliases": [],
@@ -1521,7 +1521,7 @@
       "aliases": [
         "low-sodium chicken broth",
         "reduced-sodium chicken broth",
-        "Chicken Broth Granules",
+        "chicken broth granules",
         "chicken broth or vegetable broth",
         "chicken or vegetable broth",
         "chicken or turkey broth"
@@ -3730,7 +3730,7 @@
     },
     {
       "name": "garlic salt",
-      "displayName": "Salt",
+      "displayName": "Garlic Salt",
       "category": "BAKING_SPICES",
       "defaultUnit": "tsp",
       "aliases": [],
@@ -4829,7 +4829,7 @@
     },
     {
       "name": "kosher salt",
-      "displayName": "Salt",
+      "displayName": "Kosher Salt",
       "category": "BAKING_SPICES",
       "defaultUnit": "tsp",
       "aliases": [],
@@ -6849,15 +6849,6 @@
       "corpusRecipes": 1
     },
     {
-      "name": "prepared salsa",
-      "displayName": "Salsa",
-      "category": "CONDIMENTS",
-      "defaultUnit": "cup",
-      "aliases": [],
-      "corpusRows": 1,
-      "corpusRecipes": 1
-    },
-    {
       "name": "pretzel",
       "displayName": "Pretzel",
       "category": "DRY_GOODS",
@@ -7599,7 +7590,8 @@
       "category": "CONDIMENTS",
       "defaultUnit": "cup",
       "aliases": [
-        "fresh salsa"
+        "fresh salsa",
+        "prepared salsa"
       ],
       "corpusRows": 29,
       "corpusRecipes": 28
@@ -7618,67 +7610,19 @@
       "displayName": "Salt \u0026 Pepper",
       "category": "BAKING_SPICES",
       "defaultUnit": null,
-      "aliases": [],
+      "aliases": [
+        "salt and ground black pepper", 
+        "salt and ground pepper",
+        "salt and freshly ground black pepper",
+        "salt and black pepper", "salt and pepper",
+        "salt and pepper to taste"
+      ],
       "corpusRows": 2,
       "corpusRecipes": 2
-    },
-    {
-      "name": "salt and black pepper",
-      "displayName": "Salt And Black Pepper",
-      "category": "BAKING_SPICES",
-      "defaultUnit": "pcs",
-      "aliases": [],
-      "corpusRows": 2,
-      "corpusRecipes": 2
-    },
-    {
-      "name": "salt and freshly ground black pepper",
-      "displayName": "Salt And Freshly Ground Black Pepper",
-      "category": "BAKING_SPICES",
-      "defaultUnit": null,
-      "aliases": [],
-      "corpusRows": 1,
-      "corpusRecipes": 1
-    },
-    {
-      "name": "salt and ground black pepper",
-      "displayName": "Salt And Ground Black Pepper",
-      "category": "BAKING_SPICES",
-      "defaultUnit": null,
-      "aliases": [],
-      "corpusRows": 1,
-      "corpusRecipes": 1
-    },
-    {
-      "name": "salt and ground pepper",
-      "displayName": "Salt And Ground Pepper",
-      "category": "BAKING_SPICES",
-      "defaultUnit": null,
-      "aliases": [],
-      "corpusRows": 1,
-      "corpusRecipes": 1
     },
     {
       "name": "salt and lemon pepper",
       "displayName": "Salt And Lemon Pepper",
-      "category": "BAKING_SPICES",
-      "defaultUnit": null,
-      "aliases": [],
-      "corpusRows": 1,
-      "corpusRecipes": 1
-    },
-    {
-      "name": "salt and pepper",
-      "displayName": "Salt And Pepper",
-      "category": "BAKING_SPICES",
-      "defaultUnit": null,
-      "aliases": [],
-      "corpusRows": 38,
-      "corpusRecipes": 38
-    },
-    {
-      "name": "salt and pepper to taste",
-      "displayName": "Salt And Pepper To Taste",
       "category": "BAKING_SPICES",
       "defaultUnit": null,
       "aliases": [],
@@ -8885,7 +8829,7 @@
     },
     {
       "name": "tomato salsa",
-      "displayName": "Salsa",
+      "displayName": "Tomato Salsa",
       "category": "CONDIMENTS",
       "defaultUnit": "cup",
       "aliases": [

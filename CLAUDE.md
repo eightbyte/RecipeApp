@@ -177,6 +177,9 @@ dotnet test RecipeApp.Tests/RecipeApp.Tests.csproj --coverage --coverage-output-
   the shopping list's aisle order** — `ShoppingListService` sorts by index — so a new category goes
   beside its nearest relative, not at the end. Adding one also means a line in
   `IngredientCatalogueBuilder.CategoryAisleRules` and a place in `RecipeScrapeService`'s keyword table.
+  **That table is first-match-wins, so a category whose names are assembled from other aisles'
+  words has to lead it** — `chicken broth` is a MEAT_SEAFOOD keyword and `cream of mushroom soup`
+  a DAIRY one long before either row's own keyword is reached.
 - The storable unit set lives in **one place**: `Enums/MeasurementUnit.cs` (backend) mirrored by
   `src/constants/units.js` (frontend). Never hardcode a unit array — consume those.
   Current set: `g`, `kg`, `ml`, `L`, `pcs`, `tsp`, `tbsp`, `cup`.
@@ -686,6 +689,29 @@ worth knowing: `CacheDirectory`, `PreferredSnapshotYear`, `FetchDelayMillisecond
   HOUSEHOLD; `shortening` and the typo `black peppeer` are OTHER; `tomatoes` (136 rows) is still one
   PRODUCE entry despite being mostly canned. Local databases imported from the old artefact keep their
   old categories until `import-catalogue --force`.
+- **SOUPS_BROTH added, 18th category (2026-09-20).** Broth, stock and bouillon were CANNED by an
+  explicit Phase 9.3 rule; they are now their own aisle, sitting immediately after CANNED in
+  `IngredientCategory.All`. No migration — `Category` is a string column and nothing was renamed.
+  **The 22 moved entries were hand-picked in the working artefact, not rebuilt** — no
+  `--build-catalogue` run, so every other entry is byte-identical and the diff is 22 `category`
+  lines. Four reviewed clusters: 11 broths/stocks/bouillon (`chicken broth` alone is 44 rows),
+  5 condensed and cream-of soups, 3 ready-to-eat soups and mixes, 3 either/or names
+  (`water or low-sodium broth`, `ramen noodle flavor packet`).
+  **Two things worth knowing:**
+  - **The keyword heuristic had the boundary backwards and no test caught it.**
+    `RecipeScrapeService.CategoryPriority` is first-match-wins and MEAT_SEAFOOD leads it, so
+    `chicken broth` resolved to MEAT_SEAFOOD all along — against the comment directly above the
+    table claiming broth was CANNED. Only `vegetable broth`/`vegetable stock` were covered, and
+    those are the two broth names with no other aisle's keyword in them. SOUPS_BROTH now leads
+    the table, and the five collision cases that fail if it stops leading are in the theory.
+  - **CANNED, DAIRY and BEVERAGES each needed their boundary restated, not just the new line.**
+    A category assembled from other aisles' words is exactly the case Phase 9.3 measured: the
+    aisle it was carved out of absorbs whatever the new line does not explicitly name. CANNED
+    now hands back anything named broth/stock/bouillon/soup, DAIRY hands back cream-of and
+    cheese soups, and BEVERAGES hands back `water or low-sodium broth`.
+  A rebuild has **not** been run against these rules, so they are reasoned, not measured —
+  preview with `--build-catalogue --batch` before trusting them on a full build. Local databases
+  keep the old categories until `import-catalogue --force`.
 
 ---
 ## Project Notes

@@ -450,7 +450,7 @@
     {
       "name": "basic soup and sauce mix",
       "displayName": "Basic Soup And Sauce Mix (See Recipe)",
-      "category": "OTHER",
+      "category": "SOUPS_BROTH",
       "defaultUnit": "cup",
       "aliases": [],
       "corpusRows": 1,
@@ -522,7 +522,7 @@
     {
       "name": "beef bouillon",
       "displayName": "Beef Bouillon",
-      "category": "CANNED",
+      "category": "SOUPS_BROTH",
       "defaultUnit": "tsp",
       "aliases": ["beef bouillon cube"],
       "corpusRows": 2,
@@ -531,7 +531,7 @@
     {
       "name": "beef broth",
       "displayName": "Beef Broth",
-      "category": "CANNED",
+      "category": "SOUPS_BROTH",
       "defaultUnit": "cup",
       "aliases": [
         "beef stock",
@@ -563,7 +563,7 @@
     {
       "name": "beef or chicken bouillon cubes",
       "displayName": "Beef Or Chicken Bouillon Cubes",
-      "category": "CANNED",
+      "category": "SOUPS_BROTH",
       "defaultUnit": "pcs",
       "aliases": [],
       "corpusRows": 1,
@@ -641,7 +641,7 @@
     {
       "name": "better baking mix",
       "displayName": "Better Baking Mix (See Recipe)",
-      "category": "BAKING_SPICES",
+      "category": "OTHER",
       "defaultUnit": "pcs",
       "aliases": [],
       "corpusRows": 5,
@@ -900,7 +900,7 @@
     {
       "name": "broth",
       "displayName": "Broth",
-      "category": "CANNED",
+      "category": "SOUPS_BROTH",
       "defaultUnit": "g",
       "aliases": [
         "low-sodium broth",
@@ -1401,7 +1401,7 @@
     {
       "name": "cheddar cheese soup",
       "displayName": "Cheddar Cheese Soup",
-      "category": "CANNED",
+      "category": "SOUPS_BROTH",
       "defaultUnit": "tbsp",
       "aliases": [],
       "corpusRows": 1,
@@ -1490,7 +1490,7 @@
     {
       "name": "chicken bouillon",
       "displayName": "Chicken Bouillon",
-      "category": "CANNED",
+      "category": "SOUPS_BROTH",
       "defaultUnit": "tsp",
       "aliases": [
         "chicken bouillon cube"
@@ -1516,7 +1516,7 @@
     {
       "name": "chicken broth",
       "displayName": "Chicken Broth",
-      "category": "CANNED",
+      "category": "SOUPS_BROTH",
       "defaultUnit": "cup",
       "aliases": [
         "low-sodium chicken broth",
@@ -1568,7 +1568,7 @@
     {
       "name": "chicken stock",
       "displayName": "Chicken Stock",
-      "category": "CANNED",
+      "category": "SOUPS_BROTH",
       "defaultUnit": "cup",
       "aliases": [
         "low-sodium chicken stock"
@@ -1941,7 +1941,7 @@
     {
       "name": "condensed cream of chicken soup",
       "displayName": "Condensed Cream of Chicken Soup",
-      "category": "CANNED",
+      "category": "SOUPS_BROTH",
       "defaultUnit": "pcs",
       "aliases": [],
       "corpusRows": 1,
@@ -1950,7 +1950,7 @@
     {
       "name": "condensed cream of mushroom soup",
       "displayName": "Condensed Cream of Mushroom Soup",
-      "category": "CANNED",
+      "category": "SOUPS_BROTH",
       "defaultUnit": "g",
       "aliases": [],
       "corpusRows": 2,
@@ -2352,7 +2352,7 @@
     {
       "name": "cream of chicken soup",
       "displayName": "Cream of Chicken Soup",
-      "category": "CANNED",
+      "category": "SOUPS_BROTH",
       "defaultUnit": "g",
       "aliases": [],
       "corpusRows": 2,
@@ -2361,7 +2361,7 @@
     {
       "name": "cream of mushroom soup",
       "displayName": "Cream of Mushroom Soup",
-      "category": "CANNED",
+      "category": "SOUPS_BROTH",
       "defaultUnit": "g",
       "aliases": [],
       "corpusRows": 5,
@@ -5220,7 +5220,7 @@
     {
       "name": "low-sodium bouillon",
       "displayName": "Low-Sodium Bouillon",
-      "category": "CANNED",
+      "category": "SOUPS_BROTH",
       "defaultUnit": "tsp",
       "aliases": [ "low-sodium vegetable bouillon cube"],
       "corpusRows": 2,
@@ -5229,7 +5229,7 @@
     {
       "name": "low-sodium bouillon granules",
       "displayName": "Low-Sodium Bouillon Granules",
-      "category": "CANNED",
+      "category": "SOUPS_BROTH",
       "defaultUnit": "tsp",
       "aliases": [],
       "corpusRows": 1,
@@ -7039,7 +7039,7 @@
     {
       "name": "ramen noodle flavor packet",
       "displayName": "Ramen Noodle Flavor Packet",
-      "category": "OTHER",
+      "category": "SOUPS_BROTH",
       "defaultUnit": "tsp",
       "aliases": [],
       "corpusRows": 1,
@@ -8026,7 +8026,7 @@
     {
       "name": "soup",
       "displayName": "Soup",
-      "category": "CANNED",
+      "category": "SOUPS_BROTH",
       "defaultUnit": "pcs",
       "aliases": [],
       "corpusRows": 1,
@@ -8277,7 +8277,7 @@
     {
       "name": "stock or low-sodium broth",
       "displayName": "Stock Or Low-Sodium Broth",
-      "category": "CANNED",
+      "category": "SOUPS_BROTH",
       "defaultUnit": "cup",
       "aliases": [],
       "corpusRows": 1,
@@ -8853,7 +8853,7 @@
     {
       "name": "tomato soup",
       "displayName": "Tomato Soup",
-      "category": "CANNED",
+      "category": "SOUPS_BROTH",
       "defaultUnit": "pcs",
       "aliases": [],
       "corpusRows": 4,
@@ -9209,7 +9209,7 @@
     {
       "name": "vegetable broth",
       "displayName": "Vegetable Broth",
-      "category": "CANNED",
+      "category": "SOUPS_BROTH",
       "defaultUnit": "cup",
       "aliases": [
         "low-sodium vegetable broth"
@@ -9265,7 +9265,7 @@
     {
       "name": "vegetable stock",
       "displayName": "Vegetable Stock",
-      "category": "CANNED",
+      "category": "SOUPS_BROTH",
       "defaultUnit": "cup",
       "aliases": [],
       "corpusRows": 1,
@@ -9400,7 +9400,7 @@
     {
       "name": "water or low-sodium broth",
       "displayName": "Water Or Low-Sodium Broth",
-      "category": "BEVERAGES",
+      "category": "SOUPS_BROTH",
       "defaultUnit": "cup",
       "aliases": [],
       "corpusRows": 1,

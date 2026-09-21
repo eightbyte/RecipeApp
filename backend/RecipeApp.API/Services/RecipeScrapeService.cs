@@ -148,19 +148,22 @@ public class RecipeScrapeService(
 
     // ── Ingredient category heuristic ─────────────────────────────────────────
 
-    // First match wins, so order is where substring collisions are settled: JAM_NUT_BUTTER precedes
-    // DAIRY ("peanut butter"), PASTA_SAUCES precedes DAIRY ("egg noodles"), KITCHEN precedes
-    // CONDIMENTS ("foil" contains "oil"), CONDIMENTS precedes GRAINS_RICE ("rice vinegar"),
-    // BAKING_SPICES precedes GRAINS_RICE ("rice flour"), DRY_GOODS ("nutmeg") and PRODUCE
-    // ("garlic powder", "black pepper"), and GRAINS_RICE precedes BAKERY ("rolled oats"). Broth,
-    // stock and bouillon are CANNED, matching the catalogue builder's aisle rules.
+    // First match wins, so order is where substring collisions are settled: SOUPS_BROTH leads
+    // because its names are built from other aisles' words and every later row would claim them
+    // first ("chicken broth" is MEAT_SEAFOOD, "cheddar cheese soup" and "cream of mushroom soup"
+    // are DAIRY, "tomato soup" is PRODUCE); JAM_NUT_BUTTER precedes DAIRY ("peanut butter"),
+    // PASTA_SAUCES precedes DAIRY ("egg noodles"), KITCHEN precedes CONDIMENTS ("foil" contains
+    // "oil"), CONDIMENTS precedes GRAINS_RICE ("rice vinegar"), BAKING_SPICES precedes
+    // GRAINS_RICE ("rice flour"), DRY_GOODS ("nutmeg") and PRODUCE ("garlic powder", "black
+    // pepper"), and GRAINS_RICE precedes BAKERY ("rolled oats").
     private static readonly (string Category, string[] Keywords)[] CategoryPriority =
     [
+        (IngredientCategory.SoupsBroth,   ["broth", "stock", "bouillon", "consomme", "consommé", "soup", "bisque", "chowder"]),
         (IngredientCategory.MeatSeafood,  ["chicken", "beef", "pork", "lamb", "turkey", "duck", "bacon", "ham", "sausage", "mince", "steak", "fillet", "breast", "thigh", "salmon", "tuna", "cod", "prawn", "shrimp", "crab", "lobster", "mussel", "anchovy", "chorizo", "salami", "pepperoni"]),
         (IngredientCategory.JamNutButter, ["peanut butter", "almond butter", "cashew butter", "nut butter", "seed butter", "jam", "jelly", "preserves", "marmalade", "honey", "syrup"]),
         (IngredientCategory.PastaSauces,  ["pasta", "spaghetti", "macaroni", "noodle", "penne", "lasagna", "linguine", "fettuccine", "rotini", "fusilli", "orzo", "marinara", "pizza sauce"]),
         (IngredientCategory.Dairy,        ["milk", "cream", "butter", "margarine", "cheese", "yogurt", "yoghurt", "egg", "parmesan", "mozzarella", "cheddar", "ricotta", "brie", "ghee", "crème fraîche", "sour cream"]),
-        (IngredientCategory.Canned,       ["canned", "tinned", "kidney bean", "chickpea", "black bean", "cannellini", "coconut milk", "chopped tomato", "diced tomato", "tomato paste", "tomato sauce", "stock", "broth", "bouillon"]),
+        (IngredientCategory.Canned,       ["canned", "tinned", "kidney bean", "chickpea", "black bean", "cannellini", "coconut milk", "chopped tomato", "diced tomato", "tomato paste", "tomato sauce"]),
         (IngredientCategory.Frozen,       ["frozen"]),
         (IngredientCategory.Kitchen,      ["foil", "parchment", "wax paper", "plastic wrap", "skewer", "toothpick", "muffin liner", "cupcake liner", "paper cup", "popsicle stick", "craft stick"]),
         (IngredientCategory.CoffeeTea,    ["coffee", "espresso", "tea"]),

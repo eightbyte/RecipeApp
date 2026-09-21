@@ -122,10 +122,10 @@ ingredients
   name             TEXT  NOT NULL UNIQUE  (normalised, lowercase e.g. "onion")
   display_name     TEXT  NOT NULL         (e.g. "Onion")
   category         TEXT  NOT NULL         (shopping group, in aisle order: PRODUCE, MEAT_SEAFOOD,
-                                           DAIRY, CANNED, FROZEN, DRY_GOODS, GRAINS_RICE,
-                                           PASTA_SAUCES, BAKING_SPICES, BAKERY, CONDIMENTS,
-                                           JAM_NUT_BUTTER, BEVERAGES, COFFEE_TEA, KITCHEN,
-                                           HOUSEHOLD, OTHER)
+                                           DAIRY, CANNED, SOUPS_BROTH, FROZEN, DRY_GOODS,
+                                           GRAINS_RICE, PASTA_SAUCES, BAKING_SPICES, BAKERY,
+                                           CONDIMENTS, JAM_NUT_BUTTER, BEVERAGES, COFFEE_TEA,
+                                           KITCHEN, HOUSEHOLD, OTHER)
   default_unit     TEXT                   (e.g. "g", "ml", "pcs")
   grams_per_millilitre  DECIMAL(8,4)      (bulk density; NULL means no reliable density is
                                            known — volume measurements are then kept as

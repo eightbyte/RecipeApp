@@ -13,6 +13,10 @@ public static class IngredientCategory
     public const string MeatSeafood   = "MEAT_SEAFOOD";
     public const string Dairy         = "DAIRY";
     public const string Canned        = "CANNED";
+
+    /// <summary>Broth, stock and bouillon in any packaging, condensed and ready-to-eat soups, and soup mixes.</summary>
+    public const string SoupsBroth    = "SOUPS_BROTH";
+
     public const string Frozen        = "FROZEN";
     public const string DryGoods      = "DRY_GOODS";
 
@@ -44,10 +48,10 @@ public static class IngredientCategory
 
     public static readonly IReadOnlyList<string> All =
     [
-        Produce, MeatSeafood, Dairy, Canned, Frozen,
-        DryGoods, GrainsRice, PastaSauces, BakingSpices, Bakery,
-        Condiments, JamNutButter, Beverages, CoffeeTea, Kitchen,
-        Household, Other
+        Produce, MeatSeafood, Dairy, Canned, SoupsBroth,
+        Frozen, DryGoods, GrainsRice, PastaSauces, BakingSpices,
+        Bakery, Condiments, JamNutButter, Beverages, CoffeeTea,
+        Kitchen, Household, Other
     ];
 
     public static bool IsValid(string category) => All.Contains(category);

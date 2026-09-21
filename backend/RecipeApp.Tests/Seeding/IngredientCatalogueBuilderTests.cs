@@ -395,10 +395,10 @@ public class IngredientCatalogueBuilderTests : IDisposable
         string[] needsABoundary =
         [
             IngredientCategory.BakingSpices, IngredientCategory.DryGoods,     IngredientCategory.GrainsRice,
-            IngredientCategory.PastaSauces,  IngredientCategory.JamNutButter, IngredientCategory.Canned,
-            IngredientCategory.Dairy,        IngredientCategory.Bakery,       IngredientCategory.Beverages,
-            IngredientCategory.CoffeeTea,    IngredientCategory.Condiments,   IngredientCategory.Kitchen,
-            IngredientCategory.Household,
+            IngredientCategory.PastaSauces,  IngredientCategory.JamNutButter, IngredientCategory.SoupsBroth,
+            IngredientCategory.Canned,       IngredientCategory.Dairy,        IngredientCategory.Bakery,
+            IngredientCategory.Beverages,    IngredientCategory.CoffeeTea,    IngredientCategory.Condiments,
+            IngredientCategory.Kitchen,      IngredientCategory.Household,
         ];
 
         foreach (var category in needsABoundary)
@@ -411,7 +411,16 @@ public class IngredientCatalogueBuilderTests : IDisposable
         IngredientCatalogueBuilder.CategoryAisleRules.Should().Contain(
             $"Plain canned tomato sauce is {IngredientCategory.Canned}");
         IngredientCatalogueBuilder.CategoryAisleRules.Should().Contain(
-            $"Broth and stock are {IngredientCategory.Canned}.");
+            $"Broth and stock are {IngredientCategory.SoupsBroth},");
+
+        // SOUPS_BROTH is assembled from other aisles' words, so the categories it was carved out
+        // of have to say so themselves — a name alone sends "cream of mushroom soup" to DAIRY.
+        IngredientCatalogueBuilder.CategoryAisleRules.Should().Contain(
+            $"bouillon or soup is {IngredientCategory.SoupsBroth}, canned or not.",
+            "CANNED keeps the vegetables and beans, and has to hand back the soups");
+        IngredientCatalogueBuilder.CategoryAisleRules.Should().Contain(
+            $"A cream-of or cheese soup is {IngredientCategory.SoupsBroth}",
+            "DAIRY is the catch-all a cream-of soup falls into on its name alone");
     }
 
     [Fact]

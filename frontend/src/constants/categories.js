@@ -11,6 +11,7 @@ export const INGREDIENT_CATEGORIES = [
   { value: 'MEAT_SEAFOOD',   title: 'Meat & Seafood',       icon: '🥩' },
   { value: 'DAIRY',          title: 'Dairy',                icon: '🥛' },
   { value: 'CANNED',         title: 'Canned Goods',         icon: '🥫' },
+  { value: 'SOUPS_BROTH',    title: 'Soups & Broth',        icon: '🍲' },
   { value: 'FROZEN',         title: 'Frozen',               icon: '🧊' },
   { value: 'DRY_GOODS',      title: 'Dry Goods',            icon: '🥜' },
   { value: 'GRAINS_RICE',    title: 'Grains & Rice',        icon: '🌾' },

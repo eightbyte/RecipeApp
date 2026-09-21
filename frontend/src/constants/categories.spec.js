@@ -11,10 +11,10 @@ describe('INGREDIENT_CATEGORIES', () => {
     // Kept in lockstep with backend/RecipeApp.API/Enums/IngredientCategory.cs. The order is the
     // shopping list's aisle order, so a reordering here is a visible change, not a cosmetic one.
     expect(INGREDIENT_CATEGORY_VALUES).toEqual([
-      'PRODUCE', 'MEAT_SEAFOOD', 'DAIRY', 'CANNED', 'FROZEN',
-      'DRY_GOODS', 'GRAINS_RICE', 'PASTA_SAUCES', 'BAKING_SPICES', 'BAKERY',
-      'CONDIMENTS', 'JAM_NUT_BUTTER', 'BEVERAGES', 'COFFEE_TEA', 'KITCHEN',
-      'HOUSEHOLD', 'OTHER',
+      'PRODUCE', 'MEAT_SEAFOOD', 'DAIRY', 'CANNED', 'SOUPS_BROTH',
+      'FROZEN', 'DRY_GOODS', 'GRAINS_RICE', 'PASTA_SAUCES', 'BAKING_SPICES',
+      'BAKERY', 'CONDIMENTS', 'JAM_NUT_BUTTER', 'BEVERAGES', 'COFFEE_TEA',
+      'KITCHEN', 'HOUSEHOLD', 'OTHER',
     ])
   })
 

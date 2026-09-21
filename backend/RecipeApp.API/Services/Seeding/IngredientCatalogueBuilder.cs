@@ -178,14 +178,18 @@ public class IngredientCatalogueBuilder(
         $"{IngredientCategory.Condiments}.\n" +
         $"- {IngredientCategory.JamNutButter}: honey, maple syrup and every other syrup, jams, jellies, " +
         "preserves, and peanut and other nut butters.\n" +
-        $"- {IngredientCategory.Canned}: canned vegetables, beans, fruit and tomatoes, soups, and broth, " +
-        "stock and bouillon in any packaging.\n" +
+        $"- {IngredientCategory.SoupsBroth}: broth, stock and bouillon of every kind and packaging — " +
+        "chicken, beef and vegetable, cubes, granules and cartons. Condensed and ready-to-eat soups, " +
+        "including every cream-of soup, and soup and soup-base mixes.\n" +
+        $"- {IngredientCategory.Canned}: canned vegetables, beans, fruit and tomatoes. Anything named " +
+        $"broth, stock, bouillon or soup is {IngredientCategory.SoupsBroth}, canned or not.\n" +
         $"- {IngredientCategory.Dairy}: milk, cream, cheese and cheese spreads, yogurt, butter, margarine " +
-        "and buttery spreads, eggs and egg substitutes.\n" +
+        $"and buttery spreads, eggs and egg substitutes. A cream-of or cheese soup is " +
+        $"{IngredientCategory.SoupsBroth} however much dairy it names.\n" +
         $"- {IngredientCategory.BakingSpices} also holds gelatin.\n" +
         $"- {IngredientCategory.Bakery}: bread, rolls, buns, tortillas, pita and pizza crusts or shells.\n" +
         $"- {IngredientCategory.Beverages}: water of any temperature, drinks, wine and beer. Broth and " +
-        $"stock are {IngredientCategory.Canned}.\n" +
+        $"stock are {IngredientCategory.SoupsBroth}, even where a name offers water as the alternative.\n" +
         $"- {IngredientCategory.CoffeeTea}: coffee and tea.\n" +
         $"- {IngredientCategory.Condiments}: oils, cooking sprays, vinegars, savoury sauces, salsa, " +
         "dressings, mustard, ketchup and mayonnaise. Not syrups.\n" +

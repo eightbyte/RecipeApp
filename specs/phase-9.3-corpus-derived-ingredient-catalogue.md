@@ -2,7 +2,10 @@
 
 **Version:** 1.1
 **Date:** 2026-09-12
-**Status:** Accepted — open questions answered (§11), implemented; artefact built, awaiting review (§12.3)
+**Status:** Accepted — open questions answered (§11), implemented; **artefact reviewed and committed**
+(`51c6e44`, `29fa95f`, `f751a46`). **§12.5 reconciles the committed file against the figures recorded
+below and records one open defect: 15 corpus names are no longer reachable (rule 5), so 17 recipes
+would fail Stage 5.**
 **Depends on:** Phase 9 Stage 4 complete (1,123 normalised recipes are the evidence base *and* the input)
 **Supersedes:** Phase 9 §12.1 (*Ingredient catalogue growth*) and its "run `seed-catalogue` before `seed-recipes`" instruction
 **Retires:** `IngredientCatalogueSeeder` as an LLM generator, and the `seed-catalogue` command name; `import-catalogue` takes over the job from a committed artefact
@@ -613,9 +616,9 @@ Run once against the real artefact, and recorded in §10 the way Phase 9 §23 re
 
 - [x] `seed-recipes --build-catalogue` writes a valid `ingredient-catalogue.json` from the 1,123
       normalised recipes, and passes all six §4.7 validations — 1,190 entries, see §12.1
-- [x] All 1,475 corpus names are reachable as a `name` or an `alias` — **100%, no exceptions**
-      (verified against the written file, §12.3)
-- [ ] The artefact is reviewed against §5 and committed — **awaiting review, §12.3**
+- [ ] All 1,475 corpus names are reachable as a `name` or an `alias` — **held for the 1,190-entry
+      build (§12.3); does NOT hold for the committed 1,056-entry file — 15 names unreachable, §12.5**
+- [x] The artefact is reviewed against §5 and committed — `51c6e44`, `29fa95f`, `f751a46`
 - [x] `import-catalogue` loads it into an empty database with no LLM and no network, and re-running is
       a no-op
 - [ ] `seed-densities` still attaches every density it did before, via the new names or their aliases
@@ -902,3 +905,67 @@ from 46 entries to 13. 41 of 50 curated densities still attach, the same 41. `sa
    `HOUSEHOLD`, `shortening` `OTHER`.
 4. §12.3 items 1 and 4 (vocabulary omissions, visible missed merges) still apply; groupings were
    re-derived, so the specific `kept apart:` lines are in the new build log, not the old one.
+
+---
+
+### 12.5 Reconciled against the committed file (2026-09-22)
+
+The review above was completed and the artefact committed. Verifying it as a Stage 5 input turned up
+a gap in **§4.7 rule 5** — *every corpus name reachable* — which is the one rule that cannot run at
+seed time and so had no standing guard.
+
+### The entry count in §12.4 is not the count that was committed
+
+| Commit | Entries |
+|---|---:|
+| `51c6e44` — first full build (§12.3) | 1,190 |
+| `29fa95f` — category rebuild (§12.4, recorded above as **1,194**) | **1,063** |
+| `d0ad12a` — partial classification work | 1,056 |
+| `f751a46` — SOUPS_BROTH, 22 entries hand-moved | **1,056** (committed today) |
+
+§12.4's "1,194 entries" describes build 2 as it was written, not the file that was kept — entries were
+consolidated by hand during review, which is legitimate, but it means **the reachability figure in
+§12.4 and the `[x]` in §13 were both carried over from a build that no longer exists.**
+
+### 15 names are unreachable, and Stage 5 rejects the recipe
+
+Measured over all 1,472 distinct ingredient names in `normalised/` against the committed file
+(1,056 entries, 1,482 lookup keys, **0 alias collisions, 0 entries no corpus name reaches** — so the
+file is tight, not sloppy): **15 names unresolvable, 18 rows, 17 recipes (1.5% of the corpus).**
+`SeedCatalogueResolver` throws `SeedCatalogueResolutionException`, so each of those recipes fails.
+
+Three classes, three different fixes:
+
+| Class | Rows | Fix |
+|---|---:|---|
+| Group headings — `"Logs"`, `"Bugs"`, `Optional Seasonings`, `Final Sauce`, `Dipping Sauce`, `Optional Gravy` | 6 | Not food. Skip at Stage 5 load — see Phase 9 §22.1 point 3 |
+| A parser note leak — `instruction`, from `Note: "Minced" means…` | 1 | Same |
+| **Alias gaps against entries that already exist** | 11 | **Add the alias. This spec's own mechanism, not a rebuild** |
+
+**The third class is the finding worth keeping**, because it is this phase's own headline problem
+surviving in a direction §5 did not check:
+
+| Corpus name | Entry | Its aliases carry |
+|---|---|---|
+| `celery stalks` (4 rows) | `celery` | `celery stalk` — **singular only** |
+| `broccoli floret` | `broccoli` | `broccoli florets` — **plural only** |
+| `cauliflower floret` | `cauliflower` | `cauliflower florets` — **plural only** |
+| `basil leaf` | `basil` | `basil leaves` — **plural only** |
+| `jalapeno chili` | `jalapeño pepper` | `jalapeno chile` — *chile*, not *chili* |
+| `vegetable or chicken broth` | `chicken broth` | `chicken broth or vegetable broth`, `chicken or vegetable broth` — both other orders |
+| `dry milk powder` | `non-fat dry milk` / `milk powder` | `dry milk`, `non-fat dry milk powder` |
+| `red or green pepper` | `bell pepper` | `bell peppers`, `capsicum` |
+
+> **§5's plural folding worked on batching and stopped there.** Folding plurals into the family key is
+> why `celery` and `celery stalk` became one entry at all — that part did its job. What it never did
+> was guarantee the finished entry carries **both** forms as aliases. Eight of the eleven gaps are
+> that, and they are a hand edit to the artefact rather than a build.
+
+### Rule 5 should be a test
+
+§9's own note that rules 5 and 6 "cannot all run in both places" is correct — they need the corpus,
+which the seed path does not have. But the *build* is not the only place that has it: a test does.
+One pass over `normalised/` against the committed artefact, asserting every name resolves, needs no
+GPU, no network and no database, runs in under a second, and is exactly the assertion that would have
+caught a hand edit dropping a name. **A rule enforced only at build time is not enforced on the file
+that ships.** Tracked on Phase 9's pre-Stage-5 punch list (§24.4.1 there).

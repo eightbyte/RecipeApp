@@ -4,7 +4,7 @@
 Mobile-first web app for storing recipes, building meal plans, and generating shopping lists.
 
 - **Spec:** `SPEC.md` — read this for feature requirements and data model definitions.
-- **Current phase:** Phase 9 in progress (seed recipe library) — **v1 feature-complete**. Stages 1–3 (Wayback discovery, fetch, parse) done and Phase 9.1 (unquantified ingredients — the Stage 4 prerequisite) done. Stage 4 (LLM normalise) is **done: all 1,123 recipes normalised, zero failures**, after a run-abort bug and four quantity repairs took the success rate from 91.3% to 100%. Stage 5 (persist) next — its inputs are `normalised/*.json` plus 1,115 cached photos. **Phase 9.3 (corpus-derived ingredient catalogue) is implemented and its artefact rebuilt on the widened 17-category set — 1,194 entries, every one of the 1,475 corpus names reachable — and awaiting human review before commit** (`specs/phase-9.3-corpus-derived-ingredient-catalogue.md` §12.3). It turns Stage 5's ingredient matching into a dictionary lookup.
+- **Current phase:** Phase 9 in progress (seed recipe library) — **v1 feature-complete**. Stages 1–3 (Wayback discovery, fetch, parse) done and Phase 9.1 (unquantified ingredients — the Stage 4 prerequisite) done. Stage 4 (LLM normalise) is **done: all 1,123 recipes normalised, zero failures**, after a run-abort bug and four quantity repairs took the success rate from 91.3% to 100%. Stage 5 (persist) next — its inputs are `normalised/*.json` plus 1,115 cached photos. **Phase 9.3 (corpus-derived ingredient catalogue) is implemented and its artefact committed** (`specs/phase-9.3-corpus-derived-ingredient-catalogue.md` §12.3). It turns Stage 5's ingredient matching into a dictionary lookup. **Two items block a clean Stage 5 run, both in `specs/phase-9-seed-recipe-library.md` §24.4: the catalogue cannot resolve 15 corpus names (17 recipes, 1.5%) and three `normalised/` artefacts were edited outside the pipeline.** Phase 9.2 (recipe sections) was analysed and **rejected** as an acceptable seed-import artefact — see `specs/phase-9.2-recipe-sections.md`; it is why group headings reach Stage 5 as ingredients.
 
 ## Repository structure
 ```
@@ -332,7 +332,9 @@ worth knowing: `CacheDirectory`, `PreferredSnapshotYear`, `FetchDelayMillisecond
   `SeedCacheStore` gained `HasParsed`/`WriteParsedAsync`/`TryLoadParsedAsync`/
   `ClearParsedContentAsync`; `RecipeSeedingOptions` gained `DefaultServings` (4);
   `SeedRecipesCommand` gained `--parse`, and `--force` now also means "re-derive" for it.
-  **Result: 1,123/1,123 pages parsed, zero failures, ~4 s** — 8,882 ingredient lines and 6,857
+  **Result: 1,123/1,123 pages parsed, zero failures, ~4 s** — 8,881 ingredient lines (8,882 as
+  originally recorded; `sweet-potato-pancakes-balsamic-maple-mushrooms`'s parsed file was rewritten
+  outside the pipeline on 2026-09-13 and lost one, see §24.4.2) and 6,857
   steps, 1,058 primary + 65 legacy templates. (Recorded as 1,089 until the last 34 pages were
   harvested; the hazard measurements below were taken on that first 1,089 and have not been
   re-run against the full corpus.)
@@ -564,22 +566,31 @@ worth knowing: `CacheDirectory`, `PreferredSnapshotYear`, `FetchDelayMillisecond
   normalised, zero failures, zero stale fingerprints.** `seed-recipes --report` reads uniformly
   `Normalised 1123`. The four quantity repairs and the abort-guard fix above were built against a
   30-recipe backlog and **generalised**: 91.3% became 100%, clearing §20's 95% bar with no recipe
-  left behind and none excluded. Retries stayed cheap — 1,008 recipes (89.8%) succeeded on the
-  first attempt, 95 needed two, 20 needed three, and none exhausted its budget.
-  **Re-verified from the artefacts rather than from the gate that wrote them**, because a gate
-  cannot be its own evidence. Across all 8,882 ingredient rows and 6,857 steps: ingredient and step
-  counts match `parsed/` exactly for every recipe, step numbers are contiguous, no
-  `ingredient_indexes` entry points outside its array, every unit is storable, no amount is zero or
-  negative, no amount/unit pair is half-set, and no name is blank. 98.0% of ingredients are
-  referenced by at least one step, so Cooking Mode's linkage is dense rather than nominal.
+  left behind and none excluded. Retries stayed cheap — **968 recipes succeeded on the first
+  attempt**, 89 needed two, 51 three, 14 four or more. (`state.json`'s `attempts` **accumulates
+  across runs**, so the two slugs reading 8 and 10 are a recipe carried through three separate
+  runs, not a per-run budget being exhausted.)
+  **Re-verified from the artefacts rather than from the gate that wrote them** (re-run 2026-09-22),
+  because a gate cannot be its own evidence. Across all 8,881 ingredient rows and 6,857 steps:
+  step numbers are contiguous, every unit is storable, no amount is zero or negative, no amount/unit
+  pair is half-set, and no name is blank. 98.0% of ingredients are referenced by at least one step,
+  so Cooking Mode's linkage is dense rather than nominal. **Three artefacts are the exception and
+  need re-running** — `oven-baked-potato-pancakes` (9 rows for 8 parsed lines),
+  `vinaigrette-salad-dressing` (5 for 6) and `sweet-potato-pancakes-balsamic-maple-mushrooms` (stale
+  fingerprint, plus an `ingredient_indexes` entry past the end of the array). All three were modified
+  on disk on 2026-09-13, after the pass, and all three violate checks `SeedRecipeNormaliser` enforces,
+  so the committed code cannot have written them; all three involve section headings, which dates them
+  to the rejected Phase 9.2 exploration. See §24.4.2. **`normalised/` is an input nothing re-validates
+  between Stage 4 and Stage 5 — Stage 5 should re-assert the parsed-count pairing and the index range
+  as it loads each artefact.**
   **Four things the finished corpus settles:**
-  - **Phase 9.1's rule held corpus-wide, and the repairs shrank the class it governs.** 331 rows
+  - **Phase 9.1's rule held corpus-wide, and the repairs shrank the class it governs.** 330 rows
     (3.7%) are unquantified, down from the 5.0% no-digit rate Phase 9.1 measured, because repairs 1
     and 2 now read the quantity off lines the model declined to read. Independently checked: **every
-    one of the 331 sits on a line that states no number**, once dimension phrases are discounted. No
+    one of the 330 sits on a line that states no number**, once dimension phrases are discounted. No
     model opted itself out of a line that did state one.
-  - **Single-number lines are exact, by construction.** 7,448 rows (84% of the corpus) sit on a line
-    stating exactly one number and **all 7,448 agree with it** inside the gate's 1% tolerance. The
+  - **Single-number lines are exact, by construction.** 7,434 rows (84% of the corpus) sit on a line
+    stating exactly one number and **all 7,434 agree with it** inside the gate's 1% tolerance. The
     151 that are not bit-exact are decimal truncations of `1/3` and `1/16` (`0.33`, `0.333`,
     `0.062`), never a different number.
   - **The multi-number line is the whole residual error surface, and Stage 5 inherits it.** 1,180
@@ -597,17 +608,18 @@ worth knowing: `CacheDirectory`, `PreferredSnapshotYear`, `FetchDelayMillisecond
     `13.333 cups`. These are below any sensible corpus-quality bar but they are visible in a
     shopping list, so they are a Stage 5 decision, not a Stage 4 defect.
   - **`HasStatedQuantity` strips `10x12 inches` and `3 inch` but not the inch mark.**
-    `6" bamboo skewers` is stored as `6 pcs`. One row in 8,882 — recorded rather than fixed,
+    `6" bamboo skewers` is stored as `6 pcs`. One row in 8,881 — recorded rather than fixed,
     because widening a dimension filter on one line of evidence is how the fraction-menu mistake
     happened.
   **Quality does not vary by run cohort**, so nothing needs re-running: the 30 benchmark recipes
   written before the repairs, the 602 from the first corpus pass and the 491 from the completing
   pass carry unexplained-amount rates of 0.88%, 0.30% and 0.38% — noise at these counts.
-  **What Stage 5 is walking into: 1,475 distinct ingredient names, 56.1% of them appearing exactly
-  once.** Singular and plural still split (`tomato` 63 rows, `tomatoes` 66), so catalogue matching
-  is the Stage 5 workload rather than a lookup. Metadata coverage is high: 8 recipes have no image
-  (they carry no JSON-LD image node), 4 no description, 8 no source credit, 75 no notes.
-- **Phase 9.3 — corpus-derived ingredient catalogue (2026-09-12). Built, not yet committed.**
+  **What Stage 5 is walking into: 1,472 distinct ingredient names, 56.1% of them appearing exactly
+  once.** Singular and plural still split (`tomato` 63 rows, `tomatoes` 66), which is what Phase 9.3
+  was built to absorb — **and 8 of its 15 remaining misses are exactly that split surviving into the
+  aliases** (see §24.4.1). Metadata coverage is high: 8 recipes have no image (they carry no JSON-LD
+  image node), 4 no description, 8 no source credit, 75 no notes.
+- **Phase 9.3 — corpus-derived ingredient catalogue (2026-09-12). Built and committed** (`51c6e44`).
   (`specs/phase-9.3-corpus-derived-ingredient-catalogue.md`; §12 is the implementation record.)
   Backend-only, no new packages. Added `Ingredient.Aliases` (`text[]`, default `{}`, unindexed) with
   migration `AddIngredientAliases`; alias-aware lookup in scrape pass 1 **and**
@@ -663,8 +675,15 @@ worth knowing: `CacheDirectory`, `PreferredSnapshotYear`, `FetchDelayMillisecond
   `AddCustomItemDialog`, and a hardcoded array in `RecipeScrapePreviewView`); `DRY_GOODS` is now
   labelled "Dry Goods" and `CONDIMENTS` "Condiments & Oils". `--build-catalogue --batch` now logs
   one line per category per batch, so a preview shows every name's aisle, not only its merges.
-  Suite: **1,183 backend tests, 211 frontend**.
-  **Result: 1,194 entries, 51 model calls, 1 name from the keyword fallback.** 469 of 1,475 names
+  Suite: **1,190 backend tests (2026-09-22, zero failures), 211 frontend**.
+  **Result as recorded at the time: 1,194 entries, 51 model calls, 1 name from the keyword fallback.**
+  **Neither that figure nor its reachability claim matches what is committed.** The artefact went
+  1,190 entries (`51c6e44`) → 1,063 (`29fa95f`) → **1,056** (`d0ad12a`, `f751a46`), and 15 corpus
+  names are unresolvable against it — 18 rows on 17 recipes, which `SeedCatalogueResolver` rejects
+  outright. 0 alias collisions and 0 unreachable entries, so the artefact is tight but incomplete.
+  **Reachability should be a test, not a claim** — one pass over `normalised/` against the artefact,
+  no GPU and no database, and it is the assertion that would have caught this. Details and the
+  15 names: `specs/phase-9-seed-recipe-library.md` §24.4.1. 469 of 1,475 names
   (3,094 rows) changed category; OTHER fell from 46 entries to 13. 41 of 50 curated densities still
   attach — regrouping lost none. Headline moves hold by name: `salt` (357 rows), `black pepper`,
   `sugar`, `flour` → BAKING_SPICES; `honey`, `peanut butter`, `maple syrup` → JAM_NUT_BUTTER;
@@ -686,9 +705,11 @@ worth knowing: `CacheDirectory`, `PreferredSnapshotYear`, `FetchDelayMillisecond
   **Known in the artefact, for review:** `lemon juice`/`lime juice` (134 rows) are CONDIMENTS;
   `corn` (33), `green beans` (21) and `green chiles` (12) are CANNED because their source lines are
   mostly cans; pudding mixes and `golden raisins` are DAIRY; `ice` (10) is KITCHEN; `spoon` is
-  HOUSEHOLD; `shortening` and the typo `black peppeer` are OTHER; `tomatoes` (136 rows) is still one
-  PRODUCE entry despite being mostly canned. Local databases imported from the old artefact keep their
-  old categories until `import-catalogue --force`.
+  HOUSEHOLD; `shortening` is OTHER; `tomatoes` (136 rows) is still one PRODUCE entry despite being
+  mostly canned. **Re-checked against the committed artefact 2026-09-22: all of these still hold,
+  except the typo `black peppeer`, which is no longer an OTHER entry — it is now an alias of
+  `black pepper` (BAKING_SPICES), which is the right resolution.** Local databases imported from the
+  old artefact keep their old categories until `import-catalogue --force`.
 - **SOUPS_BROTH added, 18th category (2026-09-20).** Broth, stock and bouillon were CANNED by an
   explicit Phase 9.3 rule; they are now their own aisle, sitting immediately after CANNED in
   `IngredientCategory.All`. No migration — `Category` is a string column and nothing was renamed.

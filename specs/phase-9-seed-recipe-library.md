@@ -1484,27 +1484,31 @@ number parser (2026-09-22).
 
 | Check | Result |
 |---|---|
-| Ingredient rows / steps | **8,881 / 6,857** |
-| Ingredient and step counts match `parsed/` exactly | **1,120 of 1,123** — 3 exceptions, §24.4.2 |
-| `parsedFingerprint` current | **1,122 of 1,123** — 1 stale, §24.4.2 |
+| Ingredient rows / steps | **8,882 / 6,857** |
+| Ingredient and step counts match `parsed/` exactly | **all 1,123** |
+| `parsedFingerprint` current | **all 1,123** |
 | Step numbers contiguous from 1 | **all 1,123** |
-| `ingredient_indexes` within range | **1,122 of 1,123** — 1 overrun, §24.4.2 |
+| `ingredient_indexes` within range | **all 1,123** |
 | Units all storable · no zero or negative amount · no half-set pair · no blank name | **clean, corpus-wide** |
-| Ingredients referenced by ≥ 1 step | **8,704 (98.0%)** — Cooking Mode's linkage is dense, not nominal |
-| Unquantified rows | **330 (3.72%)**, down from Phase 9.1's 5.0% no-digit rate |
+| Ingredients referenced by ≥ 1 step | **8,705 (98.0%)** — Cooking Mode's linkage is dense, not nominal |
+| Unquantified rows | **331 (3.73%)**, down from Phase 9.1's 5.0% no-digit rate |
 | — of those, sitting on a line that **does** state a number | **0** |
 | Rows on a line stating exactly one number | **7,434** |
 | — of those, disagreeing with that number | **0** |
 
 **Phase 9.1's rule held corpus-wide, and the repairs shrank the class it governs.** Every one of the
-330 unquantified rows sits on a line stating no number, once dimension phrases are discounted. No
+331 unquantified rows sits on a line stating no number, once dimension phrases are discounted. No
 model opted itself out of a line that did state one.
 
 **Single-number lines are exact by construction.** The 151 rows that are not bit-exact are decimal
 truncations of `1/3` and `1/16` — `0.33`, `0.333`, `0.062` — never a different number.
 
-> The counts above differ by one row from the figures recorded on 2026-09-11 (8,882 rows, 331
-> unquantified). The whole difference is the three hand-edited artefacts in §24.4.2, not drift.
+> The three hand-edited artefacts of §24.4.2 were re-run on 2026-09-22 before this table was taken,
+> which is why it reads clean and why the row count matches the 2026-09-11 figure again.
+
+**Linkage density, for reference:** of the 4,817 steps that link at least one ingredient, the mean
+step links **39.6%** of its recipe's ingredients, and **18.6% link 70% or more**. A step that links
+most of the list is common enough not to be a defect signal on its own.
 
 ### 24.3a The multi-number line is the entire residual error surface
 
@@ -1525,7 +1529,7 @@ tablespoon)` → `13.333 cups`. These are below any sensible corpus-quality bar,
 in a shopping list, so they are **a Stage 5 decision, not a Stage 4 defect**.
 
 One more, recorded rather than fixed: `HasStatedQuantity` strips `10x12 inches` and `3 inch` but not
-the inch *mark*, so `6" bamboo skewers` is stored as `6 pcs`. One row in 8,881. Widening a dimension
+the inch *mark*, so `6" bamboo skewers` is stored as `6 pcs`. One row in 8,882. Widening a dimension
 filter on one line of evidence is how the fraction-menu mistake of §23.3 happened.
 
 **Quality does not vary by run cohort, so nothing needs re-running.** The 30 benchmark recipes
@@ -1537,20 +1541,41 @@ carry unexplained-amount rates of 0.88%, 0.30% and 0.38% — noise at these coun
 Two items, both found by the 2026-09-22 verification and neither of them a Stage 4 defect. **Nothing
 here blocks writing Stage 5; both block a clean full run.**
 
-#### 24.4.1 The catalogue cannot resolve 15 corpus names, so 17 recipes would be rejected
+#### 24.4.1 The catalogue cannot resolve 19 corpus names, so 20 recipes would be rejected
 
 §12.1's resolver throws on an unresolved name. Measured against the committed
 `seed-data/ingredient-catalogue.json` (1,056 entries, 1,482 lookup keys, **0 alias collisions, 0
-entries no corpus name reaches**) and all 1,472 distinct names the normalised corpus uses:
+entries no corpus name reaches**) and all 1,476 distinct names the normalised corpus uses:
 
-**15 names unresolvable — 18 rows on 17 recipes (1.5% of the corpus).** They fall into three classes
+**19 names unresolvable — 22 rows on 20 recipes (1.8% of the corpus).** They fall into three classes
 with three different fixes:
 
 | Class | Rows | Names |
 |---|---:|---|
-| **Group headings** — not food at all (§22.1 point 3) | 6 | `"Logs"`, `"Bugs"`, `Optional Seasonings`, `Final Sauce`, `Dipping Sauce`, `Optional Gravy` |
-| **A parser note leak** — hazard 5 surviving into the ingredient list | 1 | `instruction`, from `Note: "Minced" means cut up into tiny pieces.` on `crispy-walleye-patties` |
-| **Alias gaps where the entry already exists** | 11 | `celery stalks` (×4), `dry milk powder`, `red or green pepper`, `broccoli floret`, `cauliflower floret`, `basil leaf`, `jalapeno chili`, `vegetable or chicken broth` |
+| Class | Names | Rows |
+|---|---:|---:|
+| **Group headings** — not food at all (§22.1 point 3) | 8 | 8 |
+| **A parser note leak** — hazard 5 surviving into the ingredient list | 1 | 1 |
+| **Alias gaps where the entry already exists** | 10 | 13 |
+
+- **Headings:** `"Logs"`, `"Bugs"`, `Optional Seasonings`, `Final Sauce`, `Dipping Sauce`,
+  `Optional Gravy`, `Basic Vinaigrette`, `Balsamic Maple Mushrooms`.
+- **Note leak:** `instruction`, from `Note: "Minced" means cut up into tiny pieces.` on
+  `crispy-walleye-patties`.
+- **Alias gaps:** `celery stalks` (4 rows), `dry milk powder`, `red or green pepper`,
+  `broccoli floret`, `cauliflower floret`, `basil leaf`, `jalapeno chili`,
+  `vegetable or chicken broth`, `cremini and/or white button mushrooms`, `applesauce and yogurt`.
+
+> A ninth heading, `Sweet Potato Pancakes`, **does** resolve — it collides with a real food name in
+> the catalogue. A heading that resolves is worse than one that does not: it enters the database as an
+> ingredient with no error at all. **Stage 5's skip must key on something other than a failed lookup.**
+
+> **Two of the alias gaps are new as of the §24.4.2 re-run, and one of them is worth noting**: the
+> model named `1 pound cremini and/or white button mushrooms` in full this time where the earlier pass
+> had said `mushroom`. Both readings are defensible and the catalogue holds `mushroom`. **An
+> either/or ingredient line is a name the corpus will not spell consistently across runs**, which is
+> an argument for resolving on a normalised head noun at Stage 5 rather than adding one alias per
+> phrasing. `applesauce and yogurt` is the same shape.
 
 **The third class is the interesting one: every single miss is a singular/plural or spelling
 near-miss against an entry that is already there, and several are plural-versus-singular in the
@@ -1577,29 +1602,56 @@ reachability claim was made against a build that was not the one kept. **Reachab
 re-check and should be a test, not a claim**: it is one pass over `normalised/` against the artefact,
 needs no GPU and no database, and it is exactly the assertion that would have caught this.
 
-#### 24.4.2 Three artefacts were edited outside the pipeline and are now inconsistent
+#### 24.4.2 Three artefacts were hand-edited during review — ✅ fixed 2026-09-22
 
-Three `normalised/*.json` files carry `normalisedAt` timestamps from the corpus pass (2026-09-11/12)
-but were **modified on disk on 2026-09-13, 23:38–23:56**, after it finished. All three violate checks
-`SeedRecipeNormaliser` enforces, so the committed code cannot have produced them — and all three
-involve section headings, which dates them to the [Phase 9.2](phase-9.2-recipe-sections.md)
-exploration that was ultimately rejected.
+**Resolved: all three re-run and clean.** `--parse --force --slug` on the one whose `parsed/` file had
+also been edited (it came back at 14 ingredient lines, restoring the heading that had been removed),
+then `--normalise --force --slug` on all three. Two succeeded first time; the third failed once with
+`IngredientCountMismatch` — the model dropped a heading — and succeeded on an immediate retry, which
+is §23.3's "a retry sometimes samples the correct answer" working as designed.
 
-| Slug | Inconsistency |
-|---|---|
-| `oven-baked-potato-pancakes` | **9 rows for 8 parsed lines** — `applesauce and yogurt (plain low-fat or Greek)` split into two rows. `IngredientCountMismatch` would reject this. |
-| `vinaigrette-salad-dressing` | **5 rows for 6 parsed lines** — the `Basic Vinaigrette` heading row removed. Same rule. |
-| `sweet-potato-pancakes-balsamic-maple-mushrooms` | **stale `parsedFingerprint`**, and step 7 links `ingredient_indexes: [12, 13]` against 13 ingredients. `IngredientIndexOutOfRange` would reject this. The linkage is off by one from step 5 on — step 5 names vegetable oil and points at maple syrup — which is §23.3's silent off-by-one, visible here only because the last index overruns. |
+**The reason this section is kept is the diagnosis, which generalises.** The three files carried
+`normalisedAt` from the corpus pass but were modified on disk on 2026-09-13, during Phase 9.3's
+catalogue review, in a deliberate attempt to strip section headings out of the ingredient lists — the
+right instinct, applied in the wrong place.
 
-**Remedy: `--normalise --force --slug <name>` on the three** (and `--parse --force --slug` on the
-third, whose parsed file was also rewritten). Under a minute of GPU time. Until then, two of the
-three would persist a wrong ingredient list *without* Stage 5 noticing, since the resolver checks
-names and not counts.
+| Slug | What the edit did | Why it broke |
+|---|---|---|
+| `vinaigrette-salad-dressing` | Removed the `Basic Vinaigrette` heading row **and correctly renumbered** `[1,2,3,4,5]` → `[0,1,2,3,4]` | Nothing internally. **5 rows against 6 parsed lines** — the count invariant lives in the *other* file |
+| `oven-baked-potato-pancakes` | Split `applesauce and yogurt (plain low-fat or Greek)` into two rows **and correctly updated** step 9 to `[7,8]` | Same — **9 rows against 8 parsed lines** |
+| `sweet-potato-pancakes-balsamic-maple-mushrooms` | Removed the *second* heading (`For Balsamic Maple Mushrooms`, index 9) from **both** `parsed/` and `normalised/`, left the first | **Indexes above the deletion were not renumbered**, and editing `parsed/` staled the fingerprint |
 
-> **The lesson is about the artefact directory, not about these three recipes.** `normalised/` is an
-> input to Stage 5 and nothing re-validates it between the two stages. **Stage 5 should re-assert the
-> parsed-count pairing and the index range as it loads each artefact** — it is a dozen lines, it
-> costs nothing, and it is the only thing standing between an edited cache file and the database.
+**Four invariants are coupled across two files, and only one of them is visible in the file being
+edited:**
+
+1. **Row count pairs to `parsed/` by position** (§11.3) — so even a *perfect* edit to `normalised/`
+   alone is `IngredientCountMismatch`. This is what caught the two otherwise-correct edits.
+2. **`ingredientIndexes` are positional** — deleting row *n* silently re-points every index above it.
+3. **`parsedFingerprint` is a SHA of `parsed/`** taken at normalise time, so fixing (1) by editing
+   `parsed/` breaks this instead. It cannot be recomputed by hand.
+4. **Each row's amount is judged against its own `sourceText`** — so rows must stay aligned to lines.
+
+> **Point 2 is the one that actually corrupted data, and it corrupted it quietly.** Removing index 9
+> left steps 5, 6 and 7 each off by one: step 5 said "heat 1 tablespoon vegetable oil" and pointed at
+> maple syrup, step 6 said "add quartered mushrooms" and pointed at vegetable oil. Steps 2 and 3 point
+> *below* the deletion and stayed correct, which is why the file looked half-right. **Only step 7's
+> overrun past the end was detectable** — the same asymmetry §23.3 found in the model's own off-by-one,
+> and the reason an unknown share of silently-wrong linkage is the failure mode to fear here.
+
+**Two conclusions, both still open work:**
+
+- **Hand-editing these artefacts is not viable. Re-run the slug** — `--normalise --force --slug` is a
+  twenty-second experiment and it maintains all four invariants by construction.
+- **`normalised/` is an input nothing re-validates between Stage 4 and Stage 5.** Stage 5 should
+  re-assert the parsed-count pairing and the index range as it loads each artefact — a dozen lines,
+  no measurable cost, and the only thing standing between an edited cache file and the database. Two
+  of these three would have persisted a wrong ingredient list *without Stage 5 noticing*, because the
+  resolver checks names and not counts.
+
+**What the fix cost: three recipes moved into §24.4.1's rejected set** (17 → 20). The hand edits had
+incidentally made them resolvable by deleting the heading rows; restoring those rows restored three
+more instances of the heading problem. That is the correct trade — a loud, caught rejection in place
+of silently wrong data — and it is fixed by the same Stage 5 skip §24.4.1 already calls for.
 
 ### 24.5 What Stage 5 inherits
 

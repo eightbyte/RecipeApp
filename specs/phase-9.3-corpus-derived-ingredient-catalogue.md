@@ -4,7 +4,7 @@
 **Date:** 2026-09-12
 **Status:** Accepted — open questions answered (§11), implemented; **artefact reviewed and committed**
 (`51c6e44`, `29fa95f`, `f751a46`). **§12.5 reconciles the committed file against the figures recorded
-below and records one open defect: 15 corpus names are no longer reachable (rule 5), so 17 recipes
+below and records one open defect: 19 corpus names are no longer reachable (rule 5), so 20 recipes
 would fail Stage 5.**
 **Depends on:** Phase 9 Stage 4 complete (1,123 normalised recipes are the evidence base *and* the input)
 **Supersedes:** Phase 9 §12.1 (*Ingredient catalogue growth*) and its "run `seed-catalogue` before `seed-recipes`" instruction
@@ -617,7 +617,7 @@ Run once against the real artefact, and recorded in §10 the way Phase 9 §23 re
 - [x] `seed-recipes --build-catalogue` writes a valid `ingredient-catalogue.json` from the 1,123
       normalised recipes, and passes all six §4.7 validations — 1,190 entries, see §12.1
 - [ ] All 1,475 corpus names are reachable as a `name` or an `alias` — **held for the 1,190-entry
-      build (§12.3); does NOT hold for the committed 1,056-entry file — 15 names unreachable, §12.5**
+      build (§12.3); does NOT hold for the committed 1,056-entry file — 19 names unreachable, §12.5**
 - [x] The artefact is reviewed against §5 and committed — `51c6e44`, `29fa95f`, `f751a46`
 - [x] `import-catalogue` loads it into an empty database with no LLM and no network, and re-running is
       a no-op
@@ -927,23 +927,23 @@ seed time and so had no standing guard.
 consolidated by hand during review, which is legitimate, but it means **the reachability figure in
 §12.4 and the `[x]` in §13 were both carried over from a build that no longer exists.**
 
-### 15 names are unreachable, and Stage 5 rejects the recipe
+### 19 names are unreachable, and Stage 5 rejects the recipe
 
-Measured over all 1,472 distinct ingredient names in `normalised/` against the committed file
+Measured over all 1,476 distinct ingredient names in `normalised/` against the committed file
 (1,056 entries, 1,482 lookup keys, **0 alias collisions, 0 entries no corpus name reaches** — so the
-file is tight, not sloppy): **15 names unresolvable, 18 rows, 17 recipes (1.5% of the corpus).**
+file is tight, not sloppy): **19 names unresolvable, 22 rows, 20 recipes (1.8% of the corpus).**
 `SeedCatalogueResolver` throws `SeedCatalogueResolutionException`, so each of those recipes fails.
 
 Three classes, three different fixes:
 
 | Class | Rows | Fix |
 |---|---:|---|
-| Group headings — `"Logs"`, `"Bugs"`, `Optional Seasonings`, `Final Sauce`, `Dipping Sauce`, `Optional Gravy` | 6 | Not food. Skip at Stage 5 load — see Phase 9 §22.1 point 3 |
+| Group headings — `"Logs"`, `"Bugs"`, `Optional Seasonings`, `Final Sauce`, `Dipping Sauce`, `Optional Gravy`, `Basic Vinaigrette`, `Balsamic Maple Mushrooms` | 8 | Not food. Skip at Stage 5 load — see Phase 9 §22.1 point 3 |
 | A parser note leak — `instruction`, from `Note: "Minced" means…` | 1 | Same |
-| **Alias gaps against entries that already exist** | 11 | **Add the alias. This spec's own mechanism, not a rebuild** |
+| **Alias gaps against entries that already exist** | 13 | **Add the alias. This spec's own mechanism, not a rebuild** |
 
 **The third class is the finding worth keeping**, because it is this phase's own headline problem
-surviving in a direction §5 did not check:
+surviving in a direction §5 did not check (the last two rows arrived with Phase 9 §24.4.2's re-run):
 
 | Corpus name | Entry | Its aliases carry |
 |---|---|---|
@@ -955,11 +955,19 @@ surviving in a direction §5 did not check:
 | `vegetable or chicken broth` | `chicken broth` | `chicken broth or vegetable broth`, `chicken or vegetable broth` — both other orders |
 | `dry milk powder` | `non-fat dry milk` / `milk powder` | `dry milk`, `non-fat dry milk powder` |
 | `red or green pepper` | `bell pepper` | `bell peppers`, `capsicum` |
+| `cremini and/or white button mushrooms` | `mushroom` | the earlier pass named this row `mushroom` |
+| `applesauce and yogurt` | `applesauce`, `plain yogurt` | both exist, separately |
 
 > **§5's plural folding worked on batching and stopped there.** Folding plurals into the family key is
 > why `celery` and `celery stalk` became one entry at all — that part did its job. What it never did
 > was guarantee the finished entry carries **both** forms as aliases. Eight of the eleven gaps are
 > that, and they are a hand edit to the artefact rather than a build.
+
+> **An either/or line is a name the corpus will not spell consistently between runs.**
+> `1 pound cremini and/or white button mushrooms` came back as `mushroom` on one pass and in full on
+> the next; `applesauce and yogurt (plain low-fat or Greek)` is one row naming two foods the catalogue
+> holds separately. Both readings are defensible, so **one alias per phrasing is not a closing move** —
+> Stage 5 resolving on a normalised head noun is.
 
 ### Rule 5 should be a test
 

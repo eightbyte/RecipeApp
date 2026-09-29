@@ -4,7 +4,7 @@
 Mobile-first web app for storing recipes, building meal plans, and generating shopping lists.
 
 - **Spec:** `SPEC.md` — read this for feature requirements and data model definitions.
-- **Current phase:** Phase 9 in progress (seed recipe library) — **v1 feature-complete**. Stages 1–3 (Wayback discovery, fetch, parse) done and Phase 9.1 (unquantified ingredients — the Stage 4 prerequisite) done. Stage 4 (LLM normalise) is **done: all 1,123 recipes normalised, zero failures**, after a run-abort bug and four quantity repairs took the success rate from 91.3% to 100%. Stage 5 (persist) next — its inputs are `normalised/*.json` plus 1,115 cached photos. **Phase 9.3 (corpus-derived ingredient catalogue) is implemented and its artefact committed** (`specs/phase-9.3-corpus-derived-ingredient-catalogue.md` §12.3). It turns Stage 5's ingredient matching into a dictionary lookup. **Two items block a clean Stage 5 run, both in `specs/phase-9-seed-recipe-library.md` §24.4: the catalogue cannot resolve 15 corpus names (17 recipes, 1.5%) and three `normalised/` artefacts were edited outside the pipeline.** Phase 9.2 (recipe sections) was analysed and **rejected** as an acceptable seed-import artefact — see `specs/phase-9.2-recipe-sections.md`; it is why group headings reach Stage 5 as ingredients.
+- **Current phase:** Phase 9 in progress (seed recipe library) — **v1 feature-complete**. Stages 1–3 (Wayback discovery, fetch, parse) done and Phase 9.1 (unquantified ingredients — the Stage 4 prerequisite) done. Stage 4 (LLM normalise) is **done: all 1,123 recipes normalised, zero failures**, after a run-abort bug and four quantity repairs took the success rate from 91.3% to 100%. Stage 5 (persist) next — its inputs are `normalised/*.json` plus 1,115 cached photos. **Phase 9.3 (corpus-derived ingredient catalogue) is implemented and its artefact committed** (`specs/phase-9.3-corpus-derived-ingredient-catalogue.md` §12.3). It turns Stage 5's ingredient matching into a dictionary lookup. **Two items block a clean Stage 5 run, both in `specs/phase-9-seed-recipe-library.md` §24.4: the catalogue cannot resolve 19 corpus names (20 recipes, 1.8%) and three `normalised/` artefacts were edited outside the pipeline.** Phase 9.2 (recipe sections) was analysed and **rejected** as an acceptable seed-import artefact — see `specs/phase-9.2-recipe-sections.md`; it is why group headings reach Stage 5 as ingredients.
 
 ## Repository structure
 ```
@@ -332,9 +332,7 @@ worth knowing: `CacheDirectory`, `PreferredSnapshotYear`, `FetchDelayMillisecond
   `SeedCacheStore` gained `HasParsed`/`WriteParsedAsync`/`TryLoadParsedAsync`/
   `ClearParsedContentAsync`; `RecipeSeedingOptions` gained `DefaultServings` (4);
   `SeedRecipesCommand` gained `--parse`, and `--force` now also means "re-derive" for it.
-  **Result: 1,123/1,123 pages parsed, zero failures, ~4 s** — 8,881 ingredient lines (8,882 as
-  originally recorded; `sweet-potato-pancakes-balsamic-maple-mushrooms`'s parsed file was rewritten
-  outside the pipeline on 2026-09-13 and lost one, see §24.4.2) and 6,857
+  **Result: 1,123/1,123 pages parsed, zero failures, ~4 s** — 8,882 ingredient lines and 6,857
   steps, 1,058 primary + 65 legacy templates. (Recorded as 1,089 until the last 34 pages were
   harvested; the hazard measurements below were taken on that first 1,089 and have not been
   re-run against the full corpus.)
@@ -571,23 +569,30 @@ worth knowing: `CacheDirectory`, `PreferredSnapshotYear`, `FetchDelayMillisecond
   across runs**, so the two slugs reading 8 and 10 are a recipe carried through three separate
   runs, not a per-run budget being exhausted.)
   **Re-verified from the artefacts rather than from the gate that wrote them** (re-run 2026-09-22),
-  because a gate cannot be its own evidence. Across all 8,881 ingredient rows and 6,857 steps:
-  step numbers are contiguous, every unit is storable, no amount is zero or negative, no amount/unit
-  pair is half-set, and no name is blank. 98.0% of ingredients are referenced by at least one step,
-  so Cooking Mode's linkage is dense rather than nominal. **Three artefacts are the exception and
-  need re-running** — `oven-baked-potato-pancakes` (9 rows for 8 parsed lines),
-  `vinaigrette-salad-dressing` (5 for 6) and `sweet-potato-pancakes-balsamic-maple-mushrooms` (stale
-  fingerprint, plus an `ingredient_indexes` entry past the end of the array). All three were modified
-  on disk on 2026-09-13, after the pass, and all three violate checks `SeedRecipeNormaliser` enforces,
-  so the committed code cannot have written them; all three involve section headings, which dates them
-  to the rejected Phase 9.2 exploration. See §24.4.2. **`normalised/` is an input nothing re-validates
-  between Stage 4 and Stage 5 — Stage 5 should re-assert the parsed-count pairing and the index range
-  as it loads each artefact.**
+  because a gate cannot be its own evidence. Across all 8,882 ingredient rows and 6,857 steps:
+  ingredient and step counts match `parsed/` exactly for every recipe, fingerprints are all current,
+  step numbers are contiguous, no `ingredient_indexes` entry points outside its array, every unit is
+  storable, no amount is zero or negative, no amount/unit pair is half-set, and no name is blank.
+  98.0% of ingredients are referenced by at least one step, so Cooking Mode's linkage is dense rather
+  than nominal.
+  **Three artefacts had been hand-edited during Phase 9.3 review to strip section headings and were
+  re-run on 2026-09-22; all three are now clean.** What the edits taught is worth more than the fix:
+  **`ingredientIndexes` are positional, so deleting an ingredient row silently re-points every index
+  above it** — on `sweet-potato-pancakes-balsamic-maple-mushrooms`, removing the second heading
+  (`For Balsamic Maple Mushrooms`, at index 9) left steps 5–7 each off by one, and only step 7's
+  overrun past the end was detectable. The other two edits renumbered correctly and still failed,
+  because **the count invariant lives in a different file**: `normalised/` pairs to `parsed/` by
+  position, so a correct 5-row edit against a 6-line parsed file is still
+  `IngredientCountMismatch`. Editing `parsed/` too then invalidates `parsedFingerprint`, which is a
+  SHA of that file taken at normalise time and cannot be recomputed by hand. **Four coupled
+  invariants across two files — hand-editing these artefacts is not viable; re-run the slug.**
+  **`normalised/` is an input nothing re-validates between Stage 4 and Stage 5 — Stage 5 should
+  re-assert the parsed-count pairing and the index range as it loads each artefact.** See §24.4.2.
   **Four things the finished corpus settles:**
-  - **Phase 9.1's rule held corpus-wide, and the repairs shrank the class it governs.** 330 rows
+  - **Phase 9.1's rule held corpus-wide, and the repairs shrank the class it governs.** 331 rows
     (3.7%) are unquantified, down from the 5.0% no-digit rate Phase 9.1 measured, because repairs 1
     and 2 now read the quantity off lines the model declined to read. Independently checked: **every
-    one of the 330 sits on a line that states no number**, once dimension phrases are discounted. No
+    one of the 331 sits on a line that states no number**, once dimension phrases are discounted. No
     model opted itself out of a line that did state one.
   - **Single-number lines are exact, by construction.** 7,434 rows (84% of the corpus) sit on a line
     stating exactly one number and **all 7,434 agree with it** inside the gate's 1% tolerance. The
@@ -608,15 +613,15 @@ worth knowing: `CacheDirectory`, `PreferredSnapshotYear`, `FetchDelayMillisecond
     `13.333 cups`. These are below any sensible corpus-quality bar but they are visible in a
     shopping list, so they are a Stage 5 decision, not a Stage 4 defect.
   - **`HasStatedQuantity` strips `10x12 inches` and `3 inch` but not the inch mark.**
-    `6" bamboo skewers` is stored as `6 pcs`. One row in 8,881 — recorded rather than fixed,
+    `6" bamboo skewers` is stored as `6 pcs`. One row in 8,882 — recorded rather than fixed,
     because widening a dimension filter on one line of evidence is how the fraction-menu mistake
     happened.
   **Quality does not vary by run cohort**, so nothing needs re-running: the 30 benchmark recipes
   written before the repairs, the 602 from the first corpus pass and the 491 from the completing
   pass carry unexplained-amount rates of 0.88%, 0.30% and 0.38% — noise at these counts.
-  **What Stage 5 is walking into: 1,472 distinct ingredient names, 56.1% of them appearing exactly
+  **What Stage 5 is walking into: 1,476 distinct ingredient names, 56.1% of them appearing exactly
   once.** Singular and plural still split (`tomato` 63 rows, `tomatoes` 66), which is what Phase 9.3
-  was built to absorb — **and 8 of its 15 remaining misses are exactly that split surviving into the
+  was built to absorb — **and 8 of its 19 remaining misses are exactly that split surviving into the
   aliases** (see §24.4.1). Metadata coverage is high: 8 recipes have no image (they carry no JSON-LD
   image node), 4 no description, 8 no source credit, 75 no notes.
 - **Phase 9.3 — corpus-derived ingredient catalogue (2026-09-12). Built and committed** (`51c6e44`).
@@ -679,7 +684,7 @@ worth knowing: `CacheDirectory`, `PreferredSnapshotYear`, `FetchDelayMillisecond
   **Result as recorded at the time: 1,194 entries, 51 model calls, 1 name from the keyword fallback.**
   **Neither that figure nor its reachability claim matches what is committed.** The artefact went
   1,190 entries (`51c6e44`) → 1,063 (`29fa95f`) → **1,056** (`d0ad12a`, `f751a46`), and 15 corpus
-  names are unresolvable against it — 18 rows on 17 recipes, which `SeedCatalogueResolver` rejects
+  names are unresolvable against it — 22 rows on 20 recipes, which `SeedCatalogueResolver` rejects
   outright. 0 alias collisions and 0 unreachable entries, so the artefact is tight but incomplete.
   **Reachability should be a test, not a claim** — one pass over `normalised/` against the artefact,
   no GPU and no database, and it is the assertion that would have caught this. Details and the

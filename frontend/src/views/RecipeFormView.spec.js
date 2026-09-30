@@ -141,4 +141,51 @@ describe('RecipeFormView — edit mode', () => {
 
     expect(recipeStore.updateRecipe).toHaveBeenCalledWith('r1', expect.any(Object))
   })
+
+  it('sends an empty amount as null, never as 0', async () => {
+    // A hand-entered "salt" row with no quantity. Coercing to 0 would render as "0 g Salt"
+    // and sum into the shopping list (Phase 9.1 §3.4).
+    const detail = makeRecipeDetail({ id: 'r1' })
+
+    const wrapper = mountForm({ id: 'r1' })
+    const recipeStore = useRecipeStore()
+    const ingStore = useIngredientStore()
+
+    ingStore.ingredients = [makeIngredient()]
+    wrapper.vm.populateForm(detail)
+    await wrapper.vm.$nextTick()
+
+    wrapper.vm.form.ingredients[0].amount = ''
+    vi.spyOn(recipeStore, 'updateRecipe').mockResolvedValue(makeRecipeDetail({ id: 'r1' }))
+    wrapper.vm.formRef = { validate: vi.fn().mockResolvedValue({ valid: true }) }
+
+    await wrapper.vm.submit()
+
+    const [, payload] = recipeStore.updateRecipe.mock.calls[0]
+    expect(payload.ingredients[0].amount).toBeNull()
+    expect(payload.ingredients[0].unit).toBeNull()
+  })
+
+  it('round-trips a null amount loaded from the API back as null', async () => {
+    const detail = makeRecipeDetail({ id: 'r1' })
+    detail.ingredients[0].amount = null
+    detail.ingredients[0].unit = null
+
+    const wrapper = mountForm({ id: 'r1' })
+    const recipeStore = useRecipeStore()
+    const ingStore = useIngredientStore()
+
+    ingStore.ingredients = [makeIngredient()]
+    wrapper.vm.populateForm(detail)
+    await wrapper.vm.$nextTick()
+
+    vi.spyOn(recipeStore, 'updateRecipe').mockResolvedValue(makeRecipeDetail({ id: 'r1' }))
+    wrapper.vm.formRef = { validate: vi.fn().mockResolvedValue({ valid: true }) }
+
+    await wrapper.vm.submit()
+
+    const [, payload] = recipeStore.updateRecipe.mock.calls[0]
+    expect(payload.ingredients[0].amount).toBeNull()
+    expect(payload.ingredients[0].unit).toBeNull()
+  })
 })

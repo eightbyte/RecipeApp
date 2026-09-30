@@ -1,0 +1,5622 @@
+{
+  "version": 1,
+  "harvestedAt": "2026-09-07T04:39:11.150143Z",
+  "sourcePattern": "myplate.gov/recipes/*",
+  "recipes": [
+    {
+      "slug": "2-step-chicken",
+      "timestamp": "20251231013803",
+      "originalUrl": "https://www.myplate.gov/recipes/2-step-chicken"
+    },
+    {
+      "slug": "20-minute-chicken-creole",
+      "timestamp": "20251231013807",
+      "originalUrl": "https://www.myplate.gov/recipes/20-minute-chicken-creole"
+    },
+    {
+      "slug": "3-can-chili",
+      "timestamp": "20251231013810",
+      "originalUrl": "https://www.myplate.gov/recipes/3-can-chili"
+    },
+    {
+      "slug": "5-day-salad",
+      "timestamp": "20251231013814",
+      "originalUrl": "https://www.myplate.gov/recipes/5-day-salad"
+    },
+    {
+      "slug": "ambrosia",
+      "timestamp": "20251231013818",
+      "originalUrl": "https://www.myplate.gov/recipes/ambrosia"
+    },
+    {
+      "slug": "angel-food-cake",
+      "timestamp": "20251231013822",
+      "originalUrl": "https://www.myplate.gov/recipes/angel-food-cake"
+    },
+    {
+      "slug": "angel-food-pastry-fresh-berries-and-whipped-cream",
+      "timestamp": "20250916234251",
+      "originalUrl": "https://www.myplate.gov/recipes/angel-food-pastry-fresh-berries-and-whipped-cream"
+    },
+    {
+      "slug": "any-days-picnic-chicken-salad",
+      "timestamp": "20250315152022",
+      "originalUrl": "https://www.myplate.gov/recipes/any-days-picnic-chicken-salad"
+    },
+    {
+      "slug": "anytime-pizza",
+      "timestamp": "20251231013824",
+      "originalUrl": "https://www.myplate.gov/recipes/anytime-pizza"
+    },
+    {
+      "slug": "apple-banana-salad-peanuts",
+      "timestamp": "20251231013851",
+      "originalUrl": "https://www.myplate.gov/recipes/apple-banana-salad-peanuts"
+    },
+    {
+      "slug": "apple-cake",
+      "timestamp": "20251231013859",
+      "originalUrl": "https://www.myplate.gov/recipes/apple-cake"
+    },
+    {
+      "slug": "apple-carrot-soup",
+      "timestamp": "20251231013902",
+      "originalUrl": "https://www.myplate.gov/recipes/apple-carrot-soup"
+    },
+    {
+      "slug": "apple-chicken-salad",
+      "timestamp": "20251231013848",
+      "originalUrl": "https://www.myplate.gov/recipes/apple-chicken-salad"
+    },
+    {
+      "slug": "apple-chunk-cake",
+      "timestamp": "20251231013908",
+      "originalUrl": "https://www.myplate.gov/recipes/apple-chunk-cake"
+    },
+    {
+      "slug": "apple-cinnamon-bars",
+      "timestamp": "20251231013911",
+      "originalUrl": "https://www.myplate.gov/recipes/apple-cinnamon-bars"
+    },
+    {
+      "slug": "apple-coffee-cake",
+      "timestamp": "20251231013916",
+      "originalUrl": "https://www.myplate.gov/recipes/apple-coffee-cake"
+    },
+    {
+      "slug": "apple-coleslaw",
+      "timestamp": "20251231013920",
+      "originalUrl": "https://www.myplate.gov/recipes/apple-coleslaw"
+    },
+    {
+      "slug": "apple-corn-chili",
+      "timestamp": "20251231013925",
+      "originalUrl": "https://www.myplate.gov/recipes/apple-corn-chili"
+    },
+    {
+      "slug": "apple-cranberry-salad-toss",
+      "timestamp": "20251231013928",
+      "originalUrl": "https://www.myplate.gov/recipes/apple-cranberry-salad-toss"
+    },
+    {
+      "slug": "apple-crisp-0",
+      "timestamp": "20251231013931",
+      "originalUrl": "https://www.myplate.gov/recipes/apple-crisp-0"
+    },
+    {
+      "slug": "apple-fennel-chicken-salad-couscous",
+      "timestamp": "20251231042559",
+      "originalUrl": "https://www.myplate.gov/recipes/apple-fennel-chicken-salad-couscous"
+    },
+    {
+      "slug": "apple-oatmeal-muffins",
+      "timestamp": "20251231013933",
+      "originalUrl": "https://www.myplate.gov/recipes/apple-oatmeal-muffins"
+    },
+    {
+      "slug": "apple-pistachio-crisp",
+      "timestamp": "20251231013937",
+      "originalUrl": "https://www.myplate.gov/recipes/apple-pistachio-crisp"
+    },
+    {
+      "slug": "apple-sage-wild-rice-stuffing",
+      "timestamp": "20251231021820",
+      "originalUrl": "https://www.myplate.gov/recipes/apple-sage-wild-rice-stuffing"
+    },
+    {
+      "slug": "apple-salad",
+      "timestamp": "20251231031540",
+      "originalUrl": "https://www.myplate.gov/recipes/apple-salad"
+    },
+    {
+      "slug": "apple-salad-sweet-tangy-yogurt-dressing",
+      "timestamp": "20251211174908",
+      "originalUrl": "https://www.myplate.gov/recipes/apple-salad-sweet-tangy-yogurt-dressing"
+    },
+    {
+      "slug": "apple-sandwiches",
+      "timestamp": "20251231020536",
+      "originalUrl": "https://www.myplate.gov/recipes/apple-sandwiches"
+    },
+    {
+      "slug": "apple-slice-pancakes",
+      "timestamp": "20251231035625",
+      "originalUrl": "https://www.myplate.gov/recipes/apple-slice-pancakes"
+    },
+    {
+      "slug": "apple-stuffed-squash",
+      "timestamp": "20251231034953",
+      "originalUrl": "https://www.myplate.gov/recipes/apple-stuffed-squash"
+    },
+    {
+      "slug": "apple-tuna-sandwiches",
+      "timestamp": "20250806031805",
+      "originalUrl": "https://www.myplate.gov/recipes/apple-tuna-sandwiches"
+    },
+    {
+      "slug": "apple-wedges-pumpkin-almond-butter",
+      "timestamp": "20251231032546",
+      "originalUrl": "https://www.myplate.gov/recipes/apple-wedges-pumpkin-almond-butter"
+    },
+    {
+      "slug": "applesauce",
+      "timestamp": "20251231035014",
+      "originalUrl": "https://www.myplate.gov/recipes/applesauce"
+    },
+    {
+      "slug": "applesauce-cookies",
+      "timestamp": "20251231034822",
+      "originalUrl": "https://www.myplate.gov/recipes/applesauce-cookies"
+    },
+    {
+      "slug": "applesauce-loaf-cake",
+      "timestamp": "20251231033353",
+      "originalUrl": "https://www.myplate.gov/recipes/applesauce-loaf-cake"
+    },
+    {
+      "slug": "applesauce-pancakes",
+      "timestamp": "20251231022211",
+      "originalUrl": "https://www.myplate.gov/recipes/applesauce-pancakes"
+    },
+    {
+      "slug": "apricot-lemon-chicken",
+      "timestamp": "20251231042110",
+      "originalUrl": "https://www.myplate.gov/recipes/apricot-lemon-chicken"
+    },
+    {
+      "slug": "argentinean-grilled-steak-salsa-criolla",
+      "timestamp": "20251231045719",
+      "originalUrl": "https://www.myplate.gov/recipes/argentinean-grilled-steak-salsa-criolla"
+    },
+    {
+      "slug": "argentinian-chimichurri-sauce",
+      "timestamp": "20250806141101",
+      "originalUrl": "https://www.myplate.gov/recipes/argentinian-chimichurri-sauce"
+    },
+    {
+      "slug": "arroz-con-pollo-chicken-and-rice",
+      "timestamp": "20251231020629",
+      "originalUrl": "https://www.myplate.gov/recipes/arroz-con-pollo-chicken-and-rice"
+    },
+    {
+      "slug": "asian-mango-chicken-wraps",
+      "timestamp": "20251231042602",
+      "originalUrl": "https://www.myplate.gov/recipes/asian-mango-chicken-wraps"
+    },
+    {
+      "slug": "asparagus-gremolata-sauce",
+      "timestamp": "20251231040501",
+      "originalUrl": "https://www.myplate.gov/recipes/asparagus-gremolata-sauce"
+    },
+    {
+      "slug": "asparagus-mandarin-orange-chicken-and-rice",
+      "timestamp": "20251231042317",
+      "originalUrl": "https://www.myplate.gov/recipes/asparagus-mandarin-orange-chicken-and-rice"
+    },
+    {
+      "slug": "au-gratin-potatoes",
+      "timestamp": "20251231034934",
+      "originalUrl": "https://www.myplate.gov/recipes/au-gratin-potatoes"
+    },
+    {
+      "slug": "autumn-vegetable-succotash",
+      "timestamp": "20251231040834",
+      "originalUrl": "https://www.myplate.gov/recipes/autumn-vegetable-succotash"
+    },
+    {
+      "slug": "avocado-and-corn-salsa",
+      "timestamp": "20251231022515",
+      "originalUrl": "https://www.myplate.gov/recipes/avocado-and-corn-salsa"
+    },
+    {
+      "slug": "avocado-black-bean-taquitos",
+      "timestamp": "20251231042404",
+      "originalUrl": "https://www.myplate.gov/recipes/avocado-black-bean-taquitos"
+    },
+    {
+      "slug": "avocado-breakfast-bruschetta",
+      "timestamp": "20251231042409",
+      "originalUrl": "https://www.myplate.gov/recipes/avocado-breakfast-bruschetta"
+    },
+    {
+      "slug": "avocado-melon-breakfast-smoothie",
+      "timestamp": "20251231020350",
+      "originalUrl": "https://www.myplate.gov/recipes/avocado-melon-breakfast-smoothie"
+    },
+    {
+      "slug": "avocado-pita-pockets",
+      "timestamp": "20251231020413",
+      "originalUrl": "https://www.myplate.gov/recipes/avocado-pita-pockets"
+    },
+    {
+      "slug": "avocado-potato-and-grilled-chicken-salad",
+      "timestamp": "20251231021858",
+      "originalUrl": "https://www.myplate.gov/recipes/avocado-potato-and-grilled-chicken-salad"
+    },
+    {
+      "slug": "avocado-veggie-bake",
+      "timestamp": "20251113014324",
+      "originalUrl": "https://www.myplate.gov/recipes/avocado-veggie-bake"
+    },
+    {
+      "slug": "baked-apples-and-sweet-potatoes",
+      "timestamp": "20251231020335",
+      "originalUrl": "https://www.myplate.gov/recipes/baked-apples-and-sweet-potatoes"
+    },
+    {
+      "slug": "baked-bananas",
+      "timestamp": "20251231042441",
+      "originalUrl": "https://www.myplate.gov/recipes/baked-bananas"
+    },
+    {
+      "slug": "baked-beans",
+      "timestamp": "20251231040918",
+      "originalUrl": "https://www.myplate.gov/recipes/baked-beans"
+    },
+    {
+      "slug": "baked-cauliflower-tots",
+      "timestamp": "20251231042608",
+      "originalUrl": "https://www.myplate.gov/recipes/baked-cauliflower-tots"
+    },
+    {
+      "slug": "baked-chicken",
+      "timestamp": "20251231022327",
+      "originalUrl": "https://www.myplate.gov/recipes/baked-chicken"
+    },
+    {
+      "slug": "baked-chicken-nuggets",
+      "timestamp": "20251231033410",
+      "originalUrl": "https://www.myplate.gov/recipes/baked-chicken-nuggets"
+    },
+    {
+      "slug": "baked-chicken-vegetables",
+      "timestamp": "20251231031424",
+      "originalUrl": "https://www.myplate.gov/recipes/baked-chicken-vegetables"
+    },
+    {
+      "slug": "baked-eggs-cheese",
+      "timestamp": "20251231034557",
+      "originalUrl": "https://www.myplate.gov/recipes/baked-eggs-cheese"
+    },
+    {
+      "slug": "baked-fish",
+      "timestamp": "20251231030842",
+      "originalUrl": "https://www.myplate.gov/recipes/baked-fish"
+    },
+    {
+      "slug": "baked-fish-0",
+      "timestamp": "20250917115726",
+      "originalUrl": "https://www.myplate.gov/recipes/baked-fish-0"
+    },
+    {
+      "slug": "baked-fish-and-vegetables",
+      "timestamp": "20251231020317",
+      "originalUrl": "https://www.myplate.gov/recipes/baked-fish-and-vegetables"
+    },
+    {
+      "slug": "baked-fish-creole-sauce",
+      "timestamp": "20251231031545",
+      "originalUrl": "https://www.myplate.gov/recipes/baked-fish-creole-sauce"
+    },
+    {
+      "slug": "baked-fish-tomatoes-peppers-onions",
+      "timestamp": "20251231040447",
+      "originalUrl": "https://www.myplate.gov/recipes/baked-fish-tomatoes-peppers-onions"
+    },
+    {
+      "slug": "baked-lemon-chicken",
+      "timestamp": "20251231020623",
+      "originalUrl": "https://www.myplate.gov/recipes/baked-lemon-chicken"
+    },
+    {
+      "slug": "baked-lentils-casserole",
+      "timestamp": "20251231041804",
+      "originalUrl": "https://www.myplate.gov/recipes/baked-lentils-casserole"
+    },
+    {
+      "slug": "baked-meatballs",
+      "timestamp": "20251013063517",
+      "originalUrl": "https://www.myplate.gov/recipes/baked-meatballs"
+    },
+    {
+      "slug": "baked-parmesan-fish",
+      "timestamp": "20251231031910",
+      "originalUrl": "https://www.myplate.gov/recipes/baked-parmesan-fish"
+    },
+    {
+      "slug": "baked-pork-chops",
+      "timestamp": "20251231014639",
+      "originalUrl": "https://www.myplate.gov/recipes/baked-pork-chops"
+    },
+    {
+      "slug": "baked-potatoes-primavera",
+      "timestamp": "20251231031607",
+      "originalUrl": "https://www.myplate.gov/recipes/baked-potatoes-primavera"
+    },
+    {
+      "slug": "baked-rice-spinach",
+      "timestamp": "20251231045428",
+      "originalUrl": "https://www.myplate.gov/recipes/baked-rice-spinach"
+    },
+    {
+      "slug": "baked-salmon-herbs-lemon",
+      "timestamp": "20250420090320",
+      "originalUrl": "https://www.myplate.gov/recipes/baked-salmon-herbs-lemon"
+    },
+    {
+      "slug": "baked-squash-apple-spices",
+      "timestamp": "20251231041644",
+      "originalUrl": "https://www.myplate.gov/recipes/baked-squash-apple-spices"
+    },
+    {
+      "slug": "baked-tofu",
+      "timestamp": "20251231021714",
+      "originalUrl": "https://www.myplate.gov/recipes/baked-tofu"
+    },
+    {
+      "slug": "baked-tortilla-chips",
+      "timestamp": "20251231033940",
+      "originalUrl": "https://www.myplate.gov/recipes/baked-tortilla-chips"
+    },
+    {
+      "slug": "baked-trout",
+      "timestamp": "20251231035948",
+      "originalUrl": "https://www.myplate.gov/recipes/baked-trout"
+    },
+    {
+      "slug": "banaha-bread",
+      "timestamp": "20250914052756",
+      "originalUrl": "https://www.myplate.gov/recipes/banaha-bread"
+    },
+    {
+      "slug": "banana-berry-muffins",
+      "timestamp": "20251223165155",
+      "originalUrl": "https://www.myplate.gov/recipes/banana-berry-muffins"
+    },
+    {
+      "slug": "banana-bread",
+      "timestamp": "20251231033920",
+      "originalUrl": "https://www.myplate.gov/recipes/banana-bread"
+    },
+    {
+      "slug": "banana-cocoa-yogurt-pops",
+      "timestamp": "20251231032550",
+      "originalUrl": "https://www.myplate.gov/recipes/banana-cocoa-yogurt-pops"
+    },
+    {
+      "slug": "banana-cupcakes",
+      "timestamp": "20251231050720",
+      "originalUrl": "https://www.myplate.gov/recipes/banana-cupcakes"
+    },
+    {
+      "slug": "banana-oat-cookies",
+      "timestamp": "20251231032021",
+      "originalUrl": "https://www.myplate.gov/recipes/banana-oat-cookies"
+    },
+    {
+      "slug": "banana-oatmeal-pancakes-lentils",
+      "timestamp": "20251231045024",
+      "originalUrl": "https://www.myplate.gov/recipes/banana-oatmeal-pancakes-lentils"
+    },
+    {
+      "slug": "banana-oatmeal-raisin-cookies",
+      "timestamp": "20251231044733",
+      "originalUrl": "https://www.myplate.gov/recipes/banana-oatmeal-raisin-cookies"
+    },
+    {
+      "slug": "banana-pancakes-apple-topping",
+      "timestamp": "20251231041728",
+      "originalUrl": "https://www.myplate.gov/recipes/banana-pancakes-apple-topping"
+    },
+    {
+      "slug": "banana-pudding",
+      "timestamp": "20251231031744",
+      "originalUrl": "https://www.myplate.gov/recipes/banana-pudding"
+    },
+    {
+      "slug": "banana-split-oatmeal",
+      "timestamp": "20251211082841",
+      "originalUrl": "https://www.myplate.gov/recipes/banana-split-oatmeal"
+    },
+    {
+      "slug": "banana-waldorf",
+      "timestamp": "20250806031157",
+      "originalUrl": "https://www.myplate.gov/recipes/banana-waldorf"
+    },
+    {
+      "slug": "banana-walnut-oatmeal",
+      "timestamp": "20251231033853",
+      "originalUrl": "https://www.myplate.gov/recipes/banana-walnut-oatmeal"
+    },
+    {
+      "slug": "bananas-with-caramel-sauce",
+      "timestamp": "20251231022344",
+      "originalUrl": "https://www.myplate.gov/recipes/bananas-with-caramel-sauce"
+    },
+    {
+      "slug": "barley-jambalaya",
+      "timestamp": "20251214040641",
+      "originalUrl": "https://www.myplate.gov/recipes/barley-jambalaya"
+    },
+    {
+      "slug": "barley-pilaf",
+      "timestamp": "20251231021245",
+      "originalUrl": "https://www.myplate.gov/recipes/barley-pilaf"
+    },
+    {
+      "slug": "basic-custard",
+      "timestamp": "20251231045328",
+      "originalUrl": "https://www.myplate.gov/recipes/basic-custard"
+    },
+    {
+      "slug": "basic-muffins",
+      "timestamp": "20251231043032",
+      "originalUrl": "https://www.myplate.gov/recipes/basic-muffins"
+    },
+    {
+      "slug": "basic-quiche",
+      "timestamp": "20251231013727",
+      "originalUrl": "https://www.myplate.gov/recipes/basic-quiche"
+    },
+    {
+      "slug": "basic-soup-and-sauce-mix",
+      "timestamp": "20251231040647",
+      "originalUrl": "https://www.myplate.gov/recipes/basic-soup-and-sauce-mix"
+    },
+    {
+      "slug": "basic-steamed-collards",
+      "timestamp": "20251231041530",
+      "originalUrl": "https://www.myplate.gov/recipes/basic-steamed-collards"
+    },
+    {
+      "slug": "batido-smoothie",
+      "timestamp": "20251231032454",
+      "originalUrl": "https://www.myplate.gov/recipes/batido-smoothie"
+    },
+    {
+      "slug": "bbq-chicken-pizza",
+      "timestamp": "20251231035611",
+      "originalUrl": "https://www.myplate.gov/recipes/bbq-chicken-pizza"
+    },
+    {
+      "slug": "bean-and-rice-burritos",
+      "timestamp": "20251231044843",
+      "originalUrl": "https://www.myplate.gov/recipes/bean-and-rice-burritos"
+    },
+    {
+      "slug": "bean-and-vegetable-salad",
+      "timestamp": "20251231035416",
+      "originalUrl": "https://www.myplate.gov/recipes/bean-and-vegetable-salad"
+    },
+    {
+      "slug": "bean-dip",
+      "timestamp": "20251231041503",
+      "originalUrl": "https://www.myplate.gov/recipes/bean-dip"
+    },
+    {
+      "slug": "bean-enchiladas",
+      "timestamp": "20251231040911",
+      "originalUrl": "https://www.myplate.gov/recipes/bean-enchiladas"
+    },
+    {
+      "slug": "beef-and-bean-chile-verde",
+      "timestamp": "20251231022400",
+      "originalUrl": "https://www.myplate.gov/recipes/beef-and-bean-chile-verde"
+    },
+    {
+      "slug": "beef-and-cabbage-dinner-tonight",
+      "timestamp": "20251231034915",
+      "originalUrl": "https://www.myplate.gov/recipes/beef-and-cabbage-dinner-tonight"
+    },
+    {
+      "slug": "beef-and-vegetable-soup",
+      "timestamp": "20251231041809",
+      "originalUrl": "https://www.myplate.gov/recipes/beef-and-vegetable-soup"
+    },
+    {
+      "slug": "beef-and-vegetables",
+      "timestamp": "20251231045635",
+      "originalUrl": "https://www.myplate.gov/recipes/beef-and-vegetables"
+    },
+    {
+      "slug": "beef-noodles",
+      "timestamp": "20251231050510",
+      "originalUrl": "https://www.myplate.gov/recipes/beef-noodles"
+    },
+    {
+      "slug": "beef-pot-roast",
+      "timestamp": "20251022070454",
+      "originalUrl": "https://www.myplate.gov/recipes/beef-pot-roast"
+    },
+    {
+      "slug": "beef-potatoes",
+      "timestamp": "20251231033759",
+      "originalUrl": "https://www.myplate.gov/recipes/beef-potatoes"
+    },
+    {
+      "slug": "beef-pozole-soup",
+      "timestamp": "20251222015109",
+      "originalUrl": "https://www.myplate.gov/recipes/beef-pozole-soup"
+    },
+    {
+      "slug": "beef-stroganoff",
+      "timestamp": "20251231031558",
+      "originalUrl": "https://www.myplate.gov/recipes/beef-stroganoff"
+    },
+    {
+      "slug": "beef-vegetable-six-layer-dinner",
+      "timestamp": "20251231042106",
+      "originalUrl": "https://www.myplate.gov/recipes/beef-vegetable-six-layer-dinner"
+    },
+    {
+      "slug": "beef-vegetable-soup",
+      "timestamp": "20251231050724",
+      "originalUrl": "https://www.myplate.gov/recipes/beef-vegetable-soup"
+    },
+    {
+      "slug": "beefy-macaroni-and-cheese",
+      "timestamp": "20251231033124",
+      "originalUrl": "https://www.myplate.gov/recipes/beefy-macaroni-and-cheese"
+    },
+    {
+      "slug": "beet-white-bean-salad",
+      "timestamp": "20251231021921",
+      "originalUrl": "https://www.myplate.gov/recipes/beet-white-bean-salad"
+    },
+    {
+      "slug": "beets-beans-and-greens",
+      "timestamp": "20251231033023",
+      "originalUrl": "https://www.myplate.gov/recipes/beets-beans-and-greens"
+    },
+    {
+      "slug": "bell-pepper-and-apple-coleslaw",
+      "timestamp": "20251231032258",
+      "originalUrl": "https://www.myplate.gov/recipes/bell-pepper-and-apple-coleslaw"
+    },
+    {
+      "slug": "bell-pepper-and-potato-salad",
+      "timestamp": "20251231033859",
+      "originalUrl": "https://www.myplate.gov/recipes/bell-pepper-and-potato-salad"
+    },
+    {
+      "slug": "bell-pepper-and-vidalia-onion-strata-fresh-salsa",
+      "timestamp": "20251231042435",
+      "originalUrl": "https://www.myplate.gov/recipes/bell-pepper-and-vidalia-onion-strata-fresh-salsa"
+    },
+    {
+      "slug": "bell-pepper-nachos",
+      "timestamp": "20251231042418",
+      "originalUrl": "https://www.myplate.gov/recipes/bell-pepper-nachos"
+    },
+    {
+      "slug": "berries-banana-cream",
+      "timestamp": "20251231045159",
+      "originalUrl": "https://www.myplate.gov/recipes/berries-banana-cream"
+    },
+    {
+      "slug": "berry-bread-pudding",
+      "timestamp": "20251231024918",
+      "originalUrl": "https://www.myplate.gov/recipes/berry-bread-pudding"
+    },
+    {
+      "slug": "berry-good-dessert",
+      "timestamp": "20251231022541",
+      "originalUrl": "https://www.myplate.gov/recipes/berry-good-dessert"
+    },
+    {
+      "slug": "better-baking-mix",
+      "timestamp": "20251231020648",
+      "originalUrl": "https://www.myplate.gov/recipes/better-baking-mix"
+    },
+    {
+      "slug": "black-bean-and-couscous-salad",
+      "timestamp": "20251231022306",
+      "originalUrl": "https://www.myplate.gov/recipes/black-bean-and-couscous-salad"
+    },
+    {
+      "slug": "black-bean-and-rice-salad",
+      "timestamp": "20251231020956",
+      "originalUrl": "https://www.myplate.gov/recipes/black-bean-and-rice-salad"
+    },
+    {
+      "slug": "black-bean-and-sweet-potato-quesadillas",
+      "timestamp": "20251231050540",
+      "originalUrl": "https://www.myplate.gov/recipes/black-bean-and-sweet-potato-quesadillas"
+    },
+    {
+      "slug": "black-bean-burgers",
+      "timestamp": "20251231025425",
+      "originalUrl": "https://www.myplate.gov/recipes/black-bean-burgers"
+    },
+    {
+      "slug": "black-bean-burrito",
+      "timestamp": "20251231031631",
+      "originalUrl": "https://www.myplate.gov/recipes/black-bean-burrito"
+    },
+    {
+      "slug": "black-bean-quesadillas",
+      "timestamp": "20251231032554",
+      "originalUrl": "https://www.myplate.gov/recipes/black-bean-quesadillas"
+    },
+    {
+      "slug": "black-bean-salsa",
+      "timestamp": "20251231032005",
+      "originalUrl": "https://www.myplate.gov/recipes/black-bean-salsa"
+    },
+    {
+      "slug": "black-bean-soup",
+      "timestamp": "20251231025035",
+      "originalUrl": "https://www.myplate.gov/recipes/black-bean-soup"
+    },
+    {
+      "slug": "black-bean-soup-0",
+      "timestamp": "20251231013736",
+      "originalUrl": "https://www.myplate.gov/recipes/black-bean-soup-0"
+    },
+    {
+      "slug": "black-beans",
+      "timestamp": "20251231014657",
+      "originalUrl": "https://www.myplate.gov/recipes/black-beans"
+    },
+    {
+      "slug": "black-eyed-pea-and-collard-greens-soup",
+      "timestamp": "20251231045232",
+      "originalUrl": "https://www.myplate.gov/recipes/black-eyed-pea-and-collard-greens-soup"
+    },
+    {
+      "slug": "black-skillet-beef-greens-and-red-potatoes",
+      "timestamp": "20251231023729",
+      "originalUrl": "https://www.myplate.gov/recipes/black-skillet-beef-greens-and-red-potatoes"
+    },
+    {
+      "slug": "blue-corn-pan-bread",
+      "timestamp": "20251231025026",
+      "originalUrl": "https://www.myplate.gov/recipes/blue-corn-pan-bread"
+    },
+    {
+      "slug": "blue-cornmeal-pancakes",
+      "timestamp": "20251231042804",
+      "originalUrl": "https://www.myplate.gov/recipes/blue-cornmeal-pancakes"
+    },
+    {
+      "slug": "blueberry-baked-oats",
+      "timestamp": "20251231013724",
+      "originalUrl": "https://www.myplate.gov/recipes/blueberry-baked-oats"
+    },
+    {
+      "slug": "blueberry-chicken-pasta-salad-field-greens",
+      "timestamp": "20251231040545",
+      "originalUrl": "https://www.myplate.gov/recipes/blueberry-chicken-pasta-salad-field-greens"
+    },
+    {
+      "slug": "blueberry-coffee-cake",
+      "timestamp": "20251231041822",
+      "originalUrl": "https://www.myplate.gov/recipes/blueberry-coffee-cake"
+    },
+    {
+      "slug": "blueberry-muffins",
+      "timestamp": "20251231043747",
+      "originalUrl": "https://www.myplate.gov/recipes/blueberry-muffins"
+    },
+    {
+      "slug": "bosnian-pot",
+      "timestamp": "20251231033042",
+      "originalUrl": "https://www.myplate.gov/recipes/bosnian-pot"
+    },
+    {
+      "slug": "braised-chicken-thighs-spinach",
+      "timestamp": "20251231050928",
+      "originalUrl": "https://www.myplate.gov/recipes/braised-chicken-thighs-spinach"
+    },
+    {
+      "slug": "bran-flake-raisin-muffins",
+      "timestamp": "20251231034611",
+      "originalUrl": "https://www.myplate.gov/recipes/bran-flake-raisin-muffins"
+    },
+    {
+      "slug": "bran-muffins",
+      "timestamp": "20251231042513",
+      "originalUrl": "https://www.myplate.gov/recipes/bran-muffins"
+    },
+    {
+      "slug": "brazilian-rice",
+      "timestamp": "20250807034703",
+      "originalUrl": "https://www.myplate.gov/recipes/brazilian-rice"
+    },
+    {
+      "slug": "bread-bag",
+      "timestamp": "20251231035555",
+      "originalUrl": "https://www.myplate.gov/recipes/bread-bag"
+    },
+    {
+      "slug": "bread-bake-chicken-cheese-vegetables",
+      "timestamp": "20251231025446",
+      "originalUrl": "https://www.myplate.gov/recipes/bread-bake-chicken-cheese-vegetables"
+    },
+    {
+      "slug": "bread-pudding-vanilla-sauce",
+      "timestamp": "20251231040943",
+      "originalUrl": "https://www.myplate.gov/recipes/bread-pudding-vanilla-sauce"
+    },
+    {
+      "slug": "breakfast-burrito-salsa",
+      "timestamp": "20251231033639",
+      "originalUrl": "https://www.myplate.gov/recipes/breakfast-burrito-salsa"
+    },
+    {
+      "slug": "breakfast-parfait",
+      "timestamp": "20251231033254",
+      "originalUrl": "https://www.myplate.gov/recipes/breakfast-parfait"
+    },
+    {
+      "slug": "breakfast-potato-egg-burritos",
+      "timestamp": "20251231020940",
+      "originalUrl": "https://www.myplate.gov/recipes/breakfast-potato-egg-burritos"
+    },
+    {
+      "slug": "brilliant-chili-topped-walnuts",
+      "timestamp": "20251013071332",
+      "originalUrl": "https://www.myplate.gov/recipes/brilliant-chili-topped-walnuts"
+    },
+    {
+      "slug": "broccoli-alfredo",
+      "timestamp": "20251231035713",
+      "originalUrl": "https://www.myplate.gov/recipes/broccoli-alfredo"
+    },
+    {
+      "slug": "broccoli-and-corn-bake",
+      "timestamp": "20251231042126",
+      "originalUrl": "https://www.myplate.gov/recipes/broccoli-and-corn-bake"
+    },
+    {
+      "slug": "broccoli-baked-potatoes",
+      "timestamp": "20251231025040",
+      "originalUrl": "https://www.myplate.gov/recipes/broccoli-baked-potatoes"
+    },
+    {
+      "slug": "broccoli-cheddar-frittata",
+      "timestamp": "20251231050558",
+      "originalUrl": "https://www.myplate.gov/recipes/broccoli-cheddar-frittata"
+    },
+    {
+      "slug": "broccoli-omelet",
+      "timestamp": "20251231042422",
+      "originalUrl": "https://www.myplate.gov/recipes/broccoli-omelet"
+    },
+    {
+      "slug": "broccoli-potato-soup",
+      "timestamp": "20251231013741",
+      "originalUrl": "https://www.myplate.gov/recipes/broccoli-potato-soup"
+    },
+    {
+      "slug": "broccoli-rice-casserole",
+      "timestamp": "20251231051101",
+      "originalUrl": "https://www.myplate.gov/recipes/broccoli-rice-casserole"
+    },
+    {
+      "slug": "broccoli-salad",
+      "timestamp": "20251231020752",
+      "originalUrl": "https://www.myplate.gov/recipes/broccoli-salad"
+    },
+    {
+      "slug": "broccoli-strawberry-orzo-salad",
+      "timestamp": "20251231032557",
+      "originalUrl": "https://www.myplate.gov/recipes/broccoli-strawberry-orzo-salad"
+    },
+    {
+      "slug": "broiled-tomatoes-and-cheese",
+      "timestamp": "20251231034958",
+      "originalUrl": "https://www.myplate.gov/recipes/broiled-tomatoes-and-cheese"
+    },
+    {
+      "slug": "bronco-beans",
+      "timestamp": "20251231033405",
+      "originalUrl": "https://www.myplate.gov/recipes/bronco-beans"
+    },
+    {
+      "slug": "brown-rice-pilaf",
+      "timestamp": "20251231031450",
+      "originalUrl": "https://www.myplate.gov/recipes/brown-rice-pilaf"
+    },
+    {
+      "slug": "brown-rice-pilaf-sage-walnuts-and-dried",
+      "timestamp": "20251231013748",
+      "originalUrl": "https://www.myplate.gov/recipes/brown-rice-pilaf-sage-walnuts-and-dried"
+    },
+    {
+      "slug": "brown-rice-sizzling-chicken-and-vegetables",
+      "timestamp": "20251231040542",
+      "originalUrl": "https://www.myplate.gov/recipes/brown-rice-sizzling-chicken-and-vegetables"
+    },
+    {
+      "slug": "brown-rice-tabbouleh",
+      "timestamp": "20251231042612",
+      "originalUrl": "https://www.myplate.gov/recipes/brown-rice-tabbouleh"
+    },
+    {
+      "slug": "brunswick-stew",
+      "timestamp": "20251231021827",
+      "originalUrl": "https://www.myplate.gov/recipes/brunswick-stew"
+    },
+    {
+      "slug": "brussel-sprouts-cranberry-and-bulgur-salad",
+      "timestamp": "20251231033346",
+      "originalUrl": "https://www.myplate.gov/recipes/brussel-sprouts-cranberry-and-bulgur-salad"
+    },
+    {
+      "slug": "brussels-sprouts-mushroom-sauce",
+      "timestamp": "20251231045214",
+      "originalUrl": "https://www.myplate.gov/recipes/brussels-sprouts-mushroom-sauce"
+    },
+    {
+      "slug": "bugs-log",
+      "timestamp": "20251231050430",
+      "originalUrl": "https://www.myplate.gov/recipes/bugs-log"
+    },
+    {
+      "slug": "bulgur-chickpea-salad",
+      "timestamp": "20251231035109",
+      "originalUrl": "https://www.myplate.gov/recipes/bulgur-chickpea-salad"
+    },
+    {
+      "slug": "bulgur-wheat-veggie-chickpea-salad",
+      "timestamp": "20251231034054",
+      "originalUrl": "https://www.myplate.gov/recipes/bulgur-wheat-veggie-chickpea-salad"
+    },
+    {
+      "slug": "butterfly-bite",
+      "timestamp": "20251231020522",
+      "originalUrl": "https://www.myplate.gov/recipes/butterfly-bite"
+    },
+    {
+      "slug": "buttermilk-scones",
+      "timestamp": "20251231042120",
+      "originalUrl": "https://www.myplate.gov/recipes/buttermilk-scones"
+    },
+    {
+      "slug": "butternut-squash-apple-soup",
+      "timestamp": "20251231020741",
+      "originalUrl": "https://www.myplate.gov/recipes/butternut-squash-apple-soup"
+    },
+    {
+      "slug": "butternut-squash-black-beans",
+      "timestamp": "20251231034003",
+      "originalUrl": "https://www.myplate.gov/recipes/butternut-squash-black-beans"
+    },
+    {
+      "slug": "butternut-squash-pasta-bake",
+      "timestamp": "20251231050827",
+      "originalUrl": "https://www.myplate.gov/recipes/butternut-squash-pasta-bake"
+    },
+    {
+      "slug": "cabbage-roll-casserole",
+      "timestamp": "20251231032936",
+      "originalUrl": "https://www.myplate.gov/recipes/cabbage-roll-casserole"
+    },
+    {
+      "slug": "cabbage-salad",
+      "timestamp": "20251231045211",
+      "originalUrl": "https://www.myplate.gov/recipes/cabbage-salad"
+    },
+    {
+      "slug": "cabbage-stir-fry",
+      "timestamp": "20251231035154",
+      "originalUrl": "https://www.myplate.gov/recipes/cabbage-stir-fry"
+    },
+    {
+      "slug": "cafe-mocha",
+      "timestamp": "20251231045347",
+      "originalUrl": "https://www.myplate.gov/recipes/cafe-mocha"
+    },
+    {
+      "slug": "cajun-catfish",
+      "timestamp": "20251231021318",
+      "originalUrl": "https://www.myplate.gov/recipes/cajun-catfish"
+    },
+    {
+      "slug": "california-avocado-super-summer-wrap",
+      "timestamp": "20251231020633",
+      "originalUrl": "https://www.myplate.gov/recipes/california-avocado-super-summer-wrap"
+    },
+    {
+      "slug": "candied-yams",
+      "timestamp": "20251231022612",
+      "originalUrl": "https://www.myplate.gov/recipes/candied-yams"
+    },
+    {
+      "slug": "cantaloupe-cooler",
+      "timestamp": "20251231032058",
+      "originalUrl": "https://www.myplate.gov/recipes/cantaloupe-cooler"
+    },
+    {
+      "slug": "caramel-sauce",
+      "timestamp": "20251231045912",
+      "originalUrl": "https://www.myplate.gov/recipes/caramel-sauce"
+    },
+    {
+      "slug": "caribbean-bean-salad",
+      "timestamp": "20251231021418",
+      "originalUrl": "https://www.myplate.gov/recipes/caribbean-bean-salad"
+    },
+    {
+      "slug": "caribbean-casserole",
+      "timestamp": "20251231032447",
+      "originalUrl": "https://www.myplate.gov/recipes/caribbean-casserole"
+    },
+    {
+      "slug": "caribbean-pink-beans",
+      "timestamp": "20251231021112",
+      "originalUrl": "https://www.myplate.gov/recipes/caribbean-pink-beans"
+    },
+    {
+      "slug": "carrot-cookies",
+      "timestamp": "20251231050842",
+      "originalUrl": "https://www.myplate.gov/recipes/carrot-cookies"
+    },
+    {
+      "slug": "carrot-raisin-salad",
+      "timestamp": "20251231050419",
+      "originalUrl": "https://www.myplate.gov/recipes/carrot-raisin-salad"
+    },
+    {
+      "slug": "carrots-tomatoes-and-macaroni",
+      "timestamp": "20251231031634",
+      "originalUrl": "https://www.myplate.gov/recipes/carrots-tomatoes-and-macaroni"
+    },
+    {
+      "slug": "catfish-stew-and-rice",
+      "timestamp": "20251231023722",
+      "originalUrl": "https://www.myplate.gov/recipes/catfish-stew-and-rice"
+    },
+    {
+      "slug": "cauliflower-shells-cheese",
+      "timestamp": "20251231023739",
+      "originalUrl": "https://www.myplate.gov/recipes/cauliflower-shells-cheese"
+    },
+    {
+      "slug": "celery-apricot-blue-cheese-spread",
+      "timestamp": "20251231032602",
+      "originalUrl": "https://www.myplate.gov/recipes/celery-apricot-blue-cheese-spread"
+    },
+    {
+      "slug": "chapatis-flatbread",
+      "timestamp": "20251231034048",
+      "originalUrl": "https://www.myplate.gov/recipes/chapatis-flatbread"
+    },
+    {
+      "slug": "cheese-and-corn-chowder",
+      "timestamp": "20251231031919",
+      "originalUrl": "https://www.myplate.gov/recipes/cheese-and-corn-chowder"
+    },
+    {
+      "slug": "cheese-roni-bake",
+      "timestamp": "20250806060159",
+      "originalUrl": "https://www.myplate.gov/recipes/cheese-roni-bake"
+    },
+    {
+      "slug": "cheese-stuffed-potatoes",
+      "timestamp": "20251231041859",
+      "originalUrl": "https://www.myplate.gov/recipes/cheese-stuffed-potatoes"
+    },
+    {
+      "slug": "cheesy-chicken-broccoli-and-rice-bake",
+      "timestamp": "20251231033540",
+      "originalUrl": "https://www.myplate.gov/recipes/cheesy-chicken-broccoli-and-rice-bake"
+    },
+    {
+      "slug": "cherry-melon-grape-salad",
+      "timestamp": "20251231032608",
+      "originalUrl": "https://www.myplate.gov/recipes/cherry-melon-grape-salad"
+    },
+    {
+      "slug": "cherry-puff-pancake",
+      "timestamp": "20251231045445",
+      "originalUrl": "https://www.myplate.gov/recipes/cherry-puff-pancake"
+    },
+    {
+      "slug": "chicken-and-beans",
+      "timestamp": "20251231033218",
+      "originalUrl": "https://www.myplate.gov/recipes/chicken-and-beans"
+    },
+    {
+      "slug": "chicken-and-broccoli-bake",
+      "timestamp": "20251231033517",
+      "originalUrl": "https://www.myplate.gov/recipes/chicken-and-broccoli-bake"
+    },
+    {
+      "slug": "chicken-and-cranberry-salad",
+      "timestamp": "20251231045422",
+      "originalUrl": "https://www.myplate.gov/recipes/chicken-and-cranberry-salad"
+    },
+    {
+      "slug": "chicken-and-dumpling-soup",
+      "timestamp": "20250806031817",
+      "originalUrl": "https://www.myplate.gov/recipes/chicken-and-dumpling-soup"
+    },
+    {
+      "slug": "chicken-and-dumplings",
+      "timestamp": "20251231033435",
+      "originalUrl": "https://www.myplate.gov/recipes/chicken-and-dumplings"
+    },
+    {
+      "slug": "chicken-and-spanish-rice",
+      "timestamp": "20251231040536",
+      "originalUrl": "https://www.myplate.gov/recipes/chicken-and-spanish-rice"
+    },
+    {
+      "slug": "chicken-apple-salad-sandwich",
+      "timestamp": "20251231034644",
+      "originalUrl": "https://www.myplate.gov/recipes/chicken-apple-salad-sandwich"
+    },
+    {
+      "slug": "chicken-broccoli-alfredo",
+      "timestamp": "20251231045646",
+      "originalUrl": "https://www.myplate.gov/recipes/chicken-broccoli-alfredo"
+    },
+    {
+      "slug": "chicken-cacciatore",
+      "timestamp": "20251231032445",
+      "originalUrl": "https://www.myplate.gov/recipes/chicken-cacciatore"
+    },
+    {
+      "slug": "chicken-casserole",
+      "timestamp": "20251231035325",
+      "originalUrl": "https://www.myplate.gov/recipes/chicken-casserole"
+    },
+    {
+      "slug": "chicken-club-salad",
+      "timestamp": "20251231031433",
+      "originalUrl": "https://www.myplate.gov/recipes/chicken-club-salad"
+    },
+    {
+      "slug": "chicken-mole",
+      "timestamp": "20251231033420",
+      "originalUrl": "https://www.myplate.gov/recipes/chicken-mole"
+    },
+    {
+      "slug": "chicken-noodle-soup",
+      "timestamp": "20251231021916",
+      "originalUrl": "https://www.myplate.gov/recipes/chicken-noodle-soup"
+    },
+    {
+      "slug": "chicken-noodle-soup-0",
+      "timestamp": "20250806033630",
+      "originalUrl": "https://www.myplate.gov/recipes/chicken-noodle-soup-0"
+    },
+    {
+      "slug": "chicken-pasta-salad",
+      "timestamp": "20251231033416",
+      "originalUrl": "https://www.myplate.gov/recipes/chicken-pasta-salad"
+    },
+    {
+      "slug": "chicken-posole",
+      "timestamp": "20250806051553",
+      "originalUrl": "https://www.myplate.gov/recipes/chicken-posole"
+    },
+    {
+      "slug": "chicken-pot-pie",
+      "timestamp": "20251231035436",
+      "originalUrl": "https://www.myplate.gov/recipes/chicken-pot-pie"
+    },
+    {
+      "slug": "chicken-pozole-soup",
+      "timestamp": "20251231013758",
+      "originalUrl": "https://www.myplate.gov/recipes/chicken-pozole-soup"
+    },
+    {
+      "slug": "chicken-ratatouille",
+      "timestamp": "20251231032243",
+      "originalUrl": "https://www.myplate.gov/recipes/chicken-ratatouille"
+    },
+    {
+      "slug": "chicken-rice-and-fruit-salad",
+      "timestamp": "20251231021053",
+      "originalUrl": "https://www.myplate.gov/recipes/chicken-rice-and-fruit-salad"
+    },
+    {
+      "slug": "chicken-rice-salad",
+      "timestamp": "20251231021148",
+      "originalUrl": "https://www.myplate.gov/recipes/chicken-rice-salad"
+    },
+    {
+      "slug": "chicken-rice-soup",
+      "timestamp": "20251231021814",
+      "originalUrl": "https://www.myplate.gov/recipes/chicken-rice-soup"
+    },
+    {
+      "slug": "chicken-salad",
+      "timestamp": "20251231022139",
+      "originalUrl": "https://www.myplate.gov/recipes/chicken-salad"
+    },
+    {
+      "slug": "chicken-salad-and-peach-sandwich",
+      "timestamp": "20251231020419",
+      "originalUrl": "https://www.myplate.gov/recipes/chicken-salad-and-peach-sandwich"
+    },
+    {
+      "slug": "chicken-salad-ramen-noodles",
+      "timestamp": "20251231024857",
+      "originalUrl": "https://www.myplate.gov/recipes/chicken-salad-ramen-noodles"
+    },
+    {
+      "slug": "chicken-soup-chiles",
+      "timestamp": "20251231031656",
+      "originalUrl": "https://www.myplate.gov/recipes/chicken-soup-chiles"
+    },
+    {
+      "slug": "chicken-soup-soul",
+      "timestamp": "20251010204726",
+      "originalUrl": "https://www.myplate.gov/recipes/chicken-soup-soul"
+    },
+    {
+      "slug": "chicken-spaghetti",
+      "timestamp": "20251231032351",
+      "originalUrl": "https://www.myplate.gov/recipes/chicken-spaghetti"
+    },
+    {
+      "slug": "chicken-spanish-rice",
+      "timestamp": "20251231025431",
+      "originalUrl": "https://www.myplate.gov/recipes/chicken-spanish-rice"
+    },
+    {
+      "slug": "chicken-stew",
+      "timestamp": "20251231040900",
+      "originalUrl": "https://www.myplate.gov/recipes/chicken-stew"
+    },
+    {
+      "slug": "chicken-stir-fry",
+      "timestamp": "20251223185052",
+      "originalUrl": "https://www.myplate.gov/recipes/chicken-stir-fry"
+    },
+    {
+      "slug": "chicken-tortilla-casserole",
+      "timestamp": "20250806142814",
+      "originalUrl": "https://www.myplate.gov/recipes/chicken-tortilla-casserole"
+    },
+    {
+      "slug": "chicken-vegetable-soup-kale",
+      "timestamp": "20251231021842",
+      "originalUrl": "https://www.myplate.gov/recipes/chicken-vegetable-soup-kale"
+    },
+    {
+      "slug": "chicken-waldorf-salad",
+      "timestamp": "20251231024736",
+      "originalUrl": "https://www.myplate.gov/recipes/chicken-waldorf-salad"
+    },
+    {
+      "slug": "chickpea-dip",
+      "timestamp": "20251231034210",
+      "originalUrl": "https://www.myplate.gov/recipes/chickpea-dip"
+    },
+    {
+      "slug": "chickpeas-and-spinach-saute",
+      "timestamp": "20251231033323",
+      "originalUrl": "https://www.myplate.gov/recipes/chickpeas-and-spinach-saute"
+    },
+    {
+      "slug": "chili-and-spice-seasoning",
+      "timestamp": "20251231035304",
+      "originalUrl": "https://www.myplate.gov/recipes/chili-and-spice-seasoning"
+    },
+    {
+      "slug": "chili-bean-dip",
+      "timestamp": "20251231044310",
+      "originalUrl": "https://www.myplate.gov/recipes/chili-bean-dip"
+    },
+    {
+      "slug": "chili-cheese-hominy",
+      "timestamp": "20251231024946",
+      "originalUrl": "https://www.myplate.gov/recipes/chili-cheese-hominy"
+    },
+    {
+      "slug": "chili-popcorn",
+      "timestamp": "20251109221844",
+      "originalUrl": "https://www.myplate.gov/recipes/chili-popcorn"
+    },
+    {
+      "slug": "chili-tomato-macaroni",
+      "timestamp": "20251231020816",
+      "originalUrl": "https://www.myplate.gov/recipes/chili-tomato-macaroni"
+    },
+    {
+      "slug": "chilled-blueberry-soup",
+      "timestamp": "20251231032457",
+      "originalUrl": "https://www.myplate.gov/recipes/chilled-blueberry-soup"
+    },
+    {
+      "slug": "chilled-cantaloupe-soup",
+      "timestamp": "20251231041117",
+      "originalUrl": "https://www.myplate.gov/recipes/chilled-cantaloupe-soup"
+    },
+    {
+      "slug": "chimichurri-sauce",
+      "timestamp": "20251231050712",
+      "originalUrl": "https://www.myplate.gov/recipes/chimichurri-sauce"
+    },
+    {
+      "slug": "chocolate-chip-yogurt-cookies",
+      "timestamp": "20251231041141",
+      "originalUrl": "https://www.myplate.gov/recipes/chocolate-chip-yogurt-cookies"
+    },
+    {
+      "slug": "chocolate-peanut-butter-frozen-bars",
+      "timestamp": "20251231020707",
+      "originalUrl": "https://www.myplate.gov/recipes/chocolate-peanut-butter-frozen-bars"
+    },
+    {
+      "slug": "chocolate-squash-cake",
+      "timestamp": "20251116213723",
+      "originalUrl": "https://www.myplate.gov/recipes/chocolate-squash-cake"
+    },
+    {
+      "slug": "chunky-garbanzo-bean-dip",
+      "timestamp": "20251231041513",
+      "originalUrl": "https://www.myplate.gov/recipes/chunky-garbanzo-bean-dip"
+    },
+    {
+      "slug": "cinnamon-raisin-almond-balls",
+      "timestamp": "20251231040828",
+      "originalUrl": "https://www.myplate.gov/recipes/cinnamon-raisin-almond-balls"
+    },
+    {
+      "slug": "cinnamon-raisin-breakfast-mix",
+      "timestamp": "20251231041944",
+      "originalUrl": "https://www.myplate.gov/recipes/cinnamon-raisin-breakfast-mix"
+    },
+    {
+      "slug": "cinnamon-sugared-pumpkin-pecan-muffins",
+      "timestamp": "20251231043323",
+      "originalUrl": "https://www.myplate.gov/recipes/cinnamon-sugared-pumpkin-pecan-muffins"
+    },
+    {
+      "slug": "cinnamon-vanilla-granola",
+      "timestamp": "20251231035114",
+      "originalUrl": "https://www.myplate.gov/recipes/cinnamon-vanilla-granola"
+    },
+    {
+      "slug": "citrus-chicken",
+      "timestamp": "20251231032247",
+      "originalUrl": "https://www.myplate.gov/recipes/citrus-chicken"
+    },
+    {
+      "slug": "citrus-salad",
+      "timestamp": "20251231042214",
+      "originalUrl": "https://www.myplate.gov/recipes/citrus-salad"
+    },
+    {
+      "slug": "citrus-salmon-fillets",
+      "timestamp": "20251231042357",
+      "originalUrl": "https://www.myplate.gov/recipes/citrus-salmon-fillets"
+    },
+    {
+      "slug": "citrus-tuna-melt",
+      "timestamp": "20251231032234",
+      "originalUrl": "https://www.myplate.gov/recipes/citrus-tuna-melt"
+    },
+    {
+      "slug": "citrus-vegetables",
+      "timestamp": "20251231034137",
+      "originalUrl": "https://www.myplate.gov/recipes/citrus-vegetables"
+    },
+    {
+      "slug": "classic-honey-flan",
+      "timestamp": "20251231021836",
+      "originalUrl": "https://www.myplate.gov/recipes/classic-honey-flan"
+    },
+    {
+      "slug": "classic-macaroni-and-cheese",
+      "timestamp": "20251231041228",
+      "originalUrl": "https://www.myplate.gov/recipes/classic-macaroni-and-cheese"
+    },
+    {
+      "slug": "cobb-salad-pears",
+      "timestamp": "20250806072221",
+      "originalUrl": "https://www.myplate.gov/recipes/cobb-salad-pears"
+    },
+    {
+      "slug": "coffee-cooler",
+      "timestamp": "20251231035340",
+      "originalUrl": "https://www.myplate.gov/recipes/coffee-cooler"
+    },
+    {
+      "slug": "collard-green-gumbo-ham-hock",
+      "timestamp": "20251211172601",
+      "originalUrl": "https://www.myplate.gov/recipes/collard-green-gumbo-ham-hock"
+    },
+    {
+      "slug": "colorful-quesadillas",
+      "timestamp": "20251231043401",
+      "originalUrl": "https://www.myplate.gov/recipes/colorful-quesadillas"
+    },
+    {
+      "slug": "confetti-bean-salsa",
+      "timestamp": "20251231021541",
+      "originalUrl": "https://www.myplate.gov/recipes/confetti-bean-salsa"
+    },
+    {
+      "slug": "confetti-grain-salad",
+      "timestamp": "20251231021005",
+      "originalUrl": "https://www.myplate.gov/recipes/confetti-grain-salad"
+    },
+    {
+      "slug": "confetti-slaw",
+      "timestamp": "20251231042942",
+      "originalUrl": "https://www.myplate.gov/recipes/confetti-slaw"
+    },
+    {
+      "slug": "cooked-beans",
+      "timestamp": "20251231031954",
+      "originalUrl": "https://www.myplate.gov/recipes/cooked-beans"
+    },
+    {
+      "slug": "cookie-cutter-appetizers",
+      "timestamp": "20251231035120",
+      "originalUrl": "https://www.myplate.gov/recipes/cookie-cutter-appetizers"
+    },
+    {
+      "slug": "corn-and-bean-medley",
+      "timestamp": "20251231032048",
+      "originalUrl": "https://www.myplate.gov/recipes/corn-and-bean-medley"
+    },
+    {
+      "slug": "corn-and-cucumber-salad",
+      "timestamp": "20251231032012",
+      "originalUrl": "https://www.myplate.gov/recipes/corn-and-cucumber-salad"
+    },
+    {
+      "slug": "corn-and-green-chili-salad",
+      "timestamp": "20251231021659",
+      "originalUrl": "https://www.myplate.gov/recipes/corn-and-green-chili-salad"
+    },
+    {
+      "slug": "corn-and-pepper-cups",
+      "timestamp": "20251231021332",
+      "originalUrl": "https://www.myplate.gov/recipes/corn-and-pepper-cups"
+    },
+    {
+      "slug": "corn-blueberry-and-wild-rice-salad",
+      "timestamp": "20251231032251",
+      "originalUrl": "https://www.myplate.gov/recipes/corn-blueberry-and-wild-rice-salad"
+    },
+    {
+      "slug": "corn-bread",
+      "timestamp": "20251231033905",
+      "originalUrl": "https://www.myplate.gov/recipes/corn-bread"
+    },
+    {
+      "slug": "corn-casserole",
+      "timestamp": "20251231051030",
+      "originalUrl": "https://www.myplate.gov/recipes/corn-casserole"
+    },
+    {
+      "slug": "corn-casserole-0",
+      "timestamp": "20251231035544",
+      "originalUrl": "https://www.myplate.gov/recipes/corn-casserole-0"
+    },
+    {
+      "slug": "corn-salad-fat-free-ranch-dressing",
+      "timestamp": "20251231042918",
+      "originalUrl": "https://www.myplate.gov/recipes/corn-salad-fat-free-ranch-dressing"
+    },
+    {
+      "slug": "corn-salad-fresh-basil-and-lemon",
+      "timestamp": "20251112233322",
+      "originalUrl": "https://www.myplate.gov/recipes/corn-salad-fresh-basil-and-lemon"
+    },
+    {
+      "slug": "corn-soup",
+      "timestamp": "20251211172932",
+      "originalUrl": "https://www.myplate.gov/recipes/corn-soup"
+    },
+    {
+      "slug": "corn-toasties",
+      "timestamp": "20251231050238",
+      "originalUrl": "https://www.myplate.gov/recipes/corn-toasties"
+    },
+    {
+      "slug": "corn-tortillas",
+      "timestamp": "20251022065115",
+      "originalUrl": "https://www.myplate.gov/recipes/corn-tortillas"
+    },
+    {
+      "slug": "cornbread-dressing",
+      "timestamp": "20251231043629",
+      "originalUrl": "https://www.myplate.gov/recipes/cornbread-dressing"
+    },
+    {
+      "slug": "cornmeal-pancakes",
+      "timestamp": "20251231032039",
+      "originalUrl": "https://www.myplate.gov/recipes/cornmeal-pancakes"
+    },
+    {
+      "slug": "country-style-potato-salad",
+      "timestamp": "20251231033706",
+      "originalUrl": "https://www.myplate.gov/recipes/country-style-potato-salad"
+    },
+    {
+      "slug": "couscous-peas-and-onions",
+      "timestamp": "20251231045413",
+      "originalUrl": "https://www.myplate.gov/recipes/couscous-peas-and-onions"
+    },
+    {
+      "slug": "cowboy-caviar-bean-salsa",
+      "timestamp": "20251231032502",
+      "originalUrl": "https://www.myplate.gov/recipes/cowboy-caviar-bean-salsa"
+    },
+    {
+      "slug": "cran-apple-crisp",
+      "timestamp": "20251231031944",
+      "originalUrl": "https://www.myplate.gov/recipes/cran-apple-crisp"
+    },
+    {
+      "slug": "cranberry-ham-slice",
+      "timestamp": "20251231041848",
+      "originalUrl": "https://www.myplate.gov/recipes/cranberry-ham-slice"
+    },
+    {
+      "slug": "cranberry-nut-bread",
+      "timestamp": "20251231051035",
+      "originalUrl": "https://www.myplate.gov/recipes/cranberry-nut-bread"
+    },
+    {
+      "slug": "cranberry-pumpkin-muffins",
+      "timestamp": "20251211091709",
+      "originalUrl": "https://www.myplate.gov/recipes/cranberry-pumpkin-muffins"
+    },
+    {
+      "slug": "cranberry-salad",
+      "timestamp": "20251231034907",
+      "originalUrl": "https://www.myplate.gov/recipes/cranberry-salad"
+    },
+    {
+      "slug": "cranberry-wojapi",
+      "timestamp": "20250917113709",
+      "originalUrl": "https://www.myplate.gov/recipes/cranberry-wojapi"
+    },
+    {
+      "slug": "cream-broccoli-soup",
+      "timestamp": "20251231041940",
+      "originalUrl": "https://www.myplate.gov/recipes/cream-broccoli-soup"
+    },
+    {
+      "slug": "cream-broccoli-soup-ii",
+      "timestamp": "20250914211519",
+      "originalUrl": "https://www.myplate.gov/recipes/cream-broccoli-soup-ii"
+    },
+    {
+      "slug": "creamy-chicken-hash",
+      "timestamp": "20251231042715",
+      "originalUrl": "https://www.myplate.gov/recipes/creamy-chicken-hash"
+    },
+    {
+      "slug": "creamy-dill-dip",
+      "timestamp": "20251231031818",
+      "originalUrl": "https://www.myplate.gov/recipes/creamy-dill-dip"
+    },
+    {
+      "slug": "creamy-italian-herb-dressing",
+      "timestamp": "20251231041658",
+      "originalUrl": "https://www.myplate.gov/recipes/creamy-italian-herb-dressing"
+    },
+    {
+      "slug": "creamy-peanut-dip",
+      "timestamp": "20251231050306",
+      "originalUrl": "https://www.myplate.gov/recipes/creamy-peanut-dip"
+    },
+    {
+      "slug": "creamy-vegetable-dip",
+      "timestamp": "20251231032024",
+      "originalUrl": "https://www.myplate.gov/recipes/creamy-vegetable-dip"
+    },
+    {
+      "slug": "creole-beans",
+      "timestamp": "20251231020925",
+      "originalUrl": "https://www.myplate.gov/recipes/creole-beans"
+    },
+    {
+      "slug": "crispy-oven-baked-fries",
+      "timestamp": "20251231041548",
+      "originalUrl": "https://www.myplate.gov/recipes/crispy-oven-baked-fries"
+    },
+    {
+      "slug": "crispy-oven-fried-chicken",
+      "timestamp": "20251231035453",
+      "originalUrl": "https://www.myplate.gov/recipes/crispy-oven-fried-chicken"
+    },
+    {
+      "slug": "crispy-taquitos",
+      "timestamp": "20251231020835",
+      "originalUrl": "https://www.myplate.gov/recipes/crispy-taquitos"
+    },
+    {
+      "slug": "crispy-walleye-patties",
+      "timestamp": "20251231045728",
+      "originalUrl": "https://www.myplate.gov/recipes/crispy-walleye-patties"
+    },
+    {
+      "slug": "crock-pot-vegetable-lentil-stew",
+      "timestamp": "20251231033642",
+      "originalUrl": "https://www.myplate.gov/recipes/crock-pot-vegetable-lentil-stew"
+    },
+    {
+      "slug": "crunchy-berry-parfait",
+      "timestamp": "20251231020527",
+      "originalUrl": "https://www.myplate.gov/recipes/crunchy-berry-parfait"
+    },
+    {
+      "slug": "crunchy-chicken-salad",
+      "timestamp": "20251231021349",
+      "originalUrl": "https://www.myplate.gov/recipes/crunchy-chicken-salad"
+    },
+    {
+      "slug": "crunchy-vegetable-wraps",
+      "timestamp": "20251231045436",
+      "originalUrl": "https://www.myplate.gov/recipes/crunchy-vegetable-wraps"
+    },
+    {
+      "slug": "crustless-pumpkin-pie",
+      "timestamp": "20251231045228",
+      "originalUrl": "https://www.myplate.gov/recipes/crustless-pumpkin-pie"
+    },
+    {
+      "slug": "crusty-rice-tofu-and-vegetables",
+      "timestamp": "20251022064528",
+      "originalUrl": "https://www.myplate.gov/recipes/crusty-rice-tofu-and-vegetables"
+    },
+    {
+      "slug": "cuban-beans-and-rice",
+      "timestamp": "20251231032354",
+      "originalUrl": "https://www.myplate.gov/recipes/cuban-beans-and-rice"
+    },
+    {
+      "slug": "cuban-salad",
+      "timestamp": "20251231032334",
+      "originalUrl": "https://www.myplate.gov/recipes/cuban-salad"
+    },
+    {
+      "slug": "cucumber-blueberry-salad",
+      "timestamp": "20251231045448",
+      "originalUrl": "https://www.myplate.gov/recipes/cucumber-blueberry-salad"
+    },
+    {
+      "slug": "cucumber-salad",
+      "timestamp": "20251231041958",
+      "originalUrl": "https://www.myplate.gov/recipes/cucumber-salad"
+    },
+    {
+      "slug": "cucumber-salad-tomatoes",
+      "timestamp": "20251231041930",
+      "originalUrl": "https://www.myplate.gov/recipes/cucumber-salad-tomatoes"
+    },
+    {
+      "slug": "cucumber-yogurt-and-cream-cheese-dip",
+      "timestamp": "20251231040506",
+      "originalUrl": "https://www.myplate.gov/recipes/cucumber-yogurt-and-cream-cheese-dip"
+    },
+    {
+      "slug": "cucumber-yogurt-and-herb-dip",
+      "timestamp": "20251231034321",
+      "originalUrl": "https://www.myplate.gov/recipes/cucumber-yogurt-and-herb-dip"
+    },
+    {
+      "slug": "cumin-lime-shrimp-over-creamy-cauliflower-risotto",
+      "timestamp": "20251231033054",
+      "originalUrl": "https://www.myplate.gov/recipes/cumin-lime-shrimp-over-creamy-cauliflower-risotto"
+    },
+    {
+      "slug": "curried-brown-rice-pumpkin-seeds-apricots",
+      "timestamp": "20251231040521",
+      "originalUrl": "https://www.myplate.gov/recipes/curried-brown-rice-pumpkin-seeds-apricots"
+    },
+    {
+      "slug": "curried-chicken-raisins-and-mushrooms",
+      "timestamp": "20251231020654",
+      "originalUrl": "https://www.myplate.gov/recipes/curried-chicken-raisins-and-mushrooms"
+    },
+    {
+      "slug": "curried-chicken-salad",
+      "timestamp": "20251022064810",
+      "originalUrl": "https://www.myplate.gov/recipes/curried-chicken-salad"
+    },
+    {
+      "slug": "curried-chickpea-salad",
+      "timestamp": "20251231022335",
+      "originalUrl": "https://www.myplate.gov/recipes/curried-chickpea-salad"
+    },
+    {
+      "slug": "curried-potatoes",
+      "timestamp": "20250806052635",
+      "originalUrl": "https://www.myplate.gov/recipes/curried-potatoes"
+    },
+    {
+      "slug": "curried-quinoa-and-cauliflower",
+      "timestamp": "20251231024747",
+      "originalUrl": "https://www.myplate.gov/recipes/curried-quinoa-and-cauliflower"
+    },
+    {
+      "slug": "curried-squash-stew",
+      "timestamp": "20251222021237",
+      "originalUrl": "https://www.myplate.gov/recipes/curried-squash-stew"
+    },
+    {
+      "slug": "curry-dip",
+      "timestamp": "20251231031826",
+      "originalUrl": "https://www.myplate.gov/recipes/curry-dip"
+    },
+    {
+      "slug": "curry-vegetable-dip",
+      "timestamp": "20251231040743",
+      "originalUrl": "https://www.myplate.gov/recipes/curry-vegetable-dip"
+    },
+    {
+      "slug": "curtido-salvadoreno-cabbage-salad",
+      "timestamp": "20251231032136",
+      "originalUrl": "https://www.myplate.gov/recipes/curtido-salvadoreno-cabbage-salad"
+    },
+    {
+      "slug": "daves-herb-stuffed-mushrooms",
+      "timestamp": "20251013062637",
+      "originalUrl": "https://www.myplate.gov/recipes/daves-herb-stuffed-mushrooms"
+    },
+    {
+      "slug": "deep-dish-apple-cranberry-pie",
+      "timestamp": "20251231020738",
+      "originalUrl": "https://www.myplate.gov/recipes/deep-dish-apple-cranberry-pie"
+    },
+    {
+      "slug": "delicious-greens",
+      "timestamp": "20251231032052",
+      "originalUrl": "https://www.myplate.gov/recipes/delicious-greens"
+    },
+    {
+      "slug": "delicious-lentil-stew",
+      "timestamp": "20251231033614",
+      "originalUrl": "https://www.myplate.gov/recipes/delicious-lentil-stew"
+    },
+    {
+      "slug": "delicious-oven-french-fries",
+      "timestamp": "20251231032311",
+      "originalUrl": "https://www.myplate.gov/recipes/delicious-oven-french-fries"
+    },
+    {
+      "slug": "delicious-tacos",
+      "timestamp": "20250420091107",
+      "originalUrl": "https://www.myplate.gov/recipes/delicious-tacos"
+    },
+    {
+      "slug": "deviled-eggs",
+      "timestamp": "20250420085419",
+      "originalUrl": "https://www.myplate.gov/recipes/deviled-eggs"
+    },
+    {
+      "slug": "dilled-fish-fillets",
+      "timestamp": "20251231041524",
+      "originalUrl": "https://www.myplate.gov/recipes/dilled-fish-fillets"
+    },
+    {
+      "slug": "dirty-rice",
+      "timestamp": "20251209111748",
+      "originalUrl": "https://www.myplate.gov/recipes/dirty-rice"
+    },
+    {
+      "slug": "dried-bananas",
+      "timestamp": "20251231045156",
+      "originalUrl": "https://www.myplate.gov/recipes/dried-bananas"
+    },
+    {
+      "slug": "drop-biscuits-better-baking-mix",
+      "timestamp": "20251231032823",
+      "originalUrl": "https://www.myplate.gov/recipes/drop-biscuits-better-baking-mix"
+    },
+    {
+      "slug": "dutch-apple-yogurt-dessert",
+      "timestamp": "20251231044416",
+      "originalUrl": "https://www.myplate.gov/recipes/dutch-apple-yogurt-dessert"
+    },
+    {
+      "slug": "dutch-green-beans",
+      "timestamp": "20251022065414",
+      "originalUrl": "https://www.myplate.gov/recipes/dutch-green-beans"
+    },
+    {
+      "slug": "eagle-nest",
+      "timestamp": "20251231020424",
+      "originalUrl": "https://www.myplate.gov/recipes/eagle-nest"
+    },
+    {
+      "slug": "easiest-banana-ice-cream",
+      "timestamp": "20251231045654",
+      "originalUrl": "https://www.myplate.gov/recipes/easiest-banana-ice-cream"
+    },
+    {
+      "slug": "easy-and-healthy-black-bean-soup",
+      "timestamp": "20250420015815",
+      "originalUrl": "https://www.myplate.gov/recipes/easy-and-healthy-black-bean-soup"
+    },
+    {
+      "slug": "easy-baked-acorn-squash",
+      "timestamp": "20251231021440",
+      "originalUrl": "https://www.myplate.gov/recipes/easy-baked-acorn-squash"
+    },
+    {
+      "slug": "easy-beef-supper",
+      "timestamp": "20251231045552",
+      "originalUrl": "https://www.myplate.gov/recipes/easy-beef-supper"
+    },
+    {
+      "slug": "easy-mix-pizza-better-baking-mix",
+      "timestamp": "20251231032828",
+      "originalUrl": "https://www.myplate.gov/recipes/easy-mix-pizza-better-baking-mix"
+    },
+    {
+      "slug": "easy-oven-fish-spinach-basil-dipping-sauce-spiced-apples",
+      "timestamp": "20251231033804",
+      "originalUrl": "https://www.myplate.gov/recipes/easy-oven-fish-spinach-basil-dipping-sauce-spiced-apples"
+    },
+    {
+      "slug": "easy-oven-packet-caribbean-tilapia-pears-and-carnival-roasted-potatoes",
+      "timestamp": "20251231020612",
+      "originalUrl": "https://www.myplate.gov/recipes/easy-oven-packet-caribbean-tilapia-pears-and-carnival-roasted-potatoes"
+    },
+    {
+      "slug": "eating-smart-seasoning-mix",
+      "timestamp": "20251231033121",
+      "originalUrl": "https://www.myplate.gov/recipes/eating-smart-seasoning-mix"
+    },
+    {
+      "slug": "egg-foo-young",
+      "timestamp": "20251231045714",
+      "originalUrl": "https://www.myplate.gov/recipes/egg-foo-young"
+    },
+    {
+      "slug": "egg-salad",
+      "timestamp": "20251231042147",
+      "originalUrl": "https://www.myplate.gov/recipes/egg-salad"
+    },
+    {
+      "slug": "eggplant-and-pepper-dip",
+      "timestamp": "20251231045339",
+      "originalUrl": "https://www.myplate.gov/recipes/eggplant-and-pepper-dip"
+    },
+    {
+      "slug": "eggplant-stir-fry",
+      "timestamp": "20251231025457",
+      "originalUrl": "https://www.myplate.gov/recipes/eggplant-stir-fry"
+    },
+    {
+      "slug": "eggs-over-kale-and-sweet-potato-grits",
+      "timestamp": "20251231034019",
+      "originalUrl": "https://www.myplate.gov/recipes/eggs-over-kale-and-sweet-potato-grits"
+    },
+    {
+      "slug": "elaines-green-mash-potatoes",
+      "timestamp": "20251231035059",
+      "originalUrl": "https://www.myplate.gov/recipes/elaines-green-mash-potatoes"
+    },
+    {
+      "slug": "enchilada-bake",
+      "timestamp": "20251231043026",
+      "originalUrl": "https://www.myplate.gov/recipes/enchilada-bake"
+    },
+    {
+      "slug": "enchilada-casserole",
+      "timestamp": "20250914062412",
+      "originalUrl": "https://www.myplate.gov/recipes/enchilada-casserole"
+    },
+    {
+      "slug": "enchilada-rice",
+      "timestamp": "20251231042446",
+      "originalUrl": "https://www.myplate.gov/recipes/enchilada-rice"
+    },
+    {
+      "slug": "english-muffin-veggie-pizza",
+      "timestamp": "20251231045017",
+      "originalUrl": "https://www.myplate.gov/recipes/english-muffin-veggie-pizza"
+    },
+    {
+      "slug": "european-salad",
+      "timestamp": "20251231042432",
+      "originalUrl": "https://www.myplate.gov/recipes/european-salad"
+    },
+    {
+      "slug": "eves-tasty-turkey-tetrazzini",
+      "timestamp": "20251231020641",
+      "originalUrl": "https://www.myplate.gov/recipes/eves-tasty-turkey-tetrazzini"
+    },
+    {
+      "slug": "fabulous-fig-bars",
+      "timestamp": "20250806101607",
+      "originalUrl": "https://www.myplate.gov/recipes/fabulous-fig-bars"
+    },
+    {
+      "slug": "fabulous-fruit-muffins",
+      "timestamp": "20251231042652",
+      "originalUrl": "https://www.myplate.gov/recipes/fabulous-fruit-muffins"
+    },
+    {
+      "slug": "falafel-yogurt-sandwich",
+      "timestamp": "20251231043240",
+      "originalUrl": "https://www.myplate.gov/recipes/falafel-yogurt-sandwich"
+    },
+    {
+      "slug": "fall-veggie-casserole",
+      "timestamp": "20251231044921",
+      "originalUrl": "https://www.myplate.gov/recipes/fall-veggie-casserole"
+    },
+    {
+      "slug": "fantastic-french-toast",
+      "timestamp": "20251231032924",
+      "originalUrl": "https://www.myplate.gov/recipes/fantastic-french-toast"
+    },
+    {
+      "slug": "farmers-market-gazpacho",
+      "timestamp": "20251231033926",
+      "originalUrl": "https://www.myplate.gov/recipes/farmers-market-gazpacho"
+    },
+    {
+      "slug": "farmers-market-salsa",
+      "timestamp": "20251231035137",
+      "originalUrl": "https://www.myplate.gov/recipes/farmers-market-salsa"
+    },
+    {
+      "slug": "fat-free-apple-crumb-dessert",
+      "timestamp": "20251231035427",
+      "originalUrl": "https://www.myplate.gov/recipes/fat-free-apple-crumb-dessert"
+    },
+    {
+      "slug": "feather-rolls",
+      "timestamp": "20251231035258",
+      "originalUrl": "https://www.myplate.gov/recipes/feather-rolls"
+    },
+    {
+      "slug": "festive-microwave-baked-apples",
+      "timestamp": "20250806034016",
+      "originalUrl": "https://www.myplate.gov/recipes/festive-microwave-baked-apples"
+    },
+    {
+      "slug": "fiesta-hummus",
+      "timestamp": "20251231021559",
+      "originalUrl": "https://www.myplate.gov/recipes/fiesta-hummus"
+    },
+    {
+      "slug": "fiesta-lettuce-wraps-and-pepper-boats",
+      "timestamp": "20251231033821",
+      "originalUrl": "https://www.myplate.gov/recipes/fiesta-lettuce-wraps-and-pepper-boats"
+    },
+    {
+      "slug": "fiesta-mix",
+      "timestamp": "20251108045244",
+      "originalUrl": "https://www.myplate.gov/recipes/fiesta-mix"
+    },
+    {
+      "slug": "fiesta-rice-salad",
+      "timestamp": "20251231031936",
+      "originalUrl": "https://www.myplate.gov/recipes/fiesta-rice-salad"
+    },
+    {
+      "slug": "fiesta-stuffed-avocado",
+      "timestamp": "20251231032614",
+      "originalUrl": "https://www.myplate.gov/recipes/fiesta-stuffed-avocado"
+    },
+    {
+      "slug": "fig-bars",
+      "timestamp": "20251231043646",
+      "originalUrl": "https://www.myplate.gov/recipes/fig-bars"
+    },
+    {
+      "slug": "fish-spinach",
+      "timestamp": "20251231032441",
+      "originalUrl": "https://www.myplate.gov/recipes/fish-spinach"
+    },
+    {
+      "slug": "fish-tacos",
+      "timestamp": "20251231024848",
+      "originalUrl": "https://www.myplate.gov/recipes/fish-tacos"
+    },
+    {
+      "slug": "five-happiness-fried-noodles",
+      "timestamp": "20251231024741",
+      "originalUrl": "https://www.myplate.gov/recipes/five-happiness-fried-noodles"
+    },
+    {
+      "slug": "flavored-water",
+      "timestamp": "20251231032512",
+      "originalUrl": "https://www.myplate.gov/recipes/flavored-water"
+    },
+    {
+      "slug": "flavorful-fried-rice",
+      "timestamp": "20251231043120",
+      "originalUrl": "https://www.myplate.gov/recipes/flavorful-fried-rice"
+    },
+    {
+      "slug": "flour-tortillas",
+      "timestamp": "20251231040701",
+      "originalUrl": "https://www.myplate.gov/recipes/flour-tortillas"
+    },
+    {
+      "slug": "food-group-funny-face",
+      "timestamp": "20251231043209",
+      "originalUrl": "https://www.myplate.gov/recipes/food-group-funny-face"
+    },
+    {
+      "slug": "four-layer-casserole",
+      "timestamp": "20251231022119",
+      "originalUrl": "https://www.myplate.gov/recipes/four-layer-casserole"
+    },
+    {
+      "slug": "french-salad-dressing",
+      "timestamp": "20251231043932",
+      "originalUrl": "https://www.myplate.gov/recipes/french-salad-dressing"
+    },
+    {
+      "slug": "french-spinach-frittata",
+      "timestamp": "20251231041459",
+      "originalUrl": "https://www.myplate.gov/recipes/french-spinach-frittata"
+    },
+    {
+      "slug": "fresh-fruit-cinnamon-yogurt-dip",
+      "timestamp": "20251231041508",
+      "originalUrl": "https://www.myplate.gov/recipes/fresh-fruit-cinnamon-yogurt-dip"
+    },
+    {
+      "slug": "fresh-salsa",
+      "timestamp": "20251231040959",
+      "originalUrl": "https://www.myplate.gov/recipes/fresh-salsa"
+    },
+    {
+      "slug": "fresh-tomato-salsa",
+      "timestamp": "20251231031821",
+      "originalUrl": "https://www.myplate.gov/recipes/fresh-tomato-salsa"
+    },
+    {
+      "slug": "fresh-tomato-sauce",
+      "timestamp": "20251109213550",
+      "originalUrl": "https://www.myplate.gov/recipes/fresh-tomato-sauce"
+    },
+    {
+      "slug": "fried-rice",
+      "timestamp": "20251231021948",
+      "originalUrl": "https://www.myplate.gov/recipes/fried-rice"
+    },
+    {
+      "slug": "fried-rice-0",
+      "timestamp": "20250419152150",
+      "originalUrl": "https://www.myplate.gov/recipes/fried-rice-0"
+    },
+    {
+      "slug": "fried-rice-chicken-vegetables",
+      "timestamp": "20251231050532",
+      "originalUrl": "https://www.myplate.gov/recipes/fried-rice-chicken-vegetables"
+    },
+    {
+      "slug": "frosted-cake",
+      "timestamp": "20251231042736",
+      "originalUrl": "https://www.myplate.gov/recipes/frosted-cake"
+    },
+    {
+      "slug": "frozen-banana-pops",
+      "timestamp": "20251231045350",
+      "originalUrl": "https://www.myplate.gov/recipes/frozen-banana-pops"
+    },
+    {
+      "slug": "frozen-fruit-cups",
+      "timestamp": "20250806101708",
+      "originalUrl": "https://www.myplate.gov/recipes/frozen-fruit-cups"
+    },
+    {
+      "slug": "frozen-fruit-pops",
+      "timestamp": "20251231031620",
+      "originalUrl": "https://www.myplate.gov/recipes/frozen-fruit-pops"
+    },
+    {
+      "slug": "frozen-pear-pops",
+      "timestamp": "20251231030904",
+      "originalUrl": "https://www.myplate.gov/recipes/frozen-pear-pops"
+    },
+    {
+      "slug": "fruit-and-peanut-butter-dip",
+      "timestamp": "20251231022408",
+      "originalUrl": "https://www.myplate.gov/recipes/fruit-and-peanut-butter-dip"
+    },
+    {
+      "slug": "fruit-and-yogurt-breakfast-shake",
+      "timestamp": "20251231033946",
+      "originalUrl": "https://www.myplate.gov/recipes/fruit-and-yogurt-breakfast-shake"
+    },
+    {
+      "slug": "fruit-cole-slaw",
+      "timestamp": "20251231041443",
+      "originalUrl": "https://www.myplate.gov/recipes/fruit-cole-slaw"
+    },
+    {
+      "slug": "fruit-compote",
+      "timestamp": "20251231034150",
+      "originalUrl": "https://www.myplate.gov/recipes/fruit-compote"
+    },
+    {
+      "slug": "fruit-crisp",
+      "timestamp": "20251231025309",
+      "originalUrl": "https://www.myplate.gov/recipes/fruit-crisp"
+    },
+    {
+      "slug": "fruit-dip",
+      "timestamp": "20251231032622",
+      "originalUrl": "https://www.myplate.gov/recipes/fruit-dip"
+    },
+    {
+      "slug": "fruit-dippers",
+      "timestamp": "20251231051047",
+      "originalUrl": "https://www.myplate.gov/recipes/fruit-dippers"
+    },
+    {
+      "slug": "fruit-feta-salad",
+      "timestamp": "20251231032618",
+      "originalUrl": "https://www.myplate.gov/recipes/fruit-feta-salad"
+    },
+    {
+      "slug": "fruit-juice-slush",
+      "timestamp": "20251231034942",
+      "originalUrl": "https://www.myplate.gov/recipes/fruit-juice-slush"
+    },
+    {
+      "slug": "fruit-kabob",
+      "timestamp": "20251231032129",
+      "originalUrl": "https://www.myplate.gov/recipes/fruit-kabob"
+    },
+    {
+      "slug": "fruit-kabobs-yogurt-dip",
+      "timestamp": "20251231032111",
+      "originalUrl": "https://www.myplate.gov/recipes/fruit-kabobs-yogurt-dip"
+    },
+    {
+      "slug": "fruit-milk-shakes",
+      "timestamp": "20251231035349",
+      "originalUrl": "https://www.myplate.gov/recipes/fruit-milk-shakes"
+    },
+    {
+      "slug": "fruit-pizza",
+      "timestamp": "20251231045020",
+      "originalUrl": "https://www.myplate.gov/recipes/fruit-pizza"
+    },
+    {
+      "slug": "fruit-pizza-go",
+      "timestamp": "20251231022404",
+      "originalUrl": "https://www.myplate.gov/recipes/fruit-pizza-go"
+    },
+    {
+      "slug": "fruit-salad",
+      "timestamp": "20251231041051",
+      "originalUrl": "https://www.myplate.gov/recipes/fruit-salad"
+    },
+    {
+      "slug": "fruit-salad-jicama",
+      "timestamp": "20251231042001",
+      "originalUrl": "https://www.myplate.gov/recipes/fruit-salad-jicama"
+    },
+    {
+      "slug": "fruit-salad-yogurt",
+      "timestamp": "20251231035034",
+      "originalUrl": "https://www.myplate.gov/recipes/fruit-salad-yogurt"
+    },
+    {
+      "slug": "fruit-salsa",
+      "timestamp": "20251231033912",
+      "originalUrl": "https://www.myplate.gov/recipes/fruit-salsa"
+    },
+    {
+      "slug": "fruit-slush",
+      "timestamp": "20251231040452",
+      "originalUrl": "https://www.myplate.gov/recipes/fruit-slush"
+    },
+    {
+      "slug": "fruit-smoothie",
+      "timestamp": "20251231035419",
+      "originalUrl": "https://www.myplate.gov/recipes/fruit-smoothie"
+    },
+    {
+      "slug": "fruit-smoothie-ii",
+      "timestamp": "20251231020441",
+      "originalUrl": "https://www.myplate.gov/recipes/fruit-smoothie-ii"
+    },
+    {
+      "slug": "fruit-snake",
+      "timestamp": "20251231020429",
+      "originalUrl": "https://www.myplate.gov/recipes/fruit-snake"
+    },
+    {
+      "slug": "fruit-sorbet",
+      "timestamp": "20251112230241",
+      "originalUrl": "https://www.myplate.gov/recipes/fruit-sorbet"
+    },
+    {
+      "slug": "fruit-yogurt-parfait",
+      "timestamp": "20251231031446",
+      "originalUrl": "https://www.myplate.gov/recipes/fruit-yogurt-parfait"
+    },
+    {
+      "slug": "fruit-yogurt-pops",
+      "timestamp": "20251211182848",
+      "originalUrl": "https://www.myplate.gov/recipes/fruit-yogurt-pops"
+    },
+    {
+      "slug": "fruity-homemade-oatmeal",
+      "timestamp": "20251231035525",
+      "originalUrl": "https://www.myplate.gov/recipes/fruity-homemade-oatmeal"
+    },
+    {
+      "slug": "fruity-thai-pita-pockets",
+      "timestamp": "20251231032627",
+      "originalUrl": "https://www.myplate.gov/recipes/fruity-thai-pita-pockets"
+    },
+    {
+      "slug": "fudgy-fruit",
+      "timestamp": "20251231041918",
+      "originalUrl": "https://www.myplate.gov/recipes/fudgy-fruit"
+    },
+    {
+      "slug": "full-beans-hot-dish",
+      "timestamp": "20251231031700",
+      "originalUrl": "https://www.myplate.gov/recipes/full-beans-hot-dish"
+    },
+    {
+      "slug": "garden-barley-soup",
+      "timestamp": "20251231050545",
+      "originalUrl": "https://www.myplate.gov/recipes/garden-barley-soup"
+    },
+    {
+      "slug": "garden-cannellini-bean-salad",
+      "timestamp": "20251231032417",
+      "originalUrl": "https://www.myplate.gov/recipes/garden-cannellini-bean-salad"
+    },
+    {
+      "slug": "garden-chili",
+      "timestamp": "20251231051024",
+      "originalUrl": "https://www.myplate.gov/recipes/garden-chili"
+    },
+    {
+      "slug": "garden-frittata",
+      "timestamp": "20251231041239",
+      "originalUrl": "https://www.myplate.gov/recipes/garden-frittata"
+    },
+    {
+      "slug": "garden-orchard-salad",
+      "timestamp": "20251231045705",
+      "originalUrl": "https://www.myplate.gov/recipes/garden-orchard-salad"
+    },
+    {
+      "slug": "garden-pan-bread",
+      "timestamp": "20251231043742",
+      "originalUrl": "https://www.myplate.gov/recipes/garden-pan-bread"
+    },
+    {
+      "slug": "garden-pasta-salad",
+      "timestamp": "20251231041650",
+      "originalUrl": "https://www.myplate.gov/recipes/garden-pasta-salad"
+    },
+    {
+      "slug": "garden-vegetable-soup",
+      "timestamp": "20251231022500",
+      "originalUrl": "https://www.myplate.gov/recipes/garden-vegetable-soup"
+    },
+    {
+      "slug": "garlic-bok-choy",
+      "timestamp": "20251231035212",
+      "originalUrl": "https://www.myplate.gov/recipes/garlic-bok-choy"
+    },
+    {
+      "slug": "garlic-ginger-ramen-beef",
+      "timestamp": "20251231033304",
+      "originalUrl": "https://www.myplate.gov/recipes/garlic-ginger-ramen-beef"
+    },
+    {
+      "slug": "garlic-stuffed-chicken",
+      "timestamp": "20251231035442",
+      "originalUrl": "https://www.myplate.gov/recipes/garlic-stuffed-chicken"
+    },
+    {
+      "slug": "gazpacho",
+      "timestamp": "20251231042144",
+      "originalUrl": "https://www.myplate.gov/recipes/gazpacho"
+    },
+    {
+      "slug": "gazpacho-soup",
+      "timestamp": "20251231032043",
+      "originalUrl": "https://www.myplate.gov/recipes/gazpacho-soup"
+    },
+    {
+      "slug": "ginger-bread-mix",
+      "timestamp": "20251231021200",
+      "originalUrl": "https://www.myplate.gov/recipes/ginger-bread-mix"
+    },
+    {
+      "slug": "ginger-orange-muffins",
+      "timestamp": "20251231020324",
+      "originalUrl": "https://www.myplate.gov/recipes/ginger-orange-muffins"
+    },
+    {
+      "slug": "gingery-quinoa-green-beans",
+      "timestamp": "20251231050359",
+      "originalUrl": "https://www.myplate.gov/recipes/gingery-quinoa-green-beans"
+    },
+    {
+      "slug": "glazed-carrots",
+      "timestamp": "20251231032035",
+      "originalUrl": "https://www.myplate.gov/recipes/glazed-carrots"
+    },
+    {
+      "slug": "glazed-meatloaf",
+      "timestamp": "20251022065158",
+      "originalUrl": "https://www.myplate.gov/recipes/glazed-meatloaf"
+    },
+    {
+      "slug": "golden-split-pea-soup",
+      "timestamp": "20251231043802",
+      "originalUrl": "https://www.myplate.gov/recipes/golden-split-pea-soup"
+    },
+    {
+      "slug": "grandmas-stuffing",
+      "timestamp": "20251231032927",
+      "originalUrl": "https://www.myplate.gov/recipes/grandmas-stuffing"
+    },
+    {
+      "slug": "granola-bars",
+      "timestamp": "20251231045106",
+      "originalUrl": "https://www.myplate.gov/recipes/granola-bars"
+    },
+    {
+      "slug": "granola-oatmeal-coconut-pecan",
+      "timestamp": "20251231042243",
+      "originalUrl": "https://www.myplate.gov/recipes/granola-oatmeal-coconut-pecan"
+    },
+    {
+      "slug": "grape-and-cashew-salad-sandwich",
+      "timestamp": "20251231032634",
+      "originalUrl": "https://www.myplate.gov/recipes/grape-and-cashew-salad-sandwich"
+    },
+    {
+      "slug": "grape-salsa",
+      "timestamp": "20251231040739",
+      "originalUrl": "https://www.myplate.gov/recipes/grape-salsa"
+    },
+    {
+      "slug": "grapefruit-spinach-salad",
+      "timestamp": "20251231031623",
+      "originalUrl": "https://www.myplate.gov/recipes/grapefruit-spinach-salad"
+    },
+    {
+      "slug": "great-northern-bean-soup",
+      "timestamp": "20251231031610",
+      "originalUrl": "https://www.myplate.gov/recipes/great-northern-bean-soup"
+    },
+    {
+      "slug": "greek-pork-chops",
+      "timestamp": "20251231044134",
+      "originalUrl": "https://www.myplate.gov/recipes/greek-pork-chops"
+    },
+    {
+      "slug": "greek-salad",
+      "timestamp": "20251211181345",
+      "originalUrl": "https://www.myplate.gov/recipes/greek-salad"
+    },
+    {
+      "slug": "greek-salad-chicken",
+      "timestamp": "20251231042531",
+      "originalUrl": "https://www.myplate.gov/recipes/greek-salad-chicken"
+    },
+    {
+      "slug": "green-bean-and-mushroom-medley",
+      "timestamp": "20251231041555",
+      "originalUrl": "https://www.myplate.gov/recipes/green-bean-and-mushroom-medley"
+    },
+    {
+      "slug": "green-bean-and-rice-casserole",
+      "timestamp": "20251231050110",
+      "originalUrl": "https://www.myplate.gov/recipes/green-bean-and-rice-casserole"
+    },
+    {
+      "slug": "green-bean-saute",
+      "timestamp": "20251231041033",
+      "originalUrl": "https://www.myplate.gov/recipes/green-bean-saute"
+    },
+    {
+      "slug": "green-beans-and-new-potatoes",
+      "timestamp": "20251231020912",
+      "originalUrl": "https://www.myplate.gov/recipes/green-beans-and-new-potatoes"
+    },
+    {
+      "slug": "green-beans-tomatoes-and-basil",
+      "timestamp": "20251231035143",
+      "originalUrl": "https://www.myplate.gov/recipes/green-beans-tomatoes-and-basil"
+    },
+    {
+      "slug": "green-onion-omelet",
+      "timestamp": "20251231021808",
+      "originalUrl": "https://www.myplate.gov/recipes/green-onion-omelet"
+    },
+    {
+      "slug": "green-tea-berry-banana-smoothie",
+      "timestamp": "20251231013731",
+      "originalUrl": "https://www.myplate.gov/recipes/green-tea-berry-banana-smoothie"
+    },
+    {
+      "slug": "grilled-asparagus-and-shrimp-quinoa-salad-lemon-vinaigrette",
+      "timestamp": "20251231032420",
+      "originalUrl": "https://www.myplate.gov/recipes/grilled-asparagus-and-shrimp-quinoa-salad-lemon-vinaigrette"
+    },
+    {
+      "slug": "grilled-cheese-peaches",
+      "timestamp": "20251231032534",
+      "originalUrl": "https://www.myplate.gov/recipes/grilled-cheese-peaches"
+    },
+    {
+      "slug": "grilled-chicken-and-avocado-quinoa-pilaf",
+      "timestamp": "20251231032432",
+      "originalUrl": "https://www.myplate.gov/recipes/grilled-chicken-and-avocado-quinoa-pilaf"
+    },
+    {
+      "slug": "grilled-fish-tacos-peach-salsa",
+      "timestamp": "20251231021952",
+      "originalUrl": "https://www.myplate.gov/recipes/grilled-fish-tacos-peach-salsa"
+    },
+    {
+      "slug": "grilled-fruit",
+      "timestamp": "20251231022257",
+      "originalUrl": "https://www.myplate.gov/recipes/grilled-fruit"
+    },
+    {
+      "slug": "grilled-lamb-salad",
+      "timestamp": "20251231042537",
+      "originalUrl": "https://www.myplate.gov/recipes/grilled-lamb-salad"
+    },
+    {
+      "slug": "grilled-pineapple-ginger-glazed-chicken-zucchini-and-peppers",
+      "timestamp": "20251231040530",
+      "originalUrl": "https://www.myplate.gov/recipes/grilled-pineapple-ginger-glazed-chicken-zucchini-and-peppers"
+    },
+    {
+      "slug": "grilled-shrimp-cantaloupe-avocado-salsa",
+      "timestamp": "20251231042541",
+      "originalUrl": "https://www.myplate.gov/recipes/grilled-shrimp-cantaloupe-avocado-salsa"
+    },
+    {
+      "slug": "grilled-steak-and-peppers-salad-pears",
+      "timestamp": "20251231040528",
+      "originalUrl": "https://www.myplate.gov/recipes/grilled-steak-and-peppers-salad-pears"
+    },
+    {
+      "slug": "grilled-vegetable-packets",
+      "timestamp": "20251231030859",
+      "originalUrl": "https://www.myplate.gov/recipes/grilled-vegetable-packets"
+    },
+    {
+      "slug": "grilled-vegetables",
+      "timestamp": "20251231020759",
+      "originalUrl": "https://www.myplate.gov/recipes/grilled-vegetables"
+    },
+    {
+      "slug": "ground-beef-stew",
+      "timestamp": "20251231034804",
+      "originalUrl": "https://www.myplate.gov/recipes/ground-beef-stew"
+    },
+    {
+      "slug": "harvest-vegetable-salad",
+      "timestamp": "20251231050300",
+      "originalUrl": "https://www.myplate.gov/recipes/harvest-vegetable-salad"
+    },
+    {
+      "slug": "healthy-black-bean-soup",
+      "timestamp": "20251209111412",
+      "originalUrl": "https://www.myplate.gov/recipes/healthy-black-bean-soup"
+    },
+    {
+      "slug": "hearty-beef-soup",
+      "timestamp": "20251231043353",
+      "originalUrl": "https://www.myplate.gov/recipes/hearty-beef-soup"
+    },
+    {
+      "slug": "hearty-mashed-potatoes",
+      "timestamp": "20251231020947",
+      "originalUrl": "https://www.myplate.gov/recipes/hearty-mashed-potatoes"
+    },
+    {
+      "slug": "hearty-mexican-soup",
+      "timestamp": "20251231034928",
+      "originalUrl": "https://www.myplate.gov/recipes/hearty-mexican-soup"
+    },
+    {
+      "slug": "hearty-salmon-skewers-over-brown-rice",
+      "timestamp": "20251231031532",
+      "originalUrl": "https://www.myplate.gov/recipes/hearty-salmon-skewers-over-brown-rice"
+    },
+    {
+      "slug": "hearty-vegetable-beef-soup",
+      "timestamp": "20251231021850",
+      "originalUrl": "https://www.myplate.gov/recipes/hearty-vegetable-beef-soup"
+    },
+    {
+      "slug": "hearty-vegetable-salad-herb-dressing",
+      "timestamp": "20251231021800",
+      "originalUrl": "https://www.myplate.gov/recipes/hearty-vegetable-salad-herb-dressing"
+    },
+    {
+      "slug": "heavenly-deviled-eggs",
+      "timestamp": "20251231045949",
+      "originalUrl": "https://www.myplate.gov/recipes/heavenly-deviled-eggs"
+    },
+    {
+      "slug": "herb-broiled-beef",
+      "timestamp": "20251231044137",
+      "originalUrl": "https://www.myplate.gov/recipes/herb-broiled-beef"
+    },
+    {
+      "slug": "herb-potato-salad",
+      "timestamp": "20251231034550",
+      "originalUrl": "https://www.myplate.gov/recipes/herb-potato-salad"
+    },
+    {
+      "slug": "herb-spinach-bake",
+      "timestamp": "20251231021239",
+      "originalUrl": "https://www.myplate.gov/recipes/herb-spinach-bake"
+    },
+    {
+      "slug": "herbed-dip",
+      "timestamp": "20251231032029",
+      "originalUrl": "https://www.myplate.gov/recipes/herbed-dip"
+    },
+    {
+      "slug": "herbed-lentils-and-rice-casserole",
+      "timestamp": "20251108103204",
+      "originalUrl": "https://www.myplate.gov/recipes/herbed-lentils-and-rice-casserole"
+    },
+    {
+      "slug": "herbed-spinach-quiche-portabella-caps",
+      "timestamp": "20251231040801",
+      "originalUrl": "https://www.myplate.gov/recipes/herbed-spinach-quiche-portabella-caps"
+    },
+    {
+      "slug": "herbed-vegetables",
+      "timestamp": "20251231042304",
+      "originalUrl": "https://www.myplate.gov/recipes/herbed-vegetables"
+    },
+    {
+      "slug": "hiding-rabbits",
+      "timestamp": "20251231031732",
+      "originalUrl": "https://www.myplate.gov/recipes/hiding-rabbits"
+    },
+    {
+      "slug": "homemade-bagels",
+      "timestamp": "20251231034309",
+      "originalUrl": "https://www.myplate.gov/recipes/homemade-bagels"
+    },
+    {
+      "slug": "homemade-cranberry-sauce",
+      "timestamp": "20251231031750",
+      "originalUrl": "https://www.myplate.gov/recipes/homemade-cranberry-sauce"
+    },
+    {
+      "slug": "homemade-mashed-potatoes",
+      "timestamp": "20250914213235",
+      "originalUrl": "https://www.myplate.gov/recipes/homemade-mashed-potatoes"
+    },
+    {
+      "slug": "homemade-pizza-crust",
+      "timestamp": "20251231043318",
+      "originalUrl": "https://www.myplate.gov/recipes/homemade-pizza-crust"
+    },
+    {
+      "slug": "homemade-ranch-dressing",
+      "timestamp": "20251231020434",
+      "originalUrl": "https://www.myplate.gov/recipes/homemade-ranch-dressing"
+    },
+    {
+      "slug": "homestyle-biscuits",
+      "timestamp": "20251231021550",
+      "originalUrl": "https://www.myplate.gov/recipes/homestyle-biscuits"
+    },
+    {
+      "slug": "honey-baked-lentils",
+      "timestamp": "20251231021125",
+      "originalUrl": "https://www.myplate.gov/recipes/honey-baked-lentils"
+    },
+    {
+      "slug": "honey-glazed-turnips",
+      "timestamp": "20251231032517",
+      "originalUrl": "https://www.myplate.gov/recipes/honey-glazed-turnips"
+    },
+    {
+      "slug": "honey-lemon-chicken",
+      "timestamp": "20251231021805",
+      "originalUrl": "https://www.myplate.gov/recipes/honey-lemon-chicken"
+    },
+    {
+      "slug": "honey-milk-balls",
+      "timestamp": "20251231044246",
+      "originalUrl": "https://www.myplate.gov/recipes/honey-milk-balls"
+    },
+    {
+      "slug": "honey-mustard-dressing",
+      "timestamp": "20251231042801",
+      "originalUrl": "https://www.myplate.gov/recipes/honey-mustard-dressing"
+    },
+    {
+      "slug": "honey-mustard-pork-chops",
+      "timestamp": "20251223123747",
+      "originalUrl": "https://www.myplate.gov/recipes/honey-mustard-pork-chops"
+    },
+    {
+      "slug": "honey-pumpkin-bar",
+      "timestamp": "20251231044933",
+      "originalUrl": "https://www.myplate.gov/recipes/honey-pumpkin-bar"
+    },
+    {
+      "slug": "honeydew-summer-salad-wedges",
+      "timestamp": "20250614012150",
+      "originalUrl": "https://www.myplate.gov/recipes/honeydew-summer-salad-wedges"
+    },
+    {
+      "slug": "hooked-salmon-sticks",
+      "timestamp": "20251231034200",
+      "originalUrl": "https://www.myplate.gov/recipes/hooked-salmon-sticks"
+    },
+    {
+      "slug": "hoppin-john-sausage-black-eyed-peas-and-rice",
+      "timestamp": "20251231021001",
+      "originalUrl": "https://www.myplate.gov/recipes/hoppin-john-sausage-black-eyed-peas-and-rice"
+    },
+    {
+      "slug": "horchata",
+      "timestamp": "20251231022127",
+      "originalUrl": "https://www.myplate.gov/recipes/horchata"
+    },
+    {
+      "slug": "hot-cornmeal-cereal",
+      "timestamp": "20251231022700",
+      "originalUrl": "https://www.myplate.gov/recipes/hot-cornmeal-cereal"
+    },
+    {
+      "slug": "hot-n-spicy-seasoning",
+      "timestamp": "20251231041535",
+      "originalUrl": "https://www.myplate.gov/recipes/hot-n-spicy-seasoning"
+    },
+    {
+      "slug": "hot-wing-flavored-chicken-ranch-sauce",
+      "timestamp": "20251231033630",
+      "originalUrl": "https://www.myplate.gov/recipes/hot-wing-flavored-chicken-ranch-sauce"
+    },
+    {
+      "slug": "huevos-motulenos",
+      "timestamp": "20251231032402",
+      "originalUrl": "https://www.myplate.gov/recipes/huevos-motulenos"
+    },
+    {
+      "slug": "huevos-rancheros-fresh-salsa",
+      "timestamp": "20251231042545",
+      "originalUrl": "https://www.myplate.gov/recipes/huevos-rancheros-fresh-salsa"
+    },
+    {
+      "slug": "hummus",
+      "timestamp": "20251231031322",
+      "originalUrl": "https://www.myplate.gov/recipes/hummus"
+    },
+    {
+      "slug": "indian-vegetable-and-rice-skillet-meal",
+      "timestamp": "20250301101459",
+      "originalUrl": "https://www.myplate.gov/recipes/indian-vegetable-and-rice-skillet-meal"
+    },
+    {
+      "slug": "instant-chocolate-mousse",
+      "timestamp": "20251231041244",
+      "originalUrl": "https://www.myplate.gov/recipes/instant-chocolate-mousse"
+    },
+    {
+      "slug": "italian-bean-patties",
+      "timestamp": "20251231021752",
+      "originalUrl": "https://www.myplate.gov/recipes/italian-bean-patties"
+    },
+    {
+      "slug": "italian-bean-soup",
+      "timestamp": "20251231031352",
+      "originalUrl": "https://www.myplate.gov/recipes/italian-bean-soup"
+    },
+    {
+      "slug": "italian-broccoli-and-pasta",
+      "timestamp": "20251231025007",
+      "originalUrl": "https://www.myplate.gov/recipes/italian-broccoli-and-pasta"
+    },
+    {
+      "slug": "italian-inspired-summer-squash",
+      "timestamp": "20251231022315",
+      "originalUrl": "https://www.myplate.gov/recipes/italian-inspired-summer-squash"
+    },
+    {
+      "slug": "italian-pasta-salad",
+      "timestamp": "20251231032316",
+      "originalUrl": "https://www.myplate.gov/recipes/italian-pasta-salad"
+    },
+    {
+      "slug": "italian-style-vegetables",
+      "timestamp": "20251231045708",
+      "originalUrl": "https://www.myplate.gov/recipes/italian-style-vegetables"
+    },
+    {
+      "slug": "italian-vegetables",
+      "timestamp": "20251231044006",
+      "originalUrl": "https://www.myplate.gov/recipes/italian-vegetables"
+    },
+    {
+      "slug": "jamaican-jerk-chicken",
+      "timestamp": "20251231021231",
+      "originalUrl": "https://www.myplate.gov/recipes/jamaican-jerk-chicken"
+    },
+    {
+      "slug": "jeans-banana-pudding-parfait",
+      "timestamp": "20251231045610",
+      "originalUrl": "https://www.myplate.gov/recipes/jeans-banana-pudding-parfait"
+    },
+    {
+      "slug": "jiffy-oatmeal-crunch",
+      "timestamp": "20251231041127",
+      "originalUrl": "https://www.myplate.gov/recipes/jiffy-oatmeal-crunch"
+    },
+    {
+      "slug": "jollof-rice",
+      "timestamp": "20251231021135",
+      "originalUrl": "https://www.myplate.gov/recipes/jollof-rice"
+    },
+    {
+      "slug": "julias-sauteed-steamed-collards",
+      "timestamp": "20251231045220",
+      "originalUrl": "https://www.myplate.gov/recipes/julias-sauteed-steamed-collards"
+    },
+    {
+      "slug": "kale-and-cranberry-stir-fry",
+      "timestamp": "20251231032641",
+      "originalUrl": "https://www.myplate.gov/recipes/kale-and-cranberry-stir-fry"
+    },
+    {
+      "slug": "kale-chips",
+      "timestamp": "20251231041710",
+      "originalUrl": "https://www.myplate.gov/recipes/kale-chips"
+    },
+    {
+      "slug": "kale-nuts-and-raisins",
+      "timestamp": "20251231032237",
+      "originalUrl": "https://www.myplate.gov/recipes/kale-nuts-and-raisins"
+    },
+    {
+      "slug": "kale-salad-yogurt-dressing",
+      "timestamp": "20251231032643",
+      "originalUrl": "https://www.myplate.gov/recipes/kale-salad-yogurt-dressing"
+    },
+    {
+      "slug": "kibbeh-khamoustah",
+      "timestamp": "20251231021139",
+      "originalUrl": "https://www.myplate.gov/recipes/kibbeh-khamoustah"
+    },
+    {
+      "slug": "kid-friendly-taco-cups",
+      "timestamp": "20251231045701",
+      "originalUrl": "https://www.myplate.gov/recipes/kid-friendly-taco-cups"
+    },
+    {
+      "slug": "layered-black-bean-dip",
+      "timestamp": "20251231031551",
+      "originalUrl": "https://www.myplate.gov/recipes/layered-black-bean-dip"
+    },
+    {
+      "slug": "leaf-finger-salad",
+      "timestamp": "20251231034852",
+      "originalUrl": "https://www.myplate.gov/recipes/leaf-finger-salad"
+    },
+    {
+      "slug": "leafy-tofu",
+      "timestamp": "20251106055823",
+      "originalUrl": "https://www.myplate.gov/recipes/leafy-tofu"
+    },
+    {
+      "slug": "leftover-turkey-casserole",
+      "timestamp": "20251231040426",
+      "originalUrl": "https://www.myplate.gov/recipes/leftover-turkey-casserole"
+    },
+    {
+      "slug": "lemon-corn-cake",
+      "timestamp": "20251231031628",
+      "originalUrl": "https://www.myplate.gov/recipes/lemon-corn-cake"
+    },
+    {
+      "slug": "lemon-dill-brussels-sprouts",
+      "timestamp": "20251231035228",
+      "originalUrl": "https://www.myplate.gov/recipes/lemon-dill-brussels-sprouts"
+    },
+    {
+      "slug": "lemon-pepper-salmon-patties",
+      "timestamp": "20251231020530",
+      "originalUrl": "https://www.myplate.gov/recipes/lemon-pepper-salmon-patties"
+    },
+    {
+      "slug": "lemon-potatoes",
+      "timestamp": "20251231024907",
+      "originalUrl": "https://www.myplate.gov/recipes/lemon-potatoes"
+    },
+    {
+      "slug": "lemon-spinach",
+      "timestamp": "20251231040753",
+      "originalUrl": "https://www.myplate.gov/recipes/lemon-spinach"
+    },
+    {
+      "slug": "lemon-velvet-supreme",
+      "timestamp": "20251231043626",
+      "originalUrl": "https://www.myplate.gov/recipes/lemon-velvet-supreme"
+    },
+    {
+      "slug": "lemonade",
+      "timestamp": "20251231042237",
+      "originalUrl": "https://www.myplate.gov/recipes/lemonade"
+    },
+    {
+      "slug": "lentil-barley-soup",
+      "timestamp": "20251231034648",
+      "originalUrl": "https://www.myplate.gov/recipes/lentil-barley-soup"
+    },
+    {
+      "slug": "lentil-chili",
+      "timestamp": "20251231033951",
+      "originalUrl": "https://www.myplate.gov/recipes/lentil-chili"
+    },
+    {
+      "slug": "lentil-minestrone",
+      "timestamp": "20251231030852",
+      "originalUrl": "https://www.myplate.gov/recipes/lentil-minestrone"
+    },
+    {
+      "slug": "lentil-soup",
+      "timestamp": "20251231024832",
+      "originalUrl": "https://www.myplate.gov/recipes/lentil-soup"
+    },
+    {
+      "slug": "lentil-spaghetti-sauce",
+      "timestamp": "20251231035501",
+      "originalUrl": "https://www.myplate.gov/recipes/lentil-spaghetti-sauce"
+    },
+    {
+      "slug": "lentil-stew",
+      "timestamp": "20251231031348",
+      "originalUrl": "https://www.myplate.gov/recipes/lentil-stew"
+    },
+    {
+      "slug": "lentil-tacos",
+      "timestamp": "20251231033221",
+      "originalUrl": "https://www.myplate.gov/recipes/lentil-tacos"
+    },
+    {
+      "slug": "lentil-vegetable-salad",
+      "timestamp": "20251231024902",
+      "originalUrl": "https://www.myplate.gov/recipes/lentil-vegetable-salad"
+    },
+    {
+      "slug": "lentil-vegetable-soup",
+      "timestamp": "20251231020755",
+      "originalUrl": "https://www.myplate.gov/recipes/lentil-vegetable-soup"
+    },
+    {
+      "slug": "lickety-split-banana-split",
+      "timestamp": "20251231034748",
+      "originalUrl": "https://www.myplate.gov/recipes/lickety-split-banana-split"
+    },
+    {
+      "slug": "light-feather-whole-wheat-pancakes",
+      "timestamp": "20251231035250",
+      "originalUrl": "https://www.myplate.gov/recipes/light-feather-whole-wheat-pancakes"
+    },
+    {
+      "slug": "lime-marinated-flank-steak-stuffed-poblano-peppers",
+      "timestamp": "20251231031511",
+      "originalUrl": "https://www.myplate.gov/recipes/lime-marinated-flank-steak-stuffed-poblano-peppers"
+    },
+    {
+      "slug": "lite-fried-okra",
+      "timestamp": "20251231032015",
+      "originalUrl": "https://www.myplate.gov/recipes/lite-fried-okra"
+    },
+    {
+      "slug": "lite-italian-dressing",
+      "timestamp": "20251231035933",
+      "originalUrl": "https://www.myplate.gov/recipes/lite-italian-dressing"
+    },
+    {
+      "slug": "louisiana-green-beans",
+      "timestamp": "20251231032210",
+      "originalUrl": "https://www.myplate.gov/recipes/louisiana-green-beans"
+    },
+    {
+      "slug": "low-calorie-dressing",
+      "timestamp": "20251231041533",
+      "originalUrl": "https://www.myplate.gov/recipes/low-calorie-dressing"
+    },
+    {
+      "slug": "low-fat-creamy-dressing",
+      "timestamp": "20251231045320",
+      "originalUrl": "https://www.myplate.gov/recipes/low-fat-creamy-dressing"
+    },
+    {
+      "slug": "low-fat-ranch-dip",
+      "timestamp": "20251231020320",
+      "originalUrl": "https://www.myplate.gov/recipes/low-fat-ranch-dip"
+    },
+    {
+      "slug": "low-fat-tartar-sauce",
+      "timestamp": "20241205113932",
+      "originalUrl": "https://www.myplate.gov/recipes/low-fat-tartar-sauce"
+    },
+    {
+      "slug": "mac-and-beans-medley",
+      "timestamp": "20251231031428",
+      "originalUrl": "https://www.myplate.gov/recipes/mac-and-beans-medley"
+    },
+    {
+      "slug": "macaroni-cheese-broccoli",
+      "timestamp": "20251231025054",
+      "originalUrl": "https://www.myplate.gov/recipes/macaroni-cheese-broccoli"
+    },
+    {
+      "slug": "macaroni-chick-pea-soup",
+      "timestamp": "20251231025048",
+      "originalUrl": "https://www.myplate.gov/recipes/macaroni-chick-pea-soup"
+    },
+    {
+      "slug": "magic-crust-quiche",
+      "timestamp": "20251022071122",
+      "originalUrl": "https://www.myplate.gov/recipes/magic-crust-quiche"
+    },
+    {
+      "slug": "magic-mix",
+      "timestamp": "20251231035705",
+      "originalUrl": "https://www.myplate.gov/recipes/magic-mix"
+    },
+    {
+      "slug": "magical-fruit-salad",
+      "timestamp": "20251231042756",
+      "originalUrl": "https://www.myplate.gov/recipes/magical-fruit-salad"
+    },
+    {
+      "slug": "main-dish-salad",
+      "timestamp": "20241207135903",
+      "originalUrl": "https://www.myplate.gov/recipes/main-dish-salad"
+    },
+    {
+      "slug": "mango-berry-rotini-salad",
+      "timestamp": "20251231034657",
+      "originalUrl": "https://www.myplate.gov/recipes/mango-berry-rotini-salad"
+    },
+    {
+      "slug": "mango-cucumber-soup",
+      "timestamp": "20251231021519",
+      "originalUrl": "https://www.myplate.gov/recipes/mango-cucumber-soup"
+    },
+    {
+      "slug": "mango-salsa",
+      "timestamp": "20251231031838",
+      "originalUrl": "https://www.myplate.gov/recipes/mango-salsa"
+    },
+    {
+      "slug": "mango-salsa1",
+      "timestamp": "20251231032521",
+      "originalUrl": "https://www.myplate.gov/recipes/mango-salsa1"
+    },
+    {
+      "slug": "mango-shake",
+      "timestamp": "20251231031725",
+      "originalUrl": "https://www.myplate.gov/recipes/mango-shake"
+    },
+    {
+      "slug": "manhattan-clam-chowder",
+      "timestamp": "20251231034242",
+      "originalUrl": "https://www.myplate.gov/recipes/manhattan-clam-chowder"
+    },
+    {
+      "slug": "maple-sweet-potatoes",
+      "timestamp": "20251231013751",
+      "originalUrl": "https://www.myplate.gov/recipes/maple-sweet-potatoes"
+    },
+    {
+      "slug": "marinara-sauce",
+      "timestamp": "20251231041702",
+      "originalUrl": "https://www.myplate.gov/recipes/marinara-sauce"
+    },
+    {
+      "slug": "marinated-beef",
+      "timestamp": "20251231050526",
+      "originalUrl": "https://www.myplate.gov/recipes/marinated-beef"
+    },
+    {
+      "slug": "marinated-three-bean-salad",
+      "timestamp": "20251231031230",
+      "originalUrl": "https://www.myplate.gov/recipes/marinated-three-bean-salad"
+    },
+    {
+      "slug": "mashed-parsnips-and-potatoes",
+      "timestamp": "20251231031235",
+      "originalUrl": "https://www.myplate.gov/recipes/mashed-parsnips-and-potatoes"
+    },
+    {
+      "slug": "mashed-sweet-potatoes",
+      "timestamp": "20251231044946",
+      "originalUrl": "https://www.myplate.gov/recipes/mashed-sweet-potatoes"
+    },
+    {
+      "slug": "mashed-taters",
+      "timestamp": "20251008043200",
+      "originalUrl": "https://www.myplate.gov/recipes/mashed-taters"
+    },
+    {
+      "slug": "masoor-dal-red-lentils-onion",
+      "timestamp": "20251231043853",
+      "originalUrl": "https://www.myplate.gov/recipes/masoor-dal-red-lentils-onion"
+    },
+    {
+      "slug": "master-mix-oregon",
+      "timestamp": "20251231050351",
+      "originalUrl": "https://www.myplate.gov/recipes/master-mix-oregon"
+    },
+    {
+      "slug": "matzo-meal-kugel-pudding",
+      "timestamp": "20250420080552",
+      "originalUrl": "https://www.myplate.gov/recipes/matzo-meal-kugel-pudding"
+    },
+    {
+      "slug": "meatball-soup",
+      "timestamp": "20251231033604",
+      "originalUrl": "https://www.myplate.gov/recipes/meatball-soup"
+    },
+    {
+      "slug": "meatloaf",
+      "timestamp": "20250420081852",
+      "originalUrl": "https://www.myplate.gov/recipes/meatloaf"
+    },
+    {
+      "slug": "meatloaf-mug",
+      "timestamp": "20251112231546",
+      "originalUrl": "https://www.myplate.gov/recipes/meatloaf-mug"
+    },
+    {
+      "slug": "meaty-stuffed-potatoes",
+      "timestamp": "20251231022052",
+      "originalUrl": "https://www.myplate.gov/recipes/meaty-stuffed-potatoes"
+    },
+    {
+      "slug": "mediterranean-chicken-and-white-bean-salad",
+      "timestamp": "20251231025501",
+      "originalUrl": "https://www.myplate.gov/recipes/mediterranean-chicken-and-white-bean-salad"
+    },
+    {
+      "slug": "mediterranean-roasted-eggplant-tomato-sauce",
+      "timestamp": "20251231034432",
+      "originalUrl": "https://www.myplate.gov/recipes/mediterranean-roasted-eggplant-tomato-sauce"
+    },
+    {
+      "slug": "mediterranean-tuna-antipasti-salad",
+      "timestamp": "20251231032647",
+      "originalUrl": "https://www.myplate.gov/recipes/mediterranean-tuna-antipasti-salad"
+    },
+    {
+      "slug": "melissas-slow-cooker-stuffing",
+      "timestamp": "20251231045540",
+      "originalUrl": "https://www.myplate.gov/recipes/melissas-slow-cooker-stuffing"
+    },
+    {
+      "slug": "melon-and-mint",
+      "timestamp": "20251231032651",
+      "originalUrl": "https://www.myplate.gov/recipes/melon-and-mint"
+    },
+    {
+      "slug": "melon-salsa",
+      "timestamp": "20251231031829",
+      "originalUrl": "https://www.myplate.gov/recipes/melon-salsa"
+    },
+    {
+      "slug": "mexican-pinwheels",
+      "timestamp": "20251231034109",
+      "originalUrl": "https://www.myplate.gov/recipes/mexican-pinwheels"
+    },
+    {
+      "slug": "microwave-baked-apple",
+      "timestamp": "20251231024937",
+      "originalUrl": "https://www.myplate.gov/recipes/microwave-baked-apple"
+    },
+    {
+      "slug": "microwave-baked-potato",
+      "timestamp": "20251231020747",
+      "originalUrl": "https://www.myplate.gov/recipes/microwave-baked-potato"
+    },
+    {
+      "slug": "microwave-cauliflower-and-peas-cream-sauce",
+      "timestamp": "20251231042301",
+      "originalUrl": "https://www.myplate.gov/recipes/microwave-cauliflower-and-peas-cream-sauce"
+    },
+    {
+      "slug": "microwave-denver-scramble-slider",
+      "timestamp": "20251231020519",
+      "originalUrl": "https://www.myplate.gov/recipes/microwave-denver-scramble-slider"
+    },
+    {
+      "slug": "microwave-potato-corn-chowder",
+      "timestamp": "20251231042526",
+      "originalUrl": "https://www.myplate.gov/recipes/microwave-potato-corn-chowder"
+    },
+    {
+      "slug": "migas-crumbs",
+      "timestamp": "20251231034013",
+      "originalUrl": "https://www.myplate.gov/recipes/migas-crumbs"
+    },
+    {
+      "slug": "minestrone-soup",
+      "timestamp": "20251231031244",
+      "originalUrl": "https://www.myplate.gov/recipes/minestrone-soup"
+    },
+    {
+      "slug": "mini-caprese-bites",
+      "timestamp": "20251231041623",
+      "originalUrl": "https://www.myplate.gov/recipes/mini-caprese-bites"
+    },
+    {
+      "slug": "mixed-fruit-salad",
+      "timestamp": "20251231024933",
+      "originalUrl": "https://www.myplate.gov/recipes/mixed-fruit-salad"
+    },
+    {
+      "slug": "mixed-grain-bread",
+      "timestamp": "20251231042034",
+      "originalUrl": "https://www.myplate.gov/recipes/mixed-grain-bread"
+    },
+    {
+      "slug": "mock-sour-cream",
+      "timestamp": "20251231031813",
+      "originalUrl": "https://www.myplate.gov/recipes/mock-sour-cream"
+    },
+    {
+      "slug": "mock-southern-sweet-potato-pie",
+      "timestamp": "20251231021207",
+      "originalUrl": "https://www.myplate.gov/recipes/mock-southern-sweet-potato-pie"
+    },
+    {
+      "slug": "mousse-la-banana",
+      "timestamp": "20251231022300",
+      "originalUrl": "https://www.myplate.gov/recipes/mousse-la-banana"
+    },
+    {
+      "slug": "mouth-watering-oven-fried-fish",
+      "timestamp": "20251231021406",
+      "originalUrl": "https://www.myplate.gov/recipes/mouth-watering-oven-fried-fish"
+    },
+    {
+      "slug": "mozz-totz",
+      "timestamp": "20251231042936",
+      "originalUrl": "https://www.myplate.gov/recipes/mozz-totz"
+    },
+    {
+      "slug": "mozzarella-chicken-garlic-spinach",
+      "timestamp": "20251231040018",
+      "originalUrl": "https://www.myplate.gov/recipes/mozzarella-chicken-garlic-spinach"
+    },
+    {
+      "slug": "muffins-better-baking-mix",
+      "timestamp": "20251231032327",
+      "originalUrl": "https://www.myplate.gov/recipes/muffins-better-baking-mix"
+    },
+    {
+      "slug": "mushroom-barley-soup",
+      "timestamp": "20251231042729",
+      "originalUrl": "https://www.myplate.gov/recipes/mushroom-barley-soup"
+    },
+    {
+      "slug": "mushroom-beef-sloppy-joes",
+      "timestamp": "20251231034828",
+      "originalUrl": "https://www.myplate.gov/recipes/mushroom-beef-sloppy-joes"
+    },
+    {
+      "slug": "mushroom-steak-fajitas",
+      "timestamp": "20251231042321",
+      "originalUrl": "https://www.myplate.gov/recipes/mushroom-steak-fajitas"
+    },
+    {
+      "slug": "naan",
+      "timestamp": "20251231035219",
+      "originalUrl": "https://www.myplate.gov/recipes/naan"
+    },
+    {
+      "slug": "neopolitan-tuna-fettuccine",
+      "timestamp": "20251231031526",
+      "originalUrl": "https://www.myplate.gov/recipes/neopolitan-tuna-fettuccine"
+    },
+    {
+      "slug": "new-orleans-red-beans",
+      "timestamp": "20251231033250",
+      "originalUrl": "https://www.myplate.gov/recipes/new-orleans-red-beans"
+    },
+    {
+      "slug": "no-bake-breakfast-cookies",
+      "timestamp": "20251231040610",
+      "originalUrl": "https://www.myplate.gov/recipes/no-bake-breakfast-cookies"
+    },
+    {
+      "slug": "no-bake-cookies",
+      "timestamp": "20251231040612",
+      "originalUrl": "https://www.myplate.gov/recipes/no-bake-cookies"
+    },
+    {
+      "slug": "oat-bran-muffins",
+      "timestamp": "20251231050450",
+      "originalUrl": "https://www.myplate.gov/recipes/oat-bran-muffins"
+    },
+    {
+      "slug": "oat-snack-cakes",
+      "timestamp": "20251231043834",
+      "originalUrl": "https://www.myplate.gov/recipes/oat-snack-cakes"
+    },
+    {
+      "slug": "oatmeal-bread",
+      "timestamp": "20251231032916",
+      "originalUrl": "https://www.myplate.gov/recipes/oatmeal-bread"
+    },
+    {
+      "slug": "oatmeal-raisin-muffins",
+      "timestamp": "20251231032231",
+      "originalUrl": "https://www.myplate.gov/recipes/oatmeal-raisin-muffins"
+    },
+    {
+      "slug": "okra-and-greens",
+      "timestamp": "20251231034313",
+      "originalUrl": "https://www.myplate.gov/recipes/okra-and-greens"
+    },
+    {
+      "slug": "old-fashioned-bread-pudding",
+      "timestamp": "20251231021029",
+      "originalUrl": "https://www.myplate.gov/recipes/old-fashioned-bread-pudding"
+    },
+    {
+      "slug": "old-fashioned-dressing",
+      "timestamp": "20251231032931",
+      "originalUrl": "https://www.myplate.gov/recipes/old-fashioned-dressing"
+    },
+    {
+      "slug": "one-dish-roasted-potatoes-and-apples-chicken-sausage",
+      "timestamp": "20251231021936",
+      "originalUrl": "https://www.myplate.gov/recipes/one-dish-roasted-potatoes-and-apples-chicken-sausage"
+    },
+    {
+      "slug": "one-pan-potatoes-chicken",
+      "timestamp": "20251231021122",
+      "originalUrl": "https://www.myplate.gov/recipes/one-pan-potatoes-chicken"
+    },
+    {
+      "slug": "one-pan-spaghetti",
+      "timestamp": "20251231020830",
+      "originalUrl": "https://www.myplate.gov/recipes/one-pan-spaghetti"
+    },
+    {
+      "slug": "one-pan-taco-rice",
+      "timestamp": "20251231031454",
+      "originalUrl": "https://www.myplate.gov/recipes/one-pan-taco-rice"
+    },
+    {
+      "slug": "orange-and-honey-glazed-brussel-sprouts",
+      "timestamp": "20251231032323",
+      "originalUrl": "https://www.myplate.gov/recipes/orange-and-honey-glazed-brussel-sprouts"
+    },
+    {
+      "slug": "orange-banana-frosty",
+      "timestamp": "20251231021109",
+      "originalUrl": "https://www.myplate.gov/recipes/orange-banana-frosty"
+    },
+    {
+      "slug": "orange-cow",
+      "timestamp": "20251231043347",
+      "originalUrl": "https://www.myplate.gov/recipes/orange-cow"
+    },
+    {
+      "slug": "orange-delight-juice",
+      "timestamp": "20251231034006",
+      "originalUrl": "https://www.myplate.gov/recipes/orange-delight-juice"
+    },
+    {
+      "slug": "orange-glazed-skinless-chicken-wings",
+      "timestamp": "20251022065127",
+      "originalUrl": "https://www.myplate.gov/recipes/orange-glazed-skinless-chicken-wings"
+    },
+    {
+      "slug": "orange-honeyed-acorn-squash",
+      "timestamp": "20251231032956",
+      "originalUrl": "https://www.myplate.gov/recipes/orange-honeyed-acorn-squash"
+    },
+    {
+      "slug": "orange-pork-chops",
+      "timestamp": "20251231033136",
+      "originalUrl": "https://www.myplate.gov/recipes/orange-pork-chops"
+    },
+    {
+      "slug": "oven-baked-potato-pancakes",
+      "timestamp": "20251231035253",
+      "originalUrl": "https://www.myplate.gov/recipes/oven-baked-potato-pancakes"
+    },
+    {
+      "slug": "oven-baked-sweet-potato-fries",
+      "timestamp": "20251231045652",
+      "originalUrl": "https://www.myplate.gov/recipes/oven-baked-sweet-potato-fries"
+    },
+    {
+      "slug": "oven-fried-fish",
+      "timestamp": "20251231031858",
+      "originalUrl": "https://www.myplate.gov/recipes/oven-fried-fish"
+    },
+    {
+      "slug": "oven-fried-yucca",
+      "timestamp": "20251211180109",
+      "originalUrl": "https://www.myplate.gov/recipes/oven-fried-yucca"
+    },
+    {
+      "slug": "oven-roasted-chicken",
+      "timestamp": "20251231041909",
+      "originalUrl": "https://www.myplate.gov/recipes/oven-roasted-chicken"
+    },
+    {
+      "slug": "oven-roasted-vegetables",
+      "timestamp": "20251231031958",
+      "originalUrl": "https://www.myplate.gov/recipes/oven-roasted-vegetables"
+    },
+    {
+      "slug": "overnight-oatmeal",
+      "timestamp": "20251231032904",
+      "originalUrl": "https://www.myplate.gov/recipes/overnight-oatmeal"
+    },
+    {
+      "slug": "overnight-oatmeal-berries",
+      "timestamp": "20251231032656",
+      "originalUrl": "https://www.myplate.gov/recipes/overnight-oatmeal-berries"
+    },
+    {
+      "slug": "pan-roasted-tilapia-tomatillo-salsa",
+      "timestamp": "20251231031849",
+      "originalUrl": "https://www.myplate.gov/recipes/pan-roasted-tilapia-tomatillo-salsa"
+    },
+    {
+      "slug": "pancakes-better-baking-mix",
+      "timestamp": "20251231032834",
+      "originalUrl": "https://www.myplate.gov/recipes/pancakes-better-baking-mix"
+    },
+    {
+      "slug": "panned-cabbage",
+      "timestamp": "20251231031810",
+      "originalUrl": "https://www.myplate.gov/recipes/panned-cabbage"
+    },
+    {
+      "slug": "parmesan-chive-biscuits",
+      "timestamp": "20251231050010",
+      "originalUrl": "https://www.myplate.gov/recipes/parmesan-chive-biscuits"
+    },
+    {
+      "slug": "parmesan-peas",
+      "timestamp": "20251231022322",
+      "originalUrl": "https://www.myplate.gov/recipes/parmesan-peas"
+    },
+    {
+      "slug": "parsley-almond-and-lemon-pesto",
+      "timestamp": "20251206164632",
+      "originalUrl": "https://www.myplate.gov/recipes/parsley-almond-and-lemon-pesto"
+    },
+    {
+      "slug": "parsnip-soup",
+      "timestamp": "20251022071533",
+      "originalUrl": "https://www.myplate.gov/recipes/parsnip-soup"
+    },
+    {
+      "slug": "party-time-pasta",
+      "timestamp": "20251231033206",
+      "originalUrl": "https://www.myplate.gov/recipes/party-time-pasta"
+    },
+    {
+      "slug": "passover-rhubarb-cobbler",
+      "timestamp": "20251022072124",
+      "originalUrl": "https://www.myplate.gov/recipes/passover-rhubarb-cobbler"
+    },
+    {
+      "slug": "pasta-bolognese",
+      "timestamp": "20251231033829",
+      "originalUrl": "https://www.myplate.gov/recipes/pasta-bolognese"
+    },
+    {
+      "slug": "pasta-chickpeas-tomato-and-spinach",
+      "timestamp": "20251231044332",
+      "originalUrl": "https://www.myplate.gov/recipes/pasta-chickpeas-tomato-and-spinach"
+    },
+    {
+      "slug": "pasta-frittata-peas",
+      "timestamp": "20251022070457",
+      "originalUrl": "https://www.myplate.gov/recipes/pasta-frittata-peas"
+    },
+    {
+      "slug": "pasta-greens-beans-and-chicken",
+      "timestamp": "20251231033844",
+      "originalUrl": "https://www.myplate.gov/recipes/pasta-greens-beans-and-chicken"
+    },
+    {
+      "slug": "pasta-primavera",
+      "timestamp": "20251231033047",
+      "originalUrl": "https://www.myplate.gov/recipes/pasta-primavera"
+    },
+    {
+      "slug": "pasta-primavera-ii",
+      "timestamp": "20250623092056",
+      "originalUrl": "https://www.myplate.gov/recipes/pasta-primavera-ii"
+    },
+    {
+      "slug": "pasta-primavera-salad",
+      "timestamp": "20251231042624",
+      "originalUrl": "https://www.myplate.gov/recipes/pasta-primavera-salad"
+    },
+    {
+      "slug": "pasta-primavera-spaghetti-sauce",
+      "timestamp": "20251231041412",
+      "originalUrl": "https://www.myplate.gov/recipes/pasta-primavera-spaghetti-sauce"
+    },
+    {
+      "slug": "pasta-salad",
+      "timestamp": "20251231043616",
+      "originalUrl": "https://www.myplate.gov/recipes/pasta-salad"
+    },
+    {
+      "slug": "pasta-salad-herb-vinaigrette",
+      "timestamp": "20251231025450",
+      "originalUrl": "https://www.myplate.gov/recipes/pasta-salad-herb-vinaigrette"
+    },
+    {
+      "slug": "pasta-vegetable-salad",
+      "timestamp": "20251231045434",
+      "originalUrl": "https://www.myplate.gov/recipes/pasta-vegetable-salad"
+    },
+    {
+      "slug": "pasta-vegetables",
+      "timestamp": "20251022064533",
+      "originalUrl": "https://www.myplate.gov/recipes/pasta-vegetables"
+    },
+    {
+      "slug": "pea-guacamole",
+      "timestamp": "20251231032009",
+      "originalUrl": "https://www.myplate.gov/recipes/pea-guacamole"
+    },
+    {
+      "slug": "pea-pesto",
+      "timestamp": "20251231043440",
+      "originalUrl": "https://www.myplate.gov/recipes/pea-pesto"
+    },
+    {
+      "slug": "peach-apple-crisp",
+      "timestamp": "20251231021745",
+      "originalUrl": "https://www.myplate.gov/recipes/peach-apple-crisp"
+    },
+    {
+      "slug": "peach-cooler",
+      "timestamp": "20251231034507",
+      "originalUrl": "https://www.myplate.gov/recipes/peach-cooler"
+    },
+    {
+      "slug": "peach-crisp",
+      "timestamp": "20251231033314",
+      "originalUrl": "https://www.myplate.gov/recipes/peach-crisp"
+    },
+    {
+      "slug": "peach-sauce",
+      "timestamp": "20251231042031",
+      "originalUrl": "https://www.myplate.gov/recipes/peach-sauce"
+    },
+    {
+      "slug": "peachy-peanut-butter-pita-pockets",
+      "timestamp": "20251231033229",
+      "originalUrl": "https://www.myplate.gov/recipes/peachy-peanut-butter-pita-pockets"
+    },
+    {
+      "slug": "peachy-pops",
+      "timestamp": "20251231043351",
+      "originalUrl": "https://www.myplate.gov/recipes/peachy-pops"
+    },
+    {
+      "slug": "peanut-butter-and-apple-wraps",
+      "timestamp": "20251231033736",
+      "originalUrl": "https://www.myplate.gov/recipes/peanut-butter-and-apple-wraps"
+    },
+    {
+      "slug": "peanut-butter-banana-breakfast-shake",
+      "timestamp": "20251231035354",
+      "originalUrl": "https://www.myplate.gov/recipes/peanut-butter-banana-breakfast-shake"
+    },
+    {
+      "slug": "peanut-butter-banana-smoothie",
+      "timestamp": "20251231041819",
+      "originalUrl": "https://www.myplate.gov/recipes/peanut-butter-banana-smoothie"
+    },
+    {
+      "slug": "peanut-butter-bananas",
+      "timestamp": "20251231045717",
+      "originalUrl": "https://www.myplate.gov/recipes/peanut-butter-bananas"
+    },
+    {
+      "slug": "peanut-butter-bread",
+      "timestamp": "20251231040037",
+      "originalUrl": "https://www.myplate.gov/recipes/peanut-butter-bread"
+    },
+    {
+      "slug": "peanut-butter-cereal-bars",
+      "timestamp": "20251231040856",
+      "originalUrl": "https://www.myplate.gov/recipes/peanut-butter-cereal-bars"
+    },
+    {
+      "slug": "peanut-butter-muffins",
+      "timestamp": "20251231040848",
+      "originalUrl": "https://www.myplate.gov/recipes/peanut-butter-muffins"
+    },
+    {
+      "slug": "peanut-butter-n-fruit-wich",
+      "timestamp": "20251231021924",
+      "originalUrl": "https://www.myplate.gov/recipes/peanut-butter-n-fruit-wich"
+    },
+    {
+      "slug": "peanut-peach-n-pineapple-wrap",
+      "timestamp": "20251231032710",
+      "originalUrl": "https://www.myplate.gov/recipes/peanut-peach-n-pineapple-wrap"
+    },
+    {
+      "slug": "peanut-stew",
+      "timestamp": "20251231022027",
+      "originalUrl": "https://www.myplate.gov/recipes/peanut-stew"
+    },
+    {
+      "slug": "peanutty-stew",
+      "timestamp": "20251231021019",
+      "originalUrl": "https://www.myplate.gov/recipes/peanutty-stew"
+    },
+    {
+      "slug": "pear-kabobs-strawberry-dipping-sauce",
+      "timestamp": "20251231024819",
+      "originalUrl": "https://www.myplate.gov/recipes/pear-kabobs-strawberry-dipping-sauce"
+    },
+    {
+      "slug": "pear-orange-sauce",
+      "timestamp": "20251231030855",
+      "originalUrl": "https://www.myplate.gov/recipes/pear-orange-sauce"
+    },
+    {
+      "slug": "pear-party-salsa",
+      "timestamp": "20251231020731",
+      "originalUrl": "https://www.myplate.gov/recipes/pear-party-salsa"
+    },
+    {
+      "slug": "pear-pbj-bouquet",
+      "timestamp": "20251231021258",
+      "originalUrl": "https://www.myplate.gov/recipes/pear-pbj-bouquet"
+    },
+    {
+      "slug": "pear-quesadillas",
+      "timestamp": "20251231045735",
+      "originalUrl": "https://www.myplate.gov/recipes/pear-quesadillas"
+    },
+    {
+      "slug": "pear-rabbit",
+      "timestamp": "20251231020744",
+      "originalUrl": "https://www.myplate.gov/recipes/pear-rabbit"
+    },
+    {
+      "slug": "pear-salad",
+      "timestamp": "20251231041952",
+      "originalUrl": "https://www.myplate.gov/recipes/pear-salad"
+    },
+    {
+      "slug": "pears-pod",
+      "timestamp": "20251231050542",
+      "originalUrl": "https://www.myplate.gov/recipes/pears-pod"
+    },
+    {
+      "slug": "peppers-stuffed-rice-beans",
+      "timestamp": "20251231044330",
+      "originalUrl": "https://www.myplate.gov/recipes/peppers-stuffed-rice-beans"
+    },
+    {
+      "slug": "perfect-pear-and-brussels-sprout-salad",
+      "timestamp": "20251231020916",
+      "originalUrl": "https://www.myplate.gov/recipes/perfect-pear-and-brussels-sprout-salad"
+    },
+    {
+      "slug": "perfect-pumpkin-pancakes",
+      "timestamp": "20251231021720",
+      "originalUrl": "https://www.myplate.gov/recipes/perfect-pumpkin-pancakes"
+    },
+    {
+      "slug": "peter-pumpkin-squares",
+      "timestamp": "20251231043411",
+      "originalUrl": "https://www.myplate.gov/recipes/peter-pumpkin-squares"
+    },
+    {
+      "slug": "picadillo",
+      "timestamp": "20251231022208",
+      "originalUrl": "https://www.myplate.gov/recipes/picadillo"
+    },
+    {
+      "slug": "picadillo-0",
+      "timestamp": "20251231043245",
+      "originalUrl": "https://www.myplate.gov/recipes/picadillo-0"
+    },
+    {
+      "slug": "pico-de-gallo",
+      "timestamp": "20251231033200",
+      "originalUrl": "https://www.myplate.gov/recipes/pico-de-gallo"
+    },
+    {
+      "slug": "pineapple-angel-food-cake",
+      "timestamp": "20251231044403",
+      "originalUrl": "https://www.myplate.gov/recipes/pineapple-angel-food-cake"
+    },
+    {
+      "slug": "pineapple-avocado-chicken-salad",
+      "timestamp": "20251231021939",
+      "originalUrl": "https://www.myplate.gov/recipes/pineapple-avocado-chicken-salad"
+    },
+    {
+      "slug": "pineapple-chicken",
+      "timestamp": "20251231040029",
+      "originalUrl": "https://www.myplate.gov/recipes/pineapple-chicken"
+    },
+    {
+      "slug": "pineapple-orange-frozen-yogurt",
+      "timestamp": "20251231021617",
+      "originalUrl": "https://www.myplate.gov/recipes/pineapple-orange-frozen-yogurt"
+    },
+    {
+      "slug": "pineapple-pork",
+      "timestamp": "20251231020823",
+      "originalUrl": "https://www.myplate.gov/recipes/pineapple-pork"
+    },
+    {
+      "slug": "pineapple-rice-bake",
+      "timestamp": "20251231050052",
+      "originalUrl": "https://www.myplate.gov/recipes/pineapple-rice-bake"
+    },
+    {
+      "slug": "pineapple-zucchini-cake",
+      "timestamp": "20251231042323",
+      "originalUrl": "https://www.myplate.gov/recipes/pineapple-zucchini-cake"
+    },
+    {
+      "slug": "pink-party-salad",
+      "timestamp": "20251231022122",
+      "originalUrl": "https://www.myplate.gov/recipes/pink-party-salad"
+    },
+    {
+      "slug": "pizza-eggburger",
+      "timestamp": "20251231021010",
+      "originalUrl": "https://www.myplate.gov/recipes/pizza-eggburger"
+    },
+    {
+      "slug": "pizza-meat-loaf",
+      "timestamp": "20250806053439",
+      "originalUrl": "https://www.myplate.gov/recipes/pizza-meat-loaf"
+    },
+    {
+      "slug": "plantain-cups-shredded-chicken-mofonguitos",
+      "timestamp": "20251231022143",
+      "originalUrl": "https://www.myplate.gov/recipes/plantain-cups-shredded-chicken-mofonguitos"
+    },
+    {
+      "slug": "pocket-fruit-pies",
+      "timestamp": "20251231042045",
+      "originalUrl": "https://www.myplate.gov/recipes/pocket-fruit-pies"
+    },
+    {
+      "slug": "polenta-pepper-and-cheese",
+      "timestamp": "20251231032222",
+      "originalUrl": "https://www.myplate.gov/recipes/polenta-pepper-and-cheese"
+    },
+    {
+      "slug": "popcorn-treats",
+      "timestamp": "20251231043231",
+      "originalUrl": "https://www.myplate.gov/recipes/popcorn-treats"
+    },
+    {
+      "slug": "popping-pomegranate-salsa",
+      "timestamp": "20250916222723",
+      "originalUrl": "https://www.myplate.gov/recipes/popping-pomegranate-salsa"
+    },
+    {
+      "slug": "pork-loin-roast-veggies",
+      "timestamp": "20251231025507",
+      "originalUrl": "https://www.myplate.gov/recipes/pork-loin-roast-veggies"
+    },
+    {
+      "slug": "pork-power-bowl",
+      "timestamp": "20251231033814",
+      "originalUrl": "https://www.myplate.gov/recipes/pork-power-bowl"
+    },
+    {
+      "slug": "pot-roasted-beef",
+      "timestamp": "20251231025427",
+      "originalUrl": "https://www.myplate.gov/recipes/pot-roasted-beef"
+    },
+    {
+      "slug": "potato-beef-casserole",
+      "timestamp": "20251231014704",
+      "originalUrl": "https://www.myplate.gov/recipes/potato-beef-casserole"
+    },
+    {
+      "slug": "potato-black-bean-kale-skillet",
+      "timestamp": "20251231034718",
+      "originalUrl": "https://www.myplate.gov/recipes/potato-black-bean-kale-skillet"
+    },
+    {
+      "slug": "potato-cakes",
+      "timestamp": "20251231020722",
+      "originalUrl": "https://www.myplate.gov/recipes/potato-cakes"
+    },
+    {
+      "slug": "potato-nachos",
+      "timestamp": "20251231031436",
+      "originalUrl": "https://www.myplate.gov/recipes/potato-nachos"
+    },
+    {
+      "slug": "potato-salad",
+      "timestamp": "20251231043419",
+      "originalUrl": "https://www.myplate.gov/recipes/potato-salad"
+    },
+    {
+      "slug": "potato-salad-0",
+      "timestamp": "20251231021152",
+      "originalUrl": "https://www.myplate.gov/recipes/potato-salad-0"
+    },
+    {
+      "slug": "potato-skins-buffalo-chicken",
+      "timestamp": "20251231041425",
+      "originalUrl": "https://www.myplate.gov/recipes/potato-skins-buffalo-chicken"
+    },
+    {
+      "slug": "potato-soup",
+      "timestamp": "20251231022230",
+      "originalUrl": "https://www.myplate.gov/recipes/potato-soup"
+    },
+    {
+      "slug": "potato-soup-0",
+      "timestamp": "20251231024959",
+      "originalUrl": "https://www.myplate.gov/recipes/potato-soup-0"
+    },
+    {
+      "slug": "potato-spinach-casserole",
+      "timestamp": "20251231051113",
+      "originalUrl": "https://www.myplate.gov/recipes/potato-spinach-casserole"
+    },
+    {
+      "slug": "potato-spinach-lasagna",
+      "timestamp": "20251231045623",
+      "originalUrl": "https://www.myplate.gov/recipes/potato-spinach-lasagna"
+    },
+    {
+      "slug": "pretzel-shapes",
+      "timestamp": "20251231042256",
+      "originalUrl": "https://www.myplate.gov/recipes/pretzel-shapes"
+    },
+    {
+      "slug": "pulled-pork-sandwich-red-cabbage-and-carrot-slaw",
+      "timestamp": "20251231033146",
+      "originalUrl": "https://www.myplate.gov/recipes/pulled-pork-sandwich-red-cabbage-and-carrot-slaw"
+    },
+    {
+      "slug": "pumpkin-and-bean-soup",
+      "timestamp": "20251231022332",
+      "originalUrl": "https://www.myplate.gov/recipes/pumpkin-and-bean-soup"
+    },
+    {
+      "slug": "pumpkin-angel-food-cake",
+      "timestamp": "20251231040619",
+      "originalUrl": "https://www.myplate.gov/recipes/pumpkin-angel-food-cake"
+    },
+    {
+      "slug": "pumpkin-bread",
+      "timestamp": "20251231043843",
+      "originalUrl": "https://www.myplate.gov/recipes/pumpkin-bread"
+    },
+    {
+      "slug": "pumpkin-cheese-pie",
+      "timestamp": "20251231050745",
+      "originalUrl": "https://www.myplate.gov/recipes/pumpkin-cheese-pie"
+    },
+    {
+      "slug": "pumpkin-chili",
+      "timestamp": "20251231035516",
+      "originalUrl": "https://www.myplate.gov/recipes/pumpkin-chili"
+    },
+    {
+      "slug": "pumpkin-chocolate-muffins",
+      "timestamp": "20251231042744",
+      "originalUrl": "https://www.myplate.gov/recipes/pumpkin-chocolate-muffins"
+    },
+    {
+      "slug": "pumpkin-cookies",
+      "timestamp": "20251231035007",
+      "originalUrl": "https://www.myplate.gov/recipes/pumpkin-cookies"
+    },
+    {
+      "slug": "pumpkin-mac-cheese-one",
+      "timestamp": "20251117215148",
+      "originalUrl": "https://www.myplate.gov/recipes/pumpkin-mac-cheese-one"
+    },
+    {
+      "slug": "pumpkin-pudding",
+      "timestamp": "20251231031728",
+      "originalUrl": "https://www.myplate.gov/recipes/pumpkin-pudding"
+    },
+    {
+      "slug": "pumpkin-ricotta-stuffed-shells",
+      "timestamp": "20251108045433",
+      "originalUrl": "https://www.myplate.gov/recipes/pumpkin-ricotta-stuffed-shells"
+    },
+    {
+      "slug": "pumpkin-soup",
+      "timestamp": "20251231033431",
+      "originalUrl": "https://www.myplate.gov/recipes/pumpkin-soup"
+    },
+    {
+      "slug": "pumpkin-soup-0",
+      "timestamp": "20251231042019",
+      "originalUrl": "https://www.myplate.gov/recipes/pumpkin-soup-0"
+    },
+    {
+      "slug": "pupusas-revueltas",
+      "timestamp": "20250806104743",
+      "originalUrl": "https://www.myplate.gov/recipes/pupusas-revueltas"
+    },
+    {
+      "slug": "purple-cow",
+      "timestamp": "20251231022634",
+      "originalUrl": "https://www.myplate.gov/recipes/purple-cow"
+    },
+    {
+      "slug": "quesadilla-con-huevos",
+      "timestamp": "20251231050702",
+      "originalUrl": "https://www.myplate.gov/recipes/quesadilla-con-huevos"
+    },
+    {
+      "slug": "quick-and-easy-baked-potato-salad",
+      "timestamp": "20251231042101",
+      "originalUrl": "https://www.myplate.gov/recipes/quick-and-easy-baked-potato-salad"
+    },
+    {
+      "slug": "quick-and-easy-pizza",
+      "timestamp": "20251231045644",
+      "originalUrl": "https://www.myplate.gov/recipes/quick-and-easy-pizza"
+    },
+    {
+      "slug": "quick-and-easy-potato-casserole",
+      "timestamp": "20251231042132",
+      "originalUrl": "https://www.myplate.gov/recipes/quick-and-easy-potato-casserole"
+    },
+    {
+      "slug": "quick-and-healthy-black-eyed-peas",
+      "timestamp": "20250806050636",
+      "originalUrl": "https://www.myplate.gov/recipes/quick-and-healthy-black-eyed-peas"
+    },
+    {
+      "slug": "quick-black-bean-salad",
+      "timestamp": "20251231021358",
+      "originalUrl": "https://www.myplate.gov/recipes/quick-black-bean-salad"
+    },
+    {
+      "slug": "quick-black-eyed-peas",
+      "timestamp": "20251231050910",
+      "originalUrl": "https://www.myplate.gov/recipes/quick-black-eyed-peas"
+    },
+    {
+      "slug": "quick-chicken-vegetable-soup",
+      "timestamp": "20251231041339",
+      "originalUrl": "https://www.myplate.gov/recipes/quick-chicken-vegetable-soup"
+    },
+    {
+      "slug": "quick-chili",
+      "timestamp": "20251231020841",
+      "originalUrl": "https://www.myplate.gov/recipes/quick-chili"
+    },
+    {
+      "slug": "quick-easy-bean-dip",
+      "timestamp": "20251231041517",
+      "originalUrl": "https://www.myplate.gov/recipes/quick-easy-bean-dip"
+    },
+    {
+      "slug": "quick-n-cool-summer-salad",
+      "timestamp": "20251231032841",
+      "originalUrl": "https://www.myplate.gov/recipes/quick-n-cool-summer-salad"
+    },
+    {
+      "slug": "quick-peach-cobbler",
+      "timestamp": "20251231041755",
+      "originalUrl": "https://www.myplate.gov/recipes/quick-peach-cobbler"
+    },
+    {
+      "slug": "quick-skillet-lasagna",
+      "timestamp": "20251231034535",
+      "originalUrl": "https://www.myplate.gov/recipes/quick-skillet-lasagna"
+    },
+    {
+      "slug": "quick-tuna-casserole",
+      "timestamp": "20251231044112",
+      "originalUrl": "https://www.myplate.gov/recipes/quick-tuna-casserole"
+    },
+    {
+      "slug": "quinoa-and-black-bean-salad",
+      "timestamp": "20251231033018",
+      "originalUrl": "https://www.myplate.gov/recipes/quinoa-and-black-bean-salad"
+    },
+    {
+      "slug": "rainbow-bell-pepper-boats-garbanzo-beans-and-kale",
+      "timestamp": "20251231031708",
+      "originalUrl": "https://www.myplate.gov/recipes/rainbow-bell-pepper-boats-garbanzo-beans-and-kale"
+    },
+    {
+      "slug": "rainbow-veggie-salad",
+      "timestamp": "20251231034250",
+      "originalUrl": "https://www.myplate.gov/recipes/rainbow-veggie-salad"
+    },
+    {
+      "slug": "ratatouille",
+      "timestamp": "20251231041055",
+      "originalUrl": "https://www.myplate.gov/recipes/ratatouille"
+    },
+    {
+      "slug": "ratatouille-0",
+      "timestamp": "20251231022427",
+      "originalUrl": "https://www.myplate.gov/recipes/ratatouille-0"
+    },
+    {
+      "slug": "red-bean-quesadilla",
+      "timestamp": "20251231034735",
+      "originalUrl": "https://www.myplate.gov/recipes/red-bean-quesadilla"
+    },
+    {
+      "slug": "red-beans-and-rice",
+      "timestamp": "20251231031926",
+      "originalUrl": "https://www.myplate.gov/recipes/red-beans-and-rice"
+    },
+    {
+      "slug": "red-beans-and-rice-0",
+      "timestamp": "20251231033833",
+      "originalUrl": "https://www.myplate.gov/recipes/red-beans-and-rice-0"
+    },
+    {
+      "slug": "red-beans-and-rice1",
+      "timestamp": "20251231032219",
+      "originalUrl": "https://www.myplate.gov/recipes/red-beans-and-rice1"
+    },
+    {
+      "slug": "red-chile-stew",
+      "timestamp": "20251231035604",
+      "originalUrl": "https://www.myplate.gov/recipes/red-chile-stew"
+    },
+    {
+      "slug": "red-hot-fusilli",
+      "timestamp": "20251231020813",
+      "originalUrl": "https://www.myplate.gov/recipes/red-hot-fusilli"
+    },
+    {
+      "slug": "red-lentil-latkes",
+      "timestamp": "20251231035446",
+      "originalUrl": "https://www.myplate.gov/recipes/red-lentil-latkes"
+    },
+    {
+      "slug": "red-monster-smoothie",
+      "timestamp": "20251231044450",
+      "originalUrl": "https://www.myplate.gov/recipes/red-monster-smoothie"
+    },
+    {
+      "slug": "red-potato-and-cabbage-colcannon",
+      "timestamp": "20251231045354",
+      "originalUrl": "https://www.myplate.gov/recipes/red-potato-and-cabbage-colcannon"
+    },
+    {
+      "slug": "red-potato-salad",
+      "timestamp": "20251231025015",
+      "originalUrl": "https://www.myplate.gov/recipes/red-potato-salad"
+    },
+    {
+      "slug": "refried-beans",
+      "timestamp": "20251231022339",
+      "originalUrl": "https://www.myplate.gov/recipes/refried-beans"
+    },
+    {
+      "slug": "rhubarb-blueberry-crisp",
+      "timestamp": "20251231035049",
+      "originalUrl": "https://www.myplate.gov/recipes/rhubarb-blueberry-crisp"
+    },
+    {
+      "slug": "rice-bowl-breakfast-fruit-and-nuts",
+      "timestamp": "20251231021024",
+      "originalUrl": "https://www.myplate.gov/recipes/rice-bowl-breakfast-fruit-and-nuts"
+    },
+    {
+      "slug": "rice-chicken-arroz-con-pollo",
+      "timestamp": "20251231041435",
+      "originalUrl": "https://www.myplate.gov/recipes/rice-chicken-arroz-con-pollo"
+    },
+    {
+      "slug": "rice-crusted-pizza",
+      "timestamp": "20251231045537",
+      "originalUrl": "https://www.myplate.gov/recipes/rice-crusted-pizza"
+    },
+    {
+      "slug": "rice-dessert",
+      "timestamp": "20251231020725",
+      "originalUrl": "https://www.myplate.gov/recipes/rice-dessert"
+    },
+    {
+      "slug": "rice-pudding",
+      "timestamp": "20251231045601",
+      "originalUrl": "https://www.myplate.gov/recipes/rice-pudding"
+    },
+    {
+      "slug": "rice-pudding1",
+      "timestamp": "20251231042723",
+      "originalUrl": "https://www.myplate.gov/recipes/rice-pudding1"
+    },
+    {
+      "slug": "rice-salad",
+      "timestamp": "20251231042141",
+      "originalUrl": "https://www.myplate.gov/recipes/rice-salad"
+    },
+    {
+      "slug": "rise-and-shine-cobbler",
+      "timestamp": "20251231040932",
+      "originalUrl": "https://www.myplate.gov/recipes/rise-and-shine-cobbler"
+    },
+    {
+      "slug": "roast-chicken",
+      "timestamp": "20251231050612",
+      "originalUrl": "https://www.myplate.gov/recipes/roast-chicken"
+    },
+    {
+      "slug": "roast-turkey-breast-rosemary-sage-and-thyme",
+      "timestamp": "20251231033740",
+      "originalUrl": "https://www.myplate.gov/recipes/roast-turkey-breast-rosemary-sage-and-thyme"
+    },
+    {
+      "slug": "roasted-bell-peppers",
+      "timestamp": "20251231042308",
+      "originalUrl": "https://www.myplate.gov/recipes/roasted-bell-peppers"
+    },
+    {
+      "slug": "roasted-brussels-sprouts",
+      "timestamp": "20251231045746",
+      "originalUrl": "https://www.myplate.gov/recipes/roasted-brussels-sprouts"
+    },
+    {
+      "slug": "roasted-brussels-sprouts-potatoes-and-chicken",
+      "timestamp": "20251231034024",
+      "originalUrl": "https://www.myplate.gov/recipes/roasted-brussels-sprouts-potatoes-and-chicken"
+    },
+    {
+      "slug": "roasted-cauliflower",
+      "timestamp": "20250917115413",
+      "originalUrl": "https://www.myplate.gov/recipes/roasted-cauliflower"
+    },
+    {
+      "slug": "roasted-cauliflower-steaks",
+      "timestamp": "20251231044226",
+      "originalUrl": "https://www.myplate.gov/recipes/roasted-cauliflower-steaks"
+    },
+    {
+      "slug": "roasted-chickpeas-garbanzo-beans",
+      "timestamp": "20251231021353",
+      "originalUrl": "https://www.myplate.gov/recipes/roasted-chickpeas-garbanzo-beans"
+    },
+    {
+      "slug": "roasted-herb-potatoes",
+      "timestamp": "20251231035236",
+      "originalUrl": "https://www.myplate.gov/recipes/roasted-herb-potatoes"
+    },
+    {
+      "slug": "roasted-pork-tacos-pico-de-gallo",
+      "timestamp": "20251231034031",
+      "originalUrl": "https://www.myplate.gov/recipes/roasted-pork-tacos-pico-de-gallo"
+    },
+    {
+      "slug": "roasted-potatoes",
+      "timestamp": "20251231043940",
+      "originalUrl": "https://www.myplate.gov/recipes/roasted-potatoes"
+    },
+    {
+      "slug": "roasted-pumpkin-seed-snack-mix",
+      "timestamp": "20251231043311",
+      "originalUrl": "https://www.myplate.gov/recipes/roasted-pumpkin-seed-snack-mix"
+    },
+    {
+      "slug": "roasted-root-vegetables",
+      "timestamp": "20251231034627",
+      "originalUrl": "https://www.myplate.gov/recipes/roasted-root-vegetables"
+    },
+    {
+      "slug": "roasted-tomatoes-herbs",
+      "timestamp": "20251231035242",
+      "originalUrl": "https://www.myplate.gov/recipes/roasted-tomatoes-herbs"
+    },
+    {
+      "slug": "round-steak-casserole",
+      "timestamp": "20251231034924",
+      "originalUrl": "https://www.myplate.gov/recipes/round-steak-casserole"
+    },
+    {
+      "slug": "salad-pineapple-nuts-and-raisins",
+      "timestamp": "20251231034302",
+      "originalUrl": "https://www.myplate.gov/recipes/salad-pineapple-nuts-and-raisins"
+    },
+    {
+      "slug": "salata-ma-jibna-salad-parmesan-cheese",
+      "timestamp": "20251231050715",
+      "originalUrl": "https://www.myplate.gov/recipes/salata-ma-jibna-salad-parmesan-cheese"
+    },
+    {
+      "slug": "salmon-burgers",
+      "timestamp": "20251231031853",
+      "originalUrl": "https://www.myplate.gov/recipes/salmon-burgers"
+    },
+    {
+      "slug": "salmon-burgers-and-sweet-potato-oven-fries",
+      "timestamp": "20251231042328",
+      "originalUrl": "https://www.myplate.gov/recipes/salmon-burgers-and-sweet-potato-oven-fries"
+    },
+    {
+      "slug": "salmon-loaf",
+      "timestamp": "20251109230719",
+      "originalUrl": "https://www.myplate.gov/recipes/salmon-loaf"
+    },
+    {
+      "slug": "salmon-patties",
+      "timestamp": "20251231031907",
+      "originalUrl": "https://www.myplate.gov/recipes/salmon-patties"
+    },
+    {
+      "slug": "salmon-spread",
+      "timestamp": "20251231031333",
+      "originalUrl": "https://www.myplate.gov/recipes/salmon-spread"
+    },
+    {
+      "slug": "salsa-pinto-beans",
+      "timestamp": "20251231021403",
+      "originalUrl": "https://www.myplate.gov/recipes/salsa-pinto-beans"
+    },
+    {
+      "slug": "salsa1",
+      "timestamp": "20251231032524",
+      "originalUrl": "https://www.myplate.gov/recipes/salsa1"
+    },
+    {
+      "slug": "salt-free-all-purpose-blend",
+      "timestamp": "20251231041540",
+      "originalUrl": "https://www.myplate.gov/recipes/salt-free-all-purpose-blend"
+    },
+    {
+      "slug": "sanchico-tuna-salad",
+      "timestamp": "20251231031340",
+      "originalUrl": "https://www.myplate.gov/recipes/sanchico-tuna-salad"
+    },
+    {
+      "slug": "sarahs-green-bean-casserole",
+      "timestamp": "20251231034945",
+      "originalUrl": "https://www.myplate.gov/recipes/sarahs-green-bean-casserole"
+    },
+    {
+      "slug": "sarahs-spicy-curry-turkey-soup",
+      "timestamp": "20251231014715",
+      "originalUrl": "https://www.myplate.gov/recipes/sarahs-spicy-curry-turkey-soup"
+    },
+    {
+      "slug": "sardine-cucumber-and-tomato-sandwich",
+      "timestamp": "20251231021912",
+      "originalUrl": "https://www.myplate.gov/recipes/sardine-cucumber-and-tomato-sandwich"
+    },
+    {
+      "slug": "sauteed-beet-greens",
+      "timestamp": "20251231040457",
+      "originalUrl": "https://www.myplate.gov/recipes/sauteed-beet-greens"
+    },
+    {
+      "slug": "sauteed-cabbage-and-onion",
+      "timestamp": "20251231032140",
+      "originalUrl": "https://www.myplate.gov/recipes/sauteed-cabbage-and-onion"
+    },
+    {
+      "slug": "sauteed-cauliflower-rice",
+      "timestamp": "20251231041835",
+      "originalUrl": "https://www.myplate.gov/recipes/sauteed-cauliflower-rice"
+    },
+    {
+      "slug": "sauteed-walleye-tarragon",
+      "timestamp": "20251231020437",
+      "originalUrl": "https://www.myplate.gov/recipes/sauteed-walleye-tarragon"
+    },
+    {
+      "slug": "savory-bread-pudding-kale-and-butternut-squash",
+      "timestamp": "20251231021908",
+      "originalUrl": "https://www.myplate.gov/recipes/savory-bread-pudding-kale-and-butternut-squash"
+    },
+    {
+      "slug": "savory-meatloaf-muffins",
+      "timestamp": "20251231041800",
+      "originalUrl": "https://www.myplate.gov/recipes/savory-meatloaf-muffins"
+    },
+    {
+      "slug": "savory-spicy-ground-beef-succotash",
+      "timestamp": "20251231021341",
+      "originalUrl": "https://www.myplate.gov/recipes/savory-spicy-ground-beef-succotash"
+    },
+    {
+      "slug": "scallion-rice",
+      "timestamp": "20251231031940",
+      "originalUrl": "https://www.myplate.gov/recipes/scallion-rice"
+    },
+    {
+      "slug": "scalloped-potatoes",
+      "timestamp": "20251231020807",
+      "originalUrl": "https://www.myplate.gov/recipes/scalloped-potatoes"
+    },
+    {
+      "slug": "scalloped-potatoes-and-chicken-fennel",
+      "timestamp": "20251231032850",
+      "originalUrl": "https://www.myplate.gov/recipes/scalloped-potatoes-and-chicken-fennel"
+    },
+    {
+      "slug": "scalloped-potatoes-ii",
+      "timestamp": "20251231041317",
+      "originalUrl": "https://www.myplate.gov/recipes/scalloped-potatoes-ii"
+    },
+    {
+      "slug": "scrambled-eggs-vegetables-cheese",
+      "timestamp": "20250520203039",
+      "originalUrl": "https://www.myplate.gov/recipes/scrambled-eggs-vegetables-cheese"
+    },
+    {
+      "slug": "scrambled-eggs-zucchini",
+      "timestamp": "20251231034040",
+      "originalUrl": "https://www.myplate.gov/recipes/scrambled-eggs-zucchini"
+    },
+    {
+      "slug": "scrambled-tofu",
+      "timestamp": "20251231021739",
+      "originalUrl": "https://www.myplate.gov/recipes/scrambled-tofu"
+    },
+    {
+      "slug": "seared-greens",
+      "timestamp": "20251231045331",
+      "originalUrl": "https://www.myplate.gov/recipes/seared-greens"
+    },
+    {
+      "slug": "seasoned-roasted-vegetables",
+      "timestamp": "20251231033955",
+      "originalUrl": "https://www.myplate.gov/recipes/seasoned-roasted-vegetables"
+    },
+    {
+      "slug": "sensational-six-layer-dinner",
+      "timestamp": "20250209201419",
+      "originalUrl": "https://www.myplate.gov/recipes/sensational-six-layer-dinner"
+    },
+    {
+      "slug": "sesame-turnips-and-carrots",
+      "timestamp": "20251231044955",
+      "originalUrl": "https://www.myplate.gov/recipes/sesame-turnips-and-carrots"
+    },
+    {
+      "slug": "shake-pudding",
+      "timestamp": "20251231034405",
+      "originalUrl": "https://www.myplate.gov/recipes/shake-pudding"
+    },
+    {
+      "slug": "shepherds-pie",
+      "timestamp": "20251231035403",
+      "originalUrl": "https://www.myplate.gov/recipes/shepherds-pie"
+    },
+    {
+      "slug": "shirini",
+      "timestamp": "20251231034836",
+      "originalUrl": "https://www.myplate.gov/recipes/shirini"
+    },
+    {
+      "slug": "shorba-lamb-and-peanut-soup",
+      "timestamp": "20251231022129",
+      "originalUrl": "https://www.myplate.gov/recipes/shorba-lamb-and-peanut-soup"
+    },
+    {
+      "slug": "short-cut-lasagna",
+      "timestamp": "20250817045514",
+      "originalUrl": "https://www.myplate.gov/recipes/short-cut-lasagna"
+    },
+    {
+      "slug": "shrimp-confetti-salad-sandwich-grapes",
+      "timestamp": "20251231041737",
+      "originalUrl": "https://www.myplate.gov/recipes/shrimp-confetti-salad-sandwich-grapes"
+    },
+    {
+      "slug": "simmered-beans",
+      "timestamp": "20251231031328",
+      "originalUrl": "https://www.myplate.gov/recipes/simmered-beans"
+    },
+    {
+      "slug": "simple-fish-tacos",
+      "timestamp": "20251231034847",
+      "originalUrl": "https://www.myplate.gov/recipes/simple-fish-tacos"
+    },
+    {
+      "slug": "simple-green-smoothie",
+      "timestamp": "20251231021133",
+      "originalUrl": "https://www.myplate.gov/recipes/simple-green-smoothie"
+    },
+    {
+      "slug": "simple-stuffed-peppers",
+      "timestamp": "20250310035750",
+      "originalUrl": "https://www.myplate.gov/recipes/simple-stuffed-peppers"
+    },
+    {
+      "slug": "simply-satisfying-kale-and-tuna-salad",
+      "timestamp": "20251231031912",
+      "originalUrl": "https://www.myplate.gov/recipes/simply-satisfying-kale-and-tuna-salad"
+    },
+    {
+      "slug": "skillet-braised-chicken",
+      "timestamp": "20251231033031",
+      "originalUrl": "https://www.myplate.gov/recipes/skillet-braised-chicken"
+    },
+    {
+      "slug": "skillet-catfish",
+      "timestamp": "20251231024927",
+      "originalUrl": "https://www.myplate.gov/recipes/skillet-catfish"
+    },
+    {
+      "slug": "skillet-lasagna",
+      "timestamp": "20251231045407",
+      "originalUrl": "https://www.myplate.gov/recipes/skillet-lasagna"
+    },
+    {
+      "slug": "skillet-meals",
+      "timestamp": "20251231031413",
+      "originalUrl": "https://www.myplate.gov/recipes/skillet-meals"
+    },
+    {
+      "slug": "skillet-noodles-and-beef",
+      "timestamp": "20251231035622",
+      "originalUrl": "https://www.myplate.gov/recipes/skillet-noodles-and-beef"
+    },
+    {
+      "slug": "skillet-pasta-dinner",
+      "timestamp": "20251231042456",
+      "originalUrl": "https://www.myplate.gov/recipes/skillet-pasta-dinner"
+    },
+    {
+      "slug": "skinny-pizza",
+      "timestamp": "20251231042549",
+      "originalUrl": "https://www.myplate.gov/recipes/skinny-pizza"
+    },
+    {
+      "slug": "sloppy-garden-joes",
+      "timestamp": "20251231034602",
+      "originalUrl": "https://www.myplate.gov/recipes/sloppy-garden-joes"
+    },
+    {
+      "slug": "slow-cook-barbecue",
+      "timestamp": "20251231004802",
+      "originalUrl": "https://www.myplate.gov/recipes/slow-cook-barbecue"
+    },
+    {
+      "slug": "slow-cooker-beans",
+      "timestamp": "20251231020604",
+      "originalUrl": "https://www.myplate.gov/recipes/slow-cooker-beans"
+    },
+    {
+      "slug": "slow-cooker-beef-stew",
+      "timestamp": "20251231040405",
+      "originalUrl": "https://www.myplate.gov/recipes/slow-cooker-beef-stew"
+    },
+    {
+      "slug": "slow-cooker-cheesy-swiss-steak",
+      "timestamp": "20251231031301",
+      "originalUrl": "https://www.myplate.gov/recipes/slow-cooker-cheesy-swiss-steak"
+    },
+    {
+      "slug": "slow-cooker-hamburger-stew",
+      "timestamp": "20250714002500",
+      "originalUrl": "https://www.myplate.gov/recipes/slow-cooker-hamburger-stew"
+    },
+    {
+      "slug": "slow-cooker-lentil-soup",
+      "timestamp": "20251231041248",
+      "originalUrl": "https://www.myplate.gov/recipes/slow-cooker-lentil-soup"
+    },
+    {
+      "slug": "slow-cooker-pork-stew-over-brown-rice",
+      "timestamp": "20251231041409",
+      "originalUrl": "https://www.myplate.gov/recipes/slow-cooker-pork-stew-over-brown-rice"
+    },
+    {
+      "slug": "smoked-ham-hocks-lima-beans",
+      "timestamp": "20250911040051",
+      "originalUrl": "https://www.myplate.gov/recipes/smoked-ham-hocks-lima-beans"
+    },
+    {
+      "slug": "smoky-mustard-maple-salmon",
+      "timestamp": "20251231040810",
+      "originalUrl": "https://www.myplate.gov/recipes/smoky-mustard-maple-salmon"
+    },
+    {
+      "slug": "smothered-greens",
+      "timestamp": "20251231035150",
+      "originalUrl": "https://www.myplate.gov/recipes/smothered-greens"
+    },
+    {
+      "slug": "snappy-cole-slaw",
+      "timestamp": "20251231044318",
+      "originalUrl": "https://www.myplate.gov/recipes/snappy-cole-slaw"
+    },
+    {
+      "slug": "snappy-rice-dish",
+      "timestamp": "20251231025407",
+      "originalUrl": "https://www.myplate.gov/recipes/snappy-rice-dish"
+    },
+    {
+      "slug": "soft-chicken-taco",
+      "timestamp": "20251231033959",
+      "originalUrl": "https://www.myplate.gov/recipes/soft-chicken-taco"
+    },
+    {
+      "slug": "soft-pretzels",
+      "timestamp": "20251231041355",
+      "originalUrl": "https://www.myplate.gov/recipes/soft-pretzels"
+    },
+    {
+      "slug": "somali-summer-salad",
+      "timestamp": "20251231050500",
+      "originalUrl": "https://www.myplate.gov/recipes/somali-summer-salad"
+    },
+    {
+      "slug": "soul-healthy-cornbread",
+      "timestamp": "20251231021253",
+      "originalUrl": "https://www.myplate.gov/recipes/soul-healthy-cornbread"
+    },
+    {
+      "slug": "south-border",
+      "timestamp": "20251231040720",
+      "originalUrl": "https://www.myplate.gov/recipes/south-border"
+    },
+    {
+      "slug": "south-border-salad",
+      "timestamp": "20251231042114",
+      "originalUrl": "https://www.myplate.gov/recipes/south-border-salad"
+    },
+    {
+      "slug": "southern-banana-pudding",
+      "timestamp": "20251231042051",
+      "originalUrl": "https://www.myplate.gov/recipes/southern-banana-pudding"
+    },
+    {
+      "slug": "southwestern-pepper-cups",
+      "timestamp": "20251231021214",
+      "originalUrl": "https://www.myplate.gov/recipes/southwestern-pepper-cups"
+    },
+    {
+      "slug": "soy-marinated-chicken",
+      "timestamp": "20251231040839",
+      "originalUrl": "https://www.myplate.gov/recipes/soy-marinated-chicken"
+    },
+    {
+      "slug": "spaghetti-and-spinach-pesto",
+      "timestamp": "20251231031443",
+      "originalUrl": "https://www.myplate.gov/recipes/spaghetti-and-spinach-pesto"
+    },
+    {
+      "slug": "spaghetti-quick-meat-sauce",
+      "timestamp": "20251231032751",
+      "originalUrl": "https://www.myplate.gov/recipes/spaghetti-quick-meat-sauce"
+    },
+    {
+      "slug": "spaghetti-squash-tomatoes-basil-and-parmesan",
+      "timestamp": "20251231041551",
+      "originalUrl": "https://www.myplate.gov/recipes/spaghetti-squash-tomatoes-basil-and-parmesan"
+    },
+    {
+      "slug": "spanish-baked-fish",
+      "timestamp": "20251231034128",
+      "originalUrl": "https://www.myplate.gov/recipes/spanish-baked-fish"
+    },
+    {
+      "slug": "spanish-frittata",
+      "timestamp": "20251231040913",
+      "originalUrl": "https://www.myplate.gov/recipes/spanish-frittata"
+    },
+    {
+      "slug": "spanish-omelet",
+      "timestamp": "20251231040015",
+      "originalUrl": "https://www.myplate.gov/recipes/spanish-omelet"
+    },
+    {
+      "slug": "spanish-rice",
+      "timestamp": "20251231032302",
+      "originalUrl": "https://www.myplate.gov/recipes/spanish-rice"
+    },
+    {
+      "slug": "speedy-burritos",
+      "timestamp": "20250203185620",
+      "originalUrl": "https://www.myplate.gov/recipes/speedy-burritos"
+    },
+    {
+      "slug": "spiced-baked-squash",
+      "timestamp": "20251231021604",
+      "originalUrl": "https://www.myplate.gov/recipes/spiced-baked-squash"
+    },
+    {
+      "slug": "spicy-baked-fish",
+      "timestamp": "20250315095136",
+      "originalUrl": "https://www.myplate.gov/recipes/spicy-baked-fish"
+    },
+    {
+      "slug": "spicy-baked-fish-ii",
+      "timestamp": "20250311061508",
+      "originalUrl": "https://www.myplate.gov/recipes/spicy-baked-fish-ii"
+    },
+    {
+      "slug": "spicy-baked-squash",
+      "timestamp": "20250304224027",
+      "originalUrl": "https://www.myplate.gov/recipes/spicy-baked-squash"
+    },
+    {
+      "slug": "spicy-carrots-and-squash",
+      "timestamp": "20251231041616",
+      "originalUrl": "https://www.myplate.gov/recipes/spicy-carrots-and-squash"
+    },
+    {
+      "slug": "spicy-chicken-and-potato-soup",
+      "timestamp": "20251231022223",
+      "originalUrl": "https://www.myplate.gov/recipes/spicy-chicken-and-potato-soup"
+    },
+    {
+      "slug": "spicy-cucumber-orange-salad",
+      "timestamp": "20251231032147",
+      "originalUrl": "https://www.myplate.gov/recipes/spicy-cucumber-orange-salad"
+    },
+    {
+      "slug": "spicy-fruit-cup",
+      "timestamp": "20251231043342",
+      "originalUrl": "https://www.myplate.gov/recipes/spicy-fruit-cup"
+    },
+    {
+      "slug": "spicy-okra",
+      "timestamp": "20251231044234",
+      "originalUrl": "https://www.myplate.gov/recipes/spicy-okra"
+    },
+    {
+      "slug": "spicy-oven-baked-chicken",
+      "timestamp": "20251231043413",
+      "originalUrl": "https://www.myplate.gov/recipes/spicy-oven-baked-chicken"
+    },
+    {
+      "slug": "spicy-southern-barbecued-chicken",
+      "timestamp": "20251231022241",
+      "originalUrl": "https://www.myplate.gov/recipes/spicy-southern-barbecued-chicken"
+    },
+    {
+      "slug": "spinach-and-meat-cakes",
+      "timestamp": "20251231033545",
+      "originalUrl": "https://www.myplate.gov/recipes/spinach-and-meat-cakes"
+    },
+    {
+      "slug": "spinach-and-mushroom-enchilada-casserole",
+      "timestamp": "20251010211238",
+      "originalUrl": "https://www.myplate.gov/recipes/spinach-and-mushroom-enchilada-casserole"
+    },
+    {
+      "slug": "spinach-black-bean-salad",
+      "timestamp": "20251231042041",
+      "originalUrl": "https://www.myplate.gov/recipes/spinach-black-bean-salad"
+    },
+    {
+      "slug": "spinach-potato-pancakes",
+      "timestamp": "20251231031950",
+      "originalUrl": "https://www.myplate.gov/recipes/spinach-potato-pancakes"
+    },
+    {
+      "slug": "spinach-rice-salad",
+      "timestamp": "20251231033557",
+      "originalUrl": "https://www.myplate.gov/recipes/spinach-rice-salad"
+    },
+    {
+      "slug": "spinach-salad-apples-and-eggs",
+      "timestamp": "20251231022103",
+      "originalUrl": "https://www.myplate.gov/recipes/spinach-salad-apples-and-eggs"
+    },
+    {
+      "slug": "spinach-salad-apples-and-raisins",
+      "timestamp": "20251231022214",
+      "originalUrl": "https://www.myplate.gov/recipes/spinach-salad-apples-and-raisins"
+    },
+    {
+      "slug": "spinach-stuffed-potatoes",
+      "timestamp": "20251231035631",
+      "originalUrl": "https://www.myplate.gov/recipes/spinach-stuffed-potatoes"
+    },
+    {
+      "slug": "spinach-tomatoes-and-corn",
+      "timestamp": "20251231042749",
+      "originalUrl": "https://www.myplate.gov/recipes/spinach-tomatoes-and-corn"
+    },
+    {
+      "slug": "splendid-fruit-salad",
+      "timestamp": "20250203205921",
+      "originalUrl": "https://www.myplate.gov/recipes/splendid-fruit-salad"
+    },
+    {
+      "slug": "split-pea-soup",
+      "timestamp": "20251231031249",
+      "originalUrl": "https://www.myplate.gov/recipes/split-pea-soup"
+    },
+    {
+      "slug": "split-pea-soup-0",
+      "timestamp": "20251231031604",
+      "originalUrl": "https://www.myplate.gov/recipes/split-pea-soup-0"
+    },
+    {
+      "slug": "spring-vegetable-saute",
+      "timestamp": "20251231033922",
+      "originalUrl": "https://www.myplate.gov/recipes/spring-vegetable-saute"
+    },
+    {
+      "slug": "spring-vegetable-soup",
+      "timestamp": "20251231034145",
+      "originalUrl": "https://www.myplate.gov/recipes/spring-vegetable-soup"
+    },
+    {
+      "slug": "springtime-cereal",
+      "timestamp": "20251231031715",
+      "originalUrl": "https://www.myplate.gov/recipes/springtime-cereal"
+    },
+    {
+      "slug": "spunky-vegetable-pizza",
+      "timestamp": "20250309230123",
+      "originalUrl": "https://www.myplate.gov/recipes/spunky-vegetable-pizza"
+    },
+    {
+      "slug": "squash-apple-casserole",
+      "timestamp": "20250311195029",
+      "originalUrl": "https://www.myplate.gov/recipes/squash-apple-casserole"
+    },
+    {
+      "slug": "squash-salsa",
+      "timestamp": "20251231032151",
+      "originalUrl": "https://www.myplate.gov/recipes/squash-salsa"
+    },
+    {
+      "slug": "squash-soup",
+      "timestamp": "20251231021413",
+      "originalUrl": "https://www.myplate.gov/recipes/squash-soup"
+    },
+    {
+      "slug": "squash-squares",
+      "timestamp": "20250316093249",
+      "originalUrl": "https://www.myplate.gov/recipes/squash-squares"
+    },
+    {
+      "slug": "stewed-cauliflower-tomatoes-onions",
+      "timestamp": "20251231041136",
+      "originalUrl": "https://www.myplate.gov/recipes/stewed-cauliflower-tomatoes-onions"
+    },
+    {
+      "slug": "stir-fried-beef",
+      "timestamp": "20251231021155",
+      "originalUrl": "https://www.myplate.gov/recipes/stir-fried-beef"
+    },
+    {
+      "slug": "stir-fry-chicken-noodles",
+      "timestamp": "20251231042136",
+      "originalUrl": "https://www.myplate.gov/recipes/stir-fry-chicken-noodles"
+    },
+    {
+      "slug": "stir-fry-vegetables-and-beef",
+      "timestamp": "20251231042555",
+      "originalUrl": "https://www.myplate.gov/recipes/stir-fry-vegetables-and-beef"
+    },
+    {
+      "slug": "stove-top-casserole",
+      "timestamp": "20250301171937",
+      "originalUrl": "https://www.myplate.gov/recipes/stove-top-casserole"
+    },
+    {
+      "slug": "stove-top-green-chile-chicken-enchiladas",
+      "timestamp": "20251231031704",
+      "originalUrl": "https://www.myplate.gov/recipes/stove-top-green-chile-chicken-enchiladas"
+    },
+    {
+      "slug": "stove-top-potato-and-cabbage-casserole",
+      "timestamp": "20251231042521",
+      "originalUrl": "https://www.myplate.gov/recipes/stove-top-potato-and-cabbage-casserole"
+    },
+    {
+      "slug": "stovetop-tamale-pie",
+      "timestamp": "20251231033108",
+      "originalUrl": "https://www.myplate.gov/recipes/stovetop-tamale-pie"
+    },
+    {
+      "slug": "strawberries-watermelon-pineapple-salad",
+      "timestamp": "20251231042334",
+      "originalUrl": "https://www.myplate.gov/recipes/strawberries-watermelon-pineapple-salad"
+    },
+    {
+      "slug": "strawberries-white-bean-and-edamame-salad",
+      "timestamp": "20251231032722",
+      "originalUrl": "https://www.myplate.gov/recipes/strawberries-white-bean-and-edamame-salad"
+    },
+    {
+      "slug": "strawberry-banana-parfait",
+      "timestamp": "20251231020444",
+      "originalUrl": "https://www.myplate.gov/recipes/strawberry-banana-parfait"
+    },
+    {
+      "slug": "strawberry-kiwi-yogurt-pops",
+      "timestamp": "20251231042338",
+      "originalUrl": "https://www.myplate.gov/recipes/strawberry-kiwi-yogurt-pops"
+    },
+    {
+      "slug": "strawberry-mango-feta-toast-points",
+      "timestamp": "20251231045451",
+      "originalUrl": "https://www.myplate.gov/recipes/strawberry-mango-feta-toast-points"
+    },
+    {
+      "slug": "strawberry-smores",
+      "timestamp": "20251231020447",
+      "originalUrl": "https://www.myplate.gov/recipes/strawberry-smores"
+    },
+    {
+      "slug": "strawberry-yogurt-pops",
+      "timestamp": "20251231042341",
+      "originalUrl": "https://www.myplate.gov/recipes/strawberry-yogurt-pops"
+    },
+    {
+      "slug": "stuffed-baked-potatoes",
+      "timestamp": "20251231042644",
+      "originalUrl": "https://www.myplate.gov/recipes/stuffed-baked-potatoes"
+    },
+    {
+      "slug": "stuffed-bell-peppers",
+      "timestamp": "20251231022117",
+      "originalUrl": "https://www.myplate.gov/recipes/stuffed-bell-peppers"
+    },
+    {
+      "slug": "stuffed-green-peppers",
+      "timestamp": "20250806111440",
+      "originalUrl": "https://www.myplate.gov/recipes/stuffed-green-peppers"
+    },
+    {
+      "slug": "stuffed-pasta-shells",
+      "timestamp": "20251116212523",
+      "originalUrl": "https://www.myplate.gov/recipes/stuffed-pasta-shells"
+    },
+    {
+      "slug": "stuffed-summer-squash",
+      "timestamp": "20251231031401",
+      "originalUrl": "https://www.myplate.gov/recipes/stuffed-summer-squash"
+    },
+    {
+      "slug": "stuffed-tomatoes",
+      "timestamp": "20251231031740",
+      "originalUrl": "https://www.myplate.gov/recipes/stuffed-tomatoes"
+    },
+    {
+      "slug": "sugar-and-spice-cookies-better-baking-mix",
+      "timestamp": "20251231032102",
+      "originalUrl": "https://www.myplate.gov/recipes/sugar-and-spice-cookies-better-baking-mix"
+    },
+    {
+      "slug": "summer-breeze-smoothie",
+      "timestamp": "20251231020728",
+      "originalUrl": "https://www.myplate.gov/recipes/summer-breeze-smoothie"
+    },
+    {
+      "slug": "summer-fruit-salad",
+      "timestamp": "20250806105501",
+      "originalUrl": "https://www.myplate.gov/recipes/summer-fruit-salad"
+    },
+    {
+      "slug": "summer-italian-vegetables",
+      "timestamp": "20251231045203",
+      "originalUrl": "https://www.myplate.gov/recipes/summer-italian-vegetables"
+    },
+    {
+      "slug": "summer-salad",
+      "timestamp": "20251231042933",
+      "originalUrl": "https://www.myplate.gov/recipes/summer-salad"
+    },
+    {
+      "slug": "summer-squash-italian-style",
+      "timestamp": "20250402124812",
+      "originalUrl": "https://www.myplate.gov/recipes/summer-squash-italian-style"
+    },
+    {
+      "slug": "summer-squash-medley",
+      "timestamp": "20251231045908",
+      "originalUrl": "https://www.myplate.gov/recipes/summer-squash-medley"
+    },
+    {
+      "slug": "summer-squash-squares",
+      "timestamp": "20251231044834",
+      "originalUrl": "https://www.myplate.gov/recipes/summer-squash-squares"
+    },
+    {
+      "slug": "summer-squash-stir-fry",
+      "timestamp": "20251231042928",
+      "originalUrl": "https://www.myplate.gov/recipes/summer-squash-stir-fry"
+    },
+    {
+      "slug": "summer-vegetable-spaghetti",
+      "timestamp": "20251231042507",
+      "originalUrl": "https://www.myplate.gov/recipes/summer-vegetable-spaghetti"
+    },
+    {
+      "slug": "sunshine-rice",
+      "timestamp": "20251231021901",
+      "originalUrl": "https://www.myplate.gov/recipes/sunshine-rice"
+    },
+    {
+      "slug": "sunshine-salad",
+      "timestamp": "20251231042013",
+      "originalUrl": "https://www.myplate.gov/recipes/sunshine-salad"
+    },
+    {
+      "slug": "sure-please-baked-eggs-cheese",
+      "timestamp": "20250403034959",
+      "originalUrl": "https://www.myplate.gov/recipes/sure-please-baked-eggs-cheese"
+    },
+    {
+      "slug": "surfs-tacos",
+      "timestamp": "20250504210728",
+      "originalUrl": "https://www.myplate.gov/recipes/surfs-tacos"
+    },
+    {
+      "slug": "sweet-acorn-squash",
+      "timestamp": "20251231043550",
+      "originalUrl": "https://www.myplate.gov/recipes/sweet-acorn-squash"
+    },
+    {
+      "slug": "sweet-and-juicy-raisin-tapenade",
+      "timestamp": "20251231032530",
+      "originalUrl": "https://www.myplate.gov/recipes/sweet-and-juicy-raisin-tapenade"
+    },
+    {
+      "slug": "sweet-and-sour-cabbage",
+      "timestamp": "20251231041008",
+      "originalUrl": "https://www.myplate.gov/recipes/sweet-and-sour-cabbage"
+    },
+    {
+      "slug": "sweet-and-sour-dressing",
+      "timestamp": "20251231031735",
+      "originalUrl": "https://www.myplate.gov/recipes/sweet-and-sour-dressing"
+    },
+    {
+      "slug": "sweet-and-sour-vegetables",
+      "timestamp": "20251009070926",
+      "originalUrl": "https://www.myplate.gov/recipes/sweet-and-sour-vegetables"
+    },
+    {
+      "slug": "sweet-cornmeal-pudding-ginger-cinnamon",
+      "timestamp": "20251231031801",
+      "originalUrl": "https://www.myplate.gov/recipes/sweet-cornmeal-pudding-ginger-cinnamon"
+    },
+    {
+      "slug": "sweet-potato-and-apple-bake",
+      "timestamp": "20251231050754",
+      "originalUrl": "https://www.myplate.gov/recipes/sweet-potato-and-apple-bake"
+    },
+    {
+      "slug": "sweet-potato-casserole",
+      "timestamp": "20251231040704",
+      "originalUrl": "https://www.myplate.gov/recipes/sweet-potato-casserole"
+    },
+    {
+      "slug": "sweet-potato-casserole-0",
+      "timestamp": "20251231032919",
+      "originalUrl": "https://www.myplate.gov/recipes/sweet-potato-casserole-0"
+    },
+    {
+      "slug": "sweet-potato-cheesecake",
+      "timestamp": "20251231041926",
+      "originalUrl": "https://www.myplate.gov/recipes/sweet-potato-cheesecake"
+    },
+    {
+      "slug": "sweet-potato-custard",
+      "timestamp": "20250515064123",
+      "originalUrl": "https://www.myplate.gov/recipes/sweet-potato-custard"
+    },
+    {
+      "slug": "sweet-potato-harvest-salad",
+      "timestamp": "20251231033333",
+      "originalUrl": "https://www.myplate.gov/recipes/sweet-potato-harvest-salad"
+    },
+    {
+      "slug": "sweet-potato-hash-egg",
+      "timestamp": "20251231042906",
+      "originalUrl": "https://www.myplate.gov/recipes/sweet-potato-hash-egg"
+    },
+    {
+      "slug": "sweet-potato-pancakes",
+      "timestamp": "20251231043510",
+      "originalUrl": "https://www.myplate.gov/recipes/sweet-potato-pancakes"
+    },
+    {
+      "slug": "sweet-potato-pancakes-balsamic-maple-mushrooms",
+      "timestamp": "20251231032407",
+      "originalUrl": "https://www.myplate.gov/recipes/sweet-potato-pancakes-balsamic-maple-mushrooms"
+    },
+    {
+      "slug": "sweet-potato-patties",
+      "timestamp": "20251231033934",
+      "originalUrl": "https://www.myplate.gov/recipes/sweet-potato-patties"
+    },
+    {
+      "slug": "sweet-potato-pie",
+      "timestamp": "20251231043739",
+      "originalUrl": "https://www.myplate.gov/recipes/sweet-potato-pie"
+    },
+    {
+      "slug": "sweet-potato-pone",
+      "timestamp": "20251231031310",
+      "originalUrl": "https://www.myplate.gov/recipes/sweet-potato-pone"
+    },
+    {
+      "slug": "sweet-savory-peanut-butter-dip",
+      "timestamp": "20250420091448",
+      "originalUrl": "https://www.myplate.gov/recipes/sweet-savory-peanut-butter-dip"
+    },
+    {
+      "slug": "sweet-sour-salad-dressing",
+      "timestamp": "20251231042923",
+      "originalUrl": "https://www.myplate.gov/recipes/sweet-sour-salad-dressing"
+    },
+    {
+      "slug": "sweetened-condensed-milk",
+      "timestamp": "20251231035345",
+      "originalUrl": "https://www.myplate.gov/recipes/sweetened-condensed-milk"
+    },
+    {
+      "slug": "swiss-chard-and-cranberries",
+      "timestamp": "20251231044423",
+      "originalUrl": "https://www.myplate.gov/recipes/swiss-chard-and-cranberries"
+    },
+    {
+      "slug": "taco-flavored-potatoes",
+      "timestamp": "20251231044032",
+      "originalUrl": "https://www.myplate.gov/recipes/taco-flavored-potatoes"
+    },
+    {
+      "slug": "taco-salad",
+      "timestamp": "20251231041734",
+      "originalUrl": "https://www.myplate.gov/recipes/taco-salad"
+    },
+    {
+      "slug": "taco-salad-ii",
+      "timestamp": "20250916230405",
+      "originalUrl": "https://www.myplate.gov/recipes/taco-salad-ii"
+    },
+    {
+      "slug": "taco-soup",
+      "timestamp": "20251231035037",
+      "originalUrl": "https://www.myplate.gov/recipes/taco-soup"
+    },
+    {
+      "slug": "tangy",
+      "timestamp": "20251231031833",
+      "originalUrl": "https://www.myplate.gov/recipes/tangy"
+    },
+    {
+      "slug": "tangy-crisp-vegetable-and-pasta-salad",
+      "timestamp": "20251231042204",
+      "originalUrl": "https://www.myplate.gov/recipes/tangy-crisp-vegetable-and-pasta-salad"
+    },
+    {
+      "slug": "tangy-jicama-slaw",
+      "timestamp": "20251231041040",
+      "originalUrl": "https://www.myplate.gov/recipes/tangy-jicama-slaw"
+    },
+    {
+      "slug": "tartar-sauce",
+      "timestamp": "20251231020452",
+      "originalUrl": "https://www.myplate.gov/recipes/tartar-sauce"
+    },
+    {
+      "slug": "tastee-burgers",
+      "timestamp": "20251231032844",
+      "originalUrl": "https://www.myplate.gov/recipes/tastee-burgers"
+    },
+    {
+      "slug": "tasty-chicken-and-veggie-packets",
+      "timestamp": "20251231022200",
+      "originalUrl": "https://www.myplate.gov/recipes/tasty-chicken-and-veggie-packets"
+    },
+    {
+      "slug": "tasty-fish-and-veggie-packets",
+      "timestamp": "20251231020330",
+      "originalUrl": "https://www.myplate.gov/recipes/tasty-fish-and-veggie-packets"
+    },
+    {
+      "slug": "tasty-low-fat-cream-soup",
+      "timestamp": "20251223170339",
+      "originalUrl": "https://www.myplate.gov/recipes/tasty-low-fat-cream-soup"
+    },
+    {
+      "slug": "tasty-veggie-dip",
+      "timestamp": "20251231044255",
+      "originalUrl": "https://www.myplate.gov/recipes/tasty-veggie-dip"
+    },
+    {
+      "slug": "ten-minute-corn-chowder",
+      "timestamp": "20251231024810",
+      "originalUrl": "https://www.myplate.gov/recipes/ten-minute-corn-chowder"
+    },
+    {
+      "slug": "teriyaki-lettuce-wraps",
+      "timestamp": "20251231041746",
+      "originalUrl": "https://www.myplate.gov/recipes/teriyaki-lettuce-wraps"
+    },
+    {
+      "slug": "terrific-bean-taco",
+      "timestamp": "20251231050552",
+      "originalUrl": "https://www.myplate.gov/recipes/terrific-bean-taco"
+    },
+    {
+      "slug": "tex-mex-skillet",
+      "timestamp": "20251231020810",
+      "originalUrl": "https://www.myplate.gov/recipes/tex-mex-skillet"
+    },
+    {
+      "slug": "thai-pineapple-and-chicken",
+      "timestamp": "20251231050821",
+      "originalUrl": "https://www.myplate.gov/recipes/thai-pineapple-and-chicken"
+    },
+    {
+      "slug": "thousand-island-dressing",
+      "timestamp": "20250917112409",
+      "originalUrl": "https://www.myplate.gov/recipes/thousand-island-dressing"
+    },
+    {
+      "slug": "three-bean-salad",
+      "timestamp": "20251231022350",
+      "originalUrl": "https://www.myplate.gov/recipes/three-bean-salad"
+    },
+    {
+      "slug": "three-grain-peanut-bread",
+      "timestamp": "20251231034459",
+      "originalUrl": "https://www.myplate.gov/recipes/three-grain-peanut-bread"
+    },
+    {
+      "slug": "three-sisters-soup",
+      "timestamp": "20251231021538",
+      "originalUrl": "https://www.myplate.gov/recipes/three-sisters-soup"
+    },
+    {
+      "slug": "three-sisters-stew",
+      "timestamp": "20251231050652",
+      "originalUrl": "https://www.myplate.gov/recipes/three-sisters-stew"
+    },
+    {
+      "slug": "tic-tac-toe-veggie-pizza",
+      "timestamp": "20251231025315",
+      "originalUrl": "https://www.myplate.gov/recipes/tic-tac-toe-veggie-pizza"
+    },
+    {
+      "slug": "tofu-broccoli",
+      "timestamp": "20251231024839",
+      "originalUrl": "https://www.myplate.gov/recipes/tofu-broccoli"
+    },
+    {
+      "slug": "tofu-salad",
+      "timestamp": "20251231034446",
+      "originalUrl": "https://www.myplate.gov/recipes/tofu-salad"
+    },
+    {
+      "slug": "tofu-tomato-and-spinach-soup",
+      "timestamp": "20251231034229",
+      "originalUrl": "https://www.myplate.gov/recipes/tofu-tomato-and-spinach-soup"
+    },
+    {
+      "slug": "tomato-and-cucumber-salad",
+      "timestamp": "20251231042957",
+      "originalUrl": "https://www.myplate.gov/recipes/tomato-and-cucumber-salad"
+    },
+    {
+      "slug": "tomato-and-garlic-omelet",
+      "timestamp": "20251231031502",
+      "originalUrl": "https://www.myplate.gov/recipes/tomato-and-garlic-omelet"
+    },
+    {
+      "slug": "tomato-basil-and-bean-pasta-salad",
+      "timestamp": "20251231045243",
+      "originalUrl": "https://www.myplate.gov/recipes/tomato-basil-and-bean-pasta-salad"
+    },
+    {
+      "slug": "tomato-basil-bruschetta",
+      "timestamp": "20251231021631",
+      "originalUrl": "https://www.myplate.gov/recipes/tomato-basil-bruschetta"
+    },
+    {
+      "slug": "tomato-basil-soup",
+      "timestamp": "20251231050116",
+      "originalUrl": "https://www.myplate.gov/recipes/tomato-basil-soup"
+    },
+    {
+      "slug": "tomato-n-cheese-pasta",
+      "timestamp": "20251231034714",
+      "originalUrl": "https://www.myplate.gov/recipes/tomato-n-cheese-pasta"
+    },
+    {
+      "slug": "tortellini-soup",
+      "timestamp": "20251231051106",
+      "originalUrl": "https://www.myplate.gov/recipes/tortellini-soup"
+    },
+    {
+      "slug": "tortilla",
+      "timestamp": "20251231042058",
+      "originalUrl": "https://www.myplate.gov/recipes/tortilla"
+    },
+    {
+      "slug": "tortilla-pizzas",
+      "timestamp": "20251231035409",
+      "originalUrl": "https://www.myplate.gov/recipes/tortilla-pizzas"
+    },
+    {
+      "slug": "tostadas",
+      "timestamp": "20251231041222",
+      "originalUrl": "https://www.myplate.gov/recipes/tostadas"
+    },
+    {
+      "slug": "tostadas-delgadas",
+      "timestamp": "20251231042353",
+      "originalUrl": "https://www.myplate.gov/recipes/tostadas-delgadas"
+    },
+    {
+      "slug": "trail-mix-bars",
+      "timestamp": "20251231033648",
+      "originalUrl": "https://www.myplate.gov/recipes/trail-mix-bars"
+    },
+    {
+      "slug": "trail-treat",
+      "timestamp": "20251231042649",
+      "originalUrl": "https://www.myplate.gov/recipes/trail-treat"
+    },
+    {
+      "slug": "tropical-morning-treat",
+      "timestamp": "20251231044940",
+      "originalUrl": "https://www.myplate.gov/recipes/tropical-morning-treat"
+    },
+    {
+      "slug": "tropical-overnight-oatmeal",
+      "timestamp": "20251231020341",
+      "originalUrl": "https://www.myplate.gov/recipes/tropical-overnight-oatmeal"
+    },
+    {
+      "slug": "tropical-yogurt-pops",
+      "timestamp": "20251231042348",
+      "originalUrl": "https://www.myplate.gov/recipes/tropical-yogurt-pops"
+    },
+    {
+      "slug": "tuna-apple-salad",
+      "timestamp": "20251231031419",
+      "originalUrl": "https://www.myplate.gov/recipes/tuna-apple-salad"
+    },
+    {
+      "slug": "tuna-apple-salad-sandwich",
+      "timestamp": "20251231040551",
+      "originalUrl": "https://www.myplate.gov/recipes/tuna-apple-salad-sandwich"
+    },
+    {
+      "slug": "tuna-melt-burger",
+      "timestamp": "20251231025416",
+      "originalUrl": "https://www.myplate.gov/recipes/tuna-melt-burger"
+    },
+    {
+      "slug": "tuna-pasta",
+      "timestamp": "20251231022059",
+      "originalUrl": "https://www.myplate.gov/recipes/tuna-pasta"
+    },
+    {
+      "slug": "tuna-pasta-casserole",
+      "timestamp": "20251231034638",
+      "originalUrl": "https://www.myplate.gov/recipes/tuna-pasta-casserole"
+    },
+    {
+      "slug": "tuna-quesadillas",
+      "timestamp": "20251231044859",
+      "originalUrl": "https://www.myplate.gov/recipes/tuna-quesadillas"
+    },
+    {
+      "slug": "tuna-salad-grapes",
+      "timestamp": "20251231041104",
+      "originalUrl": "https://www.myplate.gov/recipes/tuna-salad-grapes"
+    },
+    {
+      "slug": "tuna-salad-greens",
+      "timestamp": "20251231022153",
+      "originalUrl": "https://www.myplate.gov/recipes/tuna-salad-greens"
+    },
+    {
+      "slug": "tuna-salad-ii",
+      "timestamp": "20250313132434",
+      "originalUrl": "https://www.myplate.gov/recipes/tuna-salad-ii"
+    },
+    {
+      "slug": "tuna-slider-green-chiles",
+      "timestamp": "20251231035746",
+      "originalUrl": "https://www.myplate.gov/recipes/tuna-slider-green-chiles"
+    },
+    {
+      "slug": "tuna-veggie-antipasto",
+      "timestamp": "20251231041311",
+      "originalUrl": "https://www.myplate.gov/recipes/tuna-veggie-antipasto"
+    },
+    {
+      "slug": "tuna-veggie-picnic-sandwich",
+      "timestamp": "20251231014648",
+      "originalUrl": "https://www.myplate.gov/recipes/tuna-veggie-picnic-sandwich"
+    },
+    {
+      "slug": "turkey-and-cucumber-sandwich",
+      "timestamp": "20251231014631",
+      "originalUrl": "https://www.myplate.gov/recipes/turkey-and-cucumber-sandwich"
+    },
+    {
+      "slug": "turkey-burgers",
+      "timestamp": "20251231050513",
+      "originalUrl": "https://www.myplate.gov/recipes/turkey-burgers"
+    },
+    {
+      "slug": "turkey-gravy",
+      "timestamp": "20251109220919",
+      "originalUrl": "https://www.myplate.gov/recipes/turkey-gravy"
+    },
+    {
+      "slug": "turkey-meatloaf",
+      "timestamp": "20251231050529",
+      "originalUrl": "https://www.myplate.gov/recipes/turkey-meatloaf"
+    },
+    {
+      "slug": "turkey-patties",
+      "timestamp": "20251231023733",
+      "originalUrl": "https://www.myplate.gov/recipes/turkey-patties"
+    },
+    {
+      "slug": "turkey-pinwheel-appetizers",
+      "timestamp": "20251231051007",
+      "originalUrl": "https://www.myplate.gov/recipes/turkey-pinwheel-appetizers"
+    },
+    {
+      "slug": "turkey-potato-salad",
+      "timestamp": "20251231041212",
+      "originalUrl": "https://www.myplate.gov/recipes/turkey-potato-salad"
+    },
+    {
+      "slug": "turkey-salad-orange-vinaigrette",
+      "timestamp": "20251231021218",
+      "originalUrl": "https://www.myplate.gov/recipes/turkey-salad-orange-vinaigrette"
+    },
+    {
+      "slug": "turkey-stew",
+      "timestamp": "20251231034918",
+      "originalUrl": "https://www.myplate.gov/recipes/turkey-stew"
+    },
+    {
+      "slug": "turkey-stuffed-cabbage",
+      "timestamp": "20251231022110",
+      "originalUrl": "https://www.myplate.gov/recipes/turkey-stuffed-cabbage"
+    },
+    {
+      "slug": "turkey-tostadas",
+      "timestamp": "20251231040831",
+      "originalUrl": "https://www.myplate.gov/recipes/turkey-tostadas"
+    },
+    {
+      "slug": "turnip-pancakes",
+      "timestamp": "20251231031616",
+      "originalUrl": "https://www.myplate.gov/recipes/turnip-pancakes"
+    },
+    {
+      "slug": "turtle-apple",
+      "timestamp": "20251231020500",
+      "originalUrl": "https://www.myplate.gov/recipes/turtle-apple"
+    },
+    {
+      "slug": "tuscan-potato-skillet",
+      "timestamp": "20251231043705",
+      "originalUrl": "https://www.myplate.gov/recipes/tuscan-potato-skillet"
+    },
+    {
+      "slug": "two-bean-chili",
+      "timestamp": "20251231040845",
+      "originalUrl": "https://www.myplate.gov/recipes/two-bean-chili"
+    },
+    {
+      "slug": "vegetable-and-rice-skillet-meal",
+      "timestamp": "20251231021830",
+      "originalUrl": "https://www.myplate.gov/recipes/vegetable-and-rice-skillet-meal"
+    },
+    {
+      "slug": "vegetable-and-turkey-stir-fry",
+      "timestamp": "20251231040034",
+      "originalUrl": "https://www.myplate.gov/recipes/vegetable-and-turkey-stir-fry"
+    },
+    {
+      "slug": "vegetable-cheese-soup",
+      "timestamp": "20250806073322",
+      "originalUrl": "https://www.myplate.gov/recipes/vegetable-cheese-soup"
+    },
+    {
+      "slug": "vegetable-chili",
+      "timestamp": "20251231044339",
+      "originalUrl": "https://www.myplate.gov/recipes/vegetable-chili"
+    },
+    {
+      "slug": "vegetable-dipping-sauce",
+      "timestamp": "20251231044251",
+      "originalUrl": "https://www.myplate.gov/recipes/vegetable-dipping-sauce"
+    },
+    {
+      "slug": "vegetable-fried-rice",
+      "timestamp": "20251231045442",
+      "originalUrl": "https://www.myplate.gov/recipes/vegetable-fried-rice"
+    },
+    {
+      "slug": "vegetable-medley-salsa-dip",
+      "timestamp": "20251231022251",
+      "originalUrl": "https://www.myplate.gov/recipes/vegetable-medley-salsa-dip"
+    },
+    {
+      "slug": "vegetable-pizza",
+      "timestamp": "20251231024942",
+      "originalUrl": "https://www.myplate.gov/recipes/vegetable-pizza"
+    },
+    {
+      "slug": "vegetable-rice-tomatoes",
+      "timestamp": "20251231045827",
+      "originalUrl": "https://www.myplate.gov/recipes/vegetable-rice-tomatoes"
+    },
+    {
+      "slug": "vegetable-salad",
+      "timestamp": "20251231031754",
+      "originalUrl": "https://www.myplate.gov/recipes/vegetable-salad"
+    },
+    {
+      "slug": "vegetable-snake",
+      "timestamp": "20251231020508",
+      "originalUrl": "https://www.myplate.gov/recipes/vegetable-snake"
+    },
+    {
+      "slug": "vegetable-soup-chicken",
+      "timestamp": "20251231040414",
+      "originalUrl": "https://www.myplate.gov/recipes/vegetable-soup-chicken"
+    },
+    {
+      "slug": "vegetable-stew",
+      "timestamp": "20251231034950",
+      "originalUrl": "https://www.myplate.gov/recipes/vegetable-stew"
+    },
+    {
+      "slug": "vegetable-stroganoff",
+      "timestamp": "20251231034706",
+      "originalUrl": "https://www.myplate.gov/recipes/vegetable-stroganoff"
+    },
+    {
+      "slug": "vegetable-tacos",
+      "timestamp": "20251231050317",
+      "originalUrl": "https://www.myplate.gov/recipes/vegetable-tacos"
+    },
+    {
+      "slug": "vegetarian-chili",
+      "timestamp": "20251231014712",
+      "originalUrl": "https://www.myplate.gov/recipes/vegetarian-chili"
+    },
+    {
+      "slug": "vegetarian-collard-greens",
+      "timestamp": "20251231042159",
+      "originalUrl": "https://www.myplate.gov/recipes/vegetarian-collard-greens"
+    },
+    {
+      "slug": "vegetarian-matzo-ball-soup",
+      "timestamp": "20251231045110",
+      "originalUrl": "https://www.myplate.gov/recipes/vegetarian-matzo-ball-soup"
+    },
+    {
+      "slug": "vegetarian-spaghetti-sauce",
+      "timestamp": "20251231041558",
+      "originalUrl": "https://www.myplate.gov/recipes/vegetarian-spaghetti-sauce"
+    },
+    {
+      "slug": "vegetarian-stuffed-peppers",
+      "timestamp": "20251231040513",
+      "originalUrl": "https://www.myplate.gov/recipes/vegetarian-stuffed-peppers"
+    },
+    {
+      "slug": "veggie-bean-wrap",
+      "timestamp": "20251231033838",
+      "originalUrl": "https://www.myplate.gov/recipes/veggie-bean-wrap"
+    },
+    {
+      "slug": "veggie-burgers",
+      "timestamp": "20251231045613",
+      "originalUrl": "https://www.myplate.gov/recipes/veggie-burgers"
+    },
+    {
+      "slug": "veggie-chow-mein",
+      "timestamp": "20251231020908",
+      "originalUrl": "https://www.myplate.gov/recipes/veggie-chow-mein"
+    },
+    {
+      "slug": "veggie-dip",
+      "timestamp": "20250616073609",
+      "originalUrl": "https://www.myplate.gov/recipes/veggie-dip"
+    },
+    {
+      "slug": "veggie-loaded-mashed-potato-bowl",
+      "timestamp": "20251231032747",
+      "originalUrl": "https://www.myplate.gov/recipes/veggie-loaded-mashed-potato-bowl"
+    },
+    {
+      "slug": "veggie-noodles",
+      "timestamp": "20250908211036",
+      "originalUrl": "https://www.myplate.gov/recipes/veggie-noodles"
+    },
+    {
+      "slug": "veggie-omelet-mug",
+      "timestamp": "20251231032538",
+      "originalUrl": "https://www.myplate.gov/recipes/veggie-omelet-mug"
+    },
+    {
+      "slug": "veggie-pizza-pita-pockets",
+      "timestamp": "20251231031929",
+      "originalUrl": "https://www.myplate.gov/recipes/veggie-pizza-pita-pockets"
+    },
+    {
+      "slug": "veggie-quesadillas",
+      "timestamp": "20251231045549",
+      "originalUrl": "https://www.myplate.gov/recipes/veggie-quesadillas"
+    },
+    {
+      "slug": "veggie-stir-fry-turkey",
+      "timestamp": "20251231041752",
+      "originalUrl": "https://www.myplate.gov/recipes/veggie-stir-fry-turkey"
+    },
+    {
+      "slug": "veggie-stuffed-pita",
+      "timestamp": "20251231050246",
+      "originalUrl": "https://www.myplate.gov/recipes/veggie-stuffed-pita"
+    },
+    {
+      "slug": "very-berry-muesli",
+      "timestamp": "20251231040935",
+      "originalUrl": "https://www.myplate.gov/recipes/very-berry-muesli"
+    },
+    {
+      "slug": "very-berry-smoothie",
+      "timestamp": "20251231035423",
+      "originalUrl": "https://www.myplate.gov/recipes/very-berry-smoothie"
+    },
+    {
+      "slug": "vidalia-onion-and-tomato-salad-grilled-tuna",
+      "timestamp": "20251231021346",
+      "originalUrl": "https://www.myplate.gov/recipes/vidalia-onion-and-tomato-salad-grilled-tuna"
+    },
+    {
+      "slug": "vinaigrette-salad-dressing",
+      "timestamp": "20251231043613",
+      "originalUrl": "https://www.myplate.gov/recipes/vinaigrette-salad-dressing"
+    },
+    {
+      "slug": "waldorf-salad",
+      "timestamp": "20251022070440",
+      "originalUrl": "https://www.myplate.gov/recipes/waldorf-salad"
+    },
+    {
+      "slug": "walleye-chowder",
+      "timestamp": "20251231035308",
+      "originalUrl": "https://www.myplate.gov/recipes/walleye-chowder"
+    },
+    {
+      "slug": "watermelon-gazpacho",
+      "timestamp": "20251231032201",
+      "originalUrl": "https://www.myplate.gov/recipes/watermelon-gazpacho"
+    },
+    {
+      "slug": "wheat-berry-chili",
+      "timestamp": "20251231050520",
+      "originalUrl": "https://www.myplate.gov/recipes/wheat-berry-chili"
+    },
+    {
+      "slug": "white-bean-bruschetta",
+      "timestamp": "20251211174338",
+      "originalUrl": "https://www.myplate.gov/recipes/white-bean-bruschetta"
+    },
+    {
+      "slug": "white-chicken-chili",
+      "timestamp": "20251231020820",
+      "originalUrl": "https://www.myplate.gov/recipes/white-chicken-chili"
+    },
+    {
+      "slug": "white-chili",
+      "timestamp": "20251231014644",
+      "originalUrl": "https://www.myplate.gov/recipes/white-chili"
+    },
+    {
+      "slug": "white-sauce-thin",
+      "timestamp": "20251231041843",
+      "originalUrl": "https://www.myplate.gov/recipes/white-sauce-thin"
+    },
+    {
+      "slug": "whole-grain-strawberry-pancakes",
+      "timestamp": "20251231033551",
+      "originalUrl": "https://www.myplate.gov/recipes/whole-grain-strawberry-pancakes"
+    },
+    {
+      "slug": "whole-wheat-garlic-bread-sticks",
+      "timestamp": "20251231043605",
+      "originalUrl": "https://www.myplate.gov/recipes/whole-wheat-garlic-bread-sticks"
+    },
+    {
+      "slug": "whole-wheat-muffins",
+      "timestamp": "20251231041934",
+      "originalUrl": "https://www.myplate.gov/recipes/whole-wheat-muffins"
+    },
+    {
+      "slug": "wild-rice-muffins",
+      "timestamp": "20251231021102",
+      "originalUrl": "https://www.myplate.gov/recipes/wild-rice-muffins"
+    },
+    {
+      "slug": "winter-crisp",
+      "timestamp": "20251231021204",
+      "originalUrl": "https://www.myplate.gov/recipes/winter-crisp"
+    },
+    {
+      "slug": "wobbly-wonders",
+      "timestamp": "20251231041026",
+      "originalUrl": "https://www.myplate.gov/recipes/wobbly-wonders"
+    },
+    {
+      "slug": "wonderful-stuffed-potatoes",
+      "timestamp": "20250420075247",
+      "originalUrl": "https://www.myplate.gov/recipes/wonderful-stuffed-potatoes"
+    },
+    {
+      "slug": "yellow-potato-and-red-pepper-shrimp-saute",
+      "timestamp": "20251231032733",
+      "originalUrl": "https://www.myplate.gov/recipes/yellow-potato-and-red-pepper-shrimp-saute"
+    },
+    {
+      "slug": "yogurt-berry-parfait",
+      "timestamp": "20251231020511",
+      "originalUrl": "https://www.myplate.gov/recipes/yogurt-berry-parfait"
+    },
+    {
+      "slug": "yogurt-fruit-salad",
+      "timestamp": "20251231042702",
+      "originalUrl": "https://www.myplate.gov/recipes/yogurt-fruit-salad"
+    },
+    {
+      "slug": "yogurt-pops",
+      "timestamp": "20251231040516",
+      "originalUrl": "https://www.myplate.gov/recipes/yogurt-pops"
+    },
+    {
+      "slug": "yogurt-popsicles",
+      "timestamp": "20251231042225",
+      "originalUrl": "https://www.myplate.gov/recipes/yogurt-popsicles"
+    },
+    {
+      "slug": "yogurt-smoothie-bag",
+      "timestamp": "20250420090830",
+      "originalUrl": "https://www.myplate.gov/recipes/yogurt-smoothie-bag"
+    },
+    {
+      "slug": "yummy-bagels",
+      "timestamp": "20250227125115",
+      "originalUrl": "https://www.myplate.gov/recipes/yummy-bagels"
+    },
+    {
+      "slug": "yummy-bean-dip",
+      "timestamp": "20250302004608",
+      "originalUrl": "https://www.myplate.gov/recipes/yummy-bean-dip"
+    },
+    {
+      "slug": "zesty-citrus-coleslaw",
+      "timestamp": "20251231041003",
+      "originalUrl": "https://www.myplate.gov/recipes/zesty-citrus-coleslaw"
+    },
+    {
+      "slug": "zesty-herb-salad-dressing",
+      "timestamp": "20251231041638",
+      "originalUrl": "https://www.myplate.gov/recipes/zesty-herb-salad-dressing"
+    },
+    {
+      "slug": "zesty-lemon-fish",
+      "timestamp": "20251231034256",
+      "originalUrl": "https://www.myplate.gov/recipes/zesty-lemon-fish"
+    },
+    {
+      "slug": "zesty-orange-carrots",
+      "timestamp": "20251231042023",
+      "originalUrl": "https://www.myplate.gov/recipes/zesty-orange-carrots"
+    },
+    {
+      "slug": "zesty-pasta-primavera-salad",
+      "timestamp": "20251231020714",
+      "originalUrl": "https://www.myplate.gov/recipes/zesty-pasta-primavera-salad"
+    },
+    {
+      "slug": "zesty-skillet-zucchini",
+      "timestamp": "20251231032119",
+      "originalUrl": "https://www.myplate.gov/recipes/zesty-skillet-zucchini"
+    },
+    {
+      "slug": "zingy-lemon-chicken-pasta",
+      "timestamp": "20251231045310",
+      "originalUrl": "https://www.myplate.gov/recipes/zingy-lemon-chicken-pasta"
+    },
+    {
+      "slug": "zucchini-and-tomatoes",
+      "timestamp": "20251231050959",
+      "originalUrl": "https://www.myplate.gov/recipes/zucchini-and-tomatoes"
+    },
+    {
+      "slug": "zucchini-au-gratin",
+      "timestamp": "20251231041627",
+      "originalUrl": "https://www.myplate.gov/recipes/zucchini-au-gratin"
+    },
+    {
+      "slug": "zucchini-bread",
+      "timestamp": "20251231020845",
+      "originalUrl": "https://www.myplate.gov/recipes/zucchini-bread"
+    },
+    {
+      "slug": "zucchini-casserole",
+      "timestamp": "20251231024754",
+      "originalUrl": "https://www.myplate.gov/recipes/zucchini-casserole"
+    },
+    {
+      "slug": "zucchini-coleslaw",
+      "timestamp": "20251231042229",
+      "originalUrl": "https://www.myplate.gov/recipes/zucchini-coleslaw"
+    },
+    {
+      "slug": "zucchini-pancakes",
+      "timestamp": "20251231034512",
+      "originalUrl": "https://www.myplate.gov/recipes/zucchini-pancakes"
+    },
+    {
+      "slug": "zucchini-recipe",
+      "timestamp": "20250303142711",
+      "originalUrl": "https://www.myplate.gov/recipes/zucchini-recipe"
+    },
+    {
+      "slug": "zucchini-stir-fry",
+      "timestamp": "20251231022416",
+      "originalUrl": "https://www.myplate.gov/recipes/zucchini-stir-fry"
+    }
+  ]
+}

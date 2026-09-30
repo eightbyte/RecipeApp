@@ -1,0 +1,770 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Seed Corpus Curator</title>
+<style>
+  :root {
+    --bg: #f6f7f9;
+    --surface: #ffffff;
+    --surface-alt: #f0f2f5;
+    --border: #dfe3e8;
+    --text: #1b1f24;
+    --text-muted: #6b7280;
+    --accent: #2f6f4f;
+    --accent-soft: #e6f0ea;
+    --danger: #b3261e;
+    --danger-soft: #fdecea;
+    --mark: #ffe9a8;
+    --radius: 8px;
+    color-scheme: light;
+  }
+
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #16181d;
+      --surface: #1e2127;
+      --surface-alt: #262a31;
+      --border: #343a43;
+      --text: #e7e9ec;
+      --text-muted: #9aa2ad;
+      --accent: #6fc494;
+      --accent-soft: #1f3329;
+      --danger: #f2857c;
+      --danger-soft: #3a2220;
+      --mark: #6b5a1f;
+      color-scheme: dark;
+    }
+  }
+
+  * { box-sizing: border-box; }
+  [hidden] { display: none !important; }
+
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--text);
+    font: 14px/1.5 system-ui, -apple-system, "Segoe UI", sans-serif;
+  }
+
+  mark { background: var(--mark); color: inherit; border-radius: 2px; padding: 0 1px; }
+
+  /* ── Header ─────────────────────────────────────────────────────────── */
+
+  header {
+    position: sticky;
+    top: 0;
+    z-index: 10;
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+    padding: 12px 16px 10px;
+  }
+
+  .header-inner { max-width: 1100px; margin: 0 auto; }
+
+  .title-row {
+    display: flex;
+    align-items: baseline;
+    gap: 10px;
+    flex-wrap: wrap;
+    margin-bottom: 10px;
+  }
+  .title-row h1 { font-size: 15px; margin: 0; font-weight: 650; letter-spacing: -0.01em; }
+  .title-row .path {
+    font: 11px ui-monospace, "Cascadia Code", Consolas, monospace;
+    color: var(--text-muted);
+    word-break: break-all;
+  }
+
+  .search-row { display: flex; gap: 8px; align-items: center; }
+
+  #search {
+    flex: 1;
+    min-width: 0;
+    padding: 9px 12px;
+    font-size: 14px;
+    font-family: inherit;
+    color: var(--text);
+    background: var(--surface-alt);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+  }
+  #search:focus { outline: 2px solid var(--accent); outline-offset: -1px; }
+
+  .filters {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px 14px;
+    align-items: center;
+    margin-top: 9px;
+    font-size: 12px;
+    color: var(--text-muted);
+  }
+  .filters .group { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; }
+  .filters .group > span { font-weight: 600; }
+
+  .chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    padding: 3px 9px;
+    border: 1px solid var(--border);
+    border-radius: 999px;
+    background: var(--surface);
+    cursor: pointer;
+    user-select: none;
+    color: var(--text-muted);
+  }
+  .chip input { margin: 0; accent-color: var(--accent); }
+  .chip:has(input:checked) {
+    background: var(--accent-soft);
+    border-color: var(--accent);
+    color: var(--text);
+  }
+
+  .status-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    align-items: center;
+    margin-top: 10px;
+    padding-top: 10px;
+    border-top: 1px solid var(--border);
+  }
+  #counts { font-size: 12px; color: var(--text-muted); flex: 1; min-width: 160px; }
+  #counts strong { color: var(--text); font-variant-numeric: tabular-nums; }
+
+  button {
+    font: inherit;
+    font-size: 12px;
+    padding: 6px 12px;
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    background: var(--surface);
+    color: var(--text);
+    cursor: pointer;
+  }
+  button:hover:not(:disabled) { background: var(--surface-alt); }
+  button:disabled { opacity: 0.45; cursor: default; }
+  button.danger { border-color: var(--danger); color: var(--danger); background: var(--danger-soft); }
+  button.danger:hover:not(:disabled) { background: var(--danger); color: #fff; }
+
+  /* ── List ───────────────────────────────────────────────────────────── */
+
+  main { max-width: 1100px; margin: 0 auto; padding: 14px 16px 60px; }
+
+  #list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 6px; }
+
+  .row {
+    display: grid;
+    grid-template-columns: auto 64px 1fr;
+    gap: 0 12px;
+    align-items: start;
+    padding: 9px 12px 9px 10px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+  }
+  .row.selected { border-color: var(--accent); background: var(--accent-soft); }
+
+  .row .pick { display: flex; align-items: center; height: 46px; }
+  .row .pick input { width: 16px; height: 16px; accent-color: var(--accent); cursor: pointer; }
+
+  .thumb {
+    width: 64px;
+    height: 46px;
+    border-radius: 5px;
+    overflow: hidden;
+    background: var(--surface-alt);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .thumb img { width: 100%; height: 100%; object-fit: cover; display: block; }
+  .thumb .none { font-size: 9px; color: var(--text-muted); text-align: center; line-height: 1.2; }
+
+  .summary {
+    text-align: left;
+    background: none;
+    border: none;
+    padding: 0;
+    font: inherit;
+    color: inherit;
+    cursor: pointer;
+    min-width: 0;
+  }
+  .summary:hover .name { color: var(--accent); }
+  .name { font-weight: 600; font-size: 14px; }
+  .meta {
+    font: 11px ui-monospace, "Cascadia Code", Consolas, monospace;
+    color: var(--text-muted);
+    margin-top: 1px;
+    overflow-wrap: anywhere;
+  }
+  .snippets { margin-top: 4px; font-size: 12px; color: var(--text-muted); }
+  .snippets div { overflow-wrap: anywhere; }
+
+  .detail {
+    grid-column: 1 / -1;
+    margin-top: 10px;
+    padding-top: 10px;
+    border-top: 1px dashed var(--border);
+    display: grid;
+    grid-template-columns: 220px 1fr;
+    gap: 16px;
+  }
+  @media (max-width: 640px) {
+    .detail { grid-template-columns: 1fr; }
+    .row { grid-template-columns: auto 48px 1fr; }
+    .thumb { width: 48px; height: 36px; }
+  }
+  .detail img { width: 100%; border-radius: 6px; display: block; }
+  .detail h3 {
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--text-muted);
+    margin: 0 0 4px;
+  }
+  .detail section + section { margin-top: 12px; }
+  .detail ul, .detail ol { margin: 0; padding-left: 20px; }
+  .detail li { margin-bottom: 2px; }
+  .detail p { margin: 0; }
+  .detail a { color: var(--accent); }
+
+  #sentinel { height: 1px; }
+  #empty { text-align: center; color: var(--text-muted); padding: 48px 16px; }
+
+  /* ── Confirm dialog ─────────────────────────────────────────────────── */
+
+  dialog {
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    background: var(--surface);
+    color: var(--text);
+    padding: 20px;
+    max-width: 460px;
+    width: calc(100% - 32px);
+  }
+  dialog::backdrop { background: rgba(0, 0, 0, 0.45); }
+  dialog h2 { margin: 0 0 8px; font-size: 16px; }
+  dialog p { margin: 0 0 10px; font-size: 13px; color: var(--text-muted); }
+  dialog ul {
+    margin: 0 0 14px;
+    padding-left: 18px;
+    font-size: 12px;
+    max-height: 180px;
+    overflow-y: auto;
+  }
+  dialog .actions { display: flex; gap: 8px; justify-content: flex-end; }
+
+  #toast {
+    position: fixed;
+    bottom: 16px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: var(--text);
+    color: var(--bg);
+    padding: 9px 16px;
+    border-radius: var(--radius);
+    font-size: 13px;
+    z-index: 20;
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="header-inner">
+    <div class="title-row">
+      <h1>Seed Corpus Curator</h1>
+      <span class="path" id="cache-path"></span>
+    </div>
+
+    <div class="search-row">
+      <input id="search" type="search" autocomplete="off" spellcheck="false"
+             placeholder="Search — words, &quot;quoted phrases&quot;, -exclude">
+    </div>
+
+    <div class="filters">
+      <div class="group">
+        <span>Search in</span>
+        <label class="chip"><input type="checkbox" id="scope-name" checked> Name &amp; slug</label>
+        <label class="chip"><input type="checkbox" id="scope-ingredients" checked> Ingredients</label>
+        <label class="chip"><input type="checkbox" id="scope-directions"> Directions</label>
+        <label class="chip"><input type="checkbox" id="scope-notes"> Description, notes &amp; source</label>
+      </div>
+      <div class="group">
+        <span>Match</span>
+        <label class="chip"><input type="checkbox" id="match-any"> Any word</label>
+        <label class="chip"><input type="checkbox" id="whole-word"> Whole words</label>
+        <label class="chip"><input type="checkbox" id="only-selected"> Selected only</label>
+      </div>
+    </div>
+
+    <div class="status-row">
+      <div id="counts">Loading…</div>
+      <button id="select-matches">Select all matches</button>
+      <button id="clear-selection">Clear selection</button>
+      <button id="delete-selected" class="danger" disabled>Delete selected</button>
+    </div>
+  </div>
+</header>
+
+<main>
+  <ul id="list"></ul>
+  <div id="sentinel"></div>
+  <div id="empty" hidden></div>
+</main>
+
+<dialog id="confirm">
+  <h2>Delete permanently?</h2>
+  <p id="confirm-text"></p>
+  <ul id="confirm-list"></ul>
+  <p>This removes the cached page, the photo, and the <code>manifest.json</code> and
+     <code>state.json</code> entries. There is no undo.</p>
+  <div class="actions">
+    <button id="confirm-cancel">Cancel</button>
+    <button id="confirm-delete" class="danger">Delete</button>
+  </div>
+</dialog>
+
+<div id="toast" hidden></div>
+
+<script>
+'use strict';
+
+const RENDER_BATCH_SIZE = 120;
+const MAXIMUM_SNIPPETS = 3;
+const CONFIRM_LIST_LIMIT = 15;
+
+const elements = {
+  search: document.getElementById('search'),
+  list: document.getElementById('list'),
+  sentinel: document.getElementById('sentinel'),
+  empty: document.getElementById('empty'),
+  counts: document.getElementById('counts'),
+  cachePath: document.getElementById('cache-path'),
+  selectMatches: document.getElementById('select-matches'),
+  clearSelection: document.getElementById('clear-selection'),
+  deleteSelected: document.getElementById('delete-selected'),
+  confirm: document.getElementById('confirm'),
+  confirmText: document.getElementById('confirm-text'),
+  confirmList: document.getElementById('confirm-list'),
+  confirmCancel: document.getElementById('confirm-cancel'),
+  confirmDelete: document.getElementById('confirm-delete'),
+  toast: document.getElementById('toast'),
+  scopeName: document.getElementById('scope-name'),
+  scopeIngredients: document.getElementById('scope-ingredients'),
+  scopeDirections: document.getElementById('scope-directions'),
+  scopeNotes: document.getElementById('scope-notes'),
+  matchAny: document.getElementById('match-any'),
+  wholeWord: document.getElementById('whole-word'),
+  onlySelected: document.getElementById('only-selected'),
+};
+
+/** @type {Array<object>} every indexed recipe, newest index from the server. */
+let allRecipes = [];
+/** @type {Array<object>} the current filter result. */
+let visibleRecipes = [];
+const selectedSlugs = new Set();
+const expandedSlugs = new Set();
+let renderedCount = 0;
+let toastTimer = null;
+
+// ── Utilities ─────────────────────────────────────────────────────────────────
+
+function escapeHtml(text) {
+  return String(text).replace(/[&<>"']/g, (character) => (
+    { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[character]
+  ));
+}
+
+function escapeRegExp(text) {
+  return text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
+function showToast(message) {
+  elements.toast.textContent = message;
+  elements.toast.hidden = false;
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => { elements.toast.hidden = true; }, 4000);
+}
+
+// ── Query parsing and matching ────────────────────────────────────────────────
+
+/**
+ * Splits the search box into terms. Supports "quoted phrases" and a leading `-` to exclude.
+ * Exclusions always apply, whatever the any/all setting — "show me these, but never those".
+ */
+function parseQuery(text) {
+  const terms = [];
+  const pattern = /(-?)(?:"([^"]*)"|(\S+))/g;
+  let match;
+
+  while ((match = pattern.exec(text)) !== null) {
+    const value = (match[2] ?? match[3] ?? '').trim().toLowerCase();
+    if (value) terms.push({ value, exclude: match[1] === '-' });
+  }
+
+  return terms;
+}
+
+function buildTermTest(term, wholeWord) {
+  if (!wholeWord) return (haystack) => haystack.includes(term.value);
+
+  const pattern = new RegExp(`(?<![\\w-])${escapeRegExp(term.value)}(?![\\w-])`);
+  return (haystack) => pattern.test(haystack);
+}
+
+function currentScopeKeys() {
+  const keys = [];
+  if (elements.scopeName.checked) keys.push('searchName');
+  if (elements.scopeIngredients.checked) keys.push('searchIngredients');
+  if (elements.scopeDirections.checked) keys.push('searchDirections');
+  if (elements.scopeNotes.checked) keys.push('searchNotes');
+  return keys.length > 0 ? keys : ['searchName'];
+}
+
+function haystackFor(recipe, scopeKeys) {
+  return scopeKeys.map((key) => recipe[key]).join('\n');
+}
+
+function applyFilter() {
+  const terms = parseQuery(elements.search.value);
+  const scopeKeys = currentScopeKeys();
+  const wholeWord = elements.wholeWord.checked;
+  const matchAny = elements.matchAny.checked;
+
+  const included = terms.filter((term) => !term.exclude).map((term) => ({
+    term, test: buildTermTest(term, wholeWord),
+  }));
+  const excluded = terms.filter((term) => term.exclude).map((term) => ({
+    term, test: buildTermTest(term, wholeWord),
+  }));
+
+  visibleRecipes = allRecipes.filter((recipe) => {
+    if (elements.onlySelected.checked && !selectedSlugs.has(recipe.slug)) return false;
+
+    const haystack = haystackFor(recipe, scopeKeys);
+
+    if (excluded.some(({ test }) => test(haystack))) return false;
+    if (included.length === 0) return true;
+
+    return matchAny
+      ? included.some(({ test }) => test(haystack))
+      : included.every(({ test }) => test(haystack));
+  });
+
+  // Only positive terms are worth highlighting — an exclusion never appears in a result.
+  const highlightValues = included.map(({ term }) => term.value);
+  renderList(highlightValues, wholeWord);
+  updateCounts();
+}
+
+// ── Highlighting ──────────────────────────────────────────────────────────────
+
+function highlight(text, highlightValues, wholeWord) {
+  const escaped = escapeHtml(text);
+  if (highlightValues.length === 0) return escaped;
+
+  const alternation = highlightValues.map(escapeRegExp).join('|');
+  const pattern = wholeWord
+    ? new RegExp(`(?<![\\w-])(${alternation})(?![\\w-])`, 'gi')
+    : new RegExp(`(${alternation})`, 'gi');
+
+  return escaped.replace(pattern, '<mark>$1</mark>');
+}
+
+/** The lines that actually caused a match, so a hit is explained without expanding the row. */
+function matchingLines(recipe, highlightValues, wholeWord) {
+  if (highlightValues.length === 0) return [];
+
+  const tests = highlightValues.map((value) => buildTermTest({ value }, wholeWord));
+  const scopeKeys = currentScopeKeys();
+
+  const candidates = [];
+  if (scopeKeys.includes('searchIngredients')) candidates.push(...recipe.ingredients);
+  if (scopeKeys.includes('searchDirections')) candidates.push(...recipe.directions);
+  if (scopeKeys.includes('searchNotes')) {
+    candidates.push(recipe.description, recipe.notes, recipe.source);
+  }
+
+  return candidates
+    .filter((line) => line && tests.some((test) => test(line.toLowerCase())))
+    .slice(0, MAXIMUM_SNIPPETS);
+}
+
+// ── Rendering ─────────────────────────────────────────────────────────────────
+
+function thumbnailHtml(recipe) {
+  return recipe.hasImage
+    ? `<img src="/api/thumbnail/${encodeURIComponent(recipe.slug)}" alt="" loading="lazy">`
+    : '<span class="none">no<br>photo</span>';
+}
+
+function detailHtml(recipe, highlightValues, wholeWord) {
+  const listItems = (items, tag) => items.length === 0 ? '' : `<${tag}>${
+    items.map((item) => `<li>${highlight(item, highlightValues, wholeWord)}</li>`).join('')
+  }</${tag}>`;
+
+  const optionalSection = (heading, text) => !text ? '' :
+    `<section><h3>${heading}</h3><p>${highlight(text, highlightValues, wholeWord)}</p></section>`;
+
+  return `
+    <div class="detail">
+      <div>
+        ${recipe.hasImage
+          ? `<img src="/api/thumbnail/${encodeURIComponent(recipe.slug)}" alt="" loading="lazy">`
+          : ''}
+        ${recipe.archiveUrl
+          ? `<p style="margin-top:8px;font-size:12px"><a href="${escapeHtml(recipe.archiveUrl)}"
+               target="_blank" rel="noreferrer noopener">Open archived page</a></p>`
+          : ''}
+      </div>
+      <div>
+        ${optionalSection('Description', recipe.description)}
+        <section><h3>Ingredients</h3>${listItems(recipe.ingredients, 'ul')}</section>
+        <section><h3>Directions</h3>${listItems(recipe.directions, 'ol')}</section>
+        ${optionalSection('Notes', recipe.notes)}
+        ${optionalSection('Source', recipe.source)}
+      </div>
+    </div>`;
+}
+
+function rowHtml(recipe, highlightValues, wholeWord) {
+  const isSelected = selectedSlugs.has(recipe.slug);
+  const isExpanded = expandedSlugs.has(recipe.slug);
+  const snippets = matchingLines(recipe, highlightValues, wholeWord);
+
+  const meta = [
+    recipe.slug,
+    recipe.servings,
+    `${recipe.ingredients.length} ingredients`,
+    recipe.inManifest ? '' : 'not in manifest',
+  ].filter(Boolean).join('  ·  ');
+
+  return `
+    <li class="row${isSelected ? ' selected' : ''}" data-slug="${escapeHtml(recipe.slug)}">
+      <label class="pick">
+        <input type="checkbox" ${isSelected ? 'checked' : ''}
+               aria-label="Select ${escapeHtml(recipe.title)}">
+      </label>
+      <div class="thumb">${thumbnailHtml(recipe)}</div>
+      <button class="summary" type="button" aria-expanded="${isExpanded}">
+        <div class="name">${highlight(recipe.title, highlightValues, wholeWord)}</div>
+        <div class="meta">${escapeHtml(meta)}</div>
+        ${snippets.length > 0
+          ? `<div class="snippets">${snippets
+              .map((line) => `<div>${highlight(line, highlightValues, wholeWord)}</div>`)
+              .join('')}</div>`
+          : ''}
+      </button>
+      ${isExpanded ? detailHtml(recipe, highlightValues, wholeWord) : ''}
+    </li>`;
+}
+
+let currentHighlightValues = [];
+let currentWholeWord = false;
+
+function renderList(highlightValues, wholeWord) {
+  currentHighlightValues = highlightValues;
+  currentWholeWord = wholeWord;
+
+  elements.list.innerHTML = '';
+  renderedCount = 0;
+
+  elements.empty.hidden = visibleRecipes.length > 0;
+  elements.empty.textContent = allRecipes.length === 0
+    ? 'No cached recipes found.'
+    : 'No recipes match this search.';
+
+  renderNextBatch();
+}
+
+function renderNextBatch() {
+  const batch = visibleRecipes.slice(renderedCount, renderedCount + RENDER_BATCH_SIZE);
+  if (batch.length === 0) return;
+
+  elements.list.insertAdjacentHTML(
+    'beforeend',
+    batch.map((recipe) => rowHtml(recipe, currentHighlightValues, currentWholeWord)).join(''));
+
+  renderedCount += batch.length;
+}
+
+function updateCounts() {
+  const selectedVisible = visibleRecipes.filter((recipe) => selectedSlugs.has(recipe.slug)).length;
+
+  elements.counts.innerHTML =
+    `<strong>${visibleRecipes.length}</strong> of <strong>${allRecipes.length}</strong> shown` +
+    ` · <strong>${selectedSlugs.size}</strong> selected` +
+    (selectedSlugs.size > selectedVisible ? ` (${selectedVisible} in view)` : '');
+
+  elements.deleteSelected.disabled = selectedSlugs.size === 0;
+  elements.deleteSelected.textContent = selectedSlugs.size === 0
+    ? 'Delete selected'
+    : `Delete ${selectedSlugs.size} selected`;
+}
+
+// ── Events ────────────────────────────────────────────────────────────────────
+
+let filterTimer = null;
+function scheduleFilter() {
+  clearTimeout(filterTimer);
+  filterTimer = setTimeout(applyFilter, 120);
+}
+
+elements.search.addEventListener('input', scheduleFilter);
+
+for (const control of [
+  elements.scopeName, elements.scopeIngredients, elements.scopeDirections, elements.scopeNotes,
+  elements.matchAny, elements.wholeWord, elements.onlySelected,
+]) {
+  control.addEventListener('change', applyFilter);
+}
+
+elements.list.addEventListener('change', (event) => {
+  const checkbox = event.target.closest('input[type="checkbox"]');
+  if (!checkbox) return;
+
+  const row = checkbox.closest('.row');
+  const slug = row.dataset.slug;
+
+  if (checkbox.checked) selectedSlugs.add(slug);
+  else selectedSlugs.delete(slug);
+
+  row.classList.toggle('selected', checkbox.checked);
+  updateCounts();
+});
+
+elements.list.addEventListener('click', (event) => {
+  const summary = event.target.closest('.summary');
+  if (!summary) return;
+
+  const row = summary.closest('.row');
+  const slug = row.dataset.slug;
+  const recipe = allRecipes.find((candidate) => candidate.slug === slug);
+  if (!recipe) return;
+
+  if (expandedSlugs.has(slug)) {
+    expandedSlugs.delete(slug);
+    row.querySelector('.detail')?.remove();
+  } else {
+    expandedSlugs.add(slug);
+    row.insertAdjacentHTML(
+      'beforeend', detailHtml(recipe, currentHighlightValues, currentWholeWord));
+  }
+
+  summary.setAttribute('aria-expanded', String(expandedSlugs.has(slug)));
+});
+
+elements.selectMatches.addEventListener('click', () => {
+  for (const recipe of visibleRecipes) selectedSlugs.add(recipe.slug);
+  applyFilter();
+});
+
+elements.clearSelection.addEventListener('click', () => {
+  selectedSlugs.clear();
+  applyFilter();
+});
+
+elements.deleteSelected.addEventListener('click', () => {
+  const titles = allRecipes
+    .filter((recipe) => selectedSlugs.has(recipe.slug))
+    .map((recipe) => recipe.title);
+
+  elements.confirmText.textContent =
+    `${titles.length} recipe${titles.length === 1 ? '' : 's'} will be removed from the seed corpus.`;
+
+  elements.confirmList.innerHTML = titles
+    .slice(0, CONFIRM_LIST_LIMIT)
+    .map((title) => `<li>${escapeHtml(title)}</li>`)
+    .join('') + (titles.length > CONFIRM_LIST_LIMIT
+      ? `<li>… and ${titles.length - CONFIRM_LIST_LIMIT} more</li>`
+      : '');
+
+  elements.confirm.showModal();
+});
+
+elements.confirmCancel.addEventListener('click', () => elements.confirm.close());
+
+elements.confirmDelete.addEventListener('click', async () => {
+  const slugs = [...selectedSlugs];
+  elements.confirmDelete.disabled = true;
+
+  try {
+    const response = await fetch('/api/delete', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ slugs }),
+    });
+
+    const result = await response.json();
+    if (!response.ok) throw new Error(result.error ?? response.statusText);
+
+    const deleted = new Set(result.deleted);
+    allRecipes = allRecipes.filter((recipe) => !deleted.has(recipe.slug));
+    for (const slug of deleted) {
+      selectedSlugs.delete(slug);
+      expandedSlugs.delete(slug);
+    }
+
+    showToast(
+      `Deleted ${result.deleted.length} recipe(s) — ${result.pagesDeleted} page(s), ` +
+      `${result.imagesDeleted} photo(s), ${result.manifestEntriesRemoved} manifest entr(ies). ` +
+      `${result.remaining} remaining.`);
+
+    applyFilter();
+  } catch (error) {
+    showToast(`Delete failed: ${error.message}`);
+  } finally {
+    elements.confirmDelete.disabled = false;
+    elements.confirm.close();
+  }
+});
+
+document.addEventListener('keydown', (event) => {
+  if (event.key === '/' && document.activeElement !== elements.search) {
+    event.preventDefault();
+    elements.search.focus();
+    elements.search.select();
+  }
+});
+
+new IntersectionObserver((entries) => {
+  if (entries.some((entry) => entry.isIntersecting)) renderNextBatch();
+}, { rootMargin: '600px' }).observe(elements.sentinel);
+
+// ── Startup ───────────────────────────────────────────────────────────────────
+
+async function load() {
+  const response = await fetch('/api/recipes');
+  const payload = await response.json();
+
+  if (!response.ok) throw new Error(payload.error ?? response.statusText);
+
+  allRecipes = payload.recipes.map((recipe) => ({
+    ...recipe,
+    searchName: `${recipe.title}\n${recipe.slug}`.toLowerCase(),
+    searchIngredients: recipe.ingredients.join('\n').toLowerCase(),
+    searchDirections: recipe.directions.join('\n').toLowerCase(),
+    searchNotes: `${recipe.description}\n${recipe.notes}\n${recipe.source}`.toLowerCase(),
+  }));
+
+  elements.cachePath.textContent = payload.cacheDirectory;
+
+  if (payload.unreadable.length > 0) {
+    showToast(`${payload.unreadable.length} page(s) could not be indexed — see the console.`);
+  }
+
+  applyFilter();
+}
+
+load().catch((error) => {
+  elements.counts.textContent = `Failed to load: ${error.message}`;
+});
+</script>
+</body>
+</html>

@@ -5,15 +5,26 @@ namespace RecipeApp.API.Services.Llm;
 
 /// <summary>
 /// Converts a JSON Schema subset to a GBNF grammar string for grammar-constrained decoding.
-/// Supports objects, arrays, string/integer/number/boolean primitives, nullable unions, and required fields.
+/// Supports objects, arrays, string/integer/number/boolean primitives, nullable unions, enums, and required fields.
 /// </summary>
 public static class JsonSchemaGrammar
 {
+    /// <summary>
+    /// The JSON primitives, as JSON actually defines them.
+    ///
+    /// <para><b>The leading-zero alternation is load-bearing.</b> A digit run written as
+    /// <c>[0-9]+</c> admits <c>00</c> and <c>012</c>, which are not JSON — every parser rejects
+    /// them, and <c>JsonNode.Parse</c> reports "'0' is an invalid end of a number" from somewhere
+    /// deep in the answer. The whole point of constrained decoding is that unparseable output is
+    /// unreachable, so a grammar looser than the format it is guarding is a defect in the guard.
+    /// Phase 9 Stage 4 lost a recipe to it: the model emitted a leading zero several thousand bytes
+    /// into an otherwise well-formed answer, and the decode was thrown away as invalid.</para>
+    /// </summary>
     private const string PrimitiveRules = """
         ws      ::= " "?
         string  ::= "\"" ([^"\\\x7F\x00-\x1F] | "\\" (["\\/bfnrt] | "u" [0-9a-fA-F] [0-9a-fA-F] [0-9a-fA-F] [0-9a-fA-F]))* "\""
-        integer ::= "-"? [0-9]+
-        number  ::= "-"? [0-9]+ ("." [0-9]+)? ([eE] [+-]? [0-9]+)?
+        integer ::= "-"? ("0" | [1-9] [0-9]*)
+        number  ::= "-"? ("0" | [1-9] [0-9]*) ("." [0-9]+)? ([eE] [+-]? [0-9]+)?
         boolean ::= "true" | "false"
         null    ::= "null"
         """;
@@ -46,6 +57,20 @@ public static class JsonSchemaGrammar
         HashSet<string> ruleSet)
     {
         if (ruleSet.Contains(ruleName)) return ruleName;
+
+        // A closed set of values: exactly one of the listed JSON literals, and nothing else.
+        //
+        // Phase 9.3 added this because a prompt instruction is not a constraint. Told that category
+        // "MUST be exactly one value from this list", the model answered SPICES and CONDIMENT — each
+        // valid JSON, each a string, so the grammar admitted it and a keyword-table guess replaced
+        // the judgement the call existed to get. Constrained decoding exists to make invalid output
+        // unreachable; a rule the grammar could state but does not is a hole in the guard.
+        if (schema["enum"] is JsonArray allowed && allowed.Count > 0)
+        {
+            var literals = allowed.Select(value => GbnfLiteral(value?.ToJsonString() ?? "null"));
+            AddRule(ruleName, "(" + string.Join(" | ", literals) + ")", rules, ruleSet);
+            return ruleName;
+        }
 
         var typeNode = schema["type"];
 
@@ -154,6 +179,11 @@ public static class JsonSchemaGrammar
         var escaped = key.Replace("\\", "\\\\").Replace("\"", "\\\"");
         return "\"\\\"" + escaped + "\\\"\"";
     }
+
+    // Produces a GBNF string literal that matches the given text verbatim — for an enum value, its
+    // JSON form, so "PRODUCE" matches with its quotes and 3 matches without any
+    private static string GbnfLiteral(string text) =>
+        "\"" + text.Replace("\\", "\\\\").Replace("\"", "\\\"") + "\"";
 
     private static string Slug(string key) =>
         key.Replace("_", "-").ToLowerInvariant();

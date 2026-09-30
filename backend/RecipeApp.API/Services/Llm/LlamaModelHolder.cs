@@ -15,14 +15,21 @@ public sealed class LlamaModelHolder : IDisposable
     public SemaphoreSlim Gate { get; } = new(1, 1);
     public string[] StopStrings { get; }
 
+    /// <summary>
+    /// Decoder settings for every call against these weights. Held here, beside the model they
+    /// configure, so the client stays a translation from schema to grammar and back.
+    /// </summary>
+    public LlmSamplingOptions Sampling { get; }
+
     private readonly LocalLlmOptions _local;
 
     public bool IsLoaded => Weights != null;
 
     public LlamaModelHolder(IOptions<LlmOptions> options, ILogger<LlamaModelHolder> logger)
     {
-        _local     = options.Value.Local;
+        _local      = options.Value.Local;
         StopStrings = _local.StopStrings;
+        Sampling    = _local.Sampling;
 
         if (string.IsNullOrWhiteSpace(_local.ModelPath))
         {

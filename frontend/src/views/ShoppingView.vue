@@ -59,7 +59,7 @@
       <div v-if="visibleGroups.length">
         <div v-for="group in visibleGroups" :key="group.category" class="mb-4">
           <div class="text-overline text-medium-emphasis mb-2 px-1">
-            {{ categoryLabel(group.category) }}
+            {{ formatCategory(group.category) }}
           </div>
 
           <v-card>
@@ -180,6 +180,7 @@
 import { ref, computed, onMounted } from 'vue'
 import { useShoppingListStore } from '@/stores/shoppingList'
 import { useUiStore } from '@/stores/ui'
+import { formatCategory } from '@/constants/categories'
 import AddCustomItemDialog from '@/components/AddCustomItemDialog.vue'
 import EmptyState from '@/components/EmptyState.vue'
 import ErrorState from '@/components/ErrorState.vue'
@@ -241,22 +242,5 @@ async function onRegenerate() {
 
 function formatAmount(amount, unit) {
   return `${amount} ${unit}`
-}
-
-const categoryLabels = {
-  PRODUCE:      '🥦 Produce',
-  MEAT_SEAFOOD: '🥩 Meat & Seafood',
-  DAIRY:        '🥛 Dairy',
-  CANNED:       '🥫 Canned Goods',
-  FROZEN:       '🧊 Frozen',
-  DRY_GOODS:    '🌾 Dry Goods & Pasta',
-  BAKERY:       '🍞 Bakery',
-  CONDIMENTS:   '🫙 Condiments & Sauces',
-  BEVERAGES:    '🧃 Beverages',
-  OTHER:        '📦 Other',
-}
-
-function categoryLabel(cat) {
-  return categoryLabels[cat] ?? cat
 }
 </script>

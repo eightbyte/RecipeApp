@@ -14,10 +14,31 @@ export const DEFAULT_UNIT = 'g'
 /**
  * Formats an amount and unit for display, trimming float noise from portion scaling.
  * Returns e.g. `240 g`, `2 cup`, `0.5 tsp`.
+ *
+ * Returns `null` when there is no amount to show. An ingredient whose source stated no
+ * quantity — `salt`, `raisins`, `nonstick cooking spray` — is stored with a null amount and a
+ * null unit (Phase 9.1 §3.1), and renders as its name alone rather than as `0 g Salt`. Every
+ * call site guards on the return value, the way `ShoppingView` already does for a custom item.
  */
 export function formatMeasurement(amount, unit) {
+  if (amount == null) return null
   const rounded = Math.round(amount * 100) / 100
-  return `${rounded} ${unit}`
+  return unit ? `${rounded} ${unit}` : `${rounded}`
+}
+
+/**
+ * The `{ amount, unit }` pair to send to the API for one ingredient row.
+ *
+ * An empty amount field means the ingredient has no stated quantity, which is stored as a null
+ * amount *and* a null unit (Phase 9.1 §3.1) — a unit measuring nothing would be as invented as
+ * the amount itself, and the API rejects a half-set pair. Notably the amount is never coerced
+ * to `0`: zero is a quantity, and a wrong one.
+ */
+export function toPayloadMeasurement(amount, unit) {
+  const parsed = amount === '' || amount == null ? Number.NaN : Number(amount)
+  return Number.isNaN(parsed)
+    ? { amount: null, unit: null }
+    : { amount: parsed, unit: unit ?? null }
 }
 
 /**

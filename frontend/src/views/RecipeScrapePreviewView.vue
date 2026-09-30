@@ -183,17 +183,15 @@
 import { reactive, ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useRecipeStore } from '@/stores/recipes'
-import { MEASUREMENT_UNITS } from '@/constants/units'
+import { MEASUREMENT_UNITS, toPayloadMeasurement } from '@/constants/units'
+import { INGREDIENT_CATEGORY_VALUES } from '@/constants/categories'
 
 const router = useRouter()
 const store  = useRecipeStore()
 
 const units = MEASUREMENT_UNITS
 
-const categories = [
-  'PRODUCE', 'MEAT_SEAFOOD', 'DAIRY', 'CANNED',
-  'FROZEN', 'DRY_GOODS', 'BAKERY', 'CONDIMENTS', 'BEVERAGES', 'OTHER',
-]
+const categories = INGREDIENT_CATEGORY_VALUES
 
 const submitError = ref(null)
 
@@ -272,8 +270,8 @@ async function saveRecipe() {
       newIngredientName:      ing.isNew ? ing.name : null,
       newIngredientDisplayName: ing.isNew ? ing.displayName : null,
       category:               ing.isNew ? ing.category : null,
-      amount:                 Number(ing.amount),
-      unit:                   ing.unit,
+      // An empty amount round-trips as null, never as 0 (Phase 9.1 §3.4).
+      ...toPayloadMeasurement(ing.amount, ing.unit),
       sourceAmount:           ing.sourceAmount ?? null,
       sourceUnit:             ing.sourceUnit ?? null,
       notes:                  ing.notes?.trim() || null,

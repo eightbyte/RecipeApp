@@ -71,7 +71,7 @@ These run in-process with no I/O. Use `FluentValidation.TestHelper` (`TestValida
 | DisplayName empty | `{ DisplayName: "" }` | Error on `DisplayName` |
 | DisplayName exceeds 200 chars | 201-char string | Error on `DisplayName` |
 | Category invalid | `{ Category: "JUNK" }` | Error on `Category` |
-| Category valid (each value) | All 10 `IngredientCategory` constants | No errors |
+| Category valid (each value) | Every `IngredientCategory.All` constant | No errors |
 | DefaultUnit exceeds 20 chars | 21-char string | Error on `DefaultUnit` |
 | DefaultUnit null | `{ DefaultUnit: null }` | No errors (optional) |
 
@@ -293,7 +293,7 @@ Use the `RecipeAppFactory` HTTP client. Assert HTTP status codes, response body 
 | List empty search | `GET /api/v1/ingredients?search=` | 200 | All ingredients |
 | Get by ID | `GET /api/v1/ingredients/{id}` | 200 | Correct ingredient |
 | Get not found | `GET /api/v1/ingredients/{unknownId}` | 404 | — |
-| Get categories | `GET /api/v1/ingredients/categories` | 200 | Array of all 10 category strings |
+| Get categories | `GET /api/v1/ingredients/categories` | 200 | `IngredientCategory.All`, in aisle order |
 | Create valid | `POST /api/v1/ingredients` with valid body | 201 | Created ingredient in response |
 | Create duplicate name | POST same name twice | 409 | Error message in body |
 | Create invalid body | POST with empty Name | 422 | Validation error details |

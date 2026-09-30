@@ -74,6 +74,17 @@ public static class MeasurementUnit
     };
 
     /// <summary>
+    /// Every spelling <see cref="TryCanonicalise"/> will accept — the canonical set plus the aliases
+    /// above.
+    ///
+    /// <para>Exists for the one caller that has to <i>state</i> the vocabulary rather than test
+    /// against it: an LLM prompt naming the units it may use. Listing only <see cref="All"/> there
+    /// understates what the pipeline takes, and the prompt then contradicts itself the moment an
+    /// example says <c>teaspoon</c>. Derived here so the promise and the check cannot drift.</para>
+    /// </summary>
+    public static readonly IReadOnlyList<string> AcceptedSpellings = [.. All, .. Aliases.Keys];
+
+    /// <summary>
     /// Strict: true only for a canonical spelling. Validators use this, which guarantees stored
     /// units are always canonical — that is what lets consolidation group by plain equality.
     /// </summary>

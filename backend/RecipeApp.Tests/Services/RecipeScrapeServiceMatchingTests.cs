@@ -102,6 +102,45 @@ public class RecipeScrapeServiceMatchingTests(DatabaseFixture db) : IAsyncLifeti
     }
 
     [Fact]
+    public async Task NormaliseAsync_KnownAlias_ResolvesOnPassOneWithNoLlmCall()
+    {
+        // Phase 9.3 §4.6. A synonym the catalogue already records is a dictionary hit, not a model
+        // call — which is why Aliases is a column rather than a detail of the seed artefact.
+        await using var ctx = db.CreateDbContext();
+        var chickpeas = TestDataBuilder.Ingredient("chickpeas", "Chickpeas", IngredientCategory.Canned);
+        chickpeas.Aliases = ["garbanzo beans", "chick peas"];
+        ctx.Ingredients.Add(chickpeas);
+        await ctx.SaveChangesAsync();
+
+        var svc     = BuildService();
+        var preview = await svc.NormaliseAsync(
+            MakeRecipe(("garbanzo beans", "Garbanzo Beans")), "https://x", default);
+
+        var ing = preview.Ingredients.Should().ContainSingle().Which;
+        ing.IsNew.Should().BeFalse();
+        ing.IngredientId.Should().Be(chickpeas.Id);
+    }
+
+    [Fact]
+    public async Task NormaliseAsync_ANameOutranksAnotherEntrysAlias()
+    {
+        // The artefact's validation forbids this collision; this is what makes the outcome defined
+        // anyway if a hand-edited row ever introduces one.
+        await using var ctx = db.CreateDbContext();
+        var tomato = TestDataBuilder.Ingredient("tomato", "Tomato", IngredientCategory.Produce);
+        tomato.Aliases = ["diced tomatoes"];
+        var diced = TestDataBuilder.Ingredient("diced tomatoes", "Diced Tomatoes", IngredientCategory.Canned);
+        ctx.Ingredients.AddRange(tomato, diced);
+        await ctx.SaveChangesAsync();
+
+        var svc     = BuildService();
+        var preview = await svc.NormaliseAsync(
+            MakeRecipe(("diced tomatoes", "Diced Tomatoes")), "https://x", default);
+
+        preview.Ingredients.Should().ContainSingle().Which.IngredientId.Should().Be(diced.Id);
+    }
+
+    [Fact]
     public async Task NormaliseAsync_SynonymAboveThreshold_ResolvesToExistingId()
     {
         await using var ctx = db.CreateDbContext();

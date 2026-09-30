@@ -90,14 +90,14 @@ public class IngredientsEndpointTests(DatabaseFixture db) : IAsyncLifetime
     }
 
     [Fact]
-    public async Task GetCategories_Returns200WithAll10()
+    public async Task GetCategories_Returns200WithEveryCategoryInAisleOrder()
     {
         var response = await Client.GetAsync("/api/v1/ingredients/categories");
         response.StatusCode.Should().Be(HttpStatusCode.OK);
 
+        // Order, not just membership: the list is the shopping list's aisle order.
         var categories = await response.Content.ReadFromJsonAsync<List<string>>();
-        categories.Should().HaveCount(10);
-        categories.Should().Contain(IngredientCategory.All);
+        categories.Should().Equal(IngredientCategory.All);
     }
 
     [Fact]

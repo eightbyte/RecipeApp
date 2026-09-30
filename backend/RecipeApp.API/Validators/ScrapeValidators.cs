@@ -46,11 +46,24 @@ public class ScrapeConfirmIngredientValidator : AbstractValidator<ScrapeConfirmI
             .WithMessage($"Category must be one of: {string.Join(", ", IngredientCategory.All)}")
             .When(x => !string.IsNullOrWhiteSpace(x.Category));
 
-        RuleFor(x => x.Amount).GreaterThan(0);
+        // Amount and Unit are null together or set together — see
+        // RecipeIngredientRequestValidator for why (Phase 9.1 §3.1).
+        RuleFor(x => x.Amount)
+            .GreaterThan(0)
+            .When(x => x.Amount.HasValue)
+            .WithMessage("Amount must be greater than zero, or null when no quantity is stated.");
+
         RuleFor(x => x.Unit)
             .NotEmpty()
             .Must(MeasurementUnit.IsValid)
-            .WithMessage($"Unit must be one of: {string.Join(", ", MeasurementUnit.All)}");
+            .WithMessage($"Unit must be one of: {string.Join(", ", MeasurementUnit.All)}")
+            .When(x => x.Amount.HasValue);
+
+        RuleFor(x => x.Unit)
+            .Null()
+            .WithMessage("Unit must be null when no amount is stated.")
+            .When(x => !x.Amount.HasValue);
+
         RuleFor(x => x.SourceAmount).GreaterThan(0).When(x => x.SourceAmount.HasValue);
         RuleFor(x => x.SourceUnit).NotEmpty().MaximumLength(32).When(x => x.SourceUnit is not null);
         RuleFor(x => x.Notes).MaximumLength(200).When(x => x.Notes is not null);

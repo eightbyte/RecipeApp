@@ -24,10 +24,15 @@ public record RecipeStepRequest(
 /// Round-tripped by the recipe form so editing an imported recipe keeps its provenance.
 /// </param>
 /// <param name="SourceUnit">Unit as originally stated by an imported source. Null for hand-entered rows.</param>
+/// <param name="Amount">
+/// Null when the ingredient has no stated quantity (Phase 9.1 §3.1). Must be null exactly when
+/// <paramref name="Unit"/> is null — the validator rejects a half-set pair.
+/// </param>
+/// <param name="Unit">Null when <paramref name="Amount"/> is null; otherwise a canonical storable unit.</param>
 public record RecipeIngredientRequest(
     Guid IngredientId,
-    decimal Amount,
-    string Unit,
+    decimal? Amount,
+    string? Unit,
     string? Notes,
     int DisplayOrder,
     decimal? SourceAmount = null,

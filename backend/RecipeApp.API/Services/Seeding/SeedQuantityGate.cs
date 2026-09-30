@@ -353,9 +353,7 @@ public static class SeedQuantityGate
         // A tolerance, because a third of a cup is 0.333 to the parser and may be 0.33 or 0.667
         // to the model, and disagreeing about the fourth decimal place is not a misread. One
         // percent is far tighter than any real error: the failure this catches was 5x.
-        var tolerance = Math.Max(sole * ToleranceFraction, MinimumTolerance);
-
-        return Math.Abs(amount - sole) <= tolerance ? null : SeedQuantityRejection.ContradictedQuantity;
+        return Agrees(amount, sole) ? null : SeedQuantityRejection.ContradictedQuantity;
     }
 
     /// <summary>Relative agreement required between the model's amount and the line's own number.</summary>
@@ -384,6 +382,66 @@ public static class SeedQuantityGate
         var matches = NumericToken.Matches(sourceText);
         return matches.Count == 1 ? ParseNumber(matches[0].Value) : null;
     }
+
+    /// <summary>
+    /// Whether an amount read off a line stating <b>two or more</b> numbers can be accounted for by
+    /// them — equal to one of them, or the product of two of them. Lines stating fewer than two are
+    /// always explained: <see cref="CheckAgainstStatedNumber"/> already holds a single-number line to
+    /// its number, and a line with none has nothing to explain an amount by.
+    ///
+    /// <para>This is Phase 9 §24.3a's residual error surface as a predicate. The multi-number line is
+    /// the one shape the gate stands aside from, and across the finished corpus <b>31 rows on 29
+    /// recipes</b> store a number it cannot account for. Every one is arithmetic rather than a misread
+    /// digit: a percentage absorbed into the quantity (<c>1 pound 85% lean ground turkey</c> →
+    /// <c>1.85</c>), an equivalence combined with the amount instead of replacing it
+    /// (<c>1/16 cup orange juice (1 tablespoon)</c> → <c>1.062</c>), or a slipped can count
+    /// (<c>3 cans (15.5 ounces each)</c> → <c>30</c>). The product arm is what keeps the 59 correct
+    /// count × pack-size rows — <c>2 cans (15.5 ounces each)</c> → <c>31</c> — explained.</para>
+    ///
+    /// <para><b>A percentage counts towards "two or more" but never explains an amount.</b> It is a
+    /// number the line states, so <c>1 pound 85% lean ground turkey</c> stays checkable; but it is a
+    /// property of the food, not a quantity of it. Found by the Stage 5 trial: without this,
+    /// <c>3 tablespoons 1% low-fat milk</c> stored as <c>1 cup</c> was "explained" by the 1 in
+    /// <c>1%</c>, and so was <c>1/4 cup buttermilk, 1% low-fat</c> → <c>1 cup</c>.</para>
+    /// </summary>
+    /// <param name="sourceText">The verbatim line, both spans.</param>
+    /// <param name="statedAmount">The amount the model read off the line, <b>before</b> unit conversion.</param>
+    public static bool IsAmountExplainedByLine(string? sourceText, decimal? statedAmount)
+    {
+        if (statedAmount is not { } amount || string.IsNullOrWhiteSpace(sourceText)) return true;
+
+        var stated = NumericToken.Matches(sourceText)
+            .Select(match => (Value: ParseNumber(match.Value), IsPercentage: IsFollowedByPercentSign(sourceText, match)))
+            .Where(number => number.Value is not null)
+            .ToList();
+
+        if (stated.Count < 2) return true;
+
+        var quantities = stated
+            .Where(number => !number.IsPercentage)
+            .Select(number => number.Value!.Value)
+            .ToList();
+
+        if (quantities.Any(number => Agrees(amount, number))) return true;
+
+        for (var first = 0; first < quantities.Count; first++)
+            for (var second = first + 1; second < quantities.Count; second++)
+                if (Agrees(amount, quantities[first] * quantities[second])) return true;
+
+        return false;
+    }
+
+    /// <summary>Whether a matched number is a percentage: <c>85%</c>, <c>1 %</c>.</summary>
+    private static bool IsFollowedByPercentSign(string text, Match number)
+    {
+        var next = number.Index + number.Length;
+        while (next < text.Length && text[next] == ' ') next++;
+        return next < text.Length && text[next] == '%';
+    }
+
+    /// <summary>The same agreement <see cref="CheckAgainstStatedNumber"/> requires.</summary>
+    private static bool Agrees(decimal amount, decimal expected) =>
+        Math.Abs(amount - expected) <= Math.Max(expected * ToleranceFraction, MinimumTolerance);
 
     /// <summary>Reads one matched token: <c>2 1/2</c>, <c>3/4</c>, <c>14.5</c>, <c>4</c>, <c>¼</c>, <c>1 ½</c>.</summary>
     private static decimal? ParseNumber(string token)

@@ -1,15 +1,21 @@
 # Phase 9 — Seed Recipe Library (USDA MyPlate)
 
-**Version:** 1.3  
-**Date:** 2026-09-22  
-**Status:** Stages 1–4 implemented and complete. The corpus is harvested, fully parsed and **fully
-normalised — 1,123/1,123, zero failures** (§24). Stage 5 (persist) is the only stage left, and its
-inputs are all in place: `normalised/*.json`, 1,115 cached photos and the committed ingredient
-catalogue. **Three artefacts and one catalogue gap need clearing before Stage 5 runs — §24.4.**  
+**Version:** 1.5  
+**Date:** 2026-09-29  
+**Status:** **Complete — every §20 Definition of Done item is met (2026-09-29).** All five stages
+implemented. Stages 1–4 are complete — **1,123/1,123 normalised, zero
+failures** (§24). **Stage 5 (persist) is built, its tests pass, and the trial (§14) persisted
+20/20** — §25.7 is the §14.0/§14.1 review. **The full run persisted 1,123 of 1,123 with zero
+failures (2026-09-29, §25.9).**  
 **Depends on:** Phase 8 (Local LLM) complete — requires a working `ILlmStructuredClient`; the
 ingredient catalogue is now a committed artefact loaded by `import-catalogue`, not a seeded
 by-product (Phase 9.3, and see §12.1)
 
+> **Revision 1.4 (2026-09-28)** implements Stage 5 and closes the §24.4 punch list. §24.5's four
+> decisions were taken by the user and are recorded in §25 with what each one costs. §14's trial
+> slugs are now pinned in source, `TrialSize` is gone (it was never read), and `seed-recipes`
+> gained a `--persist` stage flag alongside the full-pipeline modes §15 planned.
+>
 > **Revision 1.3 (2026-09-22)** records the completed Stage 4 corpus pass and reconciles the
 > document with what Phase 9.1 and Phase 9.3 changed underneath it. §23 recorded only the
 > 30-recipe benchmark of 2026-09-09 and said the full pass had not been run; it has, twice, and
@@ -837,7 +843,8 @@ density to a row that does not exist, and Stage 5 cannot resolve a `cup` without
 
 ## 14. Trial Run Protocol
 
-`dotnet run -- seed-recipes --trial` imports `TrialSize` (20) recipes.
+`dotnet run -- seed-recipes --trial` imports the 20 recipes pinned in
+`Services/Seeding/SeedTrialSelection.cs` (✅ as built; §25.4 lists them by stratum).
 
 Selection is **stratified and deterministic**, not the first 20 alphabetically — the sample must exercise the hard cases. The 20 slugs are pinned in source so the trial is reproducible across machines, covering:
 
@@ -923,14 +930,19 @@ dotnet run -- seed-recipes --parse --force   # ✅ Discard parsed/ and re-derive
 dotnet run -- seed-recipes --normalise       # ✅ Stage 4 — parsed/ → normalised/, LLM, no database
 dotnet run -- seed-recipes --normalise --force        # ✅ Discard normalised/ and re-run the pass
 dotnet run -- seed-recipes --normalise --slug apple-carrot-soup   # ✅ One recipe; repeatable
-dotnet run -- seed-recipes --trial           # ⬜ Full pipeline, 20 stratified recipes
-dotnet run -- seed-recipes                   # ⬜ Full pipeline, entire library
-dotnet run -- seed-recipes --limit 50        # ⬜ Full pipeline, first 50 unprocessed
-dotnet run -- seed-recipes --force           # ⬜ Re-import recipes already in the database
+dotnet run -- seed-recipes --persist         # ✅ Stage 5 only — no LLM, never loads the model
+dotnet run -- seed-recipes --persist --trial # ✅ Stage 5 over the 20 pinned trial recipes
+dotnet run -- seed-recipes --trial           # ✅ Full pipeline, 20 stratified recipes
+dotnet run -- seed-recipes                   # ✅ Full pipeline, entire library
+dotnet run -- seed-recipes --limit 50        # ✅ Full pipeline, first 50 unpersisted
+dotnet run -- seed-recipes --force           # ✅ Re-import recipes already in the database
 ```
 
-The unimplemented modes are parsed and rejected with an explicit "stage 5 is not implemented
-yet" message and exit code `2`, rather than silently doing part of the job. Usage errors exit `1`;
+✅ **As built (1.4):** every mode is implemented and exit code `2` is gone. The full pipeline runs
+every stage in order, each resuming from its cache; `--limit` and `--force` reach Stage 5 only, so a
+re-import never discards a parse or an LLM pass (§13). `--persist` was added so Stage 5 can run on
+its own — with a complete cache the full pipeline does the same work, but only `--persist` makes
+"no model, no network" a property of the command rather than of the cache's state. Usage errors exit `1`;
 the implemented modes exit `0`. A Stage 4 run that stops on `MaxConsecutiveLlmFailures` exits `1`:
 everything it did is cached, but it did not finish and must not report that it did.
 
@@ -1128,16 +1140,20 @@ Network calls to Wayback are **not** exercised in CI — `WaybackHarvester` is b
 - [x] `seed-recipes --parse` turns every cached page into a recipe — **1,123/1,123, zero failures**
 - [x] `seed-recipes --normalise` turns parsed recipes into gate-approved LLM output —
       **1,123/1,123, zero failures** (§24; the benchmark that preceded it is §23)
-- [ ] `seed-recipes --trial` imports 20 stratified recipes
-- [ ] All 11 trial acceptance criteria (§14.1) pass on manual review
-- [ ] Full run completes with ≥ 95% of discovered recipes persisted — *Stage 4 clears the bar
-      outright at **100%** on the full corpus (§24). Persistence is unmeasured; §24.4.1 puts the
-      current ceiling at **98.5%** because 17 recipes name an ingredient the catalogue cannot
-      resolve, which still clears the bar but is a fixable 1.5%*
-- [ ] Re-running `seed-recipes` is a no-op
-- [x] Unit tests pass; CI needs no GPU and no network — **1,190 suite-wide, zero failures
-      (2026-09-22)**, up from 917 at Stage 4's benchmark
-- [ ] Integration tests (`RecipeLibrarySeederTests`) — Stage 4's runner is covered; Stage 5's is not
+- [x] `seed-recipes --trial` imports 20 stratified recipes — **20/20** (§25.6)
+- [x] All 11 trial acceptance criteria (§14.1) pass on manual review — **all pass or are
+      explained** (§25.7); the user's decisions on the findings are §25.8
+- [x] Full run completes with ≥ 95% of discovered recipes persisted — **1,123/1,123 (100%), zero
+      failures** (§25.9). The §24.4.1 resolution gaps were closed before the run; the user then
+      reviewed the imported library in the running app (2026-09-29)
+- [x] Re-running `seed-recipes` is a no-op — **verified 2026-09-29** against the fully imported
+      database: `--persist` reported 0 persisted, 1,123 already in the database, 0 catalogue rows
+      inserted or updated and 0 densities updated; `--report` shows stages 1–4 fully cached. The
+      full pipeline mode was not re-run because it includes the LLM stage and the GPU was in use;
+      its stages 1–4 skip cached work by the same resume logic
+- [x] Unit tests pass; CI needs no GPU and no network — **1,249 suite-wide, zero failures
+      (2026-09-29)**, up from 917 at Stage 4's benchmark
+- [x] Integration tests — Stage 5's `SeedPersistTests` (19 tests, §25.5) pass against Testcontainers
 - [x] `CLAUDE.md` updated with the new files, config keys and CLI command
 - [x] `.gitignore` updated for cache directories
 
@@ -1543,6 +1559,10 @@ here blocks writing Stage 5; both block a clean full run.**
 
 #### 24.4.1 The catalogue cannot resolve 19 corpus names, so 20 recipes would be rejected
 
+> **✅ Resolved in 1.4 (§25.2).** Headings and the note leaks are skipped from a reviewed list of
+> 29 rows on 21 recipes, and the alias gaps are closed by 11 hand-added aliases. Against the
+> committed artefact, **every remaining corpus name now resolves.**
+
 §12.1's resolver throws on an unresolved name. Measured against the committed
 `seed-data/ingredient-catalogue.json` (1,056 entries, 1,482 lookup keys, **0 alias collisions, 0
 entries no corpus name reaches**) and all 1,476 distinct names the normalised corpus uses:
@@ -1685,3 +1705,248 @@ of silently wrong data — and it is fixed by the same Stage 5 skip §24.4.1 alr
 **The trial protocol (§14) is unchanged and still the right next step** — its strata were chosen
 before any of this was measured and they hit every hazard above: unquantified lines, canned container
 quantities, vulgar fractions, and the density-table review of §14.0.
+
+---
+
+## 25. Stage 5 — Implementation (2026-09-28)
+
+Backend-only, no new packages, no migration (§19 holds). Stage 5 reads `normalised/`, re-checks each
+artefact against `parsed/`, prepares it, and persists it through `ConfirmAsync` inside one
+transaction together with its photo. **Zero LLM calls.**
+
+### 25.1 What was added
+
+| File | Role |
+|---|---|
+| `Services/Seeding/SeedRecipePersister.cs` | Per recipe: `Prepare` (no database) then `PersistAsync` (one transaction) |
+| `Services/Seeding/SeedPersistModels.cs` | `SeedPersistFailure`, `SeedPersistException`, `SeedPersistOutcome`, `SeedPersistResult` |
+| `Services/Seeding/SeedNonIngredientRows.cs` | The reviewed skip-list, and index re-pointing after removal |
+| `Services/Seeding/SeedTrialSelection.cs` | The 20 pinned trial slugs (§25.4) |
+| `Services/Llm/DeferredLlmStructuredClient.cs` | Loads the model on first inference rather than at construction |
+| `Data/CatalogueImport.cs` | Migrate → catalogue → densities, shared by `import-catalogue` and Stage 5 |
+| `Validators/RecipeLimits.cs` | The edit form's field limits, named, so Stage 5 checks the same numbers |
+
+`RecipeLibrarySeeder.PersistAsync` walks the manifest with the same per-slug isolation as Stages 3–4,
+opening a fresh DI scope per recipe so a failed save cannot poison the next. `SeedQuantityGate`
+gained `IsAmountExplainedByLine`; `ImageService` gained `ImportAsync` and `PublicPathPrefix`.
+
+**The deferred LLM client was necessary, not tidy.** `LlamaModelHolder` loads its weights in its
+constructor, and `RecipeScrapeService` — which owns `ConfirmAsync` — takes an `ILlmStructuredClient`.
+Without the wrapper, every persist run would load 9B parameters onto the GPU and discard them, and
+would fail outright on a machine with no model configured. The web host still resolves the holder
+eagerly at startup, so a bad model path is still reported there.
+
+### 25.2 The four decisions §24.5 left open
+
+| # | Decision | As built |
+|---|---|---|
+| 1 | Unresolvable names | **A reviewed skip-list, plus aliases.** 29 heading and note rows on 21 recipes, keyed on slug + verbatim source line, never on position. 11 aliases added to the artefact by hand. |
+| 2 | Unexplained multi-number amounts | **Import the recipe, drop the amount.** The row is stored unquantified and the published line is appended to its `Notes`. |
+| 3 | Re-validating artefacts | Fingerprint, row count against `parsed/`, and index range, checked **before** any row is removed. |
+| 4 | `Recipe.Description` | Description + **page notes** + source credit + attribution note, as paragraphs. The notes are included because `Recipe` has no notes column and 1,048 recipes carry them. |
+
+The quality filter (§18 Q3) is **off**, but implemented (`ApplyQualityFilter`) and counted in every
+run summary, so its thresholds can be chosen after the trial.
+
+### 25.3 What preparing the corpus found
+
+- **§24.4.1 undercounted the headings.** It listed 8. Reading every unquantified row whose line looks
+  like a title, in context, found **27** headings plus the 2 note leaks. The additions are the
+  dangerous kind: `Cookie Crust`, `Dressing`, `Salad`, `Spread` and `Pancakes` all *resolve* against
+  the catalogue, so a skip keyed on a failed lookup would never have seen them.
+- **No structural signal finds headings on its own.** "Unquantified and used by no step" finds 44
+  rows. Of those, 15 are headings and the rest are real (`salt (optional)`, `cooking spray`). It
+  also misses `Dressing` wherever the model linked the heading to the steps that make it. Hence a
+  reviewed list. An entry that matches nothing is reported in the run summary, so a stale entry
+  stays visible.
+- **One alias gap was new:** `mashed sweet potatoes`, from the 2026-09-22 re-run. It now aliases
+  `sweet potato`.
+- **`applesauce and yogurt` is aliased to `applesauce`,** which drops the yogurt from shopping lists
+  for the one recipe (`oven-baked-potato-pancakes`) whose line names both. It is an optional line,
+  and the row keeps its notes. Review it at trial time.
+- **`sweet potato pancakes` (BAKERY) is now unreachable.** It exists only because a heading entered
+  the catalogue, and the skip-list removes the only row that reached it. It was left in the artefact
+  for review rather than deleted.
+- **The unexplained-amount check reproduces §24.3a exactly:** 31 rows on 29 recipes. Two numbers on
+  a line account for an amount if the amount equals one of them or their product, within the gate's
+  existing 1% tolerance. All 59 correct count × pack-size rows stay explained. **Corrected by the
+  trial to 33 rows on 31 recipes** — a percentage no longer explains an amount (§25.7).
+- **Every recipe fits the edit form's limits.** The longest composed description is 1,263
+  characters (limit 2,000), the longest step 521, the largest serving count 68. Stage 5 still checks,
+  because `ConfirmAsync` validates nothing, and a recipe outside the limits could be imported but
+  never saved again.
+- **There is no U+FFFD in the corpus.** A `jalape?o` seen during this work came from the Windows
+  console's code page, not from the data.
+
+### 25.4 The trial set
+
+Chosen by script as the first recipe satisfying each stratum, walking the slugs in reversed-string
+order to spread the picks across the alphabet:
+
+| Stratum | Slug |
+|---|---|
+| Baking: cups of flour, sugar and oats | `apple-crisp-0` |
+| Canned `1 can (14.5 ounces)` | `red-beans-and-rice1` |
+| Whole produce as `pcs` | `ratatouille-0` |
+| ≥ 8 steps | `baked-fish-0` |
+| ≤ 2 steps | `grape-salsa` |
+| Footnoted notes (`*`) | `cinnamon-vanilla-granola` |
+| Mixed-number fractions | `fried-rice-0` |
+| ≥ 4 unquantified rows | `bugs-log` (7, plus three headings) |
+| Unquantified | `corn-casserole-0`, `black-bean-soup-0`, `cafe-mocha` |
+| Vulgar fraction, no ASCII digit | `cherry-puff-pancake` (the `¼ cup sliced almonds` line) |
+| Credit and notes into Description | `potato-salad-0` |
+| Cups of rice | `picadillo-0` |
+| Headings skipped | `turnip-pancakes` |
+| Unexplained amount dropped | `sunshine-salad` (and `black-bean-soup-0`) |
+| No photo | `splendid-fruit-salad` |
+| Cups of a liquid (stay `cup`) | `red-beans-and-rice-0` |
+| Either/or name via an alias | `oven-baked-potato-pancakes` |
+| Cups of greens (no density) | `red-bean-quesadilla` |
+
+### 25.5 Tests
+
+- **Unit tests need no database:** 18 cases for `IsAmountExplainedByLine` (5 added by the trial's
+  percentage fix), 5 for `SeedNonIngredientRows`, and 6 for command parsing and trial selection.
+- **`SeedPersistTests` covers every §17.3 bullet**, run against a Testcontainers Postgres through
+  the app's own DI graph, with the cache and image storage redirected to a temp directory. It also
+  covers skip-list re-pointing, dropped amounts, the three re-validation rejections,
+  `--force` against a recipe in a meal plan, and an empty catalogue.
+- **Suite: 1,240 tests, zero failures** (2026-09-28), no GPU and no network.
+
+### 25.6 Running the trial
+
+`seed-recipes --persist --trial` against the development database. The run imported the catalogue
+(927 inserted, 67 updated, 62 already current) and densities, then persisted **20 of 20**: 5 heading
+rows removed, 2 unexplained amounts stored unquantified, 1 recipe without a photo. The log has no
+LLamaSharp line at all, so the model was never loaded.
+
+Criterion 11 needs a meal plan, and creating one closes the active plan, so it ran against a
+throwaway clone (`CREATE DATABASE … TEMPLATE recipeapp`), with the API on a spare port and
+`Llm__Local__ModelPath` emptied so the web host could start without the GPU. The clone was dropped
+afterwards.
+
+### 25.7 §14.0 and §14.1 review (2026-09-28)
+
+The mechanical criteria were checked by script over every persisted row against `normalised/` and
+`parsed/`, and the rest by reading all 173 ingredient rows.
+
+| # | Criterion | Result |
+|---|---|---|
+| 1 | ≥ 18 of 20 import | ✅ 20 of 20 |
+| 2 | Amounts plausible for servings | ⚠️ One wrong in the trial — `3/4 container yogurt (6 ounces)` stored as the whole 6 oz. It is a corpus class; see the pack-size finding below |
+| 3 | Flour, sugar, rice, oats → `g` | ✅ flour 30–120 g, brown sugar 106.5 g, brown rice 190/665 g, oats and oatmeal 360/22.5 g. White sugar appeared only in tablespoons, which resolve by design to nothing |
+| 4 | Steps ordered and complete | ✅ All 125 steps are **character-identical** to `parsed/`, numbered 1..n |
+| 5 | No footnote in a step | ✅ No `*` in any step. The granola's honey footnote landed in the description |
+| 6 | `IngredientIndexes` correct | ✅ Every step's links equal the artefact's indexes after heading removal, including `turnip-pancakes` (two headings removed above its dipping-sauce rows) |
+| 7 | No U+FFFD / `&nbsp;` | ✅ None, and no U+00A0 or other entity |
+| 8 | Catalogue matches right | ✅ No `chili sauce → chili powder` shape. Splits noted below |
+| 9 | `SourceUrl` is myplate.gov | ✅ All 20 |
+| 10 | Images serve under `/uploads/images/` | ✅ 19 of 19 served as `image/*` over HTTP; `splendid-fruit-salad` has none by design |
+| 11 | Shopping list consolidates | ✅ oil 2 tbsp + 1 tbsp + 2 tsp → 55 ml; soy sauce 1 + 2 tbsp → 3 tbsp; brown rice 3½ + 1 cup → 855 g through density; water ¾ + 2 cup → 2¾ cup. Unmerged pairs are catalogue splits, not consolidation faults |
+
+**§14.0 — rows still in `cup`.** Liquids and packing-dominated foods, correctly left:
+water, milk, low-fat milk, brewed coffee, canned tomatoes, grapes, sweet cherries, green onions,
+onion, Anaheim chili, turnip and carrot (grated), spinach leaves, frozen spinach, fresh basil,
+parsley leaf, green olives, mixed vegetables, cooked chicken breast, shredded cheese. **Candidates for
+a curated density**, each a decision: `yellow cornmeal` (¾ cup), `non-fat dry milk` (⅓ cup),
+`cooked brown rice` (6 cup) and `margarine` (¼ cup).
+
+**Findings:**
+
+- **A percentage explained an amount, and was fixed.** The check accepted any number on the line,
+  so `3 tablespoons 1% low-fat milk` stored as **1 cup** was explained by the 1 in `1%`, as was
+  `1/4 cup buttermilk, 1% low-fat` → 1 cup. A percentage now counts towards "two or more numbers"
+  (so `1 pound 85% lean` stays checkable) but never explains an amount. Corpus effect, measured with
+  a replica that first reproduced the original 31: **33 rows on 31 recipes**, exactly those two added.
+- **A pack size stored in place of a fraction of the pack — not fixed, a decision.** A scan of
+  multi-number lines whose amount equals a later number while the leading quantity is not 1 found
+  49 rows. Most are correct equivalences (`1/16 cup (1 tablespoon)` → 1 tbsp, `32 ounces (2 pounds)`
+  → 2 lb). **7 store the whole container for a fraction of it** — `1/2 can (15.5 ounces)` → 15.5 oz
+  on five recipes, `1/2 7.5-ounce can` → 7.5, `3/4 container (6 ounces)` → 6 — each overstating by
+  2× or ⅓. The check cannot tell these from correct rows by arithmetic alone.
+- **Wrong amounts the arithmetic check cannot see — not fixed.** Found in the same scan:
+  `2 tablespoons dried egg mix (or 1 egg)` → 1 cup, `2 tablespoons fresh lime juice (about 1 lime)`
+  → 1 teaspoon, `5 cups hominy (2 - 15 ounce cans)` → 15 oz, `8 pineapple spears (about 1 ounce
+  each)` → 1 oz. The number agrees with the line and the unit does not, or the count is dropped.
+- **`Learn more about: …` reaches the description.** It is MyPlate's related-foods link list, parsed
+  into `notes`: **969 of the 1,048 recipes with notes carry it, and in 529 it is the only thing
+  there.** Decision 4 appends notes to the description on the premise that notes are content; for
+  half the corpus they are navigation.
+- **Legacy catalogue rows shadow artefact aliases — development database only.** A non-force
+  `import-catalogue` leaves rows that pre-date Phase 9.3, and a name outranks an alias, so 6 trial
+  rows landed on them (`apples`, `eggs`, `potato`, `oranges`, `turnip`). Across the database,
+  **21 legacy rows shadow an alias**, among them `onions`, `tomato`, `carrots` and `plain flour`,
+  which hides `all-purpose flour`'s density. 13 more trial ingredients carry their pre-9.3 category
+  (`salt`, `flour`, `sugar` as DRY_GOODS). A fresh database has none of these rows.
+- **Catalogue splits and categories to review:** `garlic` and `garlic clove` are separate entries, so
+  the plan's list shows 2 pcs of each; `cooked brown rice` is CANNED; `parsley leaf` is
+  BAKING_SPICES; `oil` and `vegetable oil` are separate (the model's name, `potato-salad-0`).
+- **The EF Core command log is on at Information**, so a trial writes ~3,800 lines of SQL around 20
+  progress lines. The full run will write ~200,000.
+
+### 25.8 Before the full run
+
+Decisions, in the order they affect the full run's output:
+
+1. **The development database's legacy rows:** reset it and import fresh, run
+   `import-catalogue --force`, or merge the 21 shadowing rows into their catalogue entries.
+  - Old database deleted. A fresh database should now be set with no entries.  
+2. **`Learn more about:`** — strip it from notes at persist time, or keep decision 4 as is.
+  - Strip it
+3. **The 7 pack-size rows** — drop their amounts (a skip-list like the headings'), or accept.
+  - accept
+4. **The §14.0 density candidates** — add any of `yellow cornmeal`, `non-fat dry milk`,
+   `cooked brown rice`, `margarine` to `IngredientDensitySeeder`, with a citation.
+   - yes, for the `yellow cornmeal` and `non-fatdry milk`
+5. **Catalogue review:** `garlic`/`garlic clove`, `cooked brown rice` → GRAINS_RICE,
+   `parsley leaf` → PRODUCE, plus the earlier `applesauce and yogurt` and `sweet potato pancakes`.
+   - `garlic` and `garlic clove` should be the same.  Yes `cooked brown rice` should go to GRAINS_RICE.  `parsley leaf` is likely BAKING_SPICES.  Im ok about the possible issues between `applesouce and yogurt` and the `sweet potato pancakes`, they are acceptable issues.
+
+Then re-run the trial with `--force` (the recipes are in no meal plan), and the full run:
+`dotnet run -- seed-recipes --persist`.
+
+### 25.9 The full run (2026-09-29)
+
+**How each answer was applied:**
+
+1. **Fresh database.** The container had been recreated but the `recipeapp_postgres_data` volume
+   survived, so the old rows were still there. With the user's go-ahead, `recipeapp` was dropped and
+   recreated empty, with no backup taken. Stage 5 migrated it and imported 1,055 catalogue entries
+   itself.
+2. **`Learn more about` stripped** — `SeedRecipePersister.StripLinkList`, configured by
+   `RecipeSeeding:NotesLinkListMarker`. Only the marker's own line is removed: text before it on the
+   line stays, and so does content on later lines, which 23 recipes have (serving tips, footnotes). The
+   first full run found **7 pages that omit the colon** (`Learn more about Lemons Herbs`), so the
+   marker has none. Covered by `SeedNotesLinkListTests`.
+3. **Pack-size rows accepted** as they are.
+4. **Densities.** Both are names added to existing rows, so no new figure was invented:
+   `yellow cornmeal` → `cornmeal` (138 g/cup, King Arthur), and `non-fat dry milk` →
+   `milk powder` (68 g/cup). USDA FDC gives **68 g for instant** (171272) and **120 g for regular**
+   (172195). The corpus means instant: one line says `non-fat instant`, and
+   `2/3 cup … mixed with 2 cups water` is instant's ⅓ cup per cup.
+5. **Catalogue.** `garlic clove` was merged into `garlic`, now **214 rows**. The merged entry takes the
+   name `garlic` rather than the more-used `garlic clove`, because 33 of `garlic`'s 56 rows are minced
+   garlic in teaspoons and tablespoons, where "Garlic Clove — 2 tbsp" would read wrong. `garlic` is
+   also the name `DataSeeder` uses. `cooked brown rice` moved to GRAINS_RICE. `parsley leaf` stays
+   BAKING_SPICES, and `applesauce and yogurt` and `sweet potato pancakes` are accepted as they are.
+
+**Result:** `seed-recipes --persist` persisted **1,123 of 1,123, 0 failed, in under a minute**. A
+`--force` re-import after the marker fix replaced all 1,123 with identical counts. Checked against the
+database:
+
+| Check | Result |
+|---|---|
+| Ingredient rows | 8,853 — the corpus's 8,882 less the 29 skipped heading/note rows (no stale skip-list line) |
+| Steps / step links | 6,857 / 14,658 |
+| Photos | 1,115; the 8 without are the recipes with no JSON-LD image |
+| Unquantified rows | 335 = 331 (§24) − 29 skipped + 33 dropped; none zero or negative |
+| `SourceUrl` | All myplate.gov |
+| Link lists left in descriptions | 0; the longest description is 1,263 characters |
+| U+FFFD, U+00A0, `&nbsp;` | 0 |
+| Density coverage | flour, sugar, brown rice, oats, yellow cornmeal and non-fat dry milk resolve to `g` |
+| Quality filter (off) | 15 recipes fall below 3 ingredients / 2 steps |
+
+The EF Core command log was lowered to Warning in `appsettings.Development.json`, so the full run
+wrote about 2,300 lines rather than around 200,000. Its one `fail:` line is EF probing
+`__EFMigrationsHistory` on an empty database before creating it, which is expected.

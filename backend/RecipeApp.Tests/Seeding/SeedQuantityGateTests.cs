@@ -381,4 +381,42 @@ public class SeedQuantityGateTests
     [InlineData("")]
     public void TryReadSoleStatedUnit_NoUnitImmediatelyAfterTheNumber_IsNull(string line) =>
         SeedQuantityGate.TryReadSoleStatedUnit(line).Should().BeNull();
+
+    // ── IsAmountExplainedByLine (Stage 5, §24.3a) ─────────────────────────────
+
+    [Theory]
+    [InlineData("1 pound 85% lean ground turkey", "1.85")]                         // percentage absorbed
+    [InlineData("1/16 cup orange juice (1 tablespoon)", "1.062")]                  // equivalence combined
+    [InlineData("3 cans (15.5 ounces each) low-sodium kidney beans", "30")]        // can count slipped
+    [InlineData("1/3 cup \"lite\" vinaigrette dressing (around 15 calories per tablespoon)", "13.333")]
+    [InlineData("3 tablespoons 1% low-fat milk", "1")]                             // the 1 in 1% (trial)
+    [InlineData("1/4 cup buttermilk, 1% low-fat", "1")]                           // the 1 in 1% (trial)
+    [InlineData("1 pound 93 % lean ground beef", "93")]                            // spaced percent sign
+    public void IsAmountExplainedByLine_TheCorpusShapes_AreUnexplained(string line, string amount) =>
+        SeedQuantityGate.IsAmountExplainedByLine(line, decimal.Parse(amount, System.Globalization.CultureInfo.InvariantCulture))
+            .Should().BeFalse();
+
+    [Theory]
+    [InlineData("2 cans (15.5 ounces each) low-sodium beans", "31")]     // count × pack size
+    [InlineData("1 can (14.5 ounces) diced tomatoes", "14.5")]           // the pack size alone
+    [InlineData("1 can (14.5 ounces) diced tomatoes", "1")]              // the count alone
+    [InlineData("1/16 cup orange juice (1 tablespoon)", "0.0625")]       // the first number
+    [InlineData("1/3 cup vinaigrette (15 calories per tablespoon)", "0.333")] // within 1%
+    [InlineData("3 tablespoons 1% low-fat milk", "3")]                   // a percentage leaves the quantity
+    [InlineData("1 pound 85% lean ground turkey", "1")]                  // explaining the amount
+    public void IsAmountExplainedByLine_ANumberOnTheLineOrAProductOfTwo_IsExplained(string line, string amount) =>
+        SeedQuantityGate.IsAmountExplainedByLine(line, decimal.Parse(amount, System.Globalization.CultureInfo.InvariantCulture))
+            .Should().BeTrue();
+
+    [Theory]
+    [InlineData("1 cup rice", "7")]        // one number — CheckAgainstStatedNumber's job, not this
+    [InlineData("salt", "1")]              // no number — nothing to explain it by
+    [InlineData("", "1")]
+    public void IsAmountExplainedByLine_FewerThanTwoNumbers_IsNotJudged(string line, string amount) =>
+        SeedQuantityGate.IsAmountExplainedByLine(line, decimal.Parse(amount, System.Globalization.CultureInfo.InvariantCulture))
+            .Should().BeTrue();
+
+    [Fact]
+    public void IsAmountExplainedByLine_NoAmount_IsExplained() =>
+        SeedQuantityGate.IsAmountExplainedByLine("2 cans (15.5 ounces each) beans", null).Should().BeTrue();
 }

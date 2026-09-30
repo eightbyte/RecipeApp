@@ -1,4 +1,6 @@
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
+using RecipeApp.API.Data;
 
 namespace RecipeApp.API.Services.Seeding;
 
@@ -6,9 +8,8 @@ namespace RecipeApp.API.Services.Seeding;
 /// Drives the offline half of the seed import: the stages that run against the local cache rather
 /// than the archive.
 ///
-/// <para>Stages 3 (parse) and 4 (LLM normalise) are implemented. Stage 5 (persist) is not yet
-/// built; when it is, it joins this interface — it walks the same manifest and shares the same
-/// per-slug isolation and resume behaviour.</para>
+/// <para>Stages 3 (parse), 4 (LLM normalise) and 5 (persist). All three walk the same manifest and
+/// share the same per-slug isolation and resume behaviour.</para>
 /// </summary>
 public interface IRecipeLibrarySeeder
 {
@@ -31,6 +32,16 @@ public interface IRecipeLibrarySeeder
     /// <param name="force">Re-run the LLM pass for recipes whose output is already cached.</param>
     Task<SeedNormaliseResult> NormaliseAsync(
         SeedManifest manifest, int? limit = null, bool force = false, CancellationToken ct = default);
+
+    /// <summary>
+    /// Stage 5. Persists every normalised recipe through <c>ConfirmAsync</c>, skipping recipes whose
+    /// <c>SourceUrl</c> is already in the database. No LLM, and the catalogue must already be loaded.
+    /// </summary>
+    /// <param name="manifest">Entries to persist, in manifest order.</param>
+    /// <param name="limit">Maximum number of recipes to persist this run; null for all.</param>
+    /// <param name="force">Replace recipes already in the database rather than skipping them.</param>
+    Task<SeedPersistResult> PersistAsync(
+        SeedManifest manifest, int? limit = null, bool force = false, CancellationToken ct = default);
 }
 
 /// <inheritdoc cref="IRecipeLibrarySeeder"/>
@@ -38,6 +49,7 @@ public class RecipeLibrarySeeder(
     SeedCacheStore cache,
     MyPlateRecipeParser parser,
     SeedRecipeNormaliser normaliser,
+    IServiceScopeFactory scopeFactory,
     IOptions<RecipeSeedingOptions> options,
     ILogger<RecipeLibrarySeeder> logger) : IRecipeLibrarySeeder
 {
@@ -322,6 +334,173 @@ public class RecipeLibrarySeeder(
             Stale      = stale,
             Aborted    = aborted,
             Failures   = failures,
+        };
+    }
+
+    // ── Stage 5 ───────────────────────────────────────────────────────────────
+
+    public async Task<SeedPersistResult> PersistAsync(
+        SeedManifest manifest, int? limit = null, bool force = false, CancellationToken ct = default)
+    {
+        cache.EnsureDirectories();
+
+        var state = await cache.LoadStateAsync(ct);
+
+        // Loaded once per run, not once per recipe: the catalogue does not change during Stage 5 —
+        // that is the point of Phase 9.3 — so every recipe resolves against the same dictionary.
+        SeedCatalogueResolver.CatalogueLookup lookup;
+        HashSet<string> persistedUrls;
+        using (var runScope = scopeFactory.CreateScope())
+        {
+            lookup = await runScope.ServiceProvider.GetRequiredService<SeedCatalogueResolver>().LoadAsync(ct);
+
+            // §13: SourceUrl is the natural key. Read up front so re-running an imported library is
+            // a pass over files, not a thousand queries.
+            var db = runScope.ServiceProvider.GetRequiredService<AppDbContext>();
+            persistedUrls = (await db.Recipes
+                    .Where(recipe => recipe.SourceUrl != null)
+                    .Select(recipe => recipe.SourceUrl!)
+                    .ToListAsync(ct))
+                .ToHashSet(StringComparer.Ordinal);
+        }
+
+        if (lookup.Count == 0)
+            throw new SeedHarvestException(
+                "The ingredient catalogue is empty, so no recipe can resolve its ingredients. Run " +
+                "'dotnet run -- import-catalogue' first.");
+
+        var persisted       = 0;
+        var replaced        = 0;
+        var alreadyPresent  = 0;
+        var notNormalised   = 0;
+        var filteredOut     = 0;
+        var belowThreshold  = 0;
+        var rowsRemoved     = 0;
+        var amountsDropped  = 0;
+        var withoutImage    = 0;
+        var failures        = new Dictionary<string, string>(StringComparer.Ordinal);
+        var staleSkipLines  = new Dictionary<string, IReadOnlyList<string>>(StringComparer.Ordinal);
+
+        var total    = manifest.Recipes.Count;
+        var position = 0;
+
+        try
+        {
+            foreach (var entry in manifest.Recipes)
+            {
+                ct.ThrowIfCancellationRequested();
+                position++;
+
+                if (!SeedCacheStore.IsValidSlug(entry.Slug))
+                {
+                    failures[entry.Slug] = "UnusableSlug: not safe to use as a cache filename";
+                    continue;
+                }
+
+                var recipe = cache.HasNormalised(entry.Slug)
+                    ? await cache.TryLoadNormalisedAsync(entry.Slug, ct)
+                    : null;
+
+                if (recipe is null)
+                {
+                    notNormalised++;
+                    continue;
+                }
+
+                var slugState = state.GetOrAdd(entry.Slug);
+
+                var exists = persistedUrls.Contains(recipe.SourceUrl);
+                if (exists && !force)
+                {
+                    alreadyPresent++;
+                    slugState.Stage     = SeedStage.Persisted;
+                    slugState.LastError = null;
+                    continue;
+                }
+
+                if (limit is { } cap && persisted >= cap) break;
+
+                try
+                {
+                    var parsed      = await cache.TryLoadParsedAsync(entry.Slug, ct);
+                    var fingerprint = await cache.TryComputeParsedFingerprintAsync(entry.Slug, ct);
+                    if (parsed is null || fingerprint is null)
+                        throw new SeedPersistException(SeedPersistFailure.StaleArtefact,
+                            "no readable parsed recipe to check the artefact against; re-run --parse");
+
+                    // A fresh scope per recipe: a failed save leaves its DbContext unusable, and one
+                    // bad recipe must never take the rest of the run with it (§16).
+                    using var scope  = scopeFactory.CreateScope();
+                    var persister    = scope.ServiceProvider.GetRequiredService<SeedRecipePersister>();
+                    var prepared     = persister.Prepare(recipe, parsed, fingerprint, lookup);
+                    var (wasReplaced, hasImage) =
+                        await persister.PersistAsync(entry.Slug, prepared, replaceExisting: exists, ct);
+
+                    persistedUrls.Add(recipe.SourceUrl);
+                    persisted++;
+                    if (wasReplaced) replaced++;
+                    if (!hasImage) withoutImage++;
+                    if (prepared.BelowQualityThreshold) belowThreshold++;
+                    rowsRemoved    += prepared.NonIngredientRowsRemoved;
+                    amountsDropped += prepared.AmountsDropped;
+                    if (prepared.StaleSkipListLines.Count > 0)
+                        staleSkipLines[entry.Slug] = prepared.StaleSkipListLines;
+
+                    slugState.Stage     = SeedStage.Persisted;
+                    slugState.LastError = null;
+
+                    logger.LogInformation(
+                        "[{Position}/{Total}] {Slug} → {Action} ({Ingredients} ingredients, {Steps} steps{Image})",
+                        position, total, entry.Slug, wasReplaced ? "replaced" : "persisted",
+                        prepared.Request.Ingredients.Count, prepared.Request.Steps.Count,
+                        hasImage ? "" : ", no photo");
+                }
+                catch (Exception ex) when (ex is SeedPersistException or DbUpdateException or IOException)
+                {
+                    var reason = ex switch
+                    {
+                        SeedPersistException persistFailure => persistFailure.StateReason,
+                        DbUpdateException => $"PersistFailed: database rejected the recipe — {ex.GetBaseException().Message}",
+                        _ => $"PersistFailed: photo could not be copied — {ex.Message}",
+                    };
+
+                    if (ex is SeedPersistException { Failure: SeedPersistFailure.BelowQualityThreshold })
+                        filteredOut++;
+                    else
+                        failures[entry.Slug] = reason;
+
+                    slugState.Stage     = SeedStage.Failed;
+                    slugState.LastError = reason;
+
+                    logger.LogWarning("[{Position}/{Total}] {Slug} → {Reason}",
+                        position, total, entry.Slug, reason);
+                }
+            }
+        }
+        finally
+        {
+            await cache.SaveStateAsync(CancellationToken.None);
+        }
+
+        if (notNormalised > 0)
+            logger.LogWarning(
+                "{Count} manifest entries have no normalised recipe. Run 'seed-recipes --normalise' first.",
+                notNormalised);
+
+        return new SeedPersistResult
+        {
+            Persisted                = persisted,
+            Replaced                 = replaced,
+            AlreadyPersisted         = alreadyPresent,
+            NotNormalised            = notNormalised,
+            Failed                   = failures.Count,
+            FilteredOut              = filteredOut,
+            BelowQualityThreshold    = belowThreshold,
+            NonIngredientRowsRemoved = rowsRemoved,
+            AmountsDropped           = amountsDropped,
+            WithoutImage             = withoutImage,
+            StaleSkipListLines       = staleSkipLines,
+            Failures                 = failures,
         };
     }
 }

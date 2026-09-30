@@ -89,6 +89,7 @@ builder.Services.AddSingleton<IRecipeLibrarySeeder, RecipeLibrarySeeder>();
 builder.Services.AddSingleton<IngredientCatalogueFileStore>();
 builder.Services.AddSingleton<IngredientCatalogueBuilder>();
 builder.Services.AddScoped<SeedCatalogueResolver>();
+builder.Services.AddScoped<SeedRecipePersister>();
 
 builder.Services.AddHttpClient(WaybackHarvester.HttpClientName, (sp, client) =>
 {
@@ -108,7 +109,8 @@ builder.Services.AddSingleton<ILlmStructuredClient>(sp =>
     var opts = sp.GetRequiredService<IOptions<LlmOptions>>().Value;
     return opts.Provider switch
     {
-        "Local" => new LLamaSharpStructuredClient(sp.GetRequiredService<LlamaModelHolder>()),
+        "Local" => new DeferredLlmStructuredClient(
+            () => new LLamaSharpStructuredClient(sp.GetRequiredService<LlamaModelHolder>())),
         var p   => throw new InvalidOperationException($"Unknown Llm:Provider '{p}'."),
     };
 });
@@ -152,8 +154,9 @@ if (isSeedDensities)
 }
 
 // ── seed-recipes command — harvests the USDA MyPlate library then exits ──────
-// Stages 1-4 touch only the archive, the local cache and the local model, so this runs without a
-// database. Stage 5 will be the first mode that needs one.
+// Stages 1-4 touch only the archive, the local cache and the local model, so they run without a
+// database. Stage 5 is the only mode that needs one, and it migrates and imports the catalogue
+// itself before persisting anything.
 if (isSeedRecipes)
 {
     // The harvest runs for the best part of an hour, so Ctrl+C is a normal way to stop it.
@@ -190,21 +193,12 @@ if (isRetiredSeedCatalogue)
 // No LLM, no network, no arguments, idempotent (Phase 9.3 §4.5).
 if (isImportCatalogue)
 {
-    using var scope = app.Services.CreateScope();
-    var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
-    await db.Database.MigrateAsync();
-
-    var store = scope.ServiceProvider.GetRequiredService<IngredientCatalogueFileStore>();
-
     try
     {
-        var catalogue = await store.LoadAsync();
-        await IngredientCatalogueFileSeeder.SeedAsync(db, catalogue, app.Logger, catalogueForce);
-
         // Densities attach to catalogue rows, so they can only be applied once the rows exist.
         // Running them together is what makes the documented catalogue → densities order hard to
         // get wrong (§4.5).
-        await IngredientDensitySeeder.SeedAsync(db, app.Logger);
+        await CatalogueImport.RunAsync(app.Services, app.Logger, catalogueForce);
     }
     catch (Exception ex) when (ex is FileNotFoundException or CatalogueValidationException)
     {

@@ -63,7 +63,7 @@ public static class IngredientDensitySeeder
         new("rye flour",           ["rye flour"],                                                           102, KingArthur),
         new("almond flour",        ["almond flour", "almond meal", "ground almonds"],                        96, KingArthur),
         new("cornstarch",          ["cornstarch", "corn starch", "cornflour"],                              120, KingArthur),
-        new("cornmeal",            ["cornmeal", "polenta"],                                                 138, KingArthur),
+        new("cornmeal",            ["cornmeal", "polenta", "yellow cornmeal"],                              138, KingArthur),
         new("semolina",            ["semolina", "semolina flour"],                                          167, KingArthur),
 
         // ── Sugars ────────────────────────────────────────────────────────────
@@ -117,7 +117,10 @@ public static class IngredientDensitySeeder
         new("shredded cheddar",    ["shredded cheddar", "grated cheddar", "cheddar cheese", "cheddar"],     113, CooksIllus),
         new("shredded mozzarella", ["shredded mozzarella", "mozzarella cheese", "mozzarella"],              112, CooksIllus),
         new("cream cheese",        ["cream cheese"],                                                        232, KingArthur),
-        new("milk powder",         ["milk powder", "powdered milk", "dried milk"],                           68, KingArthur),
+        // Instant, which is what the MyPlate corpus means: one line says so outright, and its
+        // "2/3 cup mixed with 2 cups water" is instant's 1/3-cup-per-cup ratio. USDA FDC agrees on
+        // 68 g for instant (171272); regular non-fat dry milk is 120 g (172195) and is not matched.
+        new("milk powder",         ["milk powder", "powdered milk", "dried milk", "non-fat dry milk"],      68, KingArthur),
 
         // ── Baking and pantry ─────────────────────────────────────────────────
         new("cocoa powder",        ["cocoa powder", "cocoa", "unsweetened cocoa powder"],                     85, KingArthur),

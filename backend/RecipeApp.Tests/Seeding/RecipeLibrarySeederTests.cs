@@ -1,4 +1,5 @@
 using System.Text.Json.Nodes;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
 using RecipeApp.API.Services.Seeding;
@@ -12,8 +13,7 @@ namespace RecipeApp.Tests.Seeding;
 /// run resumable. File system only; no database, no network, and inference is scripted through
 /// <see cref="StubLlmStructuredClient"/>.
 ///
-/// <para>Stage 5 will join this class and get its own coverage; the integration tests §17.3
-/// describes are blocked on it.</para>
+/// <para>Stage 5 needs a database and has its own class, <see cref="SeedPersistTests"/>.</para>
 /// </summary>
 public class RecipeLibrarySeederTests : IDisposable
 {
@@ -44,8 +44,13 @@ public class RecipeLibrarySeederTests : IDisposable
             new SeedRecipeNormaliser(
                 llm ?? UnusedLlm, Options.Create(_options),
                 NullLogger<SeedRecipeNormaliser>.Instance),
+            UnusedScopes,
             Options.Create(_options),
             NullLogger<RecipeLibrarySeeder>.Instance);
+
+    /// <summary>Stages 3 and 4 open no scope — only Stage 5 needs the database.</summary>
+    private static readonly IServiceScopeFactory UnusedScopes =
+        new ServiceCollection().BuildServiceProvider().GetRequiredService<IServiceScopeFactory>();
 
     private static SeedManifest ManifestOf(params string[] slugs) => new()
     {

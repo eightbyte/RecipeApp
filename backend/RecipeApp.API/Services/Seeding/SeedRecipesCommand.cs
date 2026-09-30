@@ -1,3 +1,5 @@
+using RecipeApp.API.Data;
+
 namespace RecipeApp.API.Services.Seeding;
 
 /// <summary>
@@ -5,9 +7,9 @@ namespace RecipeApp.API.Services.Seeding;
 /// after the <c>seed-recipes</c> token — and drives the harvest stages, then exits without
 /// starting Kestrel.
 ///
-/// <para>Stages 1-4 (discover, fetch, images, parse, normalise) are implemented. The pipeline
-/// modes that need persistence report as unimplemented rather than silently doing part of the
-/// job.</para>
+/// <para>Every stage is implemented. Each has its own flag, and no stage flag at all runs the full
+/// pipeline — every stage in order, each resuming from its cache, so a complete cache makes the
+/// earlier stages no-ops and the run costs only the database writes.</para>
 /// </summary>
 public static class SeedRecipesCommand
 {
@@ -15,9 +17,6 @@ public static class SeedRecipesCommand
 
     /// <summary>Exit code for a usage error or an aborted run.</summary>
     private const int FailureExitCode = 1;
-
-    /// <summary>Exit code for a mode that is recognised but not yet built.</summary>
-    private const int NotImplementedExitCode = 2;
 
     /// <summary>
     /// Index of the command token in the process argument vector, or -1 when the command was not
@@ -49,13 +48,22 @@ public static class SeedRecipesCommand
         /// </summary>
         public bool BuildCatalogue { get; init; }
 
+        /// <summary>
+        /// Stage 5 — persist normalised recipes to the database. No LLM; migrates and imports the
+        /// catalogue first so the catalogue → densities → recipes order cannot be skipped.
+        /// </summary>
+        public bool Persist { get; init; }
+
         /// <summary>Print the cached progress summary and do no work.</summary>
         public bool Report { get; init; }
 
         /// <summary>Discard cached pages and images before harvesting.</summary>
         public bool RefreshCache { get; init; }
 
-        /// <summary>Run the stratified trial subset through the full pipeline.</summary>
+        /// <summary>
+        /// Restrict the run to the pinned stratified subset (<see cref="SeedTrialSelection"/>). Alone it
+        /// runs the full pipeline over those recipes; with <c>--persist</c>, only Stage 5.
+        /// </summary>
         public bool Trial { get; init; }
 
         /// <summary>Redo work already done — re-parse cached recipes, re-import persisted ones.</summary>
@@ -83,9 +91,9 @@ public static class SeedRecipesCommand
         /// </summary>
         public IReadOnlyList<int> CatalogueBatches { get; init; } = [];
 
-        /// <summary>Whether this invocation needs Stage 5, which is not yet implemented.</summary>
-        public bool RequiresFullPipeline =>
-            !Discover && !Harvest && !Parse && !Normalise && !BuildCatalogue && !Report;
+        /// <summary>Whether no single stage was named, so every stage runs in order.</summary>
+        public bool RunsFullPipeline =>
+            !Discover && !Harvest && !Parse && !Normalise && !BuildCatalogue && !Persist && !Report;
     }
 
     /// <summary>Parses the command's own arguments, or returns null after reporting a usage error.</summary>
@@ -102,6 +110,7 @@ public static class SeedRecipesCommand
                 case "--parse":         arguments = arguments with { Parse = true }; break;
                 case "--normalise":     arguments = arguments with { Normalise = true }; break;
                 case "--build-catalogue": arguments = arguments with { BuildCatalogue = true }; break;
+                case "--persist":       arguments = arguments with { Persist = true }; break;
                 case "--report":        arguments = arguments with { Report = true }; break;
                 case "--refresh-cache": arguments = arguments with { RefreshCache = true }; break;
                 case "--trial":         arguments = arguments with { Trial = true }; break;
@@ -157,6 +166,13 @@ public static class SeedRecipesCommand
             return null;
         }
 
+        // Both name the recipes to run on; honouring one silently would run the wrong set.
+        if (arguments.Trial && arguments.Slugs.Count > 0)
+        {
+            logger.LogError("--trial and --slug each choose the recipes to run; use one or the other.");
+            return null;
+        }
+
         return arguments;
     }
 
@@ -171,12 +187,17 @@ public static class SeedRecipesCommand
                             normalised/. Run once, review the result, commit it.
           --batch <n>       With --build-catalogue: group only batch n, log its merges and
                             write nothing; repeatable
+          --persist         Stage 5 — write normalised recipes to the database, no LLM
           --report          Print the cached progress summary and do no work
           --refresh-cache   Discard cached pages and images, then re-harvest
           --limit <n>       Process at most n recipes this run
           --slug <name>     Restrict the run to this recipe; repeatable
-          --trial           Full pipeline over the stratified trial subset
+          --trial           Restrict the run to the 20 pinned trial recipes
           --force           Redo work already done (re-parse, re-normalise, re-import)
+
+        With no stage flag, every stage runs in order, each resuming from its cache.
+        --force then applies to Stage 5 only: it re-imports recipes already in the
+        database and never discards a cached page, parse or LLM pass.
         """;
 
     // ── Execution ─────────────────────────────────────────────────────────────
@@ -213,11 +234,10 @@ public static class SeedRecipesCommand
             if (arguments.BuildCatalogue)
                 return await BuildCatalogueAsync(services, harvester, logger, arguments, ct);
 
-            logger.LogError(
-                "Stage 5 (persist) is not implemented yet, so this mode cannot run. " +
-                "Use --discover, --harvest, --parse, --normalise, --build-catalogue or --report.\n{Usage}",
-                Usage);
-            return NotImplementedExitCode;
+            if (arguments.Persist)
+                return await PersistAsync(services, harvester, logger, arguments, ct);
+
+            return await RunFullPipelineAsync(services, harvester, cache, logger, arguments, ct);
         }
         catch (SeedHarvestException ex)
         {
@@ -229,6 +249,14 @@ public static class SeedRecipesCommand
             // Nothing was written. A catalogue that contradicts itself is worse than no catalogue,
             // and every consumer downstream treats this file as authoritative (§4.7).
             logger.LogError("Catalogue build aborted: {Message}", ex.Message);
+            return FailureExitCode;
+        }
+        catch (Exception ex) when (ex is FileNotFoundException or Npgsql.NpgsqlException)
+        {
+            // Only Stage 5 reaches either: the catalogue artefact is missing, or Postgres is down.
+            logger.LogError("Seed persist aborted: {Message}", ex.Message);
+            if (ex is Npgsql.NpgsqlException)
+                logger.LogError("Is the database running? 'docker compose up -d postgres'.");
             return FailureExitCode;
         }
         catch (OperationCanceledException)
@@ -436,6 +464,116 @@ public static class SeedRecipesCommand
             "Written to {Path}. Review it against the merge rules, then commit it.", result.Path);
 
         return 0;
+    }
+
+    /// <summary>
+    /// The recipes this invocation runs on: the pinned trial subset, the named slugs, or the whole
+    /// manifest.
+    /// </summary>
+    internal static SeedManifest SelectRecipes(
+        SeedManifest manifest, SeedRecipesArguments arguments, ILogger logger) =>
+        Restrict(manifest, arguments.Trial ? SeedTrialSelection.Slugs : arguments.Slugs, logger);
+
+    /// <summary>Stage 5 alone. No LLM — the model is never loaded.</summary>
+    private static async Task<int> PersistAsync(
+        IServiceProvider services,
+        IWaybackHarvester harvester,
+        ILogger logger,
+        SeedRecipesArguments arguments,
+        CancellationToken ct)
+    {
+        var manifest = SelectRecipes(await harvester.EnsureManifestAsync(ct), arguments, logger);
+        return await PersistSelectedAsync(services, logger, manifest, arguments, ct);
+    }
+
+    private static async Task<int> PersistSelectedAsync(
+        IServiceProvider services,
+        ILogger logger,
+        SeedManifest manifest,
+        SeedRecipesArguments arguments,
+        CancellationToken ct)
+    {
+        // Catalogue → densities → recipes (Phase 9.3 §4.5), enforced by running the first two here
+        // rather than trusting that import-catalogue was run. Idempotent: an imported catalogue only
+        // has nulls filled and newly committed aliases merged in, and --force never reaches it —
+        // re-importing recipes must not discard someone's catalogue corrections.
+        await CatalogueImport.RunAsync(services, logger, force: false, ct);
+
+        var seeder = services.GetRequiredService<IRecipeLibrarySeeder>();
+        var result = await seeder.PersistAsync(manifest, arguments.Limit, arguments.Force, ct);
+
+        logger.LogInformation(
+            "Persist complete: {Persisted} persisted ({Replaced} replacing an existing recipe), " +
+            "{Already} already in the database, {Failed} failed (of {Total} selected).",
+            result.Persisted, result.Replaced, result.AlreadyPersisted, result.Failed, manifest.Recipes.Count);
+
+        logger.LogInformation(
+            "Adjustments: {Rows} heading/note rows removed, {Dropped} unexplained amounts stored " +
+            "unquantified, {NoPhoto} recipes without a photo.",
+            result.NonIngredientRowsRemoved, result.AmountsDropped, result.WithoutImage);
+
+        if (result.FilteredOut > 0)
+            logger.LogInformation("{Count} recipes excluded by the quality filter.", result.FilteredOut);
+
+        if (result.BelowQualityThreshold > 0)
+            logger.LogInformation(
+                "{Count} persisted recipes fall below the quality thresholds (filter is off).",
+                result.BelowQualityThreshold);
+
+        if (result.NotNormalised > 0)
+            logger.LogWarning("{Count} recipes have no normalised recipe yet.", result.NotNormalised);
+
+        foreach (var (slug, lines) in result.StaleSkipListLines.OrderBy(pair => pair.Key, StringComparer.Ordinal))
+            logger.LogWarning(
+                "  {Slug}: skip-list lines matched nothing — remove them from SeedNonIngredientRows: {Lines}",
+                slug, string.Join(" | ", lines));
+
+        foreach (var (slug, error) in result.Failures.OrderBy(pair => pair.Key, StringComparer.Ordinal))
+            logger.LogWarning("  {Slug}: {Error}", slug, error);
+
+        return 0;
+    }
+
+    /// <summary>
+    /// Every stage in order over the selected recipes. Each stage resumes from its own cache, so
+    /// against a complete cache the harvest makes no request, the normalise pass calls no model, and
+    /// the run is the database writes alone.
+    ///
+    /// <para><c>--limit</c> and <c>--force</c> reach Stage 5 only (§13): a re-import must cost no
+    /// GPU time, and discarding a parse or an LLM pass has its own stage flag.</para>
+    /// </summary>
+    private static async Task<int> RunFullPipelineAsync(
+        IServiceProvider services,
+        IWaybackHarvester harvester,
+        SeedCacheStore cache,
+        ILogger logger,
+        SeedRecipesArguments arguments,
+        CancellationToken ct)
+    {
+        var manifest = SelectRecipes(await harvester.EnsureManifestAsync(ct), arguments, logger);
+        var seeder   = services.GetRequiredService<IRecipeLibrarySeeder>();
+
+        var harvest = await harvester.HarvestAsync(manifest, limit: null, ct);
+        logger.LogInformation("Stage 2: {Fetched} pages fetched, {Skipped} already cached, {Failed} failed.",
+            harvest.PagesFetched, harvest.PagesSkipped, harvest.PagesFailed);
+
+        var parse = await seeder.ParseAsync(manifest, limit: null, force: false, ct);
+        logger.LogInformation("Stage 3: {Parsed} parsed, {Skipped} already parsed, {Failed} failed.",
+            parse.Parsed, parse.Skipped, parse.Failed);
+
+        var normalise = await seeder.NormaliseAsync(manifest, limit: null, force: false, ct);
+        logger.LogInformation("Stage 4: {Normalised} normalised, {Skipped} already current, {Failed} failed.",
+            normalise.Normalised, normalise.Skipped, normalise.Failed);
+
+        // Persisting past an aborted Stage 4 would import the part that happened to finish and
+        // report the run as done.
+        if (normalise.Aborted)
+        {
+            logger.LogError("Stage 4 stopped early, so Stage 5 did not run. Fix the model and re-run.");
+            return FailureExitCode;
+        }
+
+        return await PersistSelectedAsync(services, logger, manifest, arguments, ct);
     }
 
     private static async Task<int> ReportAsync(

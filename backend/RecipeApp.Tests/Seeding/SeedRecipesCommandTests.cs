@@ -21,7 +21,7 @@ public class SeedRecipesCommandTests
         var arguments = Parse();
 
         arguments.Should().NotBeNull();
-        arguments!.RequiresFullPipeline.Should().BeTrue();
+        arguments!.RunsFullPipeline.Should().BeTrue();
     }
 
     [Theory]
@@ -30,10 +30,60 @@ public class SeedRecipesCommandTests
     [InlineData("--parse")]
     [InlineData("--normalise")]
     [InlineData("--build-catalogue")]
+    [InlineData("--persist")]
     [InlineData("--report")]
-    public void TryParse_AnImplementedStage_DoesNotNeedTheUnbuiltStages(string flag)
+    public void TryParse_ANamedStage_RunsOnlyThatStage(string flag)
     {
-        Parse(flag)!.RequiresFullPipeline.Should().BeFalse();
+        Parse(flag)!.RunsFullPipeline.Should().BeFalse();
+    }
+
+    [Theory]
+    [InlineData("--trial")]
+    [InlineData("--force")]
+    [InlineData("--limit", "50")]
+    public void TryParse_AModifierAlone_StillRunsTheFullPipeline(params string[] args)
+    {
+        // §15: `seed-recipes --trial`, `--force` and `--limit 50` are full-pipeline modes.
+        Parse(args)!.RunsFullPipeline.Should().BeTrue();
+    }
+
+    [Fact]
+    public void TryParse_PersistWithTrial_PersistsOnlyTheTrialSubset()
+    {
+        var arguments = Parse("--persist", "--trial")!;
+
+        arguments.Persist.Should().BeTrue();
+        arguments.Trial.Should().BeTrue();
+        arguments.RunsFullPipeline.Should().BeFalse();
+    }
+
+    [Fact]
+    public void TryParse_TrialWithSlug_IsRejected()
+    {
+        // Both choose the recipes to run on; honouring either silently would run the wrong set.
+        Parse("--trial", "--slug", "apple-crisp-0").Should().BeNull();
+    }
+
+    [Fact]
+    public void SelectRecipes_Trial_NarrowsToThePinnedSlugsInManifestOrder()
+    {
+        var manifest = new SeedManifest
+        {
+            Recipes = [.. new[] { "zucchini-bread", "apple-crisp-0", "grape-salsa", "not-in-the-trial" }
+                .Select(slug => new SeedManifestEntry(slug, "20250101000000", "https://www.myplate.gov/recipes/" + slug))],
+        };
+
+        var selected = SeedRecipesCommand.SelectRecipes(manifest, Parse("--trial")!, NullLogger.Instance);
+
+        selected.Recipes.Select(entry => entry.Slug).Should().Equal("apple-crisp-0", "grape-salsa");
+    }
+
+    [Fact]
+    public void TrialSelection_PinsTwentyDistinctSlugs()
+    {
+        // §14: twenty, stratified, reproducible. A duplicate would silently shrink the trial.
+        SeedTrialSelection.Slugs.Should().HaveCount(20).And.OnlyHaveUniqueItems();
+        SeedTrialSelection.Slugs.Should().OnlyContain(slug => SeedCacheStore.IsValidSlug(slug));
     }
 
     [Fact]

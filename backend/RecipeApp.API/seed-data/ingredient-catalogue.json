@@ -223,9 +223,7 @@
       "displayName": "Applesauce",
       "category": "JAM_NUT_BUTTER",
       "defaultUnit": "cup",
-      "aliases": [
-        "unsweetened applesauce"
-      ],
+      "aliases": ["unsweetened applesauce", "applesauce and yogurt"],
       "corpusRows": 14,
       "corpusRecipes": 14
     },
@@ -461,10 +459,7 @@
       "displayName": "Basil",
       "category": "PRODUCE",
       "defaultUnit": "pcs",
-      "aliases": [
-        "fresh basil",
-        "basil leaves"
-      ],
+      "aliases": ["fresh basil", "basil leaves", "basil leaf"],
       "corpusRows": 37,
       "corpusRecipes": 37
     },
@@ -891,9 +886,7 @@
       "displayName": "Broccoli",
       "category": "PRODUCE",
       "defaultUnit": "cup",
-      "aliases": ["broccoli florets",
-        "broccoli head",
-        "broccoli stalk"],
+      "aliases": ["broccoli florets", "broccoli head", "broccoli stalk", "broccoli floret"],
       "corpusRows": 34,
       "corpusRecipes": 34
     },
@@ -1279,7 +1272,7 @@
       "displayName": "Cauliflower",
       "category": "PRODUCE",
       "defaultUnit": "pcs",
-      "aliases": ["cauliflower florets"],
+      "aliases": ["cauliflower florets", "cauliflower floret"],
       "corpusRows": 11,
       "corpusRecipes": 11
     },
@@ -1324,11 +1317,7 @@
       "displayName": "Celery",
       "category": "PRODUCE",
       "defaultUnit": "cup",
-      "aliases": [
-        "sliced celery", 
-        "celery stalk", 
-        "celery stick"
-      ],
+      "aliases": ["sliced celery", "celery stalk", "celery stick", "celery stalks"],
       "corpusRows": 73,
       "corpusRecipes": 73
     },
@@ -1518,14 +1507,7 @@
       "displayName": "Chicken Broth",
       "category": "SOUPS_BROTH",
       "defaultUnit": "cup",
-      "aliases": [
-        "low-sodium chicken broth",
-        "reduced-sodium chicken broth",
-        "chicken broth granules",
-        "chicken broth or vegetable broth",
-        "chicken or vegetable broth",
-        "chicken or turkey broth"
-      ],
+      "aliases": ["low-sodium chicken broth", "reduced-sodium chicken broth", "chicken broth granules", "chicken broth or vegetable broth", "chicken or vegetable broth", "chicken or turkey broth", "vegetable or chicken broth"],
       "corpusRows": 44,
       "corpusRecipes": 44
     },
@@ -1977,7 +1959,7 @@
     {
       "name": "cooked brown rice",
       "displayName": "Cooked Brown Rice",
-      "category": "CANNED",
+      "category": "GRAINS_RICE",
       "defaultUnit": "cup",
       "aliases": [],
       "corpusRows": 7,
@@ -3681,9 +3663,14 @@
       "displayName": "Garlic",
       "category": "PRODUCE",
       "defaultUnit": "pcs",
-      "aliases": [],
-      "corpusRows": 56,
-      "corpusRecipes": 56
+      "aliases": [
+        "fresh garlic clove",
+        "garlic clove",
+        "garlic cloves",
+        "large garlic clove"
+      ],
+      "corpusRows": 214,
+      "corpusRecipes": 214
     },
     {
       "name": "garlic \u0026 herb blend",
@@ -3702,19 +3689,6 @@
       "aliases": [],
       "corpusRows": 3,
       "corpusRecipes": 3
-    },
-    {
-      "name": "garlic clove",
-      "displayName": "Garlic Clove",
-      "category": "PRODUCE",
-      "defaultUnit": "pcs",
-      "aliases": [
-        "fresh garlic clove",
-        "large garlic clove",
-        "garlic cloves"
-      ],
-      "corpusRows": 153,
-      "corpusRecipes": 153
     },
     {
       "name": "garlic powder",
@@ -4719,13 +4693,7 @@
       "displayName": "Jalape\u00F1o Pepper",
       "category": "PRODUCE",
       "defaultUnit": "pcs",
-      "aliases": [
-        "jalapeno pepper",
-        "jalape\u00F1o",
-        "jalapeno chile",
-        "jalape\u00F1o chile pepper",
-        "fresh jalape\u00F1o"
-      ],
+      "aliases": ["jalapeno pepper", "jalape\u00F1o", "jalapeno chile", "jalape\u00F1o chile pepper", "fresh jalape\u00F1o", "jalapeno chili"],
       "corpusRows": 5,
       "corpusRecipes": 5
     },
@@ -5591,11 +5559,7 @@
       "displayName": "Mushrooms",
       "category": "PRODUCE",
       "defaultUnit": "cup",
-      "aliases": [
-        "fresh mushrooms",
-        "mushroom",
-        "sliced mushrooms"
-      ],
+      "aliases": ["fresh mushrooms", "mushroom", "sliced mushrooms", "cremini and/or white button mushrooms"],
       "corpusRows": 29,
       "corpusRecipes": 28
     },
@@ -5676,13 +5640,7 @@
       "displayName": "Non-Fat Dry Milk",
       "category": "DAIRY",
       "defaultUnit": "cup",
-      "aliases": [
-        "non-fat dry milk powder",
-        "non-fat dried milk",
-        "dry milk",
-        "fat-free dry milk",
-        "nonfat dry milk"
-      ],
+      "aliases": ["non-fat dry milk powder", "non-fat dried milk", "dry milk", "fat-free dry milk", "nonfat dry milk", "dry milk powder"],
       "corpusRows": 15,
       "corpusRecipes": 15
     },
@@ -7202,7 +7160,7 @@
       "displayName": "Red Or Green Bell Pepper",
       "category": "PRODUCE",
       "defaultUnit": "pcs",
-      "aliases": [],
+      "aliases": ["red or green pepper"],
       "corpusRows": 2,
       "corpusRecipes": 2
     },
@@ -8474,7 +8432,8 @@
       "category": "PRODUCE",
       "defaultUnit": "pcs",
       "aliases": [
-        "sweet potatoes"
+        "sweet potatoes",
+        "mashed sweet potatoes"
       ],
       "corpusRows": 25,
       "corpusRecipes": 25

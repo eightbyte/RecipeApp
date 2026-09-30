@@ -32,7 +32,7 @@ public class RecipeIngredientRequestValidator : AbstractValidator<RecipeIngredie
 
         RuleFor(x => x.SourceAmount).GreaterThan(0).When(x => x.SourceAmount.HasValue);
         RuleFor(x => x.SourceUnit).NotEmpty().MaximumLength(32).When(x => x.SourceUnit is not null);
-        RuleFor(x => x.Notes).MaximumLength(500).When(x => x.Notes is not null);
+        RuleFor(x => x.Notes).MaximumLength(RecipeLimits.IngredientNotesMaxLength).When(x => x.Notes is not null);
     }
 }
 
@@ -41,7 +41,7 @@ public class RecipeStepRequestValidator : AbstractValidator<RecipeStepRequest>
     public RecipeStepRequestValidator()
     {
         RuleFor(x => x.StepNumber).GreaterThan(0);
-        RuleFor(x => x.Instruction).NotEmpty().MaximumLength(2000);
+        RuleFor(x => x.Instruction).NotEmpty().MaximumLength(RecipeLimits.StepInstructionMaxLength);
     }
 }
 
@@ -49,9 +49,9 @@ public class CreateRecipeValidator : AbstractValidator<CreateRecipeRequest>
 {
     public CreateRecipeValidator()
     {
-        RuleFor(x => x.Name).NotEmpty().MaximumLength(200);
-        RuleFor(x => x.Description).MaximumLength(2000).When(x => x.Description is not null);
-        RuleFor(x => x.Servings).InclusiveBetween(1, 100);
+        RuleFor(x => x.Name).NotEmpty().MaximumLength(RecipeLimits.NameMaxLength);
+        RuleFor(x => x.Description).MaximumLength(RecipeLimits.DescriptionMaxLength).When(x => x.Description is not null);
+        RuleFor(x => x.Servings).InclusiveBetween(RecipeLimits.MinServings, RecipeLimits.MaxServings);
         RuleFor(x => x.Ingredients).NotEmpty().WithMessage("A recipe must have at least one ingredient.");
         RuleForEach(x => x.Ingredients).SetValidator(new RecipeIngredientRequestValidator());
         RuleForEach(x => x.Steps).SetValidator(new RecipeStepRequestValidator());
@@ -76,9 +76,9 @@ public class UpdateRecipeValidator : AbstractValidator<UpdateRecipeRequest>
 {
     public UpdateRecipeValidator()
     {
-        RuleFor(x => x.Name).NotEmpty().MaximumLength(200);
-        RuleFor(x => x.Description).MaximumLength(2000).When(x => x.Description is not null);
-        RuleFor(x => x.Servings).InclusiveBetween(1, 100);
+        RuleFor(x => x.Name).NotEmpty().MaximumLength(RecipeLimits.NameMaxLength);
+        RuleFor(x => x.Description).MaximumLength(RecipeLimits.DescriptionMaxLength).When(x => x.Description is not null);
+        RuleFor(x => x.Servings).InclusiveBetween(RecipeLimits.MinServings, RecipeLimits.MaxServings);
         RuleFor(x => x.Ingredients).NotEmpty().WithMessage("A recipe must have at least one ingredient.");
         RuleForEach(x => x.Ingredients).SetValidator(new RecipeIngredientRequestValidator());
         RuleForEach(x => x.Steps).SetValidator(new RecipeStepRequestValidator());

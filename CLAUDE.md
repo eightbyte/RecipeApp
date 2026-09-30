@@ -4,7 +4,9 @@
 Mobile-first web app for storing recipes, building meal plans, and generating shopping lists.
 
 - **Spec:** `SPEC.md` — read this for feature requirements and data model definitions.
-- **Current phase:** Phase 9 in progress (seed recipe library) — **v1 feature-complete**. Stages 1–3 (Wayback discovery, fetch, parse) done and Phase 9.1 (unquantified ingredients — the Stage 4 prerequisite) done. Stage 4 (LLM normalise) is **done: all 1,123 recipes normalised, zero failures**, after a run-abort bug and four quantity repairs took the success rate from 91.3% to 100%. Stage 5 (persist) next — its inputs are `normalised/*.json` plus 1,115 cached photos. **Phase 9.3 (corpus-derived ingredient catalogue) is implemented and its artefact committed** (`specs/phase-9.3-corpus-derived-ingredient-catalogue.md` §12.3). It turns Stage 5's ingredient matching into a dictionary lookup. **Two items block a clean Stage 5 run, both in `specs/phase-9-seed-recipe-library.md` §24.4: the catalogue cannot resolve 19 corpus names (20 recipes, 1.8%) and three `normalised/` artefacts were edited outside the pipeline.** Phase 9.2 (recipe sections) was analysed and **rejected** as an acceptable seed-import artefact — see `specs/phase-9.2-recipe-sections.md`; it is why group headings reach Stage 5 as ingredients.
+- **Current phase:** Phase 9 **complete** (seed recipe library, closed 2026-09-29 — every §20
+  Definition of Done item met, the re-run verified a no-op, and the imported library reviewed in the
+  running app) — **v1 feature-complete**. Stages 1–3 (Wayback discovery, fetch, parse) done and Phase 9.1 (unquantified ingredients — the Stage 4 prerequisite) done. Stage 4 (LLM normalise) is **done: all 1,123 recipes normalised, zero failures**, after a run-abort bug and four quantity repairs took the success rate from 91.3% to 100%. **Stage 5 (persist) is done: all 1,123 recipes persisted, zero failures (2026-09-29)** — the trial review is `specs/phase-9-seed-recipe-library.md` §25.7, the decisions §25.8 and the full run §25.9. **Phase 9.3 (corpus-derived ingredient catalogue) is implemented and its artefact committed** (`specs/phase-9.3-corpus-derived-ingredient-catalogue.md` §12.3). It turns Stage 5's ingredient matching into a dictionary lookup. The §24.4 blockers are closed: every corpus name now resolves, once 29 heading and note rows are skipped. Phase 9.2 (recipe sections) was analysed and **rejected** as an acceptable seed-import artefact — see `specs/phase-9.2-recipe-sections.md`; it is why group headings reach Stage 5 as ingredients.
 
 ## Repository structure
 ```
@@ -94,7 +96,7 @@ dotnet run -- import-catalogue         # Load the committed ingredient catalogue
 dotnet run -- import-catalogue --force # Re-apply the artefact over existing rows (discards corrections)
 dotnet run -- seed-densities           # Curated bulk densities; idempotent, only fills nulls
 
-# Phase 9 — USDA MyPlate seed library. Stages 1-4 implemented; 5 pending.
+# Phase 9 — USDA MyPlate seed library. All five stages implemented.
 dotnet run -- seed-recipes --report        # Print cached progress; no work, no network
 dotnet run -- seed-recipes --discover      # Stage 1 — CDX query → manifest.json (~1,123 slugs)
 dotnet run -- seed-recipes --harvest       # Stages 1-2 — cache pages + photos (~50 min, resumable)
@@ -106,6 +108,12 @@ dotnet run -- seed-recipes --normalise     # Stage 4 — parsed/ → normalised/
 dotnet run -- seed-recipes --normalise --limit 30
 dotnet run -- seed-recipes --normalise --force  # Discard normalised/ and re-run the LLM pass
 dotnet run -- seed-recipes --normalise --slug apple-carrot-soup   # One recipe; repeatable
+dotnet run -- seed-recipes --persist       # Stage 5 — normalised/ → database. No LLM; the model is
+                                           # never loaded. Imports the catalogue + densities first
+dotnet run -- seed-recipes --persist --trial   # Stage 5 over the 20 pinned trial recipes
+dotnet run -- seed-recipes --persist --force   # Re-import recipes already in the database
+dotnet run -- seed-recipes                 # Full pipeline: every stage in order, each resuming from
+                                           # its cache. --trial / --limit / --force reach Stage 5 only
 
 # Phase 9.3 — Stage 4.5, the corpus-derived ingredient catalogue.
 dotnet run -- seed-recipes --build-catalogue  # normalised/ → seed-data/ingredient-catalogue.json
@@ -120,9 +128,10 @@ attach a density to a row that does not exist, and Stage 5 cannot resolve a `cup
 `import-catalogue` runs the first two together, and the Development startup path runs all three in
 order, so the ordering is enforced rather than documented and hoped for.
 
-`seed-recipes` needs no database — stages 1-2 touch only the archive and the local cache, stage 3
-only the cache, and stage 4 the cache plus the local model. Ctrl+C stops it cooperatively;
-re-running resumes from the last cached recipe.
+Stages 1-4 of `seed-recipes` need no database — stages 1-2 touch only the archive and the local
+cache, stage 3 only the cache, and stage 4 the cache plus the local model. Stage 5 is the only one
+that needs Postgres, and it migrates and runs the catalogue → densities import itself before
+persisting. Ctrl+C stops it cooperatively; re-running resumes from the last cached recipe.
 
 `--slug` exists for prompt iteration: Stage 4's failures cluster by ingredient-line shape rather
 than by manifest position, and re-running one named recipe is a twenty-second experiment instead
@@ -234,7 +243,8 @@ dotnet test RecipeApp.Tests/RecipeApp.Tests.csproj --coverage --coverage-output-
 
 The `RecipeSeeding` section lives in the committed `appsettings.json` (nothing secret in it). Keys
 worth knowing: `CacheDirectory`, `PreferredSnapshotYear`, `FetchDelayMilliseconds`,
-`MinimumDiscoveredSlugs`, `DownloadImages`. See `Services/Seeding/RecipeSeedingOptions.cs`.
+`MinimumDiscoveredSlugs`, `DownloadImages`, and for Stage 5 `ApplyQualityFilter` (off) with
+`QualityMinimumIngredients`/`QualityMinimumSteps`. See `Services/Seeding/RecipeSeedingOptions.cs`.
 
 ## Notes
 - **No AutoMapper** — manual mapping in `DTOs/Mappings.cs` (extension methods on entity types). Simpler to trace, no reflection.
@@ -738,6 +748,67 @@ worth knowing: `CacheDirectory`, `PreferredSnapshotYear`, `FetchDelayMillisecond
   A rebuild has **not** been run against these rules, so they are reasoned, not measured —
   preview with `--build-catalogue --batch` before trusting them on a full build. Local databases
   keep the old categories until `import-catalogue --force`.
+- **Phase 9 Stage 5 (persist) — implemented; trial persisted 20/20 (2026-09-28).**
+  Backend-only, no packages, no migration. Record: `specs/phase-9-seed-recipe-library.md` §25.
+  Added `Services/Seeding/SeedRecipePersister.cs` (`Prepare` needs no database; `PersistAsync` runs
+  `ConfirmAsync` and the photo copy in one transaction), `SeedPersistModels.cs`,
+  `SeedNonIngredientRows.cs`, `SeedTrialSelection.cs`, `Services/Llm/DeferredLlmStructuredClient.cs`,
+  `Data/CatalogueImport.cs` and `Validators/RecipeLimits.cs`. `RecipeLibrarySeeder.PersistAsync` opens
+  one DI scope per recipe. `TrialSize` was deleted because nothing read it: the trial is a pinned list.
+  Tests: `SeedPersistTests` (Testcontainers, through the app's DI graph) and `SeedNonIngredientRowsTests`.
+  **Decisions (the user's), each with its cost:**
+  - **Group headings are skipped from a reviewed list keyed on slug + verbatim source line** — 29
+    rows on 21 recipes. It is not a rule because no rule works: `Dressing`, `Salad` and `Cookie Crust`
+    *resolve* against the catalogue, and "unquantified, used by no step" also catches
+    `salt (optional)`. **Removing a row re-points every step index above it**, which is the
+    corruption §24.4.2 found in hand edits. A list line that matches nothing is logged as stale.
+  - **An amount its line cannot account for is dropped, not persisted or rejected.** A line has to
+    state two or more numbers for this to apply, and it catches 33 rows on 31 recipes
+    (`SeedQuantityGate.IsAmountExplainedByLine`: equal to a number on the line or to the product of
+    two, within 1%). The row is stored unquantified, `SourceAmount`/`SourceUnit` go with the amount,
+    and the published line is appended to `Notes` so the cook still sees it. **A percentage counts
+    towards "two or more" but never explains an amount**: the trial found `3 tablespoons 1% low-fat
+    milk` stored as `1 cup` and "explained" by the 1 in `1%`.
+  - **`Recipe.Description` = description + page notes + source credit + attribution.** `Recipe` has
+    no notes column, and 1,048 recipes carry notes.
+  - **The quality filter is off, but counted.** Its thresholds get decided after the trial.
+  **Things worth knowing:**
+  - **`ConfirmAsync` validates nothing**, so Stage 5 checks name, description, servings, notes and
+    step length against `RecipeLimits`, the same constants the edit validators now use. A recipe
+    outside them would import fine and then fail to save from the UI.
+  - **The artefact is re-checked against `parsed/` before any row is removed:** fingerprint, row
+    count and index range. Checking after removal would test the wrong invariant.
+  - **`LlamaModelHolder` loads the model in its constructor**, and `RecipeScrapeService` takes an
+    `ILlmStructuredClient`. Without the deferred client, every persist run would load 9B parameters
+    it never uses.
+  - **`--force` never deletes a recipe that a meal plan uses** (`MealPlanRecipe → Recipe` is
+    `Restrict`). It reports `RecipeInUse` and leaves the row alone.
+  - Photos are copied to `ImageStorage:BasePath` as `myplate-{slug}{ext}`, so a re-import overwrites
+    its own file. Recipes with no photo keep `ImageUrl = null`.
+  - **11 aliases were hand-added to the catalogue artefact.** `applesauce and yogurt` → `applesauce`
+    drops the yogurt on one optional line, so review it. `sweet potato pancakes` is now an
+    unreachable entry that was left in place for review.
+  **The trial (§25.6–25.8): 20/20 persisted, all 11 §14.1 criteria pass or are explained, and every
+  step is character-identical to `parsed/`.** **The full run (2026-09-29, §25.9): 1,123 persisted,
+  0 failed, in under a minute** — 8,853 ingredient rows, 6,857 steps, 1,115 photos, 335 unquantified
+  rows, every count matching the artefacts. The §25.8 decisions it applied: `garlic clove` merged into
+  `garlic` (the name reads right for minced garlic in spoons, 33 of its 56 rows), `cooked brown rice`
+  → GRAINS_RICE, `yellow cornmeal` and `non-fat dry milk` given the existing `cornmeal` and
+  `milk powder` densities (instant dry milk, 68 g/cup — the corpus's reconstitution ratio says so,
+  and USDA FDC 171272 agrees). The 7 whole-container pack-size rows were accepted.
+  Three findings outlive this phase:
+  - **A non-force `import-catalogue` leaves pre-9.3 rows in place, and a name outranks an alias.** In
+    the development database 21 legacy rows (`onions`, `tomato`, `eggs`, `plain flour`) capture
+    names the artefact meant as aliases, splitting shopping-list lines and hiding densities. Any
+    database that pre-dates Phase 9.3 has this; a fresh one does not.
+  - **Creating a meal plan closes the active one**, so an end-to-end check against a developer's
+    database must run on a clone: `CREATE DATABASE x TEMPLATE recipeapp`, then the API with
+    `ConnectionStrings__DefaultConnection` pointed at it. **Starting the web host loads the model**
+    (`Program.cs` resolves `LlamaModelHolder` eagerly); set `Llm__Local__ModelPath=""` to start it
+    without the GPU.
+  - **969 of 1,048 recipes' notes carry MyPlate's `Learn more about: …` link list**, 529 of them
+    nothing else. Stage 5 strips the marker's line (`NotesLinkListMarker`, deliberately without its
+    colon — 7 pages omit it) and keeps content on later lines, which 23 recipes have.
 
 ---
 ## Project Notes

@@ -91,9 +91,6 @@ public class RecipeSeedingOptions
     /// </summary>
     public int MaxConsecutiveLlmFailures { get; init; } = 5;
 
-    /// <summary>Recipes imported by <c>--trial</c>.</summary>
-    public int TrialSize { get; init; } = 20;
-
     // ── Stage 4.5: the corpus-derived ingredient catalogue (Phase 9.3) ────────
 
     /// <summary>
@@ -155,6 +152,32 @@ public class RecipeSeedingOptions
 
     /// <summary>Provenance text appended to <c>Recipe.Description</c> at persist time.</summary>
     public string SeedAttributionNote { get; init; } = "Source: USDA MyPlate Kitchen (public domain)";
+
+    /// <summary>
+    /// Start of MyPlate's related-foods link list inside the page notes. The line it begins is
+    /// removed before the notes reach <c>Recipe.Description</c>; empty disables the strip. No colon:
+    /// 7 pages render it without one (<c>Learn more about Lemons Herbs</c>).
+    /// </summary>
+    public string NotesLinkListMarker { get; init; } = "Learn more about";
+
+    /// <summary>
+    /// File name prefix for seeded photos in image storage: <c>{prefix}{slug}{extension}</c>.
+    /// Deterministic, so a <c>--force</c> re-import overwrites its own photo rather than leaving an
+    /// orphan, and a seeded file can never collide with an upload's GUID name.
+    /// </summary>
+    public string SeedImageFilePrefix { get; init; } = "myplate-";
+
+    /// <summary>
+    /// Exclude recipes below the §18 Q3 thresholds instead of only counting them. Off until the trial
+    /// has shown what the thresholds cost; the run summary reports the count either way.
+    /// </summary>
+    public bool ApplyQualityFilter { get; init; }
+
+    /// <summary>§18 Q3: fewest ingredients a recipe may have and still pass the quality filter.</summary>
+    public int QualityMinimumIngredients { get; init; } = 3;
+
+    /// <summary>§18 Q3: fewest steps a recipe may have and still pass the quality filter.</summary>
+    public int QualityMinimumSteps { get; init; } = 2;
 
     /// <summary>
     /// User agent sent to the Internet Archive. Descriptive rather than browser-impersonating —

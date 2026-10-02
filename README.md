@@ -2,7 +2,7 @@
 
 A mobile-first web app for storing recipes, building meal plans, and generating shopping lists. It emphasises three things: a clean step-by-step cooking view, meal-planning that turns straight into a grouped shopping list, and importing recipes straight from a URL using a locally-run LLM (no cloud AI calls, no per-request API cost).
 
-**Status:** v1 feature-complete (Phase 8 of the build — see [SPEC.md](SPEC.md) and [CLAUDE.md](CLAUDE.md) for full history and conventions).
+**Status:** v1 feature-complete, including a seeded library of 1,123 USDA MyPlate recipes (Phase 9). See [SPEC.md](SPEC.md) and [specs/](specs/) for history, and [CLAUDE.md](CLAUDE.md) for conventions.
 
 ## Features
 
@@ -144,5 +144,6 @@ npm run test:coverage    # with coverage report
 ## Further reading
 
 - [SPEC.md](SPEC.md) — full feature specification and data model
-- [CLAUDE.md](CLAUDE.md) — repository structure, conventions, and per-phase change log
+- [CLAUDE.md](CLAUDE.md) — repository structure and conventions (with [backend/CLAUDE.md](backend/CLAUDE.md), [frontend/CLAUDE.md](frontend/CLAUDE.md) and [.claude/rules/](.claude/rules/))
+- [docs/history/phase-notes.md](docs/history/phase-notes.md) — archived per-phase implementation notes
 - [specs/](specs/) — detailed per-phase specification documents

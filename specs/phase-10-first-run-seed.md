@@ -1,8 +1,9 @@
 # Phase 10 — Distributable First-Run Seed
 
-**Version:** 0.1 (draft)
-**Date:** 2026-10-01
-**Status:** Draft. Open questions in §9 need answers before implementation starts.
+**Version:** 0.2 (draft)
+**Date:** 2026-10-04 (0.1: 2026-10-01)
+**Status:** Draft. Q1–Q3 are answered and folded in (§2). Q4 (§9) is open and decides the scope of
+§4.4.
 **Depends on:** Phase 9.3 (corpus-derived ingredient catalogue)
 **Supersedes:** `DataSeeder`'s two hard-coded sample recipes, and the Development-only startup seed block in `Program.cs`
 **Leaves alone:** the Phase 9 MyPlate pipeline (`seed-recipes`) as a personal-use tool
@@ -39,7 +40,7 @@ cache. What ships is:
 `git log --all` confirms no recipe text was ever committed. `normalised/`, `parsed/`, `raw/` and
 `images/` have always been gitignored. The only tracked seed files are
 `seed-data/ingredient-catalogue.json` and `seed-data/myplate/manifest.json`. Both are lists of facts.
-The `.gitignore` comment claiming `normalised/` is committed is wrong (§7).
+The `.gitignore` comment claiming `normalised/` is committed is wrong (§5).
 
 ## 2. Decisions taken
 
@@ -50,6 +51,11 @@ The `.gitignore` comment claiming `normalised/` is committed is wrong (§7).
 | D3 | Mark sample recipes as samples? | **No.** They are ordinary recipes that users can edit or delete. |
 | D4 | The Phase 9 pipeline? | **Keep it.** It stays as a personal-use tool. The corpus is not distributed. |
 | D5 | How many sample recipes? | **12.** |
+| D6 | Migrate on start outside Development? (Q1) | **Yes**, in every environment except `Testing`. The worst case is rebuilding the database. |
+| D7 | Do catalogue improvements reach existing installs? (Q2) | **No, not automatically.** Each step runs once. `import-catalogue` is the documented upgrade path. The ledger records the artefact version so an additive update can be added later. |
+| D8 | MyPlate provenance in the shipped catalogue? (Q3) | **Removed.** The `source` block and per-entry corpus counts are dropped from the shipped file and kept only in the review list (§4.7). |
+| D9 | Can curation delete a catalogue entry? | **No. Fold, never drop.** An entry is kept, renamed, or folded into another entry as an alias. Every MyPlate name must still resolve, or `seed-recipes --persist` fails for the recipes that use it (§4.7). |
+| D10 | What must a clean start support? | **Two paths from an empty database:** the distributed set alone, or the distributed set plus the personal MyPlate library (§4.9). |
 
 ## 3. Current state
 
@@ -76,7 +82,7 @@ Add a table that records each one-time seed step.
 SeedLedgerEntry
   Key             text         PK      e.g. "ingredient-catalogue", "sample-recipes"
   Outcome         text                 "Applied" | "SkippedExistingData"
-  ArtefactVersion int                  version field of the seed file that was applied
+  ArtefactVersion int                  contentVersion of the seed file that was applied (§4.7)
   AppliedAt       timestamptz
 ```
 
@@ -95,7 +101,8 @@ The ledger, not the data, is the evidence that a step ran. That is what D2 needs
 `FirstRunSeeder.RunAsync` replaces the Development block in `Program.cs`, keeping the existing
 order:
 
-1. `MigrateAsync` (subject to Q1)
+1. `MigrateAsync` (D6). Under the published Docker image (`ASPNETCORE_ENVIRONMENT=Production`), this
+   is the first time the schema gets created at all.
 2. Ingredient catalogue, guarded by `"ingredient-catalogue"`
 3. Densities: unchanged, idempotent, fills nulls only, so runs every start without a ledger entry
 4. Sample recipes, guarded by `"sample-recipes"`
@@ -128,7 +135,8 @@ the same way as the catalogue.
 
 ```jsonc
 {
-  "version": 1,
+  "formatVersion": 1,
+  "contentVersion": 1,
   "recipes": [
     {
       "name": "Spaghetti Bolognese",
@@ -220,21 +228,84 @@ profile of the 1,055 entries:
 | Near-duplicates | — | `dried egg mix` / `dry egg mix` / `egg mix` |
 | Category `OTHER` | 7 | Need a real category or removal |
 
-**Process:**
-1. Generate `seed-data/catalogue-review.md` (not committed) listing every flagged entry with its
-   signal and a suggested action: keep, rename, fold into another entry as an alias, or drop.
-2. The project owner decides each one. No entry is removed or merged on a suggestion alone.
-3. Apply the decisions to `ingredient-catalogue.json` by hand. `IngredientCatalogueValidator` must
-   still pass.
-4. Bump the artefact's `version`.
+**Actions (D9).** Each flagged entry gets one of three actions:
 
-The artefact's `source` block (`"corpus": "myplate"`, corpus counts) and the per-entry
-`corpusRows`/`corpusRecipes` counts describe provenance only. See Q3.
+| Action | Effect | Example |
+|---|---|---|
+| Keep | Unchanged | `acorn squash` |
+| Rename | New `name`/`displayName`. The old name becomes an alias | `6 1/2-inch whole wheat pita pockets` → `whole wheat pita` |
+| Fold | Entry removed. Its name and aliases become aliases of the surviving entry | `dry egg mix`, `egg mix` → aliases of `dried egg mix` |
+
+There is no drop. `SeedCatalogueResolver` resolves every MyPlate name against the catalogue rows in
+the database, and an unresolved name fails that recipe with `CatalogueMiss`. A dropped entry would
+remove recipes from the personal library (D4). After a fold, the surviving entry's category and
+default unit win.
+
+**Process:**
+1. Generate `seed-data/catalogue-review.md` (gitignored) from the current version-1 artefact, while
+   it still carries `corpusRows`/`corpusRecipes`. List every flagged entry with its signal, its
+   counts and a suggested action.
+2. The project owner decides each one. No entry is renamed or folded on a suggestion alone.
+3. Apply the decisions to `ingredient-catalogue.json` by hand. `IngredientCatalogueValidator` rules
+   1–4 must still pass.
+4. Reshape the file (D8) and raise its versions (below).
+
+**Shipped file shape (D8).** The `source` block and per-entry `corpusRows`/`corpusRecipes` are
+removed. `generatedAt` becomes `updatedAt`. Two version fields replace the single `version`:
+
+```jsonc
+{
+  "formatVersion": 2,      // file shape. The loader rejects a format it can't read
+  "contentVersion": 1,     // raised on every curated edit. Recorded in the ledger (D7)
+  "updatedAt": "2026-10-…Z",
+  "provenance": "curated",
+  "entries": [ { "name": "…", "displayName": "…", "category": "…", "defaultUnit": "…", "aliases": [] } ]
+}
+```
+
+Today one `version` field does both jobs: `IngredientCatalogueFileStore` rejects any value other
+than `CurrentVersion`. A content edit must not make the loader refuse the file, so the two are
+separated.
+
+**Validator rules 5 and 6.**
+- Rule 5 (every corpus name reachable) still matters, because of D9. It moves out of the builder
+  into a test that runs only where the local MyPlate cache exists (`normalised/` is gitignored).
+  On any other machine it reports itself as skipped, not passed.
+- Rule 6 (corpus row counts add up) is deleted along with the counts.
+
+**The builder no longer writes the shipped file.** `seed-recipes --build-catalogue` saves through
+`IngredientCatalogueFileStore` today, so a re-run would overwrite the curated catalogue. Its output
+moves to `seed-data/myplate/catalogue-build.json` (gitignored, in the version-1 shape with counts),
+where it serves as a reference for later curation and never as the shipped artefact.
 
 ### 4.8 Retiring `DataSeeder`
 
 `DataSeeder` and its `SampleIngredients` list are deleted. `DataSeederTests` is replaced by tests
 for the new seeder (§6). The comment in `Program.cs` naming `DataSeeder` is updated.
+
+### 4.9 Clean-start paths (D10)
+
+Both paths start from an empty database. Locally, that means a scratch database:
+`CREATE DATABASE recipeapp_clean;`, then point `ConnectionStrings__DefaultConnection` at it.
+
+| Path | Steps | Result |
+|---|---|---|
+| A. Distributed | Start the app | Curated catalogue, densities, 12 sample recipes. Two `Applied` ledger rows |
+| B. Personal | Path A, then `dotnet run -- seed-recipes --persist` | Path A plus the 1,123 MyPlate recipes and their photos |
+
+Path B works because:
+- `--persist` runs a non-force `import-catalogue` first. That is a no-op against a catalogue the
+  first run has just loaded.
+- D9 keeps every MyPlate name resolvable against the curated catalogue.
+- Persist matches existing recipes on `SourceUrl`. The sample recipes have none, so the two sets
+  never collide, and `--persist --force` never replaces a sample.
+
+The order cannot be reversed. A database that receives MyPlate recipes before its first start
+records `sample-recipes` as `SkippedExistingData` (§4.3), so the samples never appear. That is
+correct for an upgraded install and is noted in `backend/CLAUDE.md` so nobody hits it by surprise
+on a fresh one.
+
+Both paths get an end-to-end check before the phase closes (§7 stage 6).
 
 ## 5. Licensing documentation corrections
 
@@ -247,7 +318,9 @@ the record doesn't mislead anyone later.
   "(public domain)". This only affects personal databases built with `seed-recipes`.
 - `.gitignore`: fix the comment claiming `manifest.json` and `normalised/` are committed.
 - `Services/Seeding/CLAUDE.md` and `backend/CLAUDE.md`: state that the corpus is personal-use only
-  and is never committed or published.
+  and is never committed or published. Also record that the shipped catalogue is hand-curated,
+  that `--build-catalogue` writes only to `catalogue-build.json` (§4.7), that curation folds and
+  never drops (D9), and the clean-start paths and their order (§4.9).
 - Root `CLAUDE.md`: add Phase 10 to the status line and the docs table.
 
 ## 6. Tests
@@ -264,6 +337,8 @@ Integration tests (Testcontainers):
 - A failure after the catalogue step leaves the catalogue's ledger row in place, and the recipe
   step retries alone.
 - `Testing` environment: startup seeds nothing.
+- **§4.9 path B:** after a first run, persisting a small fixture corpus adds its recipes and leaves
+  the 12 samples untouched.
 
 Artefact tests (no database):
 
@@ -272,23 +347,31 @@ Artefact tests (no database):
 - The §4.5 requirements: shared ingredients, mixed units, an unquantified row, and full food-aisle
   category coverage.
 - Both artefacts are present in the build output directory.
+- The shipped catalogue has no `source` block or corpus counts, and the loader rejects an unknown
+  `formatVersion` but accepts any `contentVersion`.
+- **Rule 5 (local only):** every name in the local `normalised/` corpus resolves against the
+  shipped catalogue. Skipped, and reported as skipped, when the cache is absent.
+- `--build-catalogue` writes to `catalogue-build.json` and leaves the shipped file untouched.
 
 ## 7. Implementation stages
 
-1. **Catalogue review list.** Generate the list. The owner decides. Apply the decisions and bump the
-   version.
-2. **Ledger.** Entity, migration and constants.
-3. **Sample artefact.** Write the 12 recipes and add their store and loader.
-4. **`FirstRunSeeder`.** Replace the Development block, delete `DataSeeder`, add the csproj publish
+1. **Catalogue review list.** Generate the list from the version-1 file. The owner decides each
+   entry.
+2. **Catalogue reshape.** Redirect `--build-catalogue` output first, so nothing can overwrite the
+   curated file. Apply the decisions, move to the format-2 shape (§4.7), move rule 5 into its
+   local-only test and delete rule 6.
+3. **Ledger.** Entity, migration and constants.
+4. **Sample artefact.** Write the 12 recipes and add their store and loader.
+5. **`FirstRunSeeder`.** Replace the Development block, delete `DataSeeder`, add the csproj publish
    items.
-5. **Tests** (§6).
-6. **Docs** (§5) and a results section in this spec.
+6. **Tests** (§6), then run both §4.9 clean-start paths by hand against a scratch database.
+7. **Docs** (§5) and a results section in this spec.
 
 ## 8. Out of scope
 
 - Distributing any MyPlate recipe text, image or the 216 federal-origin recipes. Each "adapted
   from" credit would need checking one by one. That may be worth doing later; it isn't needed now.
-- Shipping catalogue updates to existing installs. See Q2.
+- Shipping catalogue updates to existing installs automatically (D7).
 - Ingredient deletion.
 
 ## 9. Open questions
@@ -300,7 +383,8 @@ first run for everyone" only works if the schema exists.
 single-instance self-hosted app, and there is no separate deploy step that could run migrations
 instead.
 
-answer: Yes, worst case can rebuild the database.  I still want the seed data for myself, but want us to be able to test the whole process too.
+*Answer (2026-10-04):* Yes. The worst case is rebuilding the database. The owner still wants the
+MyPlate data for personal use and wants to run the whole process from a clean start. → D6, D10, §4.9.
 
 **Q2. When a later release improves the catalogue, should existing installs receive it?**
 D2 says each step runs once. Applied strictly to the catalogue, an install would keep its first
@@ -310,7 +394,7 @@ documented upgrade path. `ArtefactVersion` is recorded in the ledger so an autom
 update (insert new entries only, never touch existing ones) can be added later without a schema
 change.
 
-Answer: Yes to your recommendation 
+*Answer (2026-10-04):* Recommendation accepted. → D7.
 
 **Q3. Strip MyPlate provenance from the shipped catalogue?**
 The `source` block and the per-entry `corpusRows`/`corpusRecipes` counts are facts and carry no
@@ -318,4 +402,35 @@ licensing risk. Once the catalogue is hand-curated, though, they no longer descr
 *Recommendation:* replace `source` with `"curated"` and a version, and drop the per-entry counts
 from the shipped file. Keep them in the review list, where they help decisions.
 
-answer: agreed to the recommendation
+*Answer (2026-10-04):* Recommendation accepted. → D8, §4.7. A follow-up found that curation could
+not delete entries without breaking `--persist`. Answered as fold, never drop → D9.
+
+**Q4. Should the §4.4 format become a general recipe-import format?**
+The owner described "a process that could import any recipes if they are in the now established
+format." Read that way, `sample-recipes.json` stops being a one-off. It becomes the first instance of
+a **recipe pack**: a file any source can produce, imported through the same resolve → validate →
+`RecipeService.CreateAsync` path. The ledger-guarded first-run step then runs only the built-in
+pack.
+
+What that adds, beyond §4.4:
+- A CLI command, e.g. `dotnet run -- import-recipes <path-to-pack.json>`, all or nothing per pack
+  as in §4.4.
+- **Ingredients outside the catalogue.** The sample pack must resolve fully. A third-party pack
+  likely won't. *Recommendation:* reject by default and list the misses. A `--create-missing` flag
+  creates them in category `OTHER` for later tidying.
+  - answer: Agreed
+- **Duplicates on re-import.** *Recommendation:* an optional `sourceUrl` per recipe. When present,
+  an existing recipe with that `sourceUrl` is skipped (`--force` replaces it, with the meal-plan
+  guard persist already has). When absent, re-importing duplicates the recipe.
+  - answer: Agreed
+- **Images.** *Recommendation:* an optional `image` path per recipe, relative to the pack file.
+  - answer: Agreed.
+
+Scope choices: (Selected option: a)
+- **(a) Format + `import-recipes` in Phase 10.** MyPlate keeps its own `--persist` path. Small
+  increment, since §4.4 already designs the format. *Recommended.*
+- **(b) As (a), plus exporting MyPlate to a pack** (`seed-recipes --export-pack`), so path B in
+  §4.9 becomes `import-recipes myplate.json`. This unifies the two import paths, but description
+  composition, photos and Stage 5's amount-dropping rule would all have to move into the export.
+  Better as its own phase.
+- **(c) Defer.** Ship §4.4 as a single-purpose file and design general import later.

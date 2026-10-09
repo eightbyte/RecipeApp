@@ -1,9 +1,8 @@
 # Phase 10 — Distributable First-Run Seed
 
-**Version:** 0.2 (draft)
-**Date:** 2026-10-04 (0.1: 2026-10-01)
-**Status:** Draft. Q1–Q3 are answered and folded in (§2). Q4 (§9) is open and decides the scope of
-§4.4.
+**Version:** 0.3
+**Date:** 2026-10-05 (0.1: 2026-10-01, 0.2: 2026-10-04)
+**Status:** Ready for implementation. Q1–Q4 are answered and folded in (§2).
 **Depends on:** Phase 9.3 (corpus-derived ingredient catalogue)
 **Supersedes:** `DataSeeder`'s two hard-coded sample recipes, and the Development-only startup seed block in `Program.cs`
 **Leaves alone:** the Phase 9 MyPlate pipeline (`seed-recipes`) as a personal-use tool
@@ -56,6 +55,7 @@ The `.gitignore` comment claiming `normalised/` is committed is wrong (§5).
 | D8 | MyPlate provenance in the shipped catalogue? (Q3) | **Removed.** The `source` block and per-entry corpus counts are dropped from the shipped file and kept only in the review list (§4.7). |
 | D9 | Can curation delete a catalogue entry? | **No. Fold, never drop.** An entry is kept, renamed, or folded into another entry as an alias. Every MyPlate name must still resolve, or `seed-recipes --persist` fails for the recipes that use it (§4.7). |
 | D10 | What must a clean start support? | **Two paths from an empty database:** the distributed set alone, or the distributed set plus the personal MyPlate library (§4.9). |
+| D11 | Is the sample-recipe file a one-off? (Q4) | **No.** It is the first **recipe pack**, a general import format with an `import-recipes` CLI command (§4.4). MyPlate keeps its own `--persist` path. |
 
 ## 3. Current state
 
@@ -105,7 +105,7 @@ order:
    is the first time the schema gets created at all.
 2. Ingredient catalogue, guarded by `"ingredient-catalogue"`
 3. Densities: unchanged, idempotent, fills nulls only, so runs every start without a ledger entry
-4. Sample recipes, guarded by `"sample-recipes"`
+4. Sample recipes: the built-in pack through `RecipePackImporter` (§4.4), guarded by `"sample-recipes"`
 
 It runs in every environment except `Testing`. `RecipeAppFactory` uses `Testing` to keep startup
 seeding out of integration tests, and that has to keep working.
@@ -128,10 +128,14 @@ The first start after upgrading sees no ledger rows. If it seeded anyway, a data
 
 A fresh database seeds both. An upgraded one records both as skipped and is left as it is.
 
-### 4.4 Sample recipe artefact
+### 4.4 Recipe packs (D11)
 
-`seed-data/sample-recipes.json` replaces the C# recipes in `DataSeeder`. It is committed and loaded
-the same way as the catalogue.
+A **recipe pack** is a JSON file of recipes in one fixed format that any source can produce.
+`seed-data/sample-recipes.json` is the first pack. It replaces the C# recipes in `DataSeeder`, is
+committed, and ships with the app (§4.6). The `import-recipes` CLI command imports any other pack
+(§4.4.3). Both use the same importer.
+
+#### 4.4.1 Format
 
 ```jsonc
 {
@@ -142,6 +146,8 @@ the same way as the catalogue.
       "name": "Spaghetti Bolognese",
       "description": "…",
       "servings": 4,
+      "sourceUrl": null,                  // optional. Duplicate key on re-import (§4.4.2)
+      "image": null,                      // optional. Path relative to the pack file
       "ingredients": [
         { "ingredient": "ground beef", "amount": 500, "unit": "g", "notes": null },
         { "ingredient": "salt", "amount": null, "unit": null, "notes": "to taste" }
@@ -154,20 +160,59 @@ the same way as the catalogue.
 }
 ```
 
-- **Ingredients are referenced by catalogue name.** They resolve by name, then alias, the same lookup
-  `SeedCatalogueResolver` uses. The catalogue must load first. A sample recipe never creates an
-  ingredient.
+- **Ingredients are referenced by catalogue name.** They resolve by name, then alias, the same
+  lookup `SeedCatalogueResolver` uses. The catalogue must be in the database first.
 - **Steps reference ingredients by name, not index.** This avoids the positional-index fragility
-  described in `Services/Seeding/CLAUDE.md`. Step numbers come from array order.
-- **Persistence goes through the real API path.** Each recipe maps to a `CreateRecipeRequest`, is
-  checked by `CreateRecipeRequestValidator`, and is saved by `RecipeService.CreateAsync`. A sample
-  recipe is therefore exactly what a user could have saved by hand.
-- **All or nothing.** The whole file is resolved and validated before anything is written. Any
-  unresolved name, invalid unit or validator failure aborts the step, logs every error, writes no
-  ledger row and lets the app start. The step retries on the next start, after the artefact is
-  fixed.
+  described in `Services/Seeding/CLAUDE.md`. A step name resolves through the same lookup, and then
+  links every row in that recipe that resolved to the same ingredient. A step naming an ingredient
+  the recipe doesn't list is an error. Step numbers come from array order.
 - Units are canonical `MeasurementUnit` values. `Amount`/`Unit` follow the null-together rule. Zero
-  is never used.
+  is never used. `SourceAmount`/`SourceUnit` are left null. A pack states its amounts directly.
+- The loader rejects an unknown `formatVersion` and accepts any `contentVersion`, the same split as
+  the catalogue (§4.7).
+
+#### 4.4.2 Import rules
+
+- **Persistence goes through the real API path.** Each recipe maps to a `CreateRecipeRequest`, is
+  checked by `CreateRecipeRequestValidator`, and is saved by `RecipeService.CreateAsync`. An
+  imported recipe is therefore exactly what a user could have saved by hand.
+- **All or nothing per pack.** The whole pack is resolved and validated before anything is
+  written, and every error is reported, not just the first. The writes then happen in one
+  transaction. Errors include an unresolved ingredient, a bad unit, a validator failure, a missing
+  or disallowed image, and a `sourceUrl` repeated within the pack.
+- **Unknown ingredients.** Rejected by default, listing every miss. With `--create-missing`, each
+  miss becomes a new `Ingredient`: lowercase name, display name as written in the pack, category
+  `OTHER`, no default unit. Users tidy them later in the ingredient screen. Creation happens inside
+  the pack's transaction.
+- **Duplicates.** A recipe with a `sourceUrl` that matches an existing recipe is skipped and
+  reported. With `--force` the existing recipe is replaced. A recipe a meal plan uses is never
+  replaced. It is reported as in use, the same guard `SeedRecipePersister` has, and that doesn't
+  fail the pack. A recipe without a `sourceUrl` is always inserted, so re-importing such a pack
+  duplicates it.
+- **Images.** `image` is resolved relative to the pack file. The extension and size limits are
+  checked up front against `ImageService`'s rules, and the file is copied with
+  `ImageService.ImportAsync`. Files are copied before commit. If the transaction rolls back, the
+  copied files are deleted, so a failed pack leaves no orphans.
+
+#### 4.4.3 Entry points
+
+| Entry point | Pack | `--create-missing` | `--force` | Ledger |
+|---|---|---|---|---|
+| First run (§4.2 step 4) | Built-in `sample-recipes.json` | Never | Never | `sample-recipes` |
+| `dotnet run -- import-recipes <pack.json> [--create-missing] [--force]` | Any | Optional | Optional | Not used |
+
+- **First run.** A failure aborts the step, logs every error, writes no ledger row and lets the app
+  start. The step retries on the next start, after the artefact is fixed.
+- **`import-recipes`.** Migrates, then runs a non-force `import-catalogue` before importing, as
+  `--persist` does, so it works on an empty database. Exits 0 on success, including when recipes
+  are skipped or in use, and 1 on any validation failure. Like `seed-recipes`, everything after the
+  command token is withheld from host configuration in `Program.cs`. The existing global `--force`
+  read for `import-catalogue` must not pick up this command's flag.
+- **Paths and options.** The built-in pack's path lives in a `RecipePackOptions` section in
+  `appsettings.json`, not inline, and resolves against `ContentRootPath` like the catalogue.
+
+Working names: `RecipePackFile` (model), `RecipePackFileStore` (load), `RecipePackImporter`
+(resolve, validate, write), `ImportRecipesCommand` (CLI).
 
 ### 4.5 The twelve recipes
 
@@ -209,8 +254,8 @@ There are no images. Users can add their own.
 Add both files to `RecipeApp.API.csproj` with `CopyToOutputDirectory` and `CopyToPublishDirectory`
 set to `PreserveNewest`. `IngredientCatalogueFileStore` already resolves its path against
 `ContentRootPath`, which in the container is `/app`, so the published copy is found without a
-config change. The sample-recipe store follows the same pattern with its own
-`RecipeSeedingOptions`-style path setting.
+config change. `RecipePackFileStore` follows the same pattern, with its path in `RecipePackOptions`
+(§4.4.3). The sample pack has no images, so only the JSON file ships.
 
 Nothing under `seed-data/myplate/` is published.
 
@@ -321,6 +366,8 @@ the record doesn't mislead anyone later.
   and is never committed or published. Also record that the shipped catalogue is hand-curated,
   that `--build-catalogue` writes only to `catalogue-build.json` (§4.7), that curation folds and
   never drops (D9), and the clean-start paths and their order (§4.9).
+- `backend/CLAUDE.md`: add `import-recipes` to the CLI command list, with a pointer to the pack
+  format in §4.4.
 - Root `CLAUDE.md`: add Phase 10 to the status line and the docs table.
 
 ## 6. Tests
@@ -339,6 +386,24 @@ Integration tests (Testcontainers):
 - `Testing` environment: startup seeds nothing.
 - **§4.9 path B:** after a first run, persisting a small fixture corpus adds its recipes and leaves
   the 12 samples untouched.
+
+Recipe-pack import (Testcontainers, fixture packs):
+
+- A valid pack imports every recipe. Step links point at the right rows, including a step naming an
+  ingredient by alias and a recipe listing the same ingredient twice.
+- A pack with several faults writes nothing and reports **every** fault: an unknown ingredient, a
+  bad unit, a validator failure, a missing image, and a `sourceUrl` repeated within the pack.
+- Unknown ingredient: rejected without `--create-missing`. With it, created as `OTHER` with no
+  default unit, and the recipe links to it.
+- `sourceUrl` duplicates are skipped on re-import and replaced with `--force`. A recipe used by a
+  meal plan is left in place and reported, and the rest of the pack still imports.
+- A recipe without `sourceUrl` duplicates on re-import.
+- Images are copied into `ImageStorage:BasePath` and set on the recipe. A pack that fails after
+  copying leaves no copied files behind.
+- `import-recipes` against an empty database migrates, loads the catalogue and imports. Its exit
+  codes are 0 on success and 1 on a validation failure. Its `--force` doesn't trigger a catalogue
+  force-import.
+- An unknown `formatVersion` is rejected. Any `contentVersion` is accepted.
 
 Artefact tests (no database):
 
@@ -361,9 +426,10 @@ Artefact tests (no database):
    curated file. Apply the decisions, move to the format-2 shape (§4.7), move rule 5 into its
    local-only test and delete rule 6.
 3. **Ledger.** Entity, migration and constants.
-4. **Sample artefact.** Write the 12 recipes and add their store and loader.
-5. **`FirstRunSeeder`.** Replace the Development block, delete `DataSeeder`, add the csproj publish
-   items.
+4. **Recipe packs.** Model, `RecipePackFileStore`, `RecipePackImporter` and the `import-recipes`
+   command (§4.4), tested against fixture packs.
+5. **Sample pack and `FirstRunSeeder`.** Write the 12 recipes (§4.5). Replace the Development
+   block, delete `DataSeeder`, add the csproj publish items.
 6. **Tests** (§6), then run both §4.9 clean-start paths by hand against a scratch database.
 7. **Docs** (§5) and a results section in this spec.
 
@@ -373,6 +439,9 @@ Artefact tests (no database):
   from" credit would need checking one by one. That may be worth doing later; it isn't needed now.
 - Shipping catalogue updates to existing installs automatically (D7).
 - Ingredient deletion.
+- Exporting MyPlate as a recipe pack (Q4 option b). `--persist` stays MyPlate's import path. This is
+  a candidate for a later phase.
+- Importing packs from the UI. `import-recipes` is CLI only.
 
 ## 9. Open questions
 
@@ -411,6 +480,7 @@ format." Read that way, `sample-recipes.json` stops being a one-off. It becomes 
 a **recipe pack**: a file any source can produce, imported through the same resolve → validate →
 `RecipeService.CreateAsync` path. The ledger-guarded first-run step then runs only the built-in
 pack.
+- Answer: Yes, that is correct.
 
 What that adds, beyond §4.4:
 - A CLI command, e.g. `dotnet run -- import-recipes <path-to-pack.json>`, all or nothing per pack
@@ -425,6 +495,9 @@ What that adds, beyond §4.4:
   - answer: Agreed
 - **Images.** *Recommendation:* an optional `image` path per recipe, relative to the pack file.
   - answer: Agreed.
+
+*Answer (2026-10-05):* Yes to the reading and to all three sub-recommendations. Scope option (a).
+→ D11, §4.4.
 
 Scope choices: (Selected option: a)
 - **(a) Format + `import-recipes` in Phase 10.** MyPlate keeps its own `--persist` path. Small

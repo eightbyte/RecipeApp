@@ -94,13 +94,23 @@ public class RecipeSeedingOptions
     // ── Stage 4.5: the corpus-derived ingredient catalogue (Phase 9.3) ────────
 
     /// <summary>
-    /// The committed catalogue artefact. Relative paths resolve against the content root.
+    /// The shipped, curated catalogue. Relative paths resolve against the content root.
     ///
     /// <para>Deliberately a sibling of the harvest cache rather than a file inside it: the cache is
     /// scratch that <c>--refresh-cache</c> may delete, and this is reviewed source that must survive
     /// it (§4.2).</para>
     /// </summary>
     public string CatalogueFilePath { get; init; } = "seed-data/ingredient-catalogue.json";
+
+    /// <summary>
+    /// Where <c>--build-catalogue</c> writes its derived catalogue. Relative paths resolve against
+    /// the content root.
+    ///
+    /// <para>Inside the MyPlate cache, because it is derived from that cache and is only a reference
+    /// for curation. Never the shipped catalogue: a re-run must not overwrite the curated file
+    /// (Phase 10 §4.7).</para>
+    /// </summary>
+    public string CatalogueBuildFilePath { get; init; } = "seed-data/myplate/catalogue-build.json";
 
     /// <summary>
     /// Names per grouping call. Large enough that a head-noun family fits in one call — which is the

@@ -3,8 +3,13 @@ using RecipeApp.API.Enums;
 namespace RecipeApp.API.Services.Seeding;
 
 /// <summary>
-/// The catalogue's invariants (Phase 9.3 §4.7), checked when the artefact is built and again when
-/// it is seeded.
+/// The catalogue's invariants (Phase 9.3 §4.7, rules 1–4), checked when a catalogue is built and
+/// again when it is seeded.
+///
+/// <para><b>Rules 5 and 6 are gone from here (Phase 10 §4.7).</b> Rule 5, every MyPlate corpus name
+/// reachable, needs the gitignored corpus, so it is now a test that runs only where the local cache
+/// exists. Rule 6 checked the per-entry corpus counts, which the shipped catalogue no longer
+/// carries.</para>
 ///
 /// <para><b>Why twice.</b> The build pass and the seeder run on different machines at different
 /// times, and the file between them is hand-editable by design — a reviewer correcting a category
@@ -20,8 +25,8 @@ namespace RecipeApp.API.Services.Seeding;
 public static class IngredientCatalogueValidator
 {
     /// <summary>
-    /// Rules 1–4: the invariants the artefact can be checked against on its own, with no corpus
-    /// present. Everything that reads the catalogue runs these.
+    /// Rules 1–4: the invariants a catalogue can be checked against on its own, with no corpus
+    /// present. Everything that reads or writes a catalogue runs these.
     /// </summary>
     public static IReadOnlyList<string> Validate(IReadOnlyList<IngredientCatalogueEntry> entries)
     {
@@ -95,48 +100,6 @@ public static class IngredientCatalogueValidator
                     aliasOwners[alias] = entry.Name;
             }
         }
-
-        return errors;
-    }
-
-    /// <summary>
-    /// Rules 5–6: the invariants that need the corpus, so only the build pass can check them.
-    ///
-    /// <para>Rule 5 is the load-bearing one. A corpus name the pass dropped is an ingredient no
-    /// recipe using it can resolve, which is a recipe Stage 5 cannot persist — and catching it here
-    /// names the problem at authoring time instead of a thousand rows into an import.</para>
-    /// </summary>
-    /// <param name="entries">The entries about to be written.</param>
-    /// <param name="corpusNames">Every distinct ingredient name in the normalised corpus.</param>
-    /// <param name="corpusRows">Total ingredient rows in the corpus.</param>
-    public static IReadOnlyList<string> ValidateAgainstCorpus(
-        IReadOnlyList<IngredientCatalogueEntry> entries,
-        IReadOnlyCollection<string> corpusNames,
-        int corpusRows)
-    {
-        var errors = new List<string>();
-
-        var reachable = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-        foreach (var entry in entries)
-        {
-            reachable.Add(entry.Name);
-            foreach (var alias in entry.Aliases) reachable.Add(alias);
-        }
-
-        // ── Rule 5: every corpus name is reachable ────────────────────────────
-        var unreachable = corpusNames.Where(name => !reachable.Contains(name)).OrderBy(n => n, StringComparer.Ordinal).ToList();
-        if (unreachable.Count > 0)
-            errors.Add($"{unreachable.Count} corpus name(s) are reachable as neither a name nor an " +
-                       $"alias, so any recipe using them cannot be persisted: " +
-                       $"{string.Join(", ", unreachable.Take(20))}" +
-                       (unreachable.Count > 20 ? ", …" : string.Empty));
-
-        // ── Rule 6: the provenance counts add up ──────────────────────────────
-        var claimedRows = entries.Sum(entry => entry.CorpusRows);
-        if (claimedRows != corpusRows)
-            errors.Add($"Entries claim {claimedRows} corpus rows but the corpus holds {corpusRows}. " +
-                       "Every row belongs to exactly one entry, so a mismatch means a name was " +
-                       "double-counted or lost.");
 
         return errors;
     }

@@ -24,9 +24,10 @@ public class DataSeederTests(DatabaseFixture db) : IAsyncLifetime
 
     private static IngredientCatalogueFile Catalogue(params IngredientCatalogueEntry[] entries) => new()
     {
-        GeneratedAt = DateTime.UtcNow,
-        Source      = new CatalogueSource("myplate", 1123, 8882, 1475),
-        Entries     = entries,
+        ContentVersion = 1,
+        UpdatedAt      = DateTime.UtcNow,
+        Provenance     = CatalogueProvenance.Curated,
+        Entries        = entries,
     };
 
     [Fact]
@@ -49,7 +50,7 @@ public class DataSeederTests(DatabaseFixture db) : IAsyncLifetime
         await using var context = db.CreateDbContext();
 
         await IngredientCatalogueFileSeeder.SeedAsync(context, Catalogue(
-            new IngredientCatalogueEntry("onion", "Onion", IngredientCategory.Produce, "pcs", [], 1, 1)));
+            new IngredientCatalogueEntry("onion", "Onion", IngredientCategory.Produce, "pcs", [])));
 
         await DataSeeder.SeedAsync(context);
 
@@ -73,8 +74,8 @@ public class DataSeederTests(DatabaseFixture db) : IAsyncLifetime
         await using var context = db.CreateDbContext();
 
         await IngredientCatalogueFileSeeder.SeedAsync(context, Catalogue(
-            new IngredientCatalogueEntry("onion", "Onion", IngredientCategory.Produce, "pcs", [], 352, 300),
-            new IngredientCatalogueEntry("garlic", "Garlic", IngredientCategory.Produce, "pcs", [], 56, 50)));
+            new IngredientCatalogueEntry("onion", "Onion", IngredientCategory.Produce, "pcs", []),
+            new IngredientCatalogueEntry("garlic", "Garlic", IngredientCategory.Produce, "pcs", [])));
 
         await DataSeeder.SeedAsync(context);
 
@@ -99,9 +100,9 @@ public class DataSeederTests(DatabaseFixture db) : IAsyncLifetime
 
         await IngredientCatalogueFileSeeder.SeedAsync(context, Catalogue(
             new IngredientCatalogueEntry("bell pepper", "Bell Pepper", IngredientCategory.Produce,
-                "pcs", ["capsicum"], 34, 30),
+                "pcs", ["capsicum"]),
             new IngredientCatalogueEntry("beef broth", "Beef Broth", IngredientCategory.Canned,
-                "ml", ["beef stock"], 5, 5)));
+                "ml", ["beef stock"])));
 
         await DataSeeder.SeedAsync(context);
 

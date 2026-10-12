@@ -183,8 +183,9 @@ public static class SeedRecipesCommand
           --harvest         Stages 1-2 — download and cache pages and images, no LLM
           --parse           Stage 3 — parse cached pages into recipes, offline
           --normalise       Stage 4 — LLM quantity extraction and step linkage
-          --build-catalogue Stage 4.5 — derive seed-data/ingredient-catalogue.json from
-                            normalised/. Run once, review the result, commit it.
+          --build-catalogue Stage 4.5 — derive a catalogue from normalised/ into
+                            seed-data/myplate/catalogue-build.json, a reference for curation.
+                            Never touches the shipped ingredient-catalogue.json.
           --batch <n>       With --build-catalogue: group only batch n, log its merges and
                             write nothing; repeatable
           --persist         Stage 5 — write normalised recipes to the database, no LLM
@@ -403,12 +404,11 @@ public static class SeedRecipesCommand
     }
 
     /// <summary>
-    /// Stage 4.5 (Phase 9.3). Derives the committed ingredient catalogue from the normalised corpus.
+    /// Stage 4.5 (Phase 9.3). Derives a catalogue from the normalised corpus into the build file,
+    /// a reference for curating the shipped catalogue by hand (Phase 10 §4.7).
     ///
-    /// <para>Runs once, on whoever has the GPU; its output is reviewed and committed, and every
-    /// other machine reads the file. <c>--slug</c> deliberately does not narrow it: a catalogue
-    /// derived from part of the corpus cannot resolve the rest of it, which is the failure §4.7
-    /// rule 5 exists to catch.</para>
+    /// <para><c>--slug</c> deliberately does not narrow it: a catalogue derived from part of the
+    /// corpus cannot resolve the rest of it.</para>
     /// </summary>
     private static async Task<int> BuildCatalogueAsync(
         IServiceProvider services,
@@ -461,7 +461,8 @@ public static class SeedRecipesCommand
                 result.NamesRecoveredFromGaps);
 
         logger.LogInformation(
-            "Written to {Path}. Review it against the merge rules, then commit it.", result.Path);
+            "Written to {Path}. It is a reference only; curate changes into the shipped catalogue " +
+            "by hand.", result.Path);
 
         return 0;
     }
@@ -508,9 +509,9 @@ public static class SeedRecipesCommand
             result.Persisted, result.Replaced, result.AlreadyPersisted, result.Failed, manifest.Recipes.Count);
 
         logger.LogInformation(
-            "Adjustments: {Rows} heading/note rows removed, {Dropped} unexplained amounts stored " +
-            "unquantified, {NoPhoto} recipes without a photo.",
-            result.NonIngredientRowsRemoved, result.AmountsDropped, result.WithoutImage);
+            "Adjustments: {Rows} heading/note rows removed, {Reassigned} rows reassigned by override, " +
+            "{Dropped} unexplained amounts stored unquantified, {NoPhoto} recipes without a photo.",
+            result.NonIngredientRowsRemoved, result.RowsReassigned, result.AmountsDropped, result.WithoutImage);
 
         if (result.FilteredOut > 0)
             logger.LogInformation("{Count} recipes excluded by the quality filter.", result.FilteredOut);
@@ -526,6 +527,11 @@ public static class SeedRecipesCommand
         foreach (var (slug, lines) in result.StaleSkipListLines.OrderBy(pair => pair.Key, StringComparer.Ordinal))
             logger.LogWarning(
                 "  {Slug}: skip-list lines matched nothing — remove them from SeedNonIngredientRows: {Lines}",
+                slug, string.Join(" | ", lines));
+
+        foreach (var (slug, lines) in result.StaleRowOverrideLines.OrderBy(pair => pair.Key, StringComparer.Ordinal))
+            logger.LogWarning(
+                "  {Slug}: row-override lines matched nothing — remove them from SeedIngredientRowOverrides: {Lines}",
                 slug, string.Join(" | ", lines));
 
         foreach (var (slug, error) in result.Failures.OrderBy(pair => pair.Key, StringComparer.Ordinal))

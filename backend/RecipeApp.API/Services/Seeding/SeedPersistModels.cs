@@ -110,6 +110,13 @@ public record SeedPersistResult
     public IReadOnlyDictionary<string, IReadOnlyList<string>> StaleSkipListLines { get; init; } =
         new Dictionary<string, IReadOnlyList<string>>();
 
+    /// <summary>Rows moved to another catalogue entry by <see cref="SeedIngredientRowOverrides"/>.</summary>
+    public int RowsReassigned { get; init; }
+
+    /// <summary>Row-override lines that matched nothing, per slug — stale entries to remove.</summary>
+    public IReadOnlyDictionary<string, IReadOnlyList<string>> StaleRowOverrideLines { get; init; } =
+        new Dictionary<string, IReadOnlyList<string>>();
+
     /// <summary>Failure reason per slug, for the closing run summary.</summary>
     public IReadOnlyDictionary<string, string> Failures { get; init; } =
         new Dictionary<string, string>();

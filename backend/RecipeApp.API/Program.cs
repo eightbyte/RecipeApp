@@ -87,6 +87,7 @@ builder.Services.AddSingleton<IRecipeLibrarySeeder, RecipeLibrarySeeder>();
 // run because `import-catalogue` reads the artefact; the builder only by the one machine that
 // authors it.
 builder.Services.AddSingleton<IngredientCatalogueFileStore>();
+builder.Services.AddSingleton<CatalogueBuildFileStore>();
 builder.Services.AddSingleton<IngredientCatalogueBuilder>();
 builder.Services.AddScoped<SeedCatalogueResolver>();
 builder.Services.AddScoped<SeedRecipePersister>();
@@ -271,8 +272,8 @@ if (app.Environment.IsDevelopment())
     {
         app.Logger.LogWarning(
             "No ingredient catalogue at {Path}. The app will start with only the sample recipes' " +
-            "own ingredients. Build one with 'dotnet run -- {Command} --build-catalogue'.",
-            catalogueStore.Path, SeedRecipesCommand.CommandName);
+            "own ingredients. The catalogue is committed source; restore it from git.",
+            catalogueStore.Path);
     }
 
     await IngredientDensitySeeder.SeedAsync(db, app.Logger);

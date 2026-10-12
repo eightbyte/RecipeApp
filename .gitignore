@@ -60,3 +60,7 @@ backend/RecipeApp.API/seed-data/**/normalised/
 backend/RecipeApp.API/seed-data/**/images/
 backend/RecipeApp.API/seed-data/**/state.json
 backend/RecipeApp.API/seed-data/**/*.tmp
+# Phase 10 §4.7 catalogue review list. Carries corpus counts and source lines; never shipped.
+backend/RecipeApp.API/seed-data/catalogue-review.md
+# Phase 10 §4.7: --build-catalogue output, a curation reference derived from normalised/.
+backend/RecipeApp.API/seed-data/myplate/catalogue-build.json

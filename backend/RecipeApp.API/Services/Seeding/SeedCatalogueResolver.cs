@@ -177,14 +177,14 @@ public class SeedCatalogueResolver(
 /// <summary>
 /// A seed recipe naming an ingredient the catalogue does not cover.
 ///
-/// <para>This means the committed artefact is stale relative to <c>normalised/</c> — the corpus was
-/// re-normalised without rebuilding the catalogue, or the catalogue was hand-edited and a name was
-/// lost. §4.7 rule 5 exists to catch it at authoring time; reaching here means it was not run.</para>
+/// <para>This means the shipped catalogue is stale relative to <c>normalised/</c> — the corpus was
+/// re-normalised and produced a new name, or a curated edit lost one (Phase 10 D9: fold, never
+/// drop). The local-only rule 5 test exists to catch it before a persist run does.</para>
 /// </summary>
 public class SeedCatalogueResolutionException(string slug, IReadOnlyList<string> names)
     : Exception($"{slug}: the catalogue has no entry for {string.Join(", ", names.Select(n => $"'{n}'"))}. " +
-                $"Rebuild it with '{SeedRecipesCommand.CommandName} --build-catalogue', or pass " +
-                "--allow-unknown-ingredients to create rows on the fly.")
+                "Add each name to seed-data/ingredient-catalogue.json as an entry or an alias, or " +
+                "reassign the row in SeedIngredientRowOverrides.")
 {
     public string Slug { get; } = slug;
 

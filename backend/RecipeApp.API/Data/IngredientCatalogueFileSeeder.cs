@@ -13,8 +13,8 @@ namespace RecipeApp.API.Data;
 /// which generated a catalogue from a model's notion of "common household cooking ingredients" — a
 /// list whose relationship to the recipe corpus was coincidental by construction, and which was
 /// unreproducible because it carried a rolling exclusion list of what it had already produced. The
-/// artefact this reads is derived from the corpus, reviewed once and committed, so every machine
-/// gets the same catalogue.</para>
+/// catalogue this reads was derived from the corpus, curated by hand and committed, so every
+/// machine gets the same catalogue.</para>
 ///
 /// <para><b>Fill nulls, never overwrite.</b> The same contract
 /// <see cref="IngredientDensitySeeder"/> already honours, and for the same reason: seed data is a
@@ -84,9 +84,9 @@ public static class IngredientCatalogueFileSeeder
         await db.SaveChangesAsync(ct);
 
         logger?.LogInformation(
-            "Ingredient catalogue seeded from the {Corpus} corpus artefact ({Generated:u}): " +
-            "{Inserted} inserted, {Updated} updated, {Unchanged} already current.",
-            catalogue.Source.Corpus, catalogue.GeneratedAt, inserted, updated, unchanged);
+            "Ingredient catalogue seeded from content version {ContentVersion} ({Updated:u}): " +
+            "{Inserted} inserted, {Changed} updated, {Unchanged} already current.",
+            catalogue.ContentVersion, catalogue.UpdatedAt, inserted, updated, unchanged);
 
         return new SeedCatalogueOutcome(inserted, updated, unchanged, force);
     }

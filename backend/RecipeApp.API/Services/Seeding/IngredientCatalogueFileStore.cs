@@ -5,24 +5,22 @@ using Microsoft.Extensions.Options;
 namespace RecipeApp.API.Services.Seeding;
 
 /// <summary>
-/// Reads and writes <c>seed-data/ingredient-catalogue.json</c> — the committed catalogue artefact
-/// (Phase 9.3 §4.2).
+/// Reads <c>seed-data/ingredient-catalogue.json</c> — the shipped, curated catalogue
+/// (Phase 10 §4.7).
+///
+/// <para><b>Read-only.</b> The file is edited by hand and nothing in the app writes it.
+/// <c>--build-catalogue</c> writes its derived catalogue through
+/// <see cref="CatalogueBuildFileStore"/> instead, so a re-run cannot overwrite the curation.</para>
 ///
 /// <para>Deliberately <i>outside</i> <see cref="SeedCacheStore"/>'s tree. The cache under
 /// <c>seed-data/myplate/</c> is scratch that <c>--refresh-cache</c> is allowed to delete; this file
-/// is reviewed source that must survive it. Keeping it a sibling also means the existing
-/// <c>.gitignore</c> rules — which ignore <c>raw/</c>, <c>parsed/</c>, <c>normalised/</c>,
-/// <c>images/</c> and <c>state.json</c> beneath <c>seed-data/**</c> — already leave it tracked
-/// without a new exception.</para>
+/// is reviewed source that must survive it.</para>
 /// </summary>
 public class IngredientCatalogueFileStore
 {
-    /// <summary>Suffix for the temporary file an atomic write moves into place.</summary>
-    private const string TempExtension = ".tmp";
-
     /// <summary>
     /// Indented camelCase, matching <see cref="SeedCacheStore"/>. Indentation is not cosmetic here:
-    /// the artefact is reviewed and diffed by a human, and a one-line file is neither.
+    /// the catalogue files are reviewed and diffed by a human, and a one-line file is neither.
     /// </summary>
     internal static readonly JsonSerializerOptions JsonOptions = new()
     {
@@ -35,34 +33,40 @@ public class IngredientCatalogueFileStore
         IOptions<RecipeSeedingOptions> options,
         IHostEnvironment environment)
     {
-        var configured = options.Value.CatalogueFilePath;
-        Path = System.IO.Path.IsPathRooted(configured)
-            ? configured
-            : System.IO.Path.Combine(environment.ContentRootPath, configured);
+        Path = ResolvePath(options.Value.CatalogueFilePath, environment);
     }
 
-    /// <summary>Absolute path of the artefact, resolved against the content root.</summary>
+    /// <summary>Absolute path of the catalogue, resolved against the content root.</summary>
     public string Path { get; }
 
     public bool Exists() => File.Exists(Path);
 
     /// <summary>
-    /// Reads the artefact.
+    /// Reads the catalogue. Any <see cref="IngredientCatalogueFile.ContentVersion"/> is accepted; an
+    /// unknown <see cref="IngredientCatalogueFile.FormatVersion"/> is not.
     /// </summary>
-    /// <exception cref="FileNotFoundException">The artefact has not been built.</exception>
-    /// <exception cref="CatalogueValidationException">The file is unreadable or malformed.</exception>
+    /// <exception cref="FileNotFoundException">The catalogue is missing.</exception>
+    /// <exception cref="CatalogueValidationException">The file is unreadable, malformed or in a format this build cannot read.</exception>
     public async Task<IngredientCatalogueFile> LoadAsync(CancellationToken ct = default)
     {
         if (!File.Exists(Path))
-            throw new FileNotFoundException(
-                $"No ingredient catalogue at {Path}. Build one with " +
-                $"'dotnet run -- {SeedRecipesCommand.CommandName} --build-catalogue'.", Path);
+            throw new FileNotFoundException($"No ingredient catalogue at {Path}.", Path);
 
+        // The format is checked before the full read, so a file in another shape is reported as
+        // that rather than as whichever required property it happens to lack.
+        int? formatVersion;
         IngredientCatalogueFile? file;
         try
         {
-            await using var stream = File.OpenRead(Path);
-            file = await JsonSerializer.DeserializeAsync<IngredientCatalogueFile>(stream, JsonOptions, ct);
+            var json = await File.ReadAllTextAsync(Path, ct);
+            formatVersion = JsonSerializer.Deserialize<FormatProbe>(json, JsonOptions)?.FormatVersion;
+
+            if (formatVersion != IngredientCatalogueFile.CurrentFormatVersion)
+                throw new CatalogueValidationException(
+                    [$"{Path} is format version {formatVersion?.ToString() ?? "(none)"}; this build " +
+                     $"reads format version {IngredientCatalogueFile.CurrentFormatVersion}."]);
+
+            file = JsonSerializer.Deserialize<IngredientCatalogueFile>(json, JsonOptions);
         }
         catch (JsonException ex)
         {
@@ -72,31 +76,15 @@ public class IngredientCatalogueFileStore
             throw new CatalogueValidationException([$"{Path} is not readable as JSON — {ex.Message}"]);
         }
 
-        if (file is null)
-            throw new CatalogueValidationException([$"{Path} deserialised to nothing."]);
-
-        if (file.Version != IngredientCatalogueFile.CurrentVersion)
-            throw new CatalogueValidationException(
-                [$"{Path} is version {file.Version}; this build reads version " +
-                 $"{IngredientCatalogueFile.CurrentVersion}."]);
-
-        return file;
+        return file ?? throw new CatalogueValidationException([$"{Path} deserialised to nothing."]);
     }
 
-    /// <summary>
-    /// Writes the artefact through a temporary file, so a crash mid-write leaves the reviewed copy
-    /// intact rather than truncating it.
-    /// </summary>
-    public async Task SaveAsync(IngredientCatalogueFile file, CancellationToken ct = default)
-    {
-        var directory = System.IO.Path.GetDirectoryName(Path);
-        if (!string.IsNullOrEmpty(directory)) Directory.CreateDirectory(directory);
+    /// <summary>Resolves a configured path against the content root unless it is already absolute.</summary>
+    internal static string ResolvePath(string configured, IHostEnvironment environment) =>
+        System.IO.Path.IsPathRooted(configured)
+            ? configured
+            : System.IO.Path.Combine(environment.ContentRootPath, configured);
 
-        var tempPath = Path + TempExtension;
-
-        await using (var stream = File.Create(tempPath))
-            await JsonSerializer.SerializeAsync(stream, file, JsonOptions, ct);
-
-        File.Move(tempPath, Path, overwrite: true);
-    }
+    /// <summary>Only the field needed to decide whether the rest of the file can be read.</summary>
+    private sealed record FormatProbe(int? FormatVersion);
 }

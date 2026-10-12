@@ -53,9 +53,10 @@ The `.gitignore` comment claiming `normalised/` is committed is wrong (§5).
 | D6 | Migrate on start outside Development? (Q1) | **Yes**, in every environment except `Testing`. The worst case is rebuilding the database. |
 | D7 | Do catalogue improvements reach existing installs? (Q2) | **No, not automatically.** Each step runs once. `import-catalogue` is the documented upgrade path. The ledger records the artefact version so an additive update can be added later. |
 | D8 | MyPlate provenance in the shipped catalogue? (Q3) | **Removed.** The `source` block and per-entry corpus counts are dropped from the shipped file and kept only in the review list (§4.7). |
-| D9 | Can curation delete a catalogue entry? | **No. Fold, never drop.** An entry is kept, renamed, or folded into another entry as an alias. Every MyPlate name must still resolve, or `seed-recipes --persist` fails for the recipes that use it (§4.7). |
+| D9 | Can curation delete a catalogue entry? | **No. Fold, never drop.** An entry is kept, renamed, or folded into another entry as an alias. Every MyPlate name must still resolve, or `seed-recipes --persist` fails for the recipes that use it (§4.7). **One exception (2026-10-10):** an entry reached only by rows `SeedNonIngredientRows` removes may be dropped, because persist never looks those rows up. Ten were dropped on that basis. |
 | D10 | What must a clean start support? | **Two paths from an empty database:** the distributed set alone, or the distributed set plus the personal MyPlate library (§4.9). |
 | D11 | Is the sample-recipe file a one-off? (Q4) | **No.** It is the first **recipe pack**, a general import format with an `import-recipes` CLI command (§4.4). MyPlate keeps its own `--persist` path. |
+| D12 | Can curation correct a row the normaliser named too generically? (2026-10-10) | **Yes, through a row-override table.** `SeedIngredientRowOverrides` sends a MyPlate row, keyed on slug and exact source line, to another catalogue entry. A fold moves every row carrying a name, so it cannot separate "cheese, reduced-fat sharp cheddar" from generic "cheese". MyPlate imports only (§4.7). |
 
 ## 3. Current state
 
@@ -291,7 +292,7 @@ default unit win.
    it still carries `corpusRows`/`corpusRecipes`. List every flagged entry with its signal, its
    counts and a suggested action.
 2. The project owner decides each one. No entry is renamed or folded on a suggestion alone.
-3. Apply the decisions to `ingredient-catalogue.json` by hand. `IngredientCatalogueValidator` rules
+3. Apply the decisions to `ingredient-catalogue.json`. `IngredientCatalogueValidator` rules
    1–4 must still pass.
 4. Reshape the file (D8) and raise its versions (below).
 
@@ -315,13 +316,25 @@ separated.
 **Validator rules 5 and 6.**
 - Rule 5 (every corpus name reachable) still matters, because of D9. It moves out of the builder
   into a test that runs only where the local MyPlate cache exists (`normalised/` is gitignored).
-  On any other machine it reports itself as skipped, not passed.
+  On any other machine it reports itself as skipped, not passed. It checks the rows persist
+  actually resolves: after `SeedNonIngredientRows` removes headings and `SeedIngredientRowOverrides`
+  reassigns rows.
 - Rule 6 (corpus row counts add up) is deleted along with the counts.
 
 **The builder no longer writes the shipped file.** `seed-recipes --build-catalogue` saves through
 `IngredientCatalogueFileStore` today, so a re-run would overwrite the curated catalogue. Its output
 moves to `seed-data/myplate/catalogue-build.json` (gitignored, in the version-1 shape with counts),
 where it serves as a reference for later curation and never as the shipped artefact.
+
+**Row overrides (D12).** The Phase 9 normaliser sometimes named a row less specifically than its
+line: `1/2 cup cheese, reduced-fat sharp cheddar, shredded` became `cheese`, and
+`1 tablespoon ginger, minced` became the ground spice. A fold works on names, so it cannot move
+those rows without moving the generic ones too. `SeedIngredientRowOverrides.BySlug` lists them by
+slug and exact source line, each with the catalogue entry name it should resolve to. Stage 5
+applies it after `SeedNonIngredientRows.Remove` and before resolution, and reports listed lines
+that matched nothing, as it does for the skip list. Every target must be an entry name in the
+shipped catalogue (§6). The table lives in code because `normalised/` is a gitignored cache that
+`--normalise --force` rewrites. It affects MyPlate imports only.
 
 ### 4.8 Retiring `DataSeeder`
 
@@ -417,6 +430,10 @@ Artefact tests (no database):
 - **Rule 5 (local only):** every name in the local `normalised/` corpus resolves against the
   shipped catalogue. Skipped, and reported as skipped, when the cache is absent.
 - `--build-catalogue` writes to `catalogue-build.json` and leaves the shipped file untouched.
+- Row overrides (D12): a listed row is renamed and nothing else changes, one listing reassigns one
+  occurrence, a listed line the recipe lacks is reported, no listed line is also on the skip list,
+  and every target is an entry name in the shipped catalogue. Rule 5 also fails on a stale
+  override.
 
 ## 7. Implementation stages
 

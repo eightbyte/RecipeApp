@@ -11,8 +11,9 @@ public class RecipeAppFactory(string connectionString) : WebApplicationFactory<P
 {
     protected override void ConfigureWebHost(IWebHostBuilder builder)
     {
-        // Prevent the development auto-migrate + seed block from running
-        builder.UseEnvironment("Testing");
+        // Keeps first-run seeding (migrate, catalogue, sample recipes) out of integration tests,
+        // so each test controls its own data (Phase 10 §4.2).
+        builder.UseEnvironment(FirstRunSeeder.TestingEnvironmentName);
 
         // Inject the Testcontainers connection string into configuration so the NpgSql
         // health check (which resolves IConfiguration lazily) uses the right database.

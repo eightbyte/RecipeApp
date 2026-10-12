@@ -1,3 +1,6 @@
 bin/
 obj/
 uploads/
+# Phase 10 §4.6: the MyPlate cache is a personal-use corpus and never enters an image.
+seed-data/myplate/
+seed-data/catalogue-review.md

@@ -7,6 +7,7 @@ using RecipeApp.API.Data;
 using RecipeApp.API.Endpoints;
 using RecipeApp.API.Services;
 using RecipeApp.API.Services.Llm;
+using RecipeApp.API.Services.RecipePacks;
 using RecipeApp.API.Services.Seeding;
 using Scalar.AspNetCore;
 
@@ -19,17 +20,25 @@ var isImportCatalogue = args.Contains(ImportCatalogueCommand);
 var isRetiredSeedCatalogue = args.Contains(RetiredSeedCatalogueCommand);
 var isSeedDensities = args.Contains("seed-densities");
 
-// --force re-applies the artefact over existing rows instead of only filling nulls.
-var catalogueForce = args.Contains("--force");
-
-// seed-recipes takes flags of its own (--discover, --limit 50, …). Everything after the command
-// token is its argument vector, so it is withheld from the host's command-line configuration
-// provider rather than being read as configuration keys.
+// seed-recipes and import-recipes take flags of their own (--discover, --limit 50, --force, …).
+// Everything after the command token is its argument vector, so it is withheld from the host's
+// command-line configuration provider rather than being read as configuration keys.
 var seedRecipesIndex = SeedRecipesCommand.IndexIn(args);
 var isSeedRecipes    = seedRecipesIndex >= 0;
 var seedRecipesArgs  = isSeedRecipes ? args[(seedRecipesIndex + 1)..] : [];
 
-var builder = WebApplication.CreateBuilder(isSeedRecipes ? args[..seedRecipesIndex] : args);
+var importRecipesIndex = ImportRecipesCommand.IndexIn(args);
+var isImportRecipes    = importRecipesIndex >= 0;
+var importRecipesArgs  = isImportRecipes ? args[(importRecipesIndex + 1)..] : [];
+
+var commandIndex = new[] { seedRecipesIndex, importRecipesIndex }.Where(index => index >= 0).DefaultIfEmpty(-1).Min();
+var hostArgs     = commandIndex >= 0 ? args[..commandIndex] : args;
+
+// --force re-applies the artefact over existing rows instead of only filling nulls. Read from the
+// host arguments only, so import-recipes' own --force never force-imports the catalogue.
+var catalogueForce = hostArgs.Contains("--force");
+
+var builder = WebApplication.CreateBuilder(hostArgs);
 
 // ── OpenAPI ───────────────────────────────────────────────────────────────────
 builder.Services.AddOpenApi();
@@ -87,9 +96,18 @@ builder.Services.AddSingleton<IRecipeLibrarySeeder, RecipeLibrarySeeder>();
 // run because `import-catalogue` reads the artefact; the builder only by the one machine that
 // authors it.
 builder.Services.AddSingleton<IngredientCatalogueFileStore>();
+builder.Services.AddSingleton<CatalogueBuildFileStore>();
 builder.Services.AddSingleton<IngredientCatalogueBuilder>();
 builder.Services.AddScoped<SeedCatalogueResolver>();
 builder.Services.AddScoped<SeedRecipePersister>();
+
+// ── Recipe packs (Phase 10 §4.4) ─────────────────────────────────────────────
+builder.Services.Configure<RecipePackOptions>(
+    builder.Configuration.GetSection(RecipePackOptions.SectionName));
+
+builder.Services.AddSingleton<RecipePackFileStore>();
+builder.Services.AddScoped<RecipePackImporter>();
+builder.Services.AddScoped<FirstRunSeeder>();
 
 builder.Services.AddHttpClient(WaybackHarvester.HttpClientName, (sp, client) =>
 {
@@ -173,6 +191,14 @@ if (isSeedRecipes)
     return;
 }
 
+// ── import-recipes command — imports one recipe pack then exits ──────────────
+// Migrates and loads the catalogue first, so it works against an empty database (Phase 10 §4.4.3).
+if (isImportRecipes)
+{
+    Environment.ExitCode = await ImportRecipesCommand.RunAsync(app.Services, app.Logger, importRecipesArgs);
+    return;
+}
+
 // ── seed-catalogue — retired by Phase 9.3 ────────────────────────────────────
 // Answered rather than ignored: it used to generate a catalogue with an LLM, and silently starting
 // the web host instead would look like the command had run.
@@ -242,45 +268,18 @@ api.MapRecipeScrapeEndpoints();
 api.MapMealPlanEndpoints();
 api.MapShoppingListEndpoints();
 
-// ── Startup tasks (development) ───────────────────────────────────────────────
-// Order is load-bearing and enforced here rather than documented and hoped for (Phase 9.3 §4.5):
-// densities attach to catalogue rows, and DataSeeder's sample recipes resolve their ingredients
-// through the catalogue. Each step can only do its job once the one before it has run.
-if (app.Environment.IsDevelopment())
+// ── First-run seeding (Phase 10 §4.2) ───────────────────────────────────────
+// Every environment except Testing: migrate, then seed the catalogue, densities and sample recipes
+// in that order. The ledger makes each one-time step run once per database, and a failed step logs
+// and lets the app start.
+if (FirstRunSeeder.RunsIn(app.Environment))
 {
     using var scope = app.Services.CreateScope();
-    var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
-    await db.Database.MigrateAsync();
-
-    var catalogueStore = scope.ServiceProvider.GetRequiredService<IngredientCatalogueFileStore>();
-    if (catalogueStore.Exists())
-    {
-        try
-        {
-            var catalogue = await catalogueStore.LoadAsync();
-            await IngredientCatalogueFileSeeder.SeedAsync(db, catalogue, app.Logger);
-        }
-        catch (CatalogueValidationException ex)
-        {
-            // Startup continues. A broken artefact must be loud, but it must not stop a developer
-            // running the app — the sample recipes below still seed and the API still works.
-            app.Logger.LogError("{Message}", ex.Message);
-        }
-    }
-    else
-    {
-        app.Logger.LogWarning(
-            "No ingredient catalogue at {Path}. The app will start with only the sample recipes' " +
-            "own ingredients. Build one with 'dotnet run -- {Command} --build-catalogue'.",
-            catalogueStore.Path, SeedRecipesCommand.CommandName);
-    }
-
-    await IngredientDensitySeeder.SeedAsync(db, app.Logger);
-    await DataSeeder.SeedAsync(db);
+    await scope.ServiceProvider.GetRequiredService<FirstRunSeeder>().RunAsync();
 }
 
 // Eagerly resolve the model holder (non-test environments) so a bad path surfaces at startup
-if (!app.Environment.IsEnvironment("Testing"))
+if (!app.Environment.IsEnvironment(FirstRunSeeder.TestingEnvironmentName))
 {
     var holder = app.Services.GetRequiredService<LlamaModelHolder>();
     if (holder.IsLoaded)

@@ -376,10 +376,12 @@ public class RecipeLibrarySeeder(
         var filteredOut     = 0;
         var belowThreshold  = 0;
         var rowsRemoved     = 0;
+        var rowsReassigned  = 0;
         var amountsDropped  = 0;
         var withoutImage    = 0;
         var failures        = new Dictionary<string, string>(StringComparer.Ordinal);
         var staleSkipLines  = new Dictionary<string, IReadOnlyList<string>>(StringComparer.Ordinal);
+        var staleOverrideLines = new Dictionary<string, IReadOnlyList<string>>(StringComparer.Ordinal);
 
         var total    = manifest.Recipes.Count;
         var position = 0;
@@ -445,6 +447,9 @@ public class RecipeLibrarySeeder(
                     amountsDropped += prepared.AmountsDropped;
                     if (prepared.StaleSkipListLines.Count > 0)
                         staleSkipLines[entry.Slug] = prepared.StaleSkipListLines;
+                    rowsReassigned += prepared.RowsReassigned;
+                    if (prepared.StaleRowOverrideLines.Count > 0)
+                        staleOverrideLines[entry.Slug] = prepared.StaleRowOverrideLines;
 
                     slugState.Stage     = SeedStage.Persisted;
                     slugState.LastError = null;
@@ -500,6 +505,8 @@ public class RecipeLibrarySeeder(
             AmountsDropped           = amountsDropped,
             WithoutImage             = withoutImage,
             StaleSkipListLines       = staleSkipLines,
+            RowsReassigned           = rowsReassigned,
+            StaleRowOverrideLines    = staleOverrideLines,
             Failures                 = failures,
         };
     }

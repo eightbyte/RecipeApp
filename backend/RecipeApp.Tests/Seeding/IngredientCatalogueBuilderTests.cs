@@ -31,6 +31,7 @@ public class IngredientCatalogueBuilderTests : IDisposable
         {
             CacheDirectory          = Path.Combine(_root, "cache"),
             CatalogueFilePath       = Path.Combine(_root, "ingredient-catalogue.json"),
+            CatalogueBuildFilePath  = Path.Combine(_root, "cache", "catalogue-build.json"),
             CatalogueMinimumEntries = 1,
         };
     }
@@ -48,7 +49,7 @@ public class IngredientCatalogueBuilderTests : IDisposable
         new TestHostEnvironment(_root),
         NullLogger<SeedCacheStore>.Instance);
 
-    private IngredientCatalogueFileStore BuildCatalogueStore() =>
+    private CatalogueBuildFileStore BuildCatalogueStore() =>
         new(Options.Create(_options), new TestHostEnvironment(_root));
 
     private IngredientCatalogueBuilder BuildBuilder(StubLlmStructuredClient llm) => new(
@@ -891,6 +892,7 @@ public class IngredientCatalogueBuilderTests : IDisposable
         {
             CacheDirectory          = _options.CacheDirectory,
             CatalogueFilePath       = _options.CatalogueFilePath,
+            CatalogueBuildFilePath  = _options.CatalogueBuildFilePath,
             CatalogueMinimumEntries = 1,
             CatalogueBatchSize      = 1,
         };
@@ -1028,14 +1030,14 @@ public class IngredientCatalogueBuilderTests : IDisposable
 
         entries.Single().Name.Should().Be("tomatoes");
         entries.Single().Aliases.Should().Equal("tomato");
-        IngredientCatalogueValidator.Validate(entries).Should().BeEmpty();
+        IngredientCatalogueValidator.Validate([.. entries.Select(e => e.ToCatalogueEntry())]).Should().BeEmpty();
     }
 
     [Fact]
     public async Task Pass3_RecoversANameTheModelNeverAnswered()
     {
-        // §4.7 rule 5 makes an unreachable name a build failure, and a dropped name is a recipe
-        // Stage 5 cannot persist — so a gap in the answer is repaired rather than propagated.
+        // A dropped name is a recipe Stage 5 cannot persist, so a gap in the answer is repaired
+        // rather than propagated.
         var manifest = await SeedCorpusAsync(
             ("a", [("onion", 1m, "pcs", "1 onion"), ("paprika", 1m, "tsp", "1 teaspoon paprika")]));
 
@@ -1088,7 +1090,7 @@ public class IngredientCatalogueBuilderTests : IDisposable
 
         entries.Single().Name.Should().Be("beets");
         entries.Single().Aliases.Should().BeEquivalentTo(["beet", "beetroot"]);
-        IngredientCatalogueValidator.Validate(entries).Should().BeEmpty();
+        IngredientCatalogueValidator.Validate([.. entries.Select(e => e.ToCatalogueEntry())]).Should().BeEmpty();
     }
 
     [Fact]
@@ -1111,7 +1113,7 @@ public class IngredientCatalogueBuilderTests : IDisposable
         var entries = (await BuildCatalogueStore().LoadAsync()).Entries;
 
         entries.Single(e => e.Name == "chickpeas").Aliases.Should().NotContain("garbanzo beans");
-        IngredientCatalogueValidator.Validate(entries).Should().BeEmpty();
+        IngredientCatalogueValidator.Validate([.. entries.Select(e => e.ToCatalogueEntry())]).Should().BeEmpty();
     }
 
     // ── Pass 4: the artefact ──────────────────────────────────────────────────
@@ -1138,12 +1140,31 @@ public class IngredientCatalogueBuilderTests : IDisposable
     }
 
     [Fact]
+    public async Task Artefact_IsWrittenToTheBuildFileAndLeavesTheShippedCatalogueUntouched()
+    {
+        // Phase 10 §4.7: a re-run must never overwrite the curated catalogue.
+        const string curated = "{ \"formatVersion\": 2, \"note\": \"curated by hand\" }";
+        await File.WriteAllTextAsync(_options.CatalogueFilePath, curated);
+
+        var manifest = await SeedCorpusAsync(("a", [("onion", 1m, "pcs", "1 onion")]));
+        var llm      = new StubLlmStructuredClient(GroupingAnswer(
+            (0, "onion", 0, "Onion", IngredientCategory.Produce)));
+
+        var result = await BuildBuilder(llm).BuildAsync(manifest);
+
+        result.Path.Should().Be(_options.CatalogueBuildFilePath);
+        (await BuildCatalogueStore().LoadAsync()).Entries.Single().Name.Should().Be("onion");
+        (await File.ReadAllTextAsync(_options.CatalogueFilePath)).Should().Be(curated);
+    }
+
+    [Fact]
     public async Task Artefact_IsNotWrittenWhenValidationFails()
     {
         _options = new RecipeSeedingOptions
         {
             CacheDirectory          = _options.CacheDirectory,
             CatalogueFilePath       = _options.CatalogueFilePath,
+            CatalogueBuildFilePath  = _options.CatalogueBuildFilePath,
             CatalogueMinimumEntries = 500,
         };
 

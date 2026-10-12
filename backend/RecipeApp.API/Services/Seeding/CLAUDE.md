@@ -5,6 +5,13 @@ This folder imports the archived MyPlate corpus (1,123 recipes) into the databas
 Full design and results: `specs/phase-9-seed-recipe-library.md` (§21–25), plus
 `specs/phase-9.1-*` (unquantified ingredients) and `specs/phase-9.3-*` (catalogue).
 
+**The corpus is personal-use only.** Most recipes are credited to state universities, extension
+programs or private organisations, so they are not US federal works and not public domain
+(`specs/phase-10-first-run-seed.md` §1). Recipe text and photos are never committed, published
+or put in a Docker image. A fresh install gets the 12 sample recipes instead (`backend/CLAUDE.md`,
+First-run seeding). To add this library, run `--persist` **after** the app's first start, never
+before (clean-start path B).
+
 ## Stages
 
 | Stage | Class | Input → output | Needs |
@@ -13,7 +20,7 @@ Full design and results: `specs/phase-9-seed-recipe-library.md` (§21–25), plu
 | 2 Harvest | `WaybackHarvester` | pages + photos → cache | network |
 | 3 Parse | `MyPlateRecipeParser` | HTML → `parsed/*.json` | nothing (deterministic) |
 | 4 Normalise | `SeedRecipeNormaliser` + `SeedQuantityGate` | `parsed/` → `normalised/*.json` | LLM |
-| 4.5 Catalogue | `IngredientCatalogueBuilder` | `normalised/` → `seed-data/ingredient-catalogue.json` | LLM (run once, reviewed, committed) |
+| 4.5 Catalogue | `IngredientCatalogueBuilder` | `normalised/` → `seed-data/myplate/catalogue-build.json` | LLM (a curation reference; never the shipped catalogue) |
 | 5 Persist | `SeedRecipePersister` + `SeedCatalogueResolver` | `normalised/` → database | Postgres, no LLM |
 
 `RecipeLibrarySeeder` walks the manifest for each stage. It isolates failures per slug and
@@ -82,9 +89,14 @@ instead.**
 
 ## Catalogue (`ingredient-catalogue.json`)
 
+- The shipped catalogue is curated by hand (Phase 10 §4.7). Nothing writes it. Raise
+  `contentVersion` on every edit. **Fold, never drop** (Phase 10 D9): every MyPlate name must stay
+  reachable as a name or an alias. `ShippedCatalogueTests` checks rule 5 where the local cache exists.
 - Stage 5 resolves names by dictionary lookup (`SeedCatalogueResolver`), and a name always
-  outranks an alias. Validation: `IngredientCatalogueValidator`. There are no alias collisions,
-  and every entry must be reachable.
+  outranks an alias. Validation: `IngredientCatalogueValidator` (rules 1–4). There are no alias
+  collisions.
+- A row the normaliser named too generically (generic `cheese` for a cheddar line) is moved with
+  `SeedIngredientRowOverrides`, keyed on slug and exact source line, not with a fold (Phase 10 D12).
 - The builder asks **one object per name** (never one per group) and batches by family with
   plurals folded. `CatalogueMergeVocabulary` is a closed list of words a merge may differ by.
   **Adding a word is a review decision.** `ground`, `dried`, `white` and `cooked` are absent on
@@ -92,8 +104,8 @@ instead.**
 - After any full build, grep the log for `were still unanswered after`: a whole batch can fail by
   sampling. Review merges with the `merged:` / `kept apart:` log lines and hand-labelled
   `--batch` previews. A count is not a review.
-- Small corrections (aliases, a category) can be hand-edited in the artefact and re-imported with
-  `import-catalogue --force`.
+- Corrections are hand-edited in the shipped file and re-imported with `import-catalogue --force`.
+  The build output is a reference to curate from, never a replacement.
 
 ## Harvest facts
 

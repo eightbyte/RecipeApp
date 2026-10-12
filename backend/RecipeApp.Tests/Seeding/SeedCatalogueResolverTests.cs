@@ -122,7 +122,7 @@ public class SeedCatalogueResolverTests(DatabaseFixture db) : IAsyncLifetime
 
         thrown.Slug.Should().Be("test-recipe");
         thrown.UnresolvedNames.Should().BeEquivalentTo(["kohlrabi", "salsify"]);
-        thrown.Message.Should().Contain("--build-catalogue");
+        thrown.Message.Should().Contain("ingredient-catalogue.json").And.Contain(nameof(SeedIngredientRowOverrides));
     }
 
     [Fact]

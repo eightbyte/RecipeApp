@@ -5,7 +5,8 @@ using RecipeApp.API.Services.Seeding;
 namespace RecipeApp.Tests.Seeding;
 
 /// <summary>
-/// Phase 9.3 §4.7's six rules, each failing on its own.
+/// Phase 9.3 §4.7's rules 1–4, each failing on its own. Rule 5 is the local-only
+/// <see cref="ShippedCatalogueTests"/> check; rule 6 was deleted with the corpus counts (Phase 10 §4.7).
 ///
 /// <para>These are the invariants that make the catalogue trustworthy enough to be a dictionary
 /// rather than a suggestion, and rule 4 is the one that corrupts silently — an alias claimed by two
@@ -19,9 +20,8 @@ public class IngredientCatalogueValidatorTests
         string? displayName = null,
         string category = IngredientCategory.Produce,
         string? defaultUnit = MeasurementUnit.Piece,
-        string[]? aliases = null,
-        int corpusRows = 1) =>
-        new(name, displayName ?? name, category, defaultUnit, aliases ?? [], corpusRows, 1);
+        string[]? aliases = null) =>
+        new(name, displayName ?? name, category, defaultUnit, aliases ?? []);
 
     [Fact]
     public void AValidCatalogueRaisesNothing()
@@ -68,6 +68,18 @@ public class IngredientCatalogueValidatorTests
     {
         IngredientCatalogueValidator.Validate([Entry("onion", "")])
             .Should().ContainSingle(e => e.Contains("no display name"));
+    }
+
+    [Theory]
+    [InlineData("Sage")]
+    [InlineData("sage")]
+    [InlineData(" Sage ")]
+    public void Rule1_RejectsADisplayNameSharedByTwoEntries(string secondDisplayName)
+    {
+        var entries = new[] { Entry("sage", "Sage"), Entry("dried sage", secondDisplayName) };
+
+        IngredientCatalogueValidator.Validate(entries)
+            .Should().ContainSingle(e => e.Contains("'dried sage'") && e.Contains("already uses"));
     }
 
     // ── Rule 2: category ──────────────────────────────────────────────────────
@@ -146,39 +158,5 @@ public class IngredientCatalogueValidatorTests
     {
         IngredientCatalogueValidator.Validate([Entry("onion", aliases: ["Onions"])])
             .Should().Contain(e => e.Contains("not stored normalised"));
-    }
-
-    // ── Rule 5: corpus reachability ───────────────────────────────────────────
-
-    [Fact]
-    public void Rule5_RejectsACorpusNameReachableAsNeitherANameNorAnAlias()
-    {
-        var entries = new[] { Entry("onion", aliases: ["onions"], corpusRows: 2) };
-
-        IngredientCatalogueValidator
-            .ValidateAgainstCorpus(entries, ["onion", "onions", "shallot"], corpusRows: 2)
-            .Should().Contain(e => e.Contains("shallot"));
-    }
-
-    [Fact]
-    public void Rule5_CountsAnAliasAsReachable()
-    {
-        var entries = new[] { Entry("onion", aliases: ["onions"], corpusRows: 2) };
-
-        IngredientCatalogueValidator
-            .ValidateAgainstCorpus(entries, ["onion", "onions"], corpusRows: 2)
-            .Should().BeEmpty();
-    }
-
-    // ── Rule 6: provenance adds up ────────────────────────────────────────────
-
-    [Fact]
-    public void Rule6_RejectsRowCountsThatDoNotSumToTheCorpus()
-    {
-        var entries = new[] { Entry("onion", corpusRows: 5) };
-
-        IngredientCatalogueValidator
-            .ValidateAgainstCorpus(entries, ["onion"], corpusRows: 8)
-            .Should().ContainSingle(e => e.Contains("claim 5 corpus rows"));
     }
 }

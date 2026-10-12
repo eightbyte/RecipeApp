@@ -27,9 +27,10 @@ public class IngredientCatalogueFileSeederTests(DatabaseFixture db) : IAsyncLife
 
     private static IngredientCatalogueFile Catalogue(params IngredientCatalogueEntry[] entries) => new()
     {
-        GeneratedAt = DateTime.UtcNow,
-        Source      = new CatalogueSource("myplate", 1123, 8882, 1475),
-        Entries     = entries,
+        ContentVersion = 1,
+        UpdatedAt      = DateTime.UtcNow,
+        Provenance     = CatalogueProvenance.Curated,
+        Entries        = entries,
     };
 
     private static IngredientCatalogueEntry Entry(
@@ -38,7 +39,7 @@ public class IngredientCatalogueFileSeederTests(DatabaseFixture db) : IAsyncLife
         string category = IngredientCategory.Produce,
         string? defaultUnit = MeasurementUnit.Piece,
         string[]? aliases = null) =>
-        new(name, displayName ?? name, category, defaultUnit, aliases ?? [], 1, 1);
+        new(name, displayName ?? name, category, defaultUnit, aliases ?? []);
 
     private async Task<Ingredient> SeedRowAsync(Ingredient row)
     {

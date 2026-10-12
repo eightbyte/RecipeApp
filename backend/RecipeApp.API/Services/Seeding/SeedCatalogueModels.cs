@@ -3,25 +3,84 @@ using RecipeApp.API.Enums;
 
 namespace RecipeApp.API.Services.Seeding;
 
-// ── seed-data/ingredient-catalogue.json (Stage 4.5 output) ────────────────────
+// ── seed-data/ingredient-catalogue.json (the shipped, curated catalogue) ──────
 
 /// <summary>
-/// The committed ingredient catalogue (Phase 9.3 §4.2) — what an ingredient <i>is</i>, derived once
-/// from the normalised corpus and reviewed by a human.
+/// The shipped ingredient catalogue (Phase 10 §4.7, D8) — what an ingredient <i>is</i>. First
+/// derived from the MyPlate corpus by <c>--build-catalogue</c>, then curated by hand, and now
+/// edited only by hand. Every install seeds from it, so it carries no MyPlate provenance.
 ///
 /// <para><b>Why this is an artefact and not a runtime step.</b> Phase 9 §12 routed catalogue
 /// matching through a per-recipe LLM call whose candidate list grew as the run proceeded, so the
 /// same ingredient name could resolve differently depending on where its recipe sat in the
-/// manifest. Deriving the catalogue once, committing it, and looking names up in a dictionary makes
-/// the import deterministic on every machine — the same bargain Phase 9 §18 Q1 struck for
-/// <c>normalised/</c>.</para>
+/// manifest. A committed catalogue looked up by dictionary makes the import deterministic on every
+/// machine.</para>
 ///
 /// <para>It carries no density: <see cref="Data.IngredientDensitySeeder"/> is the single source of
-/// truth for that, curated and cited, and two sources would be one too many (§4.2). It carries
-/// nothing recipe-specific either — how much of an ingredient a recipe uses is the recipe's
-/// business.</para>
+/// truth for that, curated and cited, and two sources would be one too many. It carries nothing
+/// recipe-specific either — how much of an ingredient a recipe uses is the recipe's business.</para>
+///
+/// <para><b>Two versions, two jobs.</b> <see cref="FormatVersion"/> is the file's shape, and the
+/// loader refuses one it cannot read. <see cref="ContentVersion"/> is raised on every curated edit
+/// and never refused: a content edit must not stop the loader reading the file.</para>
 /// </summary>
 public record IngredientCatalogueFile
+{
+    /// <summary>The only file shape this build reads.</summary>
+    public const int CurrentFormatVersion = 2;
+
+    public int FormatVersion { get; init; } = CurrentFormatVersion;
+
+    /// <summary>Raised on every curated edit. Recorded in the seed ledger (Phase 10 D7).</summary>
+    public required int ContentVersion { get; init; }
+
+    public required DateTime UpdatedAt { get; init; }
+
+    /// <summary>How the content was produced, e.g. <see cref="CatalogueProvenance.Curated"/>.</summary>
+    public required string Provenance { get; init; }
+
+    /// <summary>Ordered by <see cref="IngredientCatalogueEntry.Name"/> so an edit diffs cleanly.</summary>
+    public required IReadOnlyList<IngredientCatalogueEntry> Entries { get; init; }
+}
+
+/// <summary>Values for <see cref="IngredientCatalogueFile.Provenance"/>.</summary>
+public static class CatalogueProvenance
+{
+    /// <summary>Reviewed and edited by hand (Phase 10 §4.7).</summary>
+    public const string Curated = "curated";
+}
+
+/// <summary>
+/// One catalogue entry: a canonical ingredient plus every other name that resolves to it.
+/// </summary>
+/// <param name="Name">Normalised lowercase name — becomes <c>Ingredient.Name</c>.</param>
+/// <param name="DisplayName">Human-readable form — becomes <c>Ingredient.DisplayName</c>.</param>
+/// <param name="Category">One of <see cref="IngredientCategory.All"/>.</param>
+/// <param name="DefaultUnit">Canonical storable unit, or null when none is typical.</param>
+/// <param name="Aliases">
+/// Names this entry absorbs: corpus names, folded entries and regional spellings. Normalised
+/// lowercase, never equal to any entry's <paramref name="Name"/>, never shared with another entry
+/// (§4.7 rule 4).
+/// </param>
+public record IngredientCatalogueEntry(
+    string Name,
+    string DisplayName,
+    string Category,
+    string? DefaultUnit,
+    IReadOnlyList<string> Aliases);
+
+// ── seed-data/myplate/catalogue-build.json (Stage 4.5 output) ─────────────────
+
+/// <summary>
+/// What <c>--build-catalogue</c> derives from the normalised MyPlate corpus (Phase 9.3 §4.2): a
+/// catalogue in the original version-1 shape, with the corpus counts a reviewer needs.
+///
+/// <para><b>A reference, never the shipped file.</b> Phase 10 §4.7 moved this output away from
+/// <c>ingredient-catalogue.json</c>, because a re-run would otherwise overwrite the curated
+/// catalogue. It lives in the gitignored MyPlate cache and is read only by a person doing a later
+/// curation pass.</para>
+/// </summary>
+public record CatalogueBuildFile
 {
     public const int CurrentVersion = 1;
 
@@ -32,14 +91,14 @@ public record IngredientCatalogueFile
     /// <summary>Which corpus this was derived from, and how much of it — provenance for a reviewer.</summary>
     public required CatalogueSource Source { get; init; }
 
-    /// <summary>Ordered by <see cref="IngredientCatalogueEntry.Name"/> so a regenerated file diffs cleanly.</summary>
-    public required IReadOnlyList<IngredientCatalogueEntry> Entries { get; init; }
+    /// <summary>Ordered by <see cref="CatalogueBuildEntry.Name"/> so a regenerated file diffs cleanly.</summary>
+    public required IReadOnlyList<CatalogueBuildEntry> Entries { get; init; }
 }
 
 /// <param name="Corpus">Corpus identifier, e.g. <c>myplate</c>.</param>
 /// <param name="Recipes">Normalised recipes read.</param>
 /// <param name="IngredientRows">Ingredient rows across those recipes.</param>
-/// <param name="DistinctNames">Distinct ingredient names before grouping — the number §4.7 rule 5 requires to be reachable.</param>
+/// <param name="DistinctNames">Distinct ingredient names before grouping.</param>
 public record CatalogueSource(
     string Corpus,
     int Recipes,
@@ -47,31 +106,32 @@ public record CatalogueSource(
     int DistinctNames);
 
 /// <summary>
-/// One catalogue entry: a canonical ingredient plus every corpus name and regional spelling that
-/// resolves to it.
+/// One derived entry: a catalogue entry plus the corpus evidence behind it.
 /// </summary>
-/// <param name="Name">Normalised lowercase name — becomes <c>Ingredient.Name</c>.</param>
-/// <param name="DisplayName">Human-readable form — becomes <c>Ingredient.DisplayName</c>.</param>
+/// <param name="Name">Normalised lowercase name, named after the group's most-used member.</param>
+/// <param name="DisplayName">Human-readable form.</param>
 /// <param name="Category">One of <see cref="IngredientCategory.All"/>.</param>
 /// <param name="DefaultUnit">
 /// Modal unit over the merged group's rows, or null when no row in the group states one. Derived
 /// from the corpus rather than asked for: it is stated 8,882 times, and a model's guess would
-/// replace observations with an opinion (§2.5, §4.4).
+/// replace observations with an opinion (Phase 9.3 §2.5, §4.4).
 /// </param>
-/// <param name="Aliases">
-/// Corpus names this entry absorbs, plus any regional spelling. Normalised lowercase, never equal
-/// to any entry's <paramref name="Name"/>, never shared with another entry (§4.7).
-/// </param>
+/// <param name="Aliases">Corpus names this entry absorbs, plus any regional spelling.</param>
 /// <param name="CorpusRows">Ingredient rows backing this entry — how much evidence it rests on.</param>
 /// <param name="CorpusRecipes">Distinct recipes those rows came from.</param>
-public record IngredientCatalogueEntry(
+public record CatalogueBuildEntry(
     string Name,
     string DisplayName,
     string Category,
     string? DefaultUnit,
     IReadOnlyList<string> Aliases,
     int CorpusRows,
-    int CorpusRecipes);
+    int CorpusRecipes)
+{
+    /// <summary>The entry without its corpus evidence, for the rules every catalogue must meet.</summary>
+    public IngredientCatalogueEntry ToCatalogueEntry() =>
+        new(Name, DisplayName, Category, DefaultUnit, Aliases);
+}
 
 // ── Pass 1: what the corpus says about one name ───────────────────────────────
 
@@ -160,8 +220,8 @@ public record CatalogueBuildResult
 
     /// <summary>
     /// Names the model never returned, folded in as single-name entries rather than dropped.
-    /// §4.7 rule 5 makes an unreachable name a build failure, and a dropped name is a recipe Stage 5
-    /// cannot persist — so a gap in the answer is repaired, and reported so it can be reviewed.
+    /// A dropped name is a recipe Stage 5 cannot persist, so a gap in the answer is repaired, and
+    /// reported so it can be reviewed.
     /// </summary>
     public int NamesRecoveredFromGaps { get; init; }
 

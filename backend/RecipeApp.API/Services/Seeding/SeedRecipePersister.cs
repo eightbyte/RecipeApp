@@ -30,12 +30,16 @@ public class SeedRecipePersister(
     /// <param name="Request">The confirm request, ingredients resolved against the catalogue.</param>
     /// <param name="NonIngredientRowsRemoved">Heading and note rows dropped.</param>
     /// <param name="StaleSkipListLines">Skip-list lines the recipe did not contain.</param>
+    /// <param name="RowsReassigned">Rows <see cref="SeedIngredientRowOverrides"/> moved to another entry.</param>
+    /// <param name="StaleRowOverrideLines">Override lines the recipe did not contain.</param>
     /// <param name="AmountsDropped">Rows whose unexplained amount was dropped.</param>
     /// <param name="BelowQualityThreshold">Whether the §18 Q3 filter would exclude it.</param>
     public record PreparedSeedRecipe(
         ScrapeConfirmRequest Request,
         int NonIngredientRowsRemoved,
         IReadOnlyList<string> StaleSkipListLines,
+        int RowsReassigned,
+        IReadOnlyList<string> StaleRowOverrideLines,
         int AmountsDropped,
         bool BelowQualityThreshold);
 
@@ -62,9 +66,11 @@ public class SeedRecipePersister(
         //    removes any, because the pairing holds only for the full set.
         EnsureDerivedFrom(recipe, parsed, parsedFingerprint);
 
-        // 2. Group headings and leaked notes are not ingredients.
-        var skipped = SeedNonIngredientRows.Remove(recipe);
-        var working = skipped.Recipe;
+        // 2. Group headings and leaked notes are not ingredients. Then rows the normaliser named
+        //    less specifically than their line are moved to the right entry (Phase 10 D12).
+        var skipped    = SeedNonIngredientRows.Remove(recipe);
+        var overridden = SeedIngredientRowOverrides.Apply(skipped.Recipe);
+        var working    = overridden.Recipe;
 
         // 3. Unexplained multi-number amounts (§24.3a) are stored unquantified, not persisted wrong.
         var (ingredients, amountsDropped) = DropUnexplainedAmounts(working);
@@ -94,7 +100,8 @@ public class SeedRecipePersister(
         }
 
         return new PreparedSeedRecipe(
-            request, skipped.Removed, skipped.Unmatched, amountsDropped, belowThreshold);
+            request, skipped.Removed, skipped.Unmatched, overridden.Reassigned, overridden.Unmatched,
+            amountsDropped, belowThreshold);
     }
 
     private static void EnsureDerivedFrom(

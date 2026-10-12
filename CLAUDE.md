@@ -2,8 +2,10 @@
 
 Mobile-first web app for storing recipes, building meal plans, and generating shopping lists.
 
-**Status:** v1 feature-complete. Phases 1–9 done (Phase 9, the seeded USDA MyPlate library of
-1,123 recipes, closed 2026-09-29). No phase is in progress.
+**Status:** v1 feature-complete. Phases 1–10 done. Phase 9 built a personal-use MyPlate library of
+1,123 recipes (closed 2026-09-29). Phase 10 made the app distributable: a curated ingredient
+catalogue and 12 original sample recipes seed every fresh database (closed 2026-10-12). No phase
+is in progress.
 
 ## Where things are documented
 
@@ -11,9 +13,11 @@ Mobile-first web app for storing recipes, building meal plans, and generating sh
 |---|---|
 | Feature requirements, data model | `SPEC.md` |
 | A phase's design and results | `specs/phase-*.md` (the Phase 9 record is `specs/phase-9-seed-recipe-library.md` §21–25) |
+| Seed-data licensing, recipe-pack format | `specs/phase-10-first-run-seed.md` (§1, §4.4) |
 | Backend conventions, CLI, config | `backend/CLAUDE.md` |
 | Frontend conventions | `frontend/CLAUDE.md` |
-| Seed-import pipeline | `backend/RecipeApp.API/Services/Seeding/CLAUDE.md` |
+| First-run seeding, `import-recipes`, clean-start paths | `backend/CLAUDE.md` |
+| MyPlate seed-import pipeline (personal use) | `backend/RecipeApp.API/Services/Seeding/CLAUDE.md` |
 | Local LLM layer | `backend/RecipeApp.API/Services/Llm/CLAUDE.md` |
 | Units, amounts, density, portion scaling | `.claude/rules/measurements.md` |
 | Ingredient categories / aisle order | `.claude/rules/ingredient-categories.md` |
@@ -45,7 +49,7 @@ LLamaSharp 0.27.0 (CUDA12, local GGUF model).
 
 ```bash
 docker compose up -d postgres
-cd backend/RecipeApp.API && dotnet run   # http://localhost:5197 (5000 under docker compose); auto-migrates + seeds in Development
+cd backend/RecipeApp.API && dotnet run   # http://localhost:5197 (5000 under docker compose); migrates + seeds a fresh DB on start
 cd frontend && npm run dev               # http://localhost:3000
 ```
 

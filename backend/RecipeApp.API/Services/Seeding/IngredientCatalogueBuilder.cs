@@ -9,8 +9,13 @@ using RecipeApp.API.Services.Llm;
 namespace RecipeApp.API.Services.Seeding;
 
 /// <summary>
-/// Stage 4.5 (Phase 9.3 §4.3): derives the committed ingredient catalogue from the normalised
-/// corpus. Four passes, of which only the second uses the model.
+/// Stage 4.5 (Phase 9.3 §4.3): derives an ingredient catalogue from the normalised corpus. Four
+/// passes, of which only the second uses the model.
+///
+/// <para><b>The output is a reference, not the shipped catalogue.</b> It is written to
+/// <see cref="CatalogueBuildFileStore"/> with its corpus counts. The shipped
+/// <c>ingredient-catalogue.json</c> was curated from an earlier build and is edited by hand
+/// (Phase 10 §4.7).</para>
 ///
 /// <para><b>Why a catalogue is derived rather than generated.</b> The retired
 /// <c>IngredientCatalogueSeeder</c> asked a model for "common household cooking ingredients", which
@@ -30,7 +35,7 @@ namespace RecipeApp.API.Services.Seeding;
 /// </summary>
 public class IngredientCatalogueBuilder(
     SeedCacheStore cache,
-    IngredientCatalogueFileStore catalogueStore,
+    CatalogueBuildFileStore buildStore,
     ILlmStructuredClient llm,
     IOptions<RecipeSeedingOptions> options,
     ILogger<IngredientCatalogueBuilder> logger)
@@ -319,9 +324,9 @@ public class IngredientCatalogueBuilder(
     // ── Entry point ───────────────────────────────────────────────────────────
 
     /// <summary>
-    /// Runs all four passes and writes the artefact. Nothing is written unless every §4.7 rule
-    /// holds — a catalogue that contradicts itself is worse than no catalogue, and every consumer
-    /// downstream treats this file as authoritative.
+    /// Runs all four passes and writes the build output. Nothing is written unless validator rules
+    /// 1–4 hold and the entry floor is met — a catalogue that contradicts itself is no use as a
+    /// reference for curation.
     /// </summary>
     public async Task<CatalogueBuildResult> BuildAsync(
         SeedManifest manifest, CancellationToken ct = default)
@@ -336,9 +341,8 @@ public class IngredientCatalogueBuilder(
         var entries  = BuildEntries(grouping.Groups, corpus.Names, out var recovered);
 
         var errors = new List<string>();
-        errors.AddRange(IngredientCatalogueValidator.Validate(entries));
-        errors.AddRange(IngredientCatalogueValidator.ValidateAgainstCorpus(
-            entries, [.. corpus.Names.Select(name => name.Name)], corpus.Rows));
+        errors.AddRange(IngredientCatalogueValidator.Validate(
+            [.. entries.Select(entry => entry.ToCatalogueEntry())]));
 
         if (entries.Count < _options.CatalogueMinimumEntries)
             errors.Add($"Only {entries.Count} entries were produced, below the configured floor of " +
@@ -362,15 +366,15 @@ public class IngredientCatalogueBuilder(
             return result;
         }
 
-        var file = new IngredientCatalogueFile
+        var file = new CatalogueBuildFile
         {
             GeneratedAt = DateTime.UtcNow,
             Source      = new CatalogueSource(CorpusName, corpus.Recipes, corpus.Rows, corpus.Names.Count),
             Entries     = entries,
         };
 
-        await catalogueStore.SaveAsync(file, ct);
-        return result with { Path = catalogueStore.Path };
+        await buildStore.SaveAsync(file, ct);
+        return result with { Path = buildStore.Path };
     }
 
     /// <summary>
@@ -1159,11 +1163,11 @@ public class IngredientCatalogueBuilder(
     /// model was never asked for, and folding in every name the grouping pass failed to place.
     /// </summary>
     /// <param name="recoveredNames">
-    /// Names the model never returned, which became single-name entries. §4.7 rule 5 makes an
-    /// unreachable name a build failure and a dropped name is a recipe Stage 5 cannot persist — so
-    /// a gap is repaired rather than propagated, and counted so it can be reviewed.
+    /// Names the model never returned, which became single-name entries. A dropped name is a recipe
+    /// Stage 5 cannot persist, so a gap is repaired rather than propagated, and counted so it can be
+    /// reviewed.
     /// </param>
-    private IReadOnlyList<IngredientCatalogueEntry> BuildEntries(
+    private IReadOnlyList<CatalogueBuildEntry> BuildEntries(
         IReadOnlyList<CatalogueGroup> groups,
         IReadOnlyList<CorpusIngredientName> corpusNames,
         out int recoveredNames)
@@ -1250,7 +1254,7 @@ public class IngredientCatalogueBuilder(
             .ThenBy(item => nameOf(item).Name.Length)
             .ThenBy(item => nameOf(item).Name, StringComparer.Ordinal);
 
-    private IngredientCatalogueEntry ToEntry(MergedGroup group)
+    private CatalogueBuildEntry ToEntry(MergedGroup group)
     {
         // Pass 3a — the default unit is the modal unit over the MERGED group's rows. Derived, never
         // asked for: the corpus states a unit 8,882 times, and 'onion' being 176 pcs against 131 cup
@@ -1301,7 +1305,7 @@ public class IngredientCatalogueBuilder(
             .OrderBy(name => name, StringComparer.Ordinal)
             .ToList();
 
-        return new IngredientCatalogueEntry(
+        return new CatalogueBuildEntry(
             Name:          group.Name,
             DisplayName:   displayName,
             Category:      group.Category,
@@ -1331,10 +1335,10 @@ public class IngredientCatalogueBuilder(
     /// (<c>beets</c>) with the table's form as its alias. Looking the target up by name alone would
     /// skip <c>beetroot</c> silently.</para>
     /// </summary>
-    private IReadOnlyList<IngredientCatalogueEntry> AttachRegionalSpellings(
-        IReadOnlyList<IngredientCatalogueEntry> entries)
+    private IReadOnlyList<CatalogueBuildEntry> AttachRegionalSpellings(
+        IReadOnlyList<CatalogueBuildEntry> entries)
     {
-        var result      = new List<IngredientCatalogueEntry>(entries);
+        var result      = new List<CatalogueBuildEntry>(entries);
         var reachable   = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         var indexByForm = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
 

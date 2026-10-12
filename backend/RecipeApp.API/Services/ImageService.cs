@@ -34,6 +34,28 @@ public class ImageService(IConfiguration config, IWebHostEnvironment env)
         return (true, null);
     }
 
+    /// <summary>
+    /// Checks an image already on disk against the upload rules (extension and size) before
+    /// <see cref="ImportAsync"/> copies it. For importers that must report every problem up front
+    /// rather than fail halfway through copying.
+    /// </summary>
+    /// <returns>Null when the file can be imported; otherwise why not.</returns>
+    public string? ValidateImportSource(string sourcePath)
+    {
+        if (!File.Exists(sourcePath))
+            return $"no image file at {sourcePath}";
+
+        var ext = Path.GetExtension(sourcePath).ToLowerInvariant();
+        if (!AllowedExtensions.Contains(ext))
+            return $"unsupported image type '{ext}'; allowed: {string.Join(", ", AllowedExtensions)}";
+
+        var length = new FileInfo(sourcePath).Length;
+        if (length > MaxBytes)
+            return $"image is {length / 1024 / 1024} MB; the maximum is {MaxBytes / 1024 / 1024} MB";
+
+        return null;
+    }
+
     public async Task<string> SaveAsync(IFormFile file)
     {
         Directory.CreateDirectory(UploadRoot);
@@ -50,7 +72,8 @@ public class ImageService(IConfiguration config, IWebHostEnvironment env)
     /// <summary>
     /// Copies an image already on disk into storage under a caller-chosen name, overwriting any file
     /// of that name. For the Phase 9 seed import, whose photos are harvested files rather than
-    /// uploads and whose names must be deterministic so a re-import replaces its own photo.
+    /// uploads and whose names must be deterministic so a re-import replaces its own photo, and for
+    /// recipe packs (Phase 10 §4.4.2).
     /// </summary>
     /// <param name="sourcePath">The image to copy.</param>
     /// <param name="fileNameStem">Name without extension; the source's extension is kept.</param>

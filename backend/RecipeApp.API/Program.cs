@@ -107,6 +107,7 @@ builder.Services.Configure<RecipePackOptions>(
 
 builder.Services.AddSingleton<RecipePackFileStore>();
 builder.Services.AddScoped<RecipePackImporter>();
+builder.Services.AddScoped<FirstRunSeeder>();
 
 builder.Services.AddHttpClient(WaybackHarvester.HttpClientName, (sp, client) =>
 {
@@ -267,45 +268,18 @@ api.MapRecipeScrapeEndpoints();
 api.MapMealPlanEndpoints();
 api.MapShoppingListEndpoints();
 
-// ── Startup tasks (development) ───────────────────────────────────────────────
-// Order is load-bearing and enforced here rather than documented and hoped for (Phase 9.3 §4.5):
-// densities attach to catalogue rows, and DataSeeder's sample recipes resolve their ingredients
-// through the catalogue. Each step can only do its job once the one before it has run.
-if (app.Environment.IsDevelopment())
+// ── First-run seeding (Phase 10 §4.2) ───────────────────────────────────────
+// Every environment except Testing: migrate, then seed the catalogue, densities and sample recipes
+// in that order. The ledger makes each one-time step run once per database, and a failed step logs
+// and lets the app start.
+if (FirstRunSeeder.RunsIn(app.Environment))
 {
     using var scope = app.Services.CreateScope();
-    var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
-    await db.Database.MigrateAsync();
-
-    var catalogueStore = scope.ServiceProvider.GetRequiredService<IngredientCatalogueFileStore>();
-    if (catalogueStore.Exists())
-    {
-        try
-        {
-            var catalogue = await catalogueStore.LoadAsync();
-            await IngredientCatalogueFileSeeder.SeedAsync(db, catalogue, app.Logger);
-        }
-        catch (CatalogueValidationException ex)
-        {
-            // Startup continues. A broken artefact must be loud, but it must not stop a developer
-            // running the app — the sample recipes below still seed and the API still works.
-            app.Logger.LogError("{Message}", ex.Message);
-        }
-    }
-    else
-    {
-        app.Logger.LogWarning(
-            "No ingredient catalogue at {Path}. The app will start with only the sample recipes' " +
-            "own ingredients. The catalogue is committed source; restore it from git.",
-            catalogueStore.Path);
-    }
-
-    await IngredientDensitySeeder.SeedAsync(db, app.Logger);
-    await DataSeeder.SeedAsync(db);
+    await scope.ServiceProvider.GetRequiredService<FirstRunSeeder>().RunAsync();
 }
 
 // Eagerly resolve the model holder (non-test environments) so a bad path surfaces at startup
-if (!app.Environment.IsEnvironment("Testing"))
+if (!app.Environment.IsEnvironment(FirstRunSeeder.TestingEnvironmentName))
 {
     var holder = app.Services.GetRequiredService<LlamaModelHolder>();
     if (holder.IsLoaded)

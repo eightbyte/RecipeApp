@@ -1,0 +1,292 @@
+{
+  "formatVersion": 1,
+  "contentVersion": 1,
+  "recipes": [
+    {
+      "name": "Fluffy Pancakes",
+      "description": "Thick, tender pancakes from pantry staples. The batter comes together in five minutes.",
+      "servings": 4,
+      "ingredients": [
+        { "ingredient": "all-purpose flour", "amount": 1.5, "unit": "cup" },
+        { "ingredient": "sugar", "amount": 2, "unit": "tbsp" },
+        { "ingredient": "baking powder", "amount": 2, "unit": "tsp" },
+        { "ingredient": "salt", "amount": 0.5, "unit": "tsp" },
+        { "ingredient": "milk", "amount": 300, "unit": "ml" },
+        { "ingredient": "egg", "amount": 1, "unit": "pcs" },
+        { "ingredient": "butter", "amount": 3, "unit": "tbsp", "notes": "melted, plus a little for the pan" },
+        { "ingredient": "maple syrup", "amount": null, "unit": null, "notes": "to serve" }
+      ],
+      "steps": [
+        { "instruction": "Whisk the flour, sugar, baking powder and salt together in a large bowl.", "ingredients": ["all-purpose flour", "sugar", "baking powder", "salt"] },
+        { "instruction": "In a jug, whisk the milk, egg and melted butter until smooth.", "ingredients": ["milk", "egg", "butter"] },
+        { "instruction": "Pour the wet mixture into the dry and stir gently until just combined. A few lumps are fine; overmixing makes the pancakes tough. Let the batter rest for 5 minutes.", "ingredients": [] },
+        { "instruction": "Heat a non-stick frying pan over medium heat and brush it with a little butter. Pour in about 60 ml of batter per pancake.", "ingredients": ["butter"] },
+        { "instruction": "Cook until bubbles cover the surface and the edges look set, about 2 minutes. Flip and cook for 1 minute more.", "ingredients": [] },
+        { "instruction": "Serve warm with maple syrup.", "ingredients": ["maple syrup"] }
+      ]
+    },
+    {
+      "name": "Vegetable Frittata",
+      "description": "A golden, puffed egg bake with softened onion, pepper and spinach. Good warm or cold.",
+      "servings": 4,
+      "ingredients": [
+        { "ingredient": "eggs", "amount": 8, "unit": "pcs" },
+        { "ingredient": "milk", "amount": 60, "unit": "ml" },
+        { "ingredient": "salt", "amount": 0.5, "unit": "tsp" },
+        { "ingredient": "black pepper", "amount": 0.25, "unit": "tsp" },
+        { "ingredient": "olive oil", "amount": 1, "unit": "tbsp" },
+        { "ingredient": "onion", "amount": 1, "unit": "pcs", "notes": "thinly sliced" },
+        { "ingredient": "bell pepper", "amount": 1, "unit": "pcs", "notes": "diced" },
+        { "ingredient": "spinach", "amount": 60, "unit": "g" },
+        { "ingredient": "cheddar cheese", "amount": 80, "unit": "g", "notes": "grated" }
+      ],
+      "steps": [
+        { "instruction": "Heat the grill (broiler) to high.", "ingredients": [] },
+        { "instruction": "Whisk the eggs, milk, salt and pepper together in a bowl.", "ingredients": ["eggs", "milk", "salt", "black pepper"] },
+        { "instruction": "Heat the oil in a 25 cm ovenproof frying pan over medium heat. Cook the onion and pepper for 6 to 8 minutes, until soft.", "ingredients": ["olive oil", "onion", "bell pepper"] },
+        { "instruction": "Add the spinach and stir until it wilts, about 1 minute.", "ingredients": ["spinach"] },
+        { "instruction": "Pour in the eggs and scatter the cheese over. Turn the heat to low and cook without stirring for about 8 minutes, until the edges are set but the centre still wobbles slightly.", "ingredients": ["eggs", "cheddar cheese"] },
+        { "instruction": "Slide the pan under the grill for 3 to 4 minutes, until puffed and golden. Rest for 5 minutes before cutting into wedges.", "ingredients": [] }
+      ]
+    },
+    {
+      "name": "Overnight Oats",
+      "description": "Creamy no-cook oats you stir together the night before. The frozen berries thaw into a quick sauce.",
+      "servings": 2,
+      "ingredients": [
+        { "ingredient": "rolled oats", "amount": 1, "unit": "cup" },
+        { "ingredient": "milk", "amount": 240, "unit": "ml" },
+        { "ingredient": "greek yogurt", "amount": 120, "unit": "g" },
+        { "ingredient": "honey", "amount": 1, "unit": "tbsp" },
+        { "ingredient": "frozen berries", "amount": 150, "unit": "g" }
+      ],
+      "steps": [
+        { "instruction": "Stir the oats, milk, yogurt and honey together in a bowl or two jars.", "ingredients": ["rolled oats", "milk", "greek yogurt", "honey"] },
+        { "instruction": "Cover and refrigerate overnight, or for at least 6 hours.", "ingredients": [] },
+        { "instruction": "Spoon the frozen berries over the top about 10 minutes before eating, so they soften and release their juice.", "ingredients": ["frozen berries"] }
+      ]
+    },
+    {
+      "name": "Greek Salad",
+      "description": "Chunky tomato, cucumber and pepper salad with olives, a sharp oregano dressing and a slab of feta.",
+      "servings": 4,
+      "ingredients": [
+        { "ingredient": "tomatoes", "amount": 4, "unit": "pcs", "notes": "cut into wedges" },
+        { "ingredient": "cucumber", "amount": 1, "unit": "pcs", "notes": "halved lengthways and sliced" },
+        { "ingredient": "red onion", "amount": 0.5, "unit": "pcs", "notes": "thinly sliced" },
+        { "ingredient": "bell pepper", "amount": 1, "unit": "pcs", "notes": "green, sliced into rings" },
+        { "ingredient": "kalamata olives", "amount": 75, "unit": "g" },
+        { "ingredient": "olive oil", "amount": 60, "unit": "ml" },
+        { "ingredient": "red wine vinegar", "amount": 2, "unit": "tbsp" },
+        { "ingredient": "dried oregano", "amount": 1, "unit": "tsp" },
+        { "ingredient": "salt", "amount": null, "unit": null, "notes": "to taste" },
+        { "ingredient": "feta cheese", "amount": 150, "unit": "g", "notes": "in one piece" }
+      ],
+      "steps": [
+        { "instruction": "Put the tomatoes, cucumber, onion and pepper in a large shallow bowl.", "ingredients": ["tomatoes", "cucumber", "red onion", "bell pepper"] },
+        { "instruction": "Scatter the olives over.", "ingredients": ["kalamata olives"] },
+        { "instruction": "Whisk the oil, vinegar, half the oregano and a pinch of salt. Pour it over the salad and toss gently.", "ingredients": ["olive oil", "red wine vinegar", "dried oregano", "salt"] },
+        { "instruction": "Lay the feta on top, sprinkle with the rest of the oregano and serve.", "ingredients": ["feta cheese", "dried oregano"] }
+      ]
+    },
+    {
+      "name": "Red Lentil Soup",
+      "description": "A thick, warming vegan soup. Red lentils cook down in about 25 minutes, with no soaking.",
+      "servings": 6,
+      "ingredients": [
+        { "ingredient": "olive oil", "amount": 2, "unit": "tbsp" },
+        { "ingredient": "onion", "amount": 1, "unit": "pcs", "notes": "diced" },
+        { "ingredient": "carrot", "amount": 2, "unit": "pcs", "notes": "diced" },
+        { "ingredient": "garlic", "amount": 3, "unit": "pcs", "notes": "cloves, minced" },
+        { "ingredient": "ground cumin", "amount": 2, "unit": "tsp" },
+        { "ingredient": "red lentils", "amount": 300, "unit": "g", "notes": "rinsed" },
+        { "ingredient": "diced tomatoes", "amount": 400, "unit": "g" },
+        { "ingredient": "vegetable broth", "amount": 1.5, "unit": "L" },
+        { "ingredient": "lemon", "amount": 1, "unit": "pcs", "notes": "juiced" },
+        { "ingredient": "salt", "amount": null, "unit": null, "notes": "to taste" }
+      ],
+      "steps": [
+        { "instruction": "Heat the oil in a large pot over medium heat. Cook the onion and carrot for about 8 minutes, until soft.", "ingredients": ["olive oil", "onion", "carrot"] },
+        { "instruction": "Add the garlic and cumin and stir for 1 minute, until fragrant.", "ingredients": ["garlic", "ground cumin"] },
+        { "instruction": "Add the lentils, tomatoes and broth. Bring to the boil, then simmer partly covered for 25 minutes, stirring now and then, until the lentils have broken down.", "ingredients": ["red lentils", "diced tomatoes", "vegetable broth"] },
+        { "instruction": "Blend part of the soup for a thicker texture, or leave it chunky.", "ingredients": [] },
+        { "instruction": "Stir in the lemon juice and season with salt.", "ingredients": ["lemon", "salt"] }
+      ]
+    },
+    {
+      "name": "Tuna Salad Sandwiches",
+      "description": "A crunchy, lemony tuna filling on whole wheat bread. Ready in ten minutes.",
+      "servings": 2,
+      "ingredients": [
+        { "ingredient": "canned tuna", "amount": 280, "unit": "g", "notes": "drained" },
+        { "ingredient": "mayonnaise", "amount": 3, "unit": "tbsp" },
+        { "ingredient": "celery", "amount": 1, "unit": "pcs", "notes": "stalk, finely diced" },
+        { "ingredient": "green onion", "amount": 2, "unit": "pcs", "notes": "thinly sliced" },
+        { "ingredient": "lemon juice", "amount": 2, "unit": "tsp" },
+        { "ingredient": "black pepper", "amount": null, "unit": null, "notes": "to taste" },
+        { "ingredient": "whole wheat bread", "amount": 4, "unit": "pcs", "notes": "slices" },
+        { "ingredient": "lettuce", "amount": null, "unit": null, "notes": "a few leaves" }
+      ],
+      "steps": [
+        { "instruction": "Flake the tuna into a bowl and mix in the mayonnaise, celery, green onion, lemon juice and a good grind of pepper.", "ingredients": ["canned tuna", "mayonnaise", "celery", "green onion", "lemon juice", "black pepper"] },
+        { "instruction": "Lay lettuce on two slices of bread, spoon the tuna on top and close with the remaining slices. Cut in half to serve.", "ingredients": ["whole wheat bread", "lettuce"] }
+      ]
+    },
+    {
+      "name": "Spaghetti Bolognese",
+      "description": "A rich beef and tomato sauce, simmered until thick and tossed through spaghetti.",
+      "servings": 4,
+      "ingredients": [
+        { "ingredient": "olive oil", "amount": 2, "unit": "tbsp" },
+        { "ingredient": "onion", "amount": 1, "unit": "pcs", "notes": "finely diced" },
+        { "ingredient": "carrot", "amount": 1, "unit": "pcs", "notes": "finely diced" },
+        { "ingredient": "garlic", "amount": 3, "unit": "pcs", "notes": "cloves, minced" },
+        { "ingredient": "ground beef", "amount": 500, "unit": "g" },
+        { "ingredient": "tomato paste", "amount": 2, "unit": "tbsp" },
+        { "ingredient": "diced tomatoes", "amount": 400, "unit": "g" },
+        { "ingredient": "beef broth", "amount": 100, "unit": "ml" },
+        { "ingredient": "dried oregano", "amount": 1, "unit": "tsp" },
+        { "ingredient": "salt", "amount": 0.5, "unit": "tsp" },
+        { "ingredient": "black pepper", "amount": 0.5, "unit": "tsp" },
+        { "ingredient": "spaghetti", "amount": 400, "unit": "g" },
+        { "ingredient": "parmesan cheese", "amount": 40, "unit": "g", "notes": "grated, to serve" }
+      ],
+      "steps": [
+        { "instruction": "Warm the oil in a large, deep pan over medium heat. Add the onion and carrot and cook gently for about 5 minutes, until soft.", "ingredients": ["olive oil", "onion", "carrot"] },
+        { "instruction": "Stir in the garlic and cook for 1 minute.", "ingredients": ["garlic"] },
+        { "instruction": "Turn the heat up, add the beef and cook, breaking it up with a spoon, until no pink remains.", "ingredients": ["ground beef"] },
+        { "instruction": "Stir the tomato paste through for a minute, then add the tomatoes, broth, oregano, salt and pepper.", "ingredients": ["tomato paste", "diced tomatoes", "beef broth", "dried oregano", "salt", "black pepper"] },
+        { "instruction": "Lower the heat and simmer uncovered for about 20 minutes, stirring now and then, until thick.", "ingredients": [] },
+        { "instruction": "Meanwhile, cook the spaghetti in a large pot of boiling salted water until just tender. Keep a mugful of the cooking water, then drain.", "ingredients": ["spaghetti"] },
+        { "instruction": "Toss the spaghetti through the sauce, loosening it with a splash of the cooking water if needed. Serve with the parmesan.", "ingredients": ["spaghetti", "parmesan cheese"] }
+      ]
+    },
+    {
+      "name": "Chicken Stir-Fry",
+      "description": "Quick-seared chicken and crisp vegetables in a sweet and salty glaze, served over rice.",
+      "servings": 4,
+      "ingredients": [
+        { "ingredient": "rice", "amount": 300, "unit": "g" },
+        { "ingredient": "soy sauce", "amount": 3, "unit": "tbsp" },
+        { "ingredient": "honey", "amount": 1, "unit": "tbsp" },
+        { "ingredient": "black pepper", "amount": 0.25, "unit": "tsp" },
+        { "ingredient": "olive oil", "amount": 2, "unit": "tbsp" },
+        { "ingredient": "chicken breast", "amount": 500, "unit": "g", "notes": "thinly sliced" },
+        { "ingredient": "bell pepper", "amount": 1, "unit": "pcs", "notes": "sliced" },
+        { "ingredient": "zucchini", "amount": 1, "unit": "pcs", "notes": "sliced" },
+        { "ingredient": "garlic", "amount": 2, "unit": "pcs", "notes": "cloves, minced" }
+      ],
+      "steps": [
+        { "instruction": "Cook the rice according to the packet instructions.", "ingredients": ["rice"] },
+        { "instruction": "Stir the soy sauce, honey and pepper together in a small bowl.", "ingredients": ["soy sauce", "honey", "black pepper"] },
+        { "instruction": "Heat half the oil in a wok or large frying pan over high heat. Stir-fry the chicken for 4 to 5 minutes, until cooked through, then tip it onto a plate.", "ingredients": ["olive oil", "chicken breast"] },
+        { "instruction": "Add the rest of the oil and stir-fry the pepper and zucchini for 2 minutes, so they stay crisp.", "ingredients": ["olive oil", "bell pepper", "zucchini"] },
+        { "instruction": "Add the garlic and stir for 30 seconds.", "ingredients": ["garlic"] },
+        { "instruction": "Return the chicken, pour in the sauce and toss until everything is glossy. Serve over the rice.", "ingredients": ["chicken breast", "soy sauce", "rice"] }
+      ]
+    },
+    {
+      "name": "Beef and Bean Chili",
+      "description": "A big pot of smoky beef and bean chili. It feeds a crowd and freezes well.",
+      "servings": 8,
+      "ingredients": [
+        { "ingredient": "olive oil", "amount": 30, "unit": "ml" },
+        { "ingredient": "onion", "amount": 2, "unit": "pcs", "notes": "diced" },
+        { "ingredient": "bell pepper", "amount": 2, "unit": "pcs", "notes": "diced" },
+        { "ingredient": "garlic", "amount": 4, "unit": "pcs", "notes": "cloves, minced" },
+        { "ingredient": "ground beef", "amount": 1, "unit": "kg" },
+        { "ingredient": "chili powder", "amount": 3, "unit": "tbsp" },
+        { "ingredient": "ground cumin", "amount": 2, "unit": "tsp" },
+        { "ingredient": "smoked paprika", "amount": 1, "unit": "tsp" },
+        { "ingredient": "crushed tomatoes", "amount": 800, "unit": "g" },
+        { "ingredient": "kidney beans", "amount": 800, "unit": "g", "notes": "drained and rinsed" },
+        { "ingredient": "black beans", "amount": 400, "unit": "g", "notes": "drained and rinsed" },
+        { "ingredient": "beef broth", "amount": 250, "unit": "ml" },
+        { "ingredient": "salt", "amount": 1, "unit": "tsp" },
+        { "ingredient": "sour cream", "amount": null, "unit": null, "notes": "to serve" }
+      ],
+      "steps": [
+        { "instruction": "Heat the oil in a large heavy pot over medium heat. Cook the onions and peppers for about 8 minutes, until soft.", "ingredients": ["olive oil", "onion", "bell pepper"] },
+        { "instruction": "Add the garlic and cook for 1 minute.", "ingredients": ["garlic"] },
+        { "instruction": "Turn the heat up and add the beef, in two batches if the pot is crowded. Brown it well, breaking it up as it cooks.", "ingredients": ["ground beef"] },
+        { "instruction": "Stir in the chili powder, cumin and paprika and cook for 1 minute to toast the spices.", "ingredients": ["chili powder", "ground cumin", "smoked paprika"] },
+        { "instruction": "Add the tomatoes, both kinds of beans, the broth and the salt. Simmer gently, partly covered, for 45 minutes, stirring occasionally, until thick.", "ingredients": ["crushed tomatoes", "kidney beans", "black beans", "beef broth", "salt"] },
+        { "instruction": "Taste and adjust the seasoning. Serve with a spoonful of sour cream.", "ingredients": ["sour cream"] }
+      ]
+    },
+    {
+      "name": "Sheet-Pan Salmon and Vegetables",
+      "description": "Salmon, crisp potatoes and charred broccoli roasted on one tray with garlic, lemon and dill.",
+      "servings": 4,
+      "ingredients": [
+        { "ingredient": "potatoes", "amount": 600, "unit": "g", "notes": "small, halved" },
+        { "ingredient": "olive oil", "amount": 3, "unit": "tbsp" },
+        { "ingredient": "salt", "amount": 1, "unit": "tsp" },
+        { "ingredient": "black pepper", "amount": 0.5, "unit": "tsp" },
+        { "ingredient": "garlic", "amount": 2, "unit": "pcs", "notes": "cloves, minced" },
+        { "ingredient": "lemon", "amount": 1, "unit": "pcs", "notes": "half juiced, half thinly sliced" },
+        { "ingredient": "dried dill", "amount": 1, "unit": "tsp" },
+        { "ingredient": "broccoli", "amount": 300, "unit": "g", "notes": "cut into florets" },
+        { "ingredient": "salmon", "amount": 600, "unit": "g", "notes": "four fillets" }
+      ],
+      "steps": [
+        { "instruction": "Heat the oven to 220 °C.", "ingredients": [] },
+        { "instruction": "Toss the potatoes with 2 tablespoons of the oil and half the salt and pepper on a large baking tray. Roast for 20 minutes.", "ingredients": ["potatoes", "olive oil", "salt", "black pepper"] },
+        { "instruction": "Mix the remaining oil with the garlic, lemon juice and dill.", "ingredients": ["olive oil", "garlic", "lemon", "dried dill"] },
+        { "instruction": "Push the potatoes to the edges of the tray. Add the broccoli and the salmon, skin side down. Brush the salmon with most of the garlic oil, toss the broccoli in the rest, and season both with the remaining salt and pepper. Lay the lemon slices over the fish.", "ingredients": ["broccoli", "salmon", "salt", "black pepper", "lemon"] },
+        { "instruction": "Roast for 12 to 15 minutes, until the salmon flakes easily and the broccoli is charred at the edges.", "ingredients": [] }
+      ]
+    },
+    {
+      "name": "Black Bean Tacos",
+      "description": "Spiced black beans, corn and rice in warm corn tortillas, topped with avocado and salsa.",
+      "servings": 4,
+      "ingredients": [
+        { "ingredient": "rice", "amount": 150, "unit": "g" },
+        { "ingredient": "olive oil", "amount": 1, "unit": "tbsp" },
+        { "ingredient": "red onion", "amount": 1, "unit": "pcs", "notes": "diced" },
+        { "ingredient": "garlic", "amount": 2, "unit": "pcs", "notes": "cloves, minced" },
+        { "ingredient": "ground cumin", "amount": 1, "unit": "tsp" },
+        { "ingredient": "chili powder", "amount": 1, "unit": "tsp" },
+        { "ingredient": "black beans", "amount": 800, "unit": "g", "notes": "drained and rinsed" },
+        { "ingredient": "frozen corn", "amount": 150, "unit": "g" },
+        { "ingredient": "corn tortillas", "amount": 8, "unit": "pcs" },
+        { "ingredient": "avocado", "amount": 1, "unit": "pcs", "notes": "sliced" },
+        { "ingredient": "salsa", "amount": 0.5, "unit": "cup" },
+        { "ingredient": "cilantro", "amount": null, "unit": null, "notes": "a handful, chopped" },
+        { "ingredient": "lime", "amount": 1, "unit": "pcs", "notes": "cut into wedges" }
+      ],
+      "steps": [
+        { "instruction": "Cook the rice according to the packet instructions.", "ingredients": ["rice"] },
+        { "instruction": "Heat the oil in a frying pan over medium heat and cook the onion for 5 minutes. Add the garlic, cumin and chili powder and stir for 1 minute.", "ingredients": ["olive oil", "red onion", "garlic", "ground cumin", "chili powder"] },
+        { "instruction": "Add the beans, the corn (straight from the freezer) and a splash of water. Cook for 5 minutes, mashing about a third of the beans with a fork, then stir in the rice.", "ingredients": ["black beans", "frozen corn", "rice"] },
+        { "instruction": "Warm the tortillas in a dry pan for about 30 seconds a side.", "ingredients": ["corn tortillas"] },
+        { "instruction": "Fill the tortillas with the bean mixture and top with avocado, salsa and cilantro. Serve with lime wedges.", "ingredients": ["avocado", "salsa", "cilantro", "lime"] }
+      ]
+    },
+    {
+      "name": "Banana Bread",
+      "description": "A moist loaf that makes good use of very ripe bananas. Mixed in one bowl.",
+      "servings": 10,
+      "ingredients": [
+        { "ingredient": "butter", "amount": null, "unit": null, "notes": "for greasing the tin" },
+        { "ingredient": "banana", "amount": 3, "unit": "pcs", "notes": "very ripe" },
+        { "ingredient": "butter", "amount": 115, "unit": "g", "notes": "melted" },
+        { "ingredient": "sugar", "amount": 150, "unit": "g" },
+        { "ingredient": "egg", "amount": 2, "unit": "pcs" },
+        { "ingredient": "vanilla extract", "amount": 1, "unit": "tsp" },
+        { "ingredient": "baking soda", "amount": 1, "unit": "tsp" },
+        { "ingredient": "salt", "amount": 0.25, "unit": "tsp" },
+        { "ingredient": "all-purpose flour", "amount": 1.75, "unit": "cup" }
+      ],
+      "steps": [
+        { "instruction": "Heat the oven to 175 °C and grease a 23 × 13 cm loaf tin with butter.", "ingredients": ["butter"] },
+        { "instruction": "Mash the bananas in a large bowl until mostly smooth.", "ingredients": ["banana"] },
+        { "instruction": "Stir in the melted butter, then the sugar, eggs and vanilla.", "ingredients": ["butter", "sugar", "egg", "vanilla extract"] },
+        { "instruction": "Sprinkle the baking soda and salt over and stir them in, then fold in the flour until no dry patches remain.", "ingredients": ["baking soda", "salt", "all-purpose flour"] },
+        { "instruction": "Scrape the batter into the tin and bake for 55 to 65 minutes, until a skewer pushed into the middle comes out clean.", "ingredients": [] },
+        { "instruction": "Cool in the tin for 10 minutes, then turn out onto a rack and cool completely before slicing.", "ingredients": [] }
+      ]
+    }
+  ]
+}

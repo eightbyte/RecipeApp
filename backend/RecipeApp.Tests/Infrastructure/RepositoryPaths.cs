@@ -17,6 +17,10 @@ public static class RepositoryPaths
     public static string ShippedCataloguePath =>
         Path.Combine(ApiContentRoot, "seed-data", "ingredient-catalogue.json");
 
+    /// <summary>The shipped sample recipe pack in the source tree.</summary>
+    public static string ShippedSamplePackPath =>
+        Path.Combine(ApiContentRoot, "seed-data", "sample-recipes.json");
+
     /// <summary>The local MyPlate cache. Gitignored, so it exists only on a machine that harvested it.</summary>
     public static string MyPlateCacheDirectory => Path.Combine(ApiContentRoot, "seed-data", "myplate");
 

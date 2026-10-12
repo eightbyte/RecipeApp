@@ -23,4 +23,16 @@
     <PackageReference Include="Scalar.AspNetCore" Version="2.17.2" />
   </ItemGroup>
 
+  <!-- Seed artefacts (Phase 10 §4.6). The Web SDK makes every .json a Content item, which would
+       publish the local MyPlate cache (seed-data/myplate/), a personal-use corpus that is never
+       distributed. Everything under seed-data/ is removed, then only the two shipped artefacts
+       are added back. -->
+  <ItemGroup>
+    <Content Remove="seed-data\**" />
+    <None Remove="seed-data\**" />
+    <Content Include="seed-data\ingredient-catalogue.json;seed-data\sample-recipes.json"
+             CopyToOutputDirectory="PreserveNewest"
+             CopyToPublishDirectory="PreserveNewest" />
+  </ItemGroup>
+
 </Project>

@@ -258,6 +258,28 @@ namespace RecipeApp.API.Data.Migrations
                     b.ToTable("RecipeStepIngredients");
                 });
 
+            modelBuilder.Entity("RecipeApp.API.Models.SeedLedgerEntry", b =>
+                {
+                    b.Property<string>("Key")
+                        .HasColumnType("text");
+
+                    b.Property<DateTime>("AppliedAt")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("timestamp with time zone")
+                        .HasDefaultValueSql("NOW()");
+
+                    b.Property<int>("ArtefactVersion")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("Outcome")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.HasKey("Key");
+
+                    b.ToTable("SeedLedger", (string)null);
+                });
+
             modelBuilder.Entity("RecipeApp.API.Models.ShoppingList", b =>
                 {
                     b.Property<Guid>("Id")

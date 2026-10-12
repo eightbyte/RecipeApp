@@ -15,6 +15,7 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
     public DbSet<MealPlanRecipe> MealPlanRecipes => Set<MealPlanRecipe>();
     public DbSet<ShoppingList> ShoppingLists => Set<ShoppingList>();
     public DbSet<ShoppingListItem> ShoppingListItems => Set<ShoppingListItem>();
+    public DbSet<SeedLedgerEntry> SeedLedger => Set<SeedLedgerEntry>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -143,6 +144,18 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
                 .WithMany()
                 .HasForeignKey(i => i.IngredientId)
                 .OnDelete(DeleteBehavior.Restrict);
+        });
+
+        // ── SeedLedgerEntry (Phase 10 §4.1) ───────────────────────────────────
+        modelBuilder.Entity<SeedLedgerEntry>(e =>
+        {
+            e.ToTable("SeedLedger");
+
+            // The natural key is the guard: a second insert for the same step fails, so two
+            // hosts racing on a fresh database cannot both record (and both run) a step.
+            e.HasKey(l => l.Key);
+            e.Property(l => l.Key).ValueGeneratedNever();
+            e.Property(l => l.AppliedAt).HasDefaultValueSql("NOW()");
         });
     }
 }

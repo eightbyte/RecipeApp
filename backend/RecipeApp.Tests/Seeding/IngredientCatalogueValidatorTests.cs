@@ -70,6 +70,18 @@ public class IngredientCatalogueValidatorTests
             .Should().ContainSingle(e => e.Contains("no display name"));
     }
 
+    [Theory]
+    [InlineData("Sage")]
+    [InlineData("sage")]
+    [InlineData(" Sage ")]
+    public void Rule1_RejectsADisplayNameSharedByTwoEntries(string secondDisplayName)
+    {
+        var entries = new[] { Entry("sage", "Sage"), Entry("dried sage", secondDisplayName) };
+
+        IngredientCatalogueValidator.Validate(entries)
+            .Should().ContainSingle(e => e.Contains("'dried sage'") && e.Contains("already uses"));
+    }
+
     // ── Rule 2: category ──────────────────────────────────────────────────────
 
     [Fact]

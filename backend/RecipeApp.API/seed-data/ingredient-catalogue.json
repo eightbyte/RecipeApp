@@ -1,7 +1,7 @@
 {
   "formatVersion": 2,
-  "contentVersion": 1,
-  "updatedAt": "2026-10-10T22:55:06.855Z",
+  "contentVersion": 2,
+  "updatedAt": "2026-10-12T19:57:50.000Z",
   "provenance": "curated",
   "entries": [
     {
@@ -51,7 +51,9 @@
       "displayName": "Allspice",
       "category": "BAKING_SPICES",
       "defaultUnit": "tsp",
-      "aliases": []
+      "aliases": [
+        "ground allspice"
+      ]
     },
     {
       "name": "almond butter",
@@ -1884,14 +1886,14 @@
     },
     {
       "name": "dried rosemary",
-      "displayName": "Rosemary",
+      "displayName": "Dried Rosemary",
       "category": "BAKING_SPICES",
       "defaultUnit": "tsp",
       "aliases": []
     },
     {
       "name": "dried sage",
-      "displayName": "Sage",
+      "displayName": "Dried Sage",
       "category": "BAKING_SPICES",
       "defaultUnit": "tsp",
       "aliases": []
@@ -2686,13 +2688,6 @@
       "aliases": []
     },
     {
-      "name": "ground allspice",
-      "displayName": "Allspice",
-      "category": "BAKING_SPICES",
-      "defaultUnit": "tsp",
-      "aliases": []
-    },
-    {
       "name": "ground beef",
       "displayName": "Ground Beef",
       "category": "MEAT_SEAFOOD",
@@ -2750,7 +2745,7 @@
     },
     {
       "name": "ground sage",
-      "displayName": "Sage",
+      "displayName": "Ground Sage",
       "category": "BAKING_SPICES",
       "defaultUnit": "tsp",
       "aliases": []
@@ -4429,7 +4424,7 @@
     },
     {
       "name": "rosemary",
-      "displayName": "Rosemary",
+      "displayName": "Fresh Rosemary",
       "category": "BAKING_SPICES",
       "defaultUnit": "tsp",
       "aliases": [
@@ -4465,7 +4460,7 @@
     },
     {
       "name": "sage",
-      "displayName": "Sage",
+      "displayName": "Fresh Sage",
       "category": "BAKING_SPICES",
       "defaultUnit": "tsp",
       "aliases": [
@@ -4584,7 +4579,7 @@
     },
     {
       "name": "seasoned salt",
-      "displayName": "Salt",
+      "displayName": "Seasoned Salt",
       "category": "BAKING_SPICES",
       "defaultUnit": "tsp",
       "aliases": []

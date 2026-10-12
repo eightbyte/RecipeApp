@@ -32,8 +32,9 @@ public static class IngredientCatalogueValidator
     {
         var errors = new List<string>();
 
-        var namesSeen   = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
-        var aliasOwners = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+        var namesSeen          = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
+        var displayNameOwners  = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+        var aliasOwners        = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
 
         foreach (var entry in entries)
         {
@@ -52,8 +53,15 @@ public static class IngredientCatalogueValidator
             else
                 namesSeen[entry.Name] = namesSeen.Count;
 
+            // Display names are what the ingredient picker shows, so two entries sharing one look
+            // like a duplicate row to the user ("dried sage" and "sage" both shown as "Sage").
             if (string.IsNullOrWhiteSpace(entry.DisplayName))
                 errors.Add($"'{entry.Name}' has no display name.");
+            else if (displayNameOwners.TryGetValue(entry.DisplayName.Trim(), out var displayNameOwner))
+                errors.Add($"'{entry.Name}' has display name '{entry.DisplayName}', which '{displayNameOwner}' " +
+                           "already uses. The ingredient picker would show them as duplicates.");
+            else
+                displayNameOwners[entry.DisplayName.Trim()] = entry.Name;
 
             // ── Rule 2: category is one of ours ────────────────────────────────
             if (!IngredientCategory.IsValid(entry.Category))

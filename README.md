@@ -2,7 +2,7 @@
 
 A mobile-first web app for storing recipes, building meal plans, and generating shopping lists. It emphasises three things: a clean step-by-step cooking view, meal-planning that turns straight into a grouped shopping list, and importing recipes straight from a URL using a locally-run LLM (no cloud AI calls, no per-request API cost).
 
-**Status:** v1 feature-complete, including a seeded library of 1,123 USDA MyPlate recipes (Phase 9). See [SPEC.md](SPEC.md) and [specs/](specs/) for history, and [CLAUDE.md](CLAUDE.md) for conventions.
+**Status:** v1 feature-complete (Phases 1–10). A fresh install starts with a curated ingredient catalogue and 12 sample recipes. See [SPEC.md](SPEC.md) and [specs/](specs/) for history, and [CLAUDE.md](CLAUDE.md) for conventions.
 
 ## Features
 
@@ -47,6 +47,8 @@ docker compose up -d
 - Frontend: http://localhost
 - API: http://localhost:5000 (health: `/health`, readiness: `/health/ready`, docs: `/scalar/v1`)
 
+On its first start against an empty database the API creates the schema and loads the starter data (see [Starter data](#starter-data)).
+
 To enable recipe scraping in this mode, mount your GGUF model into the `api` container and set `Llm__Local__ModelPath` accordingly (see [docker-compose.yml](docker-compose.yml)).
 
 ## Running locally (for development)
@@ -87,7 +89,7 @@ cd backend/RecipeApp.API
 dotnet run
 ```
 
-Migrations run automatically on startup in Development, along with light sample-data seeding. The API listens on **http://localhost:5197** (see `Properties/launchSettings.json`).
+Migrations run automatically on every start. An empty database also gets the starter data (see [Starter data](#starter-data)). The API listens on **http://localhost:5197** (see `Properties/launchSettings.json`).
 
 - Scalar API docs: http://localhost:5197/scalar/v1
 - Health check: http://localhost:5197/health
@@ -105,23 +107,34 @@ npm run dev
 
 ## LLM model setup
 
-Recipe scraping and ingredient catalogue seeding require a local GGUF model. Any reasonably capable instruction-tuned chat model works (7B+ parameters recommended for reliable structured extraction):
+Recipe scraping requires a local GGUF model. Any reasonably capable instruction-tuned chat model works (7B+ parameters recommended for reliable structured extraction):
 
 1. Download a `.gguf` model file (e.g. from Hugging Face — search for `Qwen2.5-7B-Instruct-GGUF` or similar).
 2. Set `Llm:Local:ModelPath` to its absolute path in `appsettings.Development.json`.
 3. Set `Llm:Local:ChatTemplate` to match the model family (`chatml`, `llama3`, or `gemma`).
 4. Set `Llm:Local:GpuLayerCount` to `0` for CPU-only inference, or leave at `999` to offload all layers to a CUDA GPU.
 
-Without a configured model, the app starts normally and logs a warning — every feature except "Import from URL" and catalogue seeding works as usual.
+Without a configured model, the app starts normally and logs a warning — every feature except "Import from URL" works as usual.
 
-### Optional: seed the ingredient catalogue
+## Starter data
 
-Populates the ingredient catalogue with common ingredients using the configured LLM:
+The first time the API starts against an empty database, it loads:
+
+- **An ingredient catalogue** of about 640 common ingredients, with shopping categories, default units, alternative names and the densities used to convert cups to grams.
+- **12 sample recipes**, written for this project, so there is something to cook, plan and shop from straight away.
+
+Each step runs once per database. Deleting the sample recipes does not bring them back, and a database that already has ingredients or recipes is left as it is. No LLM or network access is needed.
+
+Other data commands, run from `backend/RecipeApp.API`:
 
 ```bash
-cd backend/RecipeApp.API
-dotnet run -- seed-catalogue [count]   # count defaults to 200
+dotnet run -- import-catalogue                    # Re-apply the shipped catalogue (fills gaps, keeps your edits)
+dotnet run -- import-recipes <pack.json> [--create-missing] [--force]   # Import a recipe pack
 ```
+
+A **recipe pack** is a JSON file of recipes. The format is described in [specs/phase-10-first-run-seed.md](specs/phase-10-first-run-seed.md) §4.4, and [sample-recipes.json](backend/RecipeApp.API/seed-data/sample-recipes.json) is an example. See [backend/CLAUDE.md](backend/CLAUDE.md) for every CLI command and flag.
+
+The USDA MyPlate recipe library from Phase 9 is a personal-use tool and is not distributed. Most of its recipes are not public domain. See [Services/Seeding/CLAUDE.md](backend/RecipeApp.API/Services/Seeding/CLAUDE.md) if you have your own local copy.
 
 ## Running tests
 

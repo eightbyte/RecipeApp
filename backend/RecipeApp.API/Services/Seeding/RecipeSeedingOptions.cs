@@ -161,7 +161,7 @@ public class RecipeSeedingOptions
     public string DefaultImageExtension { get; init; } = ".jpg";
 
     /// <summary>Provenance text appended to <c>Recipe.Description</c> at persist time.</summary>
-    public string SeedAttributionNote { get; init; } = "Source: USDA MyPlate Kitchen (public domain)";
+    public string SeedAttributionNote { get; init; } = "Source: USDA MyPlate Kitchen";
 
     /// <summary>
     /// Start of MyPlate's related-foods link list inside the page notes. The line it begins is

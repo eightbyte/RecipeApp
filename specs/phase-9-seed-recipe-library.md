@@ -9,7 +9,8 @@ failures** (§24). **Stage 5 (persist) is built, its tests pass, and the trial (
 failures (2026-09-29, §25.9).**  
 **Depends on:** Phase 8 (Local LLM) complete — requires a working `ILlmStructuredClient`; the
 ingredient catalogue is now a committed artefact loaded by `import-catalogue`, not a seeded
-by-product (Phase 9.3, and see §12.1)
+by-product (Phase 9.3, and see §12.1)  
+**Licensing correction:** the public-domain claims below are wrong. See `specs/phase-10-first-run-seed.md` §1 and the notes beside each claim.
 
 > **Revision 1.4 (2026-09-28)** implements Stage 5 and closes the §24.4 punch list. §24.5's four
 > decisions were taken by the user and are recorded in §25 with what each one costs. §14's trial
@@ -53,6 +54,8 @@ is persisted, or the harvest's conversions become unauditable.
 ### 1.1 Why this source
 
 USDA MyPlate Kitchen is a US federal government work and therefore uncopyrighted under **17 USC §105** — free for commercial use with no licence agreement, no attribution requirement, and no redistribution restriction. Every alternative corpus of comparable size (Recipe1M+, RecipeNLG, RecipeDB, Recipe Box) is scraped from AllRecipes/Epicurious/Food Network and carries a non-commercial research licence, which is a contractual restriction binding regardless of the copyright status of the underlying ingredient lists.
+
+> **Correction (Phase 10, 2026-10-12):** this claim is wrong. 17 USC §105 covers only works by federal employees, and most of the corpus credits state universities, extension programs or private organisations. The corpus is a personal-use local cache and is never committed or distributed. See `specs/phase-10-first-run-seed.md` §1.
 
 The content is also a good fit on the merits: everyday North American home cooking — skillet dinners, casseroles, chili, baked chicken, sheet-pan vegetables — at realistic family serving counts.
 
@@ -152,6 +155,8 @@ cache stores whichever the payload's magic bytes say it is, and lookup globs `<s
 | `manifest.json` | **Yes** | Pins exact Wayback timestamps → reproducible re-harvest. **188 KB as built** |
 | `normalised/` | **Yes** (recommended) | ~2–4 MB of public-domain JSON |
 | `state.json` | **No** — gitignored | Bookkeeping; rebuildable by scanning the cache directories |
+
+> **Correction (Phase 10, 2026-10-12):** this claim is wrong. 17 USC §105 covers only works by federal employees, and most of the corpus credits state universities, extension programs or private organisations. The corpus is a personal-use local cache and is never committed or distributed. See `specs/phase-10-first-run-seed.md` §1.
 
 > **Committing `normalised/` is the key decision.** It means every other developer — and CI — can run `seed-recipes` with **no GPU, no network, and no LLM**, completing in seconds instead of hours. The data is public domain, so there is no licensing obstacle to vendoring it. The LLM is then only required for the *original* harvest and for re-normalisation after prompt changes.
 >
@@ -450,6 +455,8 @@ When `DownloadImages` is true, fetch that URL into `images/<slug>.jpg`. At persi
 
 Images are public domain along with the rest of the USDA work. A failed image fetch is **non-fatal** — the recipe imports with `ImageUrl = null`.
 
+> **Correction (Phase 10, 2026-10-12):** this claim is wrong. 17 USC §105 covers only works by federal employees, and most of the corpus credits state universities, extension programs or private organisations. The corpus is a personal-use local cache and is never committed or distributed. See `specs/phase-10-first-run-seed.md` §1. Photos are never committed or published.
+
 > **⚠️ Revised in 1.1 — fetching that URL as written does not return an image.**
 >
 > Two archive behaviours defeat the naive approach, and they compound:
@@ -641,7 +648,7 @@ Each of these was observed in the archived sample and must be handled:
    > not a step.** It covers all 30, and it cannot misfire on a step that merely happens to contain
    > an asterisk — `"Add tomatoes with juice, chili sauce*, green pepper…"` stays a step, which a
    > marker-based split would have broken.
-6. **Adapted-source credits** — many recipes carry `Source: Adapted from: Food Hero, Oregon State University Cooperative Extension`. These are land-grant extension programs; the recipes remain USDA-published federal works. Capture the credit into `Recipe.Description` alongside `SeedAttributionNote` for provenance, and **do not discard it**.
+6. **Adapted-source credits** — many recipes carry `Source: Adapted from: Food Hero, Oregon State University Cooperative Extension`. These are land-grant extension programs; the recipes remain USDA-published federal works *(corrected in Phase 10 §1: an extension program's recipe is not a federal work, and USDA's permission to republish it does not extend to this project)*. Capture the credit into `Recipe.Description` alongside `SeedAttributionNote` for provenance, and **do not discard it**.
 
    > **✅ Confirmed in 1.2 — 1,081 of 1,089 pages carry one**, in a single consistent shape:
    > `<span class="field--name-field-source"><span>Source:</span><span class="field__item">…</span></span>`.

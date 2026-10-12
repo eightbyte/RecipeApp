@@ -1,8 +1,8 @@
 # Phase 10 — Distributable First-Run Seed
 
-**Version:** 0.3
-**Date:** 2026-10-05 (0.1: 2026-10-01, 0.2: 2026-10-04)
-**Status:** Ready for implementation. Q1–Q4 are answered and folded in (§2).
+**Version:** 1.0
+**Date:** 2026-10-12 (0.1: 2026-10-01, 0.2: 2026-10-04, 0.3: 2026-10-05)
+**Status:** **Complete (2026-10-12).** All seven stages are done. Results are in §10.
 **Depends on:** Phase 9.3 (corpus-derived ingredient catalogue)
 **Supersedes:** `DataSeeder`'s two hard-coded sample recipes, and the Development-only startup seed block in `Program.cs`
 **Leaves alone:** the Phase 9 MyPlate pipeline (`seed-recipes`) as a personal-use tool
@@ -524,3 +524,57 @@ Scope choices: (Selected option: a)
   composition, photos and Stage 5's amount-dropping rule would all have to move into the export.
   Better as its own phase.
 - **(c) Defer.** Ship §4.4 as a single-purpose file and design general import later.
+
+## 10. Results
+
+**Closed 2026-10-12** on branch `phase-10-first-run-seed`, one commit per stage.
+
+### 10.1 What shipped
+
+| Stage | Result |
+|---|---|
+| 1–2 Catalogue | Curated by the owner from the review list. 1,055 entries became **642** through renames and folds, plus the ten D9-exception drops. The file is format 2, content version 1, `provenance: "curated"`, with no corpus counts. `--build-catalogue` writes only to `seed-data/myplate/catalogue-build.json`. Row overrides (D12) cover 51 rows. |
+| 3 Ledger | `SeedLedger` table (`AddSeedLedger` migration), `SeedLedgerKeys`, `SeedLedgerOutcome`. |
+| 4 Recipe packs | `RecipePackFile`, `RecipePackFileStore`, `RecipePackImporter` and `ImportRecipesCommand` in `Services/RecipePacks/`, as §4.4 designs them. |
+| 5 First run | `seed-data/sample-recipes.json` (the 12 §4.5 recipes, original text) and `FirstRunSeeder`, which replaces the Development block and `DataSeeder`. |
+| 6 Tests | Every §6 item, plus both §4.9 paths run by hand (§10.3). |
+| 7 Docs | §5 corrections applied: phase-9 correction notes, `SeedAttributionNote` without "(public domain)", the `.gitignore` comment, and the three `CLAUDE.md` files. |
+
+### 10.2 Deviations and decisions made during implementation
+
+- **The MyPlate cache was being published.** The Web SDK makes every `.json` a Content item, so
+  `dotnet publish` copied `normalised/`, `parsed/`, `manifest.json` and `state.json` into the output,
+  and a locally built Docker image would have carried them too. §3 assumed nothing under
+  `seed-data/` was published. The csproj now removes everything under `seed-data/` and adds back
+  only the two artefacts. `.dockerignore` excludes `seed-data/myplate/` and `catalogue-review.md`.
+  A clean publish was checked to contain only the two artefacts. An image built before this fix
+  may contain the cache.
+- **The validator is `CreateRecipeValidator`**, not `CreateRecipeRequestValidator` as §4.4.2 and
+  §6 name it.
+- **Pack JSON is strict.** Unknown properties, a missing required property and a wrong type are all
+  errors. `amount` and `unit` must be present even when null, so a forgotten amount is caught.
+  Units are matched exactly against `MeasurementUnit` (`g`, not `grams`).
+- **The importer joins an ambient transaction.** The first-run step runs it inside the step's own
+  transaction, so the recipes and the ledger row commit together. On that path, copied images
+  are not deleted if the caller later rolls back. The sample pack has no images, so this does not
+  arise today.
+- **`--create-missing` creates only what is written.** An unknown ingredient used only by a
+  skipped or in-use recipe is not created.
+- **A step that names an ingredient links every row resolving to it** (§4.4.1). Banana Bread lists
+  butter twice, unquantified for the pan and 115 g melted, so the greasing step shows both rows.
+- **An existing database records both steps as `SkippedExistingData`** on its first start after
+  upgrading, and from then on startup no longer re-imports the catalogue (D7).
+- **Skipped steps log at Debug.** A normal restart shows only the density line.
+
+### 10.3 Clean-start checks (§4.9)
+
+Run 2026-10-12 against a scratch `recipeapp_clean` database, with image storage redirected to a
+temporary folder. The database was dropped afterwards.
+
+| Check | Result |
+|---|---|
+| Path A, `ASPNETCORE_ENVIRONMENT=Production` | Migrated from empty. Both steps `Applied` at content version 1. 642 ingredients, 12 recipes, 117 rows, 132 step links. `/health` 200 |
+| Second start | No change: 642 / 12 / 2 ledger rows. The density pass updated 0 rows |
+| Path B, `seed-recipes --persist` | 1,123 persisted, 0 failed. Still 642 ingredients, so the catalogue import was a no-op. 1,135 recipes, 12 of them without `SourceUrl`. 1,115 photos |
+
+Backend suite: **1,321 passed, 0 failed, 0 skipped** (rule 5 ran because the local cache exists).

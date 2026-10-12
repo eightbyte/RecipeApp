@@ -3,7 +3,9 @@ using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
+using RecipeApp.API.Data;
 using RecipeApp.API.Enums;
 using RecipeApp.API.Models;
 using RecipeApp.API.Services;
@@ -444,5 +446,52 @@ public class SeedPersistTests(DatabaseFixture db) : IAsyncLifetime
         await Seeder.PersistAsync(ManifestOf("stateful"));
 
         (await Cache.LoadStateAsync()).Slugs["stateful"].Stage.Should().Be(SeedStage.Persisted);
+    }
+
+    // ── Clean-start path B (Phase 10 §4.9) ────────────────────────────────────
+
+    [Fact]
+    public async Task PersistingAfterAFirstRunAddsTheLibraryAndLeavesTheSamplesUntouched()
+    {
+        using (var scope = _factory.Services.CreateScope())
+            await scope.ServiceProvider.GetRequiredService<FirstRunSeeder>().RunAsync();
+
+        var samplesBefore = await RecipeSnapshotAsync();
+        int ingredientsBefore;
+        await using (var context = db.CreateDbContext())
+            ingredientsBefore = await context.Ingredients.CountAsync();
+
+        // What `seed-recipes --persist` does: a non-force catalogue import, then persist. Names
+        // are shipped catalogue entries, as every MyPlate name must be (D9).
+        await CatalogueImport.RunAsync(_factory.Services, NullLogger.Instance);
+        await GivenNormalisedAsync("path-b-pilaf",
+            [new Line("2 cups rice", "rice", 2m, "cup"), new Line("1 onion, diced", "onion", 1m, "pcs")]);
+        await GivenNormalisedAsync("path-b-omelette", [new Line("2 eggs", "egg", 2m, "pcs")]);
+
+        var result = await Seeder.PersistAsync(ManifestOf("path-b-pilaf", "path-b-omelette"));
+        var forced = await Seeder.PersistAsync(ManifestOf("path-b-pilaf", "path-b-omelette"), force: true);
+
+        result.Persisted.Should().Be(2);
+        result.Failures.Should().BeEmpty();
+        forced.Replaced.Should().Be(2, "--force replaces only recipes whose SourceUrl matches");
+
+        await using (var context = db.CreateDbContext())
+        {
+            (await context.Ingredients.CountAsync()).Should().Be(ingredientsBefore, "the catalogue import was a no-op");
+            (await context.Recipes.CountAsync(recipe => recipe.SourceUrl != null)).Should().Be(2);
+        }
+
+        (await RecipeSnapshotAsync()).Should().BeEquivalentTo(samplesBefore, "the samples have no SourceUrl to collide on");
+    }
+
+    /// <summary>The recipes without a <c>SourceUrl</c>, which after a first run are the samples.</summary>
+    private async Task<List<(Guid Id, string Name, DateTime UpdatedAt, int Rows)>> RecipeSnapshotAsync()
+    {
+        await using var context = db.CreateDbContext();
+        var samples = await context.Recipes
+            .Where(recipe => recipe.SourceUrl == null)
+            .Select(recipe => new { recipe.Id, recipe.Name, recipe.UpdatedAt, Rows = recipe.Ingredients.Count })
+            .ToListAsync();
+        return [.. samples.Select(sample => (sample.Id, sample.Name, sample.UpdatedAt, sample.Rows))];
     }
 }

@@ -5,6 +5,13 @@ This folder imports the archived MyPlate corpus (1,123 recipes) into the databas
 Full design and results: `specs/phase-9-seed-recipe-library.md` (§21–25), plus
 `specs/phase-9.1-*` (unquantified ingredients) and `specs/phase-9.3-*` (catalogue).
 
+**The corpus is personal-use only.** Most recipes are credited to state universities, extension
+programs or private organisations, so they are not US federal works and not public domain
+(`specs/phase-10-first-run-seed.md` §1). Recipe text and photos are never committed, published
+or put in a Docker image. A fresh install gets the 12 sample recipes instead (`backend/CLAUDE.md`,
+First-run seeding). To add this library, run `--persist` **after** the app's first start, never
+before (clean-start path B).
+
 ## Stages
 
 | Stage | Class | Input → output | Needs |

@@ -49,13 +49,12 @@ backend/**/uploads/
 # ========================
 # Seed import cache (Phase 9)
 # ========================
-# manifest.json and normalised/ are committed — they pin the harvest and make seeding
-# reproducible without a GPU. Everything below is bulk or derivable.
+# Only manifest.json is committed: it pins the harvest and lists slugs and URLs, no recipe text.
+# Everything else is a personal-use cache. Most of the corpus is not public domain, so recipe
+# text and photos are never committed or published (Phase 10 §1).
 backend/RecipeApp.API/seed-data/**/raw/
 backend/RecipeApp.API/seed-data/**/parsed/
-# Stage 4 output. Phase 9 §18 Q1 recommends committing this eventually, so every developer
-# and CI get the library without a GPU — but not while the prompt is still being iterated on,
-# because each pass rewrites all 1,089 files.
+# Stage 4 output. Holds recipe text, so it stays local (Phase 10 §1 supersedes Phase 9 §18 Q1).
 backend/RecipeApp.API/seed-data/**/normalised/
 backend/RecipeApp.API/seed-data/**/images/
 backend/RecipeApp.API/seed-data/**/state.json

@@ -73,3 +73,17 @@ cd frontend && npm test
 - Use descriptive, clear names. Always ensure type safety. Avoid hard-coded values.
 - Test your changes.
 - Never assume. Ask for clarity.
+
+## Agent skills
+
+### Issue tracker
+
+Issues are tracked in GitHub Issues on `eightbyte/RecipeApp` via the `gh` CLI. See `docs/agents/issue-tracker.md`.
+
+### Triage labels
+
+Default vocabulary: `needs-triage`, `needs-info`, `ready-for-agent`, `ready-for-human`, `wontfix`. See `docs/agents/triage-labels.md`.
+
+### Domain docs
+
+Single-context: one root `CONTEXT.md` plus `docs/adr/`. See `docs/agents/domain.md`.

@@ -38,7 +38,7 @@
     <v-container class="pa-4" max-width="600">
 
       <!-- ── Title + meta ─────────────────────────────────────────────── -->
-      <div class="d-flex align-start justify-space-between gap-2 mb-2">
+      <div class="d-flex align-start justify-space-between ga-2 mb-2">
         <div class="flex-grow-1">
           <h1 class="text-h5 font-weight-bold">{{ recipe.name }}</h1>
           <div v-if="recipe.description" class="text-body-2 text-medium-emphasis mt-1">
@@ -48,7 +48,7 @@
       </div>
 
       <!-- Chips row -->
-      <div class="d-flex gap-2 flex-wrap mb-4">
+      <div class="d-flex ga-2 flex-wrap mb-4">
         <v-chip size="small" variant="tonal" color="primary">
           <v-icon start>mdi-account-group</v-icon>
           {{ scaledServings }} servings
@@ -87,7 +87,7 @@
 
       <!-- ── Portion selector ──────────────────────────────────────────── -->
       <v-card class="mb-5 pa-3" variant="outlined">
-        <div class="d-flex align-center gap-3">
+        <div class="d-flex align-center ga-4">
           <span class="text-body-2 font-weight-medium">Portion size</span>
           <v-btn-toggle v-model="portionSize" mandatory density="compact" color="primary">
             <v-btn value="HALF"    size="small">½</v-btn>
@@ -146,7 +146,7 @@
           <!-- Ingredient chips for this step -->
           <div
             v-if="stepIngredients(step).length"
-            class="px-4 pb-3 d-flex flex-wrap gap-2"
+            class="px-4 pb-3 d-flex flex-wrap ga-2"
           >
             <v-chip
               v-for="ing in stepIngredients(step)"

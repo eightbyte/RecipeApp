@@ -33,7 +33,7 @@
           class="mb-2"
         />
 
-        <div class="d-flex gap-3">
+        <div class="d-flex ga-4">
           <v-text-field
             v-model.number="form.servings"
             label="Servings"
@@ -64,13 +64,13 @@
           :key="idx"
           class="mb-4"
         >
-          <div class="d-flex align-center gap-2 mb-1">
+          <div class="d-flex align-center ga-2 mb-1">
             <span class="text-caption text-medium-emphasis" style="min-width: 20px">{{ idx + 1 }}.</span>
             <span class="text-body-2 font-weight-medium">{{ ing.displayName }}</span>
             <v-chip v-if="ing.isNew" size="x-small" color="info" variant="flat">New</v-chip>
           </div>
 
-          <div class="d-flex gap-2 pl-6">
+          <div class="d-flex ga-2 pl-6">
             <v-text-field
               v-model.number="ing.amount"
               label="Amount"
@@ -121,7 +121,7 @@
           :key="sIdx"
           class="mb-4"
         >
-          <div class="d-flex align-start gap-2">
+          <div class="d-flex align-start ga-2">
             <v-avatar color="primary" size="28" class="text-white text-caption font-weight-bold mt-3">
               {{ step.stepNumber }}
             </v-avatar>
@@ -138,7 +138,7 @@
               />
 
               <div class="text-caption text-medium-emphasis mb-1">Ingredients used in this step:</div>
-              <div class="d-flex flex-wrap gap-1">
+              <div class="d-flex flex-wrap ga-1">
                 <v-chip
                   v-for="(ing, iIdx) in form.ingredients"
                   :key="iIdx"
@@ -162,7 +162,7 @@
       </v-alert>
 
       <!-- ── Actions ─────────────────────────────────────────────── -->
-      <div class="d-flex gap-3">
+      <div class="d-flex ga-4">
         <v-btn variant="outlined" :to="{ name: 'recipes' }">Cancel</v-btn>
         <v-btn
           color="primary"

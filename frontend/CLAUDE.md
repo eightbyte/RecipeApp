@@ -24,7 +24,7 @@ Tests sit beside their subject as `*.spec.js` (Vitest + Vue Test Utils). Run wit
 - **HTTP:** import `api` from `@/services/api.js`. Never use raw `fetch` or `axios`.
 - **Pinia:** `use<Domain>Store()`. Every API call goes through a store action.
 - **Vuetify first.** Prefer a Vuetify component over raw HTML wherever one exists.
-- **Bootstrap:** utility classes (`d-flex`, `gap-*`) and the grid only. No Bootstrap JS or components.
+- **Bootstrap:** utility classes (`d-flex`) and the grid only. No Bootstrap JS or components.
   It is imported after Vuetify.
 - **Never hard-code a unit or category list.** Consume `constants/units.js` / `constants/categories.js`.
 - **Grayscale rule:** add class `grayscale` to a recipe image when `lastCookedAt` is within 7 days.

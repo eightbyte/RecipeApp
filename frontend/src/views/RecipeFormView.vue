@@ -26,7 +26,7 @@
           class="mb-2"
         />
 
-        <div class="d-flex gap-3">
+        <div class="d-flex ga-4">
           <v-text-field
             v-model.number="form.servings"
             label="Servings"
@@ -87,7 +87,7 @@
         <div
           v-for="(ing, idx) in form.ingredients"
           :key="idx"
-          class="d-flex gap-2 align-start mb-3"
+          class="d-flex ga-2 align-start mb-3"
         >
           <!-- Drag handle future: just a number for now -->
           <div class="text-caption text-medium-emphasis mt-4" style="min-width: 20px">
@@ -120,7 +120,7 @@
               </template>
             </v-autocomplete>
 
-            <div class="d-flex gap-2">
+            <div class="d-flex ga-2">
               <v-text-field
                 v-model.number="ing.amount"
                 label="Amount"
@@ -185,7 +185,7 @@
           :key="sIdx"
           class="mb-4"
         >
-          <div class="d-flex align-start gap-2">
+          <div class="d-flex align-start ga-2">
             <v-avatar color="primary" size="28" class="text-white text-caption font-weight-bold mt-3">
               {{ sIdx + 1 }}
             </v-avatar>
@@ -205,7 +205,7 @@
               <div class="text-caption text-medium-emphasis mb-1">
                 Ingredients used in this step:
               </div>
-              <div class="d-flex flex-wrap gap-1">
+              <div class="d-flex flex-wrap ga-1">
                 <v-chip
                   v-for="(ing, iIdx) in form.ingredients"
                   :key="iIdx"
@@ -244,7 +244,7 @@
         {{ submitError }}
       </v-alert>
 
-      <div class="d-flex gap-3">
+      <div class="d-flex ga-4">
         <v-btn
           variant="outlined"
           :to="isEdit ? { name: 'recipe-detail', params: { id: route.params.id } } : { name: 'recipes' }"

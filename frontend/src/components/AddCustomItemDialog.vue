@@ -15,7 +15,7 @@
           autofocus
         />
 
-        <div class="d-flex gap-3 mb-2">
+        <div class="d-flex ga-4 mb-2">
           <v-text-field
             v-model.number="form.amount"
             label="Amount"

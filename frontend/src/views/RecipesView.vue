@@ -68,7 +68,7 @@
             </div>
 
             <div class="d-flex align-center justify-space-between mt-2">
-              <div class="d-flex gap-2">
+              <div class="d-flex ga-2">
                 <v-chip size="x-small" variant="tonal">
                   <v-icon start size="12">mdi-account-group</v-icon>
                   {{ recipe.servings }} servings

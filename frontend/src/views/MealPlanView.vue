@@ -21,7 +21,7 @@
           <h1 class="text-h6 font-weight-bold">{{ mealPlanStore.activePlan.name }}</h1>
           <div class="text-caption text-medium-emphasis">Active plan</div>
         </div>
-        <div class="d-flex align-center gap-1">
+        <div class="d-flex align-center ga-1">
           <v-btn
             color="primary"
             variant="tonal"
@@ -60,8 +60,8 @@
         :key="meal.id"
         class="mb-3"
       >
-        <div class="d-flex align-center pa-3 gap-3">
-          <div class="date-chip text-center" style="min-width: 48px">
+        <div class="d-flex align-center pa-3 ga-4">
+          <div class="text-center" style="min-width: 48px">
             <div v-if="meal.scheduledDate" class="text-caption font-weight-bold">
               {{ formatDay(meal.scheduledDate) }}
             </div>

@@ -49,7 +49,7 @@
     <template v-else>
       <!-- Sticky header -->
       <header ref="headerEl" tabindex="-1" class="cooking-header safe-area-top">
-        <div class="d-flex align-center gap-2 px-2 py-2">
+        <div class="d-flex align-center ga-2 px-2 py-2">
           <v-btn
             icon="mdi-close"
             variant="text"
@@ -84,7 +84,7 @@
           }"
           @click="toggleStep(step)"
         >
-          <div class="d-flex align-start gap-3">
+          <div class="d-flex align-start ga-4">
             <v-checkbox-btn
               :model-value="isDone(step)"
               color="primary"
@@ -101,7 +101,7 @@
               </div>
 
               <!-- Per-step ingredient chips; the current step's are highlighted -->
-              <div v-if="stepIngredients(step).length" class="d-flex flex-wrap gap-2 mt-3">
+              <div v-if="stepIngredients(step).length" class="d-flex flex-wrap ga-2 mt-3">
                 <v-chip
                   v-for="ing in stepIngredients(step)"
                   :key="ing.id"

@@ -1,7 +1,7 @@
 <template>
   <v-container class="pa-4" max-width="600">
 
-    <h1 class="visually-hidden">Shopping list</h1>
+    <h1 class="d-sr-only">Shopping list</h1>
 
     <!-- ── Loading skeleton ───────────────────────────────────────────────── -->
     <template v-if="store.loading && !store.list">
@@ -26,7 +26,7 @@
         class="mb-4"
         closable
       >
-        <div class="d-flex align-center justify-space-between flex-wrap gap-2">
+        <div class="d-flex align-center justify-space-between flex-wrap ga-2">
           <span>Your meal plan has changed — tap to update your shopping list.</span>
           <v-btn
             size="small"
@@ -88,7 +88,7 @@
                   </v-list-item-subtitle>
 
                   <template #append>
-                    <div class="d-flex align-center gap-1">
+                    <div class="d-flex align-center ga-1">
                       <!-- Review flag -->
                       <v-tooltip
                         v-if="item.needsReview"

@@ -13,7 +13,7 @@
       :ripple="true"
       @click="handleAdd(suggestion)"
     >
-      <div class="d-flex align-center pa-3 gap-3">
+      <div class="d-flex align-center pa-3 ga-4">
         <v-avatar size="48" rounded="lg" color="grey-lighten-3">
           <v-img
             v-if="suggestion.recipeImageUrl"

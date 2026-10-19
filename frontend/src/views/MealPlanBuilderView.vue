@@ -57,7 +57,7 @@
           variant="outlined"
         >
           <div class="pa-3">
-            <div class="d-flex align-center gap-2 mb-2">
+            <div class="d-flex align-center ga-2 mb-2">
               <v-avatar size="36" rounded="lg" color="grey-lighten-3">
                 <v-img v-if="meal.recipeImageUrl" :src="meal.recipeImageUrl" cover />
                 <v-icon v-else color="grey" size="16">mdi-food</v-icon>
@@ -66,7 +66,7 @@
               <v-btn icon="mdi-delete" variant="text" size="x-small" color="error" @click="removeRecipe(meal.id)" />
             </div>
 
-            <div class="d-flex gap-2 flex-wrap">
+            <div class="d-flex ga-2 flex-wrap">
               <v-text-field
                 :model-value="meal.scheduledDate ?? ''"
                 type="date"

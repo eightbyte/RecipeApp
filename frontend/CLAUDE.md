@@ -13,6 +13,7 @@ amount formatting, portion scaling, unit pickers or category lists.
 | `services/api.js` | The pre-configured Axios instance |
 | `constants/` | `units.js`, `categories.js` — mirrors of the backend enums |
 | `composables/` | `useWakeLock.js` |
+| `styles/` | `settings.scss` — Vuetify Sass settings |
 | `router/index.js` | All routes |
 | `test/` | Vitest `setup.js` and `factories.js` |
 
@@ -26,6 +27,8 @@ Tests sit beside their subject as `*.spec.js` (Vitest + Vue Test Utils). Run wit
 - **Vuetify first.** Prefer a Vuetify component over raw HTML wherever one exists.
 - **Bootstrap:** utility classes (`d-flex`) and the grid only. No Bootstrap JS or components.
   It is imported after Vuetify.
+- **Typeface:** the system font stack, set once as `$body-font-family` in `src/styles/settings.scss`.
+  Vuetify compiles it into `html` and every typography class (`text-h6`, `text-caption`, …).
 - **Never hard-code a unit or category list.** Consume `constants/units.js` / `constants/categories.js`.
 - **Grayscale rule:** add class `grayscale` to a recipe image when `lastCookedAt` is within 7 days.
 - **Routes:** use the names defined in `router/index.js` (`home`, `recipes`, `recipe-detail`,

@@ -63,3 +63,8 @@ backend/RecipeApp.API/seed-data/**/*.tmp
 backend/RecipeApp.API/seed-data/catalogue-review.md
 # Phase 10 §4.7: --build-catalogue output, a curation reference derived from normalised/.
 backend/RecipeApp.API/seed-data/myplate/catalogue-build.json
+
+# ========================
+# User
+# ========================
+/temp/

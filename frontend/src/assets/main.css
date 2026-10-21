@@ -37,13 +37,11 @@ html, body {
   bottom: calc(80px + env(safe-area-inset-bottom, 0px)) !important;
 }
 
-/* ── Date and time fields ────────────────────────────────────────────────── */
-/* Chromium pads each part of a date/time input, which makes a date v-text-field
+/* ── Date fields ─────────────────────────────────────────────────────────── */
+/* Chromium pads each part of a date input, which makes a date v-text-field
    2px taller than the other fields. Zero it so every field is the same height. */
 ::-webkit-datetime-edit-fields-wrapper,
 ::-webkit-datetime-edit-text,
-::-webkit-datetime-edit-minute,
-::-webkit-datetime-edit-hour-field,
 ::-webkit-datetime-edit-day-field,
 ::-webkit-datetime-edit-month-field,
 ::-webkit-datetime-edit-year-field {

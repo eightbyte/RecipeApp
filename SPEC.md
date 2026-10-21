@@ -44,8 +44,7 @@ A mobile-first web application for managing personal recipes, building meal plan
 | State Management | **Pinia** | One store file per domain |
 | Routing | **Vue Router 4** | Lazy-loaded views |
 | HTTP Client | **Axios** | Pre-configured instance in `src/services/api.js` |
-| UI Components | **Vuetify 3** | Primary component library |
-| CSS Utilities | **Bootstrap 5** | Grid + utility classes only (no Bootstrap JS) |
+| UI Components | **Vuetify 3** | Components, theme and utility classes — the only styling framework ([ADR 0001](docs/adr/0001-vuetify-is-the-only-styling-framework.md)) |
 | Build Tool | **Vite** | Fast dev server and builds |
 
 ### Backend

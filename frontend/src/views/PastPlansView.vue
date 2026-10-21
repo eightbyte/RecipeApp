@@ -1,10 +1,10 @@
 <template>
   <v-container class="pa-4" max-width="600">
-    <h1 class="text-h6 font-weight-bold mb-4">Past Meal Plans</h1>
+    <h1 class="text-h6 font-weight-bold mb-6">Past Meal Plans</h1>
 
     <!-- ── Loading skeleton ─────────────────────────────────────────────── -->
     <template v-if="mealPlanStore.loading">
-      <v-skeleton-loader v-for="n in 3" :key="n" type="list-item-two-line" class="mb-3" />
+      <v-skeleton-loader v-for="n in 3" :key="n" type="list-item-two-line" class="mb-4" />
     </template>
 
     <!-- ── Fetch error ──────────────────────────────────────────────────── -->
@@ -27,7 +27,7 @@
       <v-card
         v-for="plan in pastPlans"
         :key="plan.id"
-        class="mb-3"
+        class="mb-4"
         :to="{ name: 'meal-plan-detail', params: { id: plan.id } }"
         :ripple="true"
       >

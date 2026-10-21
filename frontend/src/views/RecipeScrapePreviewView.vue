@@ -4,18 +4,18 @@
     <!-- Loading bar during save -->
     <v-progress-linear v-if="store.confirmLoading" indeterminate color="primary" class="mb-2" />
 
-    <h1 class="text-h6 font-weight-bold mb-4">Review Imported Recipe</h1>
+    <h1 class="text-h6 font-weight-bold mb-6">Review Imported Recipe</h1>
 
     <!-- No preview guard -->
-    <v-alert v-if="!store.scrapePreview" type="warning" class="mb-4">
+    <v-alert v-if="!store.scrapePreview" type="warning" class="mb-6">
       No preview available. Please <router-link :to="{ name: 'recipes' }">go back</router-link> and import a recipe.
     </v-alert>
 
     <template v-else>
 
       <!-- ── Basic info ──────────────────────────────────────────── -->
-      <v-card class="mb-4 pa-4">
-        <div class="text-subtitle-2 text-medium-emphasis mb-3">Basic Info</div>
+      <v-card class="mb-6 pa-4">
+        <div class="text-subtitle-2 text-medium-emphasis mb-4">Basic Info</div>
 
         <v-text-field
           v-model="form.name"
@@ -56,13 +56,13 @@
       </v-card>
 
       <!-- ── Ingredients ─────────────────────────────────────────── -->
-      <v-card class="mb-4 pa-4">
-        <div class="text-subtitle-2 text-medium-emphasis mb-3">Ingredients</div>
+      <v-card class="mb-6 pa-4">
+        <div class="text-subtitle-2 text-medium-emphasis mb-4">Ingredients</div>
 
         <div
           v-for="(ing, idx) in form.ingredients"
           :key="idx"
-          class="mb-4"
+          class="mb-6"
         >
           <div class="d-flex align-center ga-2 mb-1">
             <span class="text-caption text-medium-emphasis" style="min-width: 20px">{{ idx + 1 }}.</span>
@@ -113,16 +113,16 @@
       </v-card>
 
       <!-- ── Steps ───────────────────────────────────────────────── -->
-      <v-card class="mb-4 pa-4">
-        <div class="text-subtitle-2 text-medium-emphasis mb-3">Steps</div>
+      <v-card class="mb-6 pa-4">
+        <div class="text-subtitle-2 text-medium-emphasis mb-4">Steps</div>
 
         <div
           v-for="(step, sIdx) in form.steps"
           :key="sIdx"
-          class="mb-4"
+          class="mb-6"
         >
           <div class="d-flex align-start ga-2">
-            <v-avatar color="primary" size="28" class="text-white text-caption font-weight-bold mt-3">
+            <v-avatar color="primary" size="28" class="text-white text-caption font-weight-bold mt-4">
               {{ step.stepNumber }}
             </v-avatar>
 
@@ -152,12 +152,12 @@
               </div>
             </div>
           </div>
-          <v-divider v-if="sIdx < form.steps.length - 1" class="mt-3" />
+          <v-divider v-if="sIdx < form.steps.length - 1" class="mt-4" />
         </div>
       </v-card>
 
       <!-- ── Error ───────────────────────────────────────────────── -->
-      <v-alert v-if="submitError" type="error" class="mb-4" closable @click:close="submitError = null">
+      <v-alert v-if="submitError" type="error" class="mb-6" closable @click:close="submitError = null">
         {{ submitError }}
       </v-alert>
 

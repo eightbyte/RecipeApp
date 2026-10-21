@@ -8,7 +8,7 @@
       placeholder="Search recipes or ingredients…"
       clearable
       hide-details
-      class="mb-4"
+      class="mb-6"
       @update:model-value="onSearch"
     />
 
@@ -18,7 +18,7 @@
         v-for="n in 3"
         :key="n"
         type="card"
-        class="mb-3"
+        class="mb-4"
       />
     </div>
 
@@ -34,7 +34,7 @@
       <v-card
         v-for="recipe in store.recipes"
         :key="recipe.id"
-        class="mb-3"
+        class="mb-4"
         :to="{ name: 'recipe-detail', params: { id: recipe.id } }"
         :ripple="true"
       >

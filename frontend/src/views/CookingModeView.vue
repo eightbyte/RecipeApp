@@ -72,12 +72,12 @@
       </header>
 
       <!-- Scrollable step list -->
-      <div class="cooking-steps px-4 py-4">
+      <div class="cooking-steps px-6 py-6">
         <div
           v-for="(step, index) in recipe.steps"
           :id="`cooking-step-${step.id}`"
           :key="step.id"
-          class="cooking-step pa-4 mb-4"
+          class="cooking-step pa-4 mb-6"
           :class="{
             'cooking-step--current': isCurrent(index),
             'cooking-step--done': isDone(step),
@@ -101,7 +101,7 @@
               </div>
 
               <!-- Per-step ingredient chips; the current step's are highlighted -->
-              <div v-if="stepIngredients(step).length" class="d-flex flex-wrap ga-2 mt-3">
+              <div v-if="stepIngredients(step).length" class="d-flex flex-wrap ga-2 mt-4">
                 <v-chip
                   v-for="ing in stepIngredients(step)"
                   :key="ing.id"

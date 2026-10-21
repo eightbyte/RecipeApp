@@ -1,9 +1,9 @@
 <template>
   <v-bottom-sheet v-model="model" max-width="600">
     <v-card>
-      <v-card-title class="pt-4 px-4">Add item</v-card-title>
+      <v-card-title class="pt-6 px-6">Add item</v-card-title>
 
-      <v-card-text class="px-4 pb-0">
+      <v-card-text class="px-6 pb-0">
         <v-text-field
           v-model="form.name"
           label="Item name"
@@ -44,7 +44,7 @@
         />
       </v-card-text>
 
-      <v-card-actions class="px-4 pb-4">
+      <v-card-actions class="px-6 pb-6">
         <v-spacer />
         <v-btn variant="text" @click="cancel">Cancel</v-btn>
         <v-btn color="primary" variant="flat" :disabled="!form.name.trim()" @click="confirm">

@@ -5,10 +5,7 @@ import App     from './App.vue'
 import router  from './router'
 import vuetify from './plugins/vuetify'
 
-// Bootstrap 5 CSS — utility classes complement Vuetify's layout
-import 'bootstrap/dist/css/bootstrap.min.css'
-
-// App-level styles (minimal overrides — let Vuetify drive component styling)
+// App-level styles (minimal overrides — Vuetify is the only styling framework)
 import './assets/main.css'
 
 const app = createApp(App)

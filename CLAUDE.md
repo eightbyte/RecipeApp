@@ -41,7 +41,7 @@ global.json                Opts `dotnet test` into Microsoft.Testing.Platform
 
 ## Stack
 
-Vue 3 (`<script setup>`) + Vite · Pinia · Vue Router 4 · Vuetify 3 + Bootstrap 5 utilities · Axios
+Vue 3 (`<script setup>`) + Vite · Pinia · Vue Router 4 · Vuetify 3 · Axios
 — .NET 10 Minimal API · EF Core 10 + Npgsql · FluentValidation 12 · PostgreSQL 16 ·
 LLamaSharp 0.27.0 (CUDA12, local GGUF model).
 

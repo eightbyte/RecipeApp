@@ -3,7 +3,7 @@
 
     <!-- ── Loading skeleton ─────────────────────────────────────────────── -->
     <template v-if="mealPlanStore.loading">
-      <v-skeleton-loader type="heading" class="mb-4" />
+      <v-skeleton-loader type="heading" class="mb-6" />
       <v-skeleton-loader v-for="n in 3" :key="n" type="list-item-avatar-two-line" class="mb-2" />
     </template>
 
@@ -16,9 +16,9 @@
 
     <div v-else-if="mealPlanStore.currentPlan">
       <!-- Header -->
-      <div class="mb-4">
+      <div class="mb-6">
         <div class="d-flex align-center ga-2 mb-1">
-          <h1 class="text-h6 font-weight-bold">{{ mealPlanStore.currentPlan.name }}</h1>
+          <h1 class="text-h6 font-weight-bold mb-2">{{ mealPlanStore.currentPlan.name }}</h1>
           <v-chip size="x-small" :color="mealPlanStore.currentPlan.isActive ? 'success' : 'default'">
             {{ mealPlanStore.currentPlan.isActive ? 'Active' : 'Closed' }}
           </v-chip>
@@ -35,7 +35,7 @@
       <v-card
         v-for="meal in mealPlanStore.currentPlan.recipes"
         :key="meal.id"
-        class="mb-3"
+        class="mb-4"
         variant="outlined"
       >
         <div class="d-flex align-center pa-3 ga-4">

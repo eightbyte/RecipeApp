@@ -40,7 +40,7 @@
       <!-- ── Title + meta ─────────────────────────────────────────────── -->
       <div class="d-flex align-start justify-space-between ga-2 mb-2">
         <div class="flex-grow-1">
-          <h1 class="text-h5 font-weight-bold">{{ recipe.name }}</h1>
+          <h1 class="text-h5 font-weight-bold mb-2">{{ recipe.name }}</h1>
           <div v-if="recipe.description" class="text-body-2 text-medium-emphasis mt-1">
             {{ recipe.description }}
           </div>
@@ -48,7 +48,7 @@
       </div>
 
       <!-- Chips row -->
-      <div class="d-flex ga-2 flex-wrap mb-4">
+      <div class="d-flex ga-2 flex-wrap mb-6">
         <v-chip size="small" variant="tonal" color="primary">
           <v-icon start>mdi-account-group</v-icon>
           {{ scaledServings }} servings
@@ -79,14 +79,14 @@
         color="primary"
         size="large"
         prepend-icon="mdi-chef-hat"
-        class="mb-4"
+        class="mb-6"
         :to="{ name: 'recipe-cooking', params: { id: recipe.id }, query: { portion: portionSize } }"
       >
         Start cooking
       </v-btn>
 
       <!-- ── Portion selector ──────────────────────────────────────────── -->
-      <v-card class="mb-5 pa-3" variant="outlined">
+      <v-card class="mb-12 pa-3" variant="outlined">
         <div class="d-flex align-center ga-4">
           <span class="text-body-2 font-weight-medium">Portion size</span>
           <v-btn-toggle v-model="portionSize" mandatory density="compact" color="primary">
@@ -99,7 +99,7 @@
 
       <!-- ── Ingredients ───────────────────────────────────────────────── -->
       <h2 class="text-subtitle-1 font-weight-bold mb-2">Ingredients</h2>
-      <v-card class="mb-5">
+      <v-card class="mb-12">
         <v-list density="compact">
           <template v-for="(ing, idx) in recipe.ingredients" :key="ing.id">
             <v-list-item
@@ -130,7 +130,7 @@
 
       <!-- ── Steps ────────────────────────────────────────────────────── -->
       <h2 class="text-subtitle-1 font-weight-bold mb-2">Instructions</h2>
-      <div v-for="step in recipe.steps" :key="step.id" class="mb-3">
+      <div v-for="step in recipe.steps" :key="step.id" class="mb-4">
         <v-card>
           <v-card-item>
             <template #prepend>
@@ -146,7 +146,7 @@
           <!-- Ingredient chips for this step -->
           <div
             v-if="stepIngredients(step).length"
-            class="px-4 pb-3 d-flex flex-wrap ga-2"
+            class="px-6 pb-4 d-flex flex-wrap ga-2"
           >
             <v-chip
               v-for="ing in stepIngredients(step)"
@@ -168,7 +168,7 @@
         color="success"
         size="large"
         prepend-icon="mdi-chef-hat"
-        class="mt-4"
+        class="mt-6"
         :loading="markingCooked"
         @click="markCooked"
       >

@@ -1,7 +1,7 @@
 <template>
   <div>
     <!-- Search controls -->
-    <div class="d-flex ga-2 mb-3">
+    <div class="d-flex ga-2 mb-4">
       <v-text-field
         v-model="searchQuery"
         label="Search recipes"
@@ -15,7 +15,7 @@
       />
     </div>
 
-    <div class="d-flex align-center ga-4 mb-3">
+    <div class="d-flex align-center ga-4 mb-4">
       <v-switch
         v-model="hideRecentlyCooked"
         label="Hide recently cooked"
@@ -27,7 +27,7 @@
     </div>
 
     <!-- Recipe list -->
-    <div v-if="recipesStore.loading" class="d-flex justify-center py-4">
+    <div v-if="recipesStore.loading" class="d-flex justify-center py-6">
       <v-progress-circular indeterminate color="primary" />
     </div>
 

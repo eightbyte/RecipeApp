@@ -5,7 +5,7 @@
       <v-card-text class="text-body-1">
         You cooked <strong>{{ recipeName }}</strong> in the last week — are you sure you want to include it?
       </v-card-text>
-      <v-card-actions class="ga-2 pt-4">
+      <v-card-actions class="ga-2 pt-6">
         <v-btn variant="outlined" @click="cancel">Cancel</v-btn>
         <v-btn color="primary" variant="tonal" @click="confirm">Add Anyway</v-btn>
       </v-card-actions>

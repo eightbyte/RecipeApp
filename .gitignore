@@ -3,6 +3,7 @@
 # ========================
 backend/**/bin/
 backend/**/obj/
+backend/**/TestResults/
 backend/**/*.user
 backend/**/.vs/
 backend/**/appsettings.Development.json
@@ -44,3 +45,26 @@ Thumbs.db
 # Uploads / Media
 # ========================
 backend/**/uploads/
+
+# ========================
+# Seed import cache (Phase 9)
+# ========================
+# Only manifest.json is committed: it pins the harvest and lists slugs and URLs, no recipe text.
+# Everything else is a personal-use cache. Most of the corpus is not public domain, so recipe
+# text and photos are never committed or published (Phase 10 §1).
+backend/RecipeApp.API/seed-data/**/raw/
+backend/RecipeApp.API/seed-data/**/parsed/
+# Stage 4 output. Holds recipe text, so it stays local (Phase 10 §1 supersedes Phase 9 §18 Q1).
+backend/RecipeApp.API/seed-data/**/normalised/
+backend/RecipeApp.API/seed-data/**/images/
+backend/RecipeApp.API/seed-data/**/state.json
+backend/RecipeApp.API/seed-data/**/*.tmp
+# Phase 10 §4.7 catalogue review list. Carries corpus counts and source lines; never shipped.
+backend/RecipeApp.API/seed-data/catalogue-review.md
+# Phase 10 §4.7: --build-catalogue output, a curation reference derived from normalised/.
+backend/RecipeApp.API/seed-data/myplate/catalogue-build.json
+
+# ========================
+# User
+# ========================
+/temp/

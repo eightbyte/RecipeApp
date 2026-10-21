@@ -154,4 +154,29 @@ describe('CookingModeView', () => {
     // Default REGULAR → 200 g flour shown unscaled on the current (first) step.
     expect(w.text()).toContain('200 g')
   })
+
+  it('shows an unquantified ingredient chip as its name alone', async () => {
+    // `null * multiplier` is 0 in JavaScript, so scaling has to short-circuit rather than
+    // delegate — otherwise a chip reading "Salt" renders as "0 Salt" (Phase 9.1 §3.4).
+    store.currentRecipe = threeStepRecipe({
+      ingredients: [
+        { id: 'ri-1', ingredientId: 'i1', ingredientName: 'salt', ingredientDisplayName: 'Salt', category: 'DRY_GOODS', amount: null, unit: null, notes: null, displayOrder: 0 },
+      ],
+      steps: [
+        { id: 's1', stepNumber: 1, instruction: 'Season', recipeIngredientIds: ['ri-1'] },
+      ],
+    })
+    store.loading = false
+    store.error = null
+    vi.spyOn(store, 'fetchRecipe').mockResolvedValue(store.currentRecipe)
+
+    const w = mount(CookingModeView, {
+      props: { id: 'r1' },
+      global: { plugins: [vuetify, pinia], stubs: { teleport: true } },
+    })
+    await flushPromises()
+
+    expect(w.vm.formatAmount(null, null)).toBeNull()
+    expect(w.get('.v-chip').text().trim()).toBe('Salt')
+  })
 })

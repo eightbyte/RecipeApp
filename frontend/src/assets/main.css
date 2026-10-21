@@ -49,9 +49,3 @@ html, body {
     transition: none;
   }
 }
-
-/* ── Utility: gap helpers not in Vuetify ─────────────────────────────────── */
-.gap-1 { gap: 4px;  }
-.gap-2 { gap: 8px;  }
-.gap-3 { gap: 12px; }
-.gap-4 { gap: 16px; }

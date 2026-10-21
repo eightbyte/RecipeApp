@@ -26,7 +26,7 @@
         :key="meal.id"
         class="mb-3"
       >
-        <div class="d-flex align-center pa-3 gap-3">
+        <div class="d-flex align-center pa-3 ga-4">
           <v-avatar size="56" rounded="lg" color="grey-lighten-3">
             <v-img
               v-if="meal.recipeImageUrl"
@@ -74,7 +74,7 @@
     </v-card>
 
     <!-- ── Food waste stat ──────────────────────────────────────────────── -->
-    <v-card class="mt-4 pa-4 d-flex align-center gap-3" color="success" variant="tonal">
+    <v-card class="mt-4 pa-4 d-flex align-center ga-4" color="success" variant="tonal">
       <v-icon color="success" size="32">mdi-leaf</v-icon>
       <div>
         <div class="text-body-2 font-weight-medium">Food waste saved</div>

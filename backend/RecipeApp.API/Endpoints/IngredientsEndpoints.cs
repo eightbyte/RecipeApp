@@ -1,9 +1,9 @@
-using FluentValidation;
 using Microsoft.EntityFrameworkCore;
 using RecipeApp.API.Data;
 using RecipeApp.API.DTOs;
 using RecipeApp.API.DTOs.Ingredients;
 using RecipeApp.API.Enums;
+using RecipeApp.API.Filters;
 using RecipeApp.API.Models;
 
 namespace RecipeApp.API.Endpoints;
@@ -44,13 +44,8 @@ public static class IngredientsEndpoints
         // POST /ingredients
         group.MapPost("/", async (
             CreateIngredientRequest request,
-            AppDbContext db,
-            IValidator<CreateIngredientRequest> validator) =>
+            AppDbContext db) =>
         {
-            var validation = await validator.ValidateAsync(request);
-            if (!validation.IsValid)
-                return Results.ValidationProblem(validation.ToDictionary());
-
             if (await db.Ingredients.AnyAsync(i => i.Name == request.Name))
                 return Results.Conflict(new { message = $"Ingredient '{request.Name}' already exists." });
 
@@ -61,6 +56,7 @@ public static class IngredientsEndpoints
                 DisplayName = request.DisplayName,
                 Category    = request.Category,
                 DefaultUnit = request.DefaultUnit,
+                GramsPerMillilitre = request.GramsPerMillilitre,
                 CreatedAt   = DateTime.UtcNow,
             };
 
@@ -69,29 +65,27 @@ public static class IngredientsEndpoints
 
             return Results.Created($"/api/v1/ingredients/{ingredient.Id}", ingredient.ToResponse());
         })
+        .WithValidation<CreateIngredientRequest>()
         .WithSummary("Create a new ingredient");
 
         // PUT /ingredients/{id}
         group.MapPut("/{id:guid}", async (
             Guid id,
             UpdateIngredientRequest request,
-            AppDbContext db,
-            IValidator<UpdateIngredientRequest> validator) =>
+            AppDbContext db) =>
         {
-            var validation = await validator.ValidateAsync(request);
-            if (!validation.IsValid)
-                return Results.ValidationProblem(validation.ToDictionary());
-
             var ingredient = await db.Ingredients.FindAsync(id);
             if (ingredient is null) return Results.NotFound();
 
-            ingredient.DisplayName = request.DisplayName;
-            ingredient.Category    = request.Category;
-            ingredient.DefaultUnit = request.DefaultUnit;
+            ingredient.DisplayName        = request.DisplayName;
+            ingredient.Category           = request.Category;
+            ingredient.DefaultUnit        = request.DefaultUnit;
+            ingredient.GramsPerMillilitre = request.GramsPerMillilitre;
             await db.SaveChangesAsync();
 
             return Results.Ok(ingredient.ToResponse());
         })
+        .WithValidation<UpdateIngredientRequest>()
         .WithSummary("Update an ingredient");
 
         return routes;

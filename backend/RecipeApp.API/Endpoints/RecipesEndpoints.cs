@@ -1,7 +1,7 @@
-using FluentValidation;
 using Microsoft.EntityFrameworkCore;
 using RecipeApp.API.Data;
 using RecipeApp.API.DTOs.Recipes;
+using RecipeApp.API.Filters;
 using RecipeApp.API.Services;
 
 namespace RecipeApp.API.Endpoints;
@@ -35,32 +35,24 @@ public static class RecipesEndpoints
         // POST /recipes
         group.MapPost("/", async (
             CreateRecipeRequest request,
-            RecipeService svc,
-            IValidator<CreateRecipeRequest> validator) =>
+            RecipeService svc) =>
         {
-            var validation = await validator.ValidateAsync(request);
-            if (!validation.IsValid)
-                return Results.ValidationProblem(validation.ToDictionary());
-
             var created = await svc.CreateAsync(request);
             return Results.Created($"/api/v1/recipes/{created.Id}", created);
         })
+        .WithValidation<CreateRecipeRequest>()
         .WithSummary("Create a new recipe");
 
         // PUT /recipes/{id}
         group.MapPut("/{id:guid}", async (
             Guid id,
             UpdateRecipeRequest request,
-            RecipeService svc,
-            IValidator<UpdateRecipeRequest> validator) =>
+            RecipeService svc) =>
         {
-            var validation = await validator.ValidateAsync(request);
-            if (!validation.IsValid)
-                return Results.ValidationProblem(validation.ToDictionary());
-
             var updated = await svc.UpdateAsync(id, request);
             return updated is null ? Results.NotFound() : Results.Ok(updated);
         })
+        .WithValidation<UpdateRecipeRequest>()
         .WithSummary("Replace a recipe's ingredients and steps");
 
         // DELETE /recipes/{id}

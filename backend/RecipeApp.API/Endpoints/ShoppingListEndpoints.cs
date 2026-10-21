@@ -1,5 +1,5 @@
-using FluentValidation;
 using RecipeApp.API.DTOs.ShoppingLists;
+using RecipeApp.API.Filters;
 using RecipeApp.API.Services;
 
 namespace RecipeApp.API.Endpoints;
@@ -40,18 +40,14 @@ public static class ShoppingListEndpoints
         group.MapPost("/{id:guid}/items", async (
             Guid id,
             AddCustomItemRequest request,
-            ShoppingListService svc,
-            IValidator<AddCustomItemRequest> validator) =>
+            ShoppingListService svc) =>
         {
-            var validation = await validator.ValidateAsync(request);
-            if (!validation.IsValid)
-                return Results.ValidationProblem(validation.ToDictionary());
-
             var item = await svc.AddCustomItemAsync(id, request);
             return item is null
                 ? Results.NotFound()
                 : Results.Created($"/api/v1/shopping-lists/{id}", item);
         })
+        .WithValidation<AddCustomItemRequest>()
         .WithSummary("Add a custom item to a shopping list")
         .WithDescription("Custom items are preserved when the list is regenerated from the meal plan.");
 
@@ -60,16 +56,12 @@ public static class ShoppingListEndpoints
             Guid id,
             Guid itemId,
             UpdateItemRequest request,
-            ShoppingListService svc,
-            IValidator<UpdateItemRequest> validator) =>
+            ShoppingListService svc) =>
         {
-            var validation = await validator.ValidateAsync(request);
-            if (!validation.IsValid)
-                return Results.ValidationProblem(validation.ToDictionary());
-
             var item = await svc.UpdateItemAsync(id, itemId, request);
             return item is null ? Results.NotFound() : Results.Ok(item);
         })
+        .WithValidation<UpdateItemRequest>()
         .WithSummary("Update a shopping list item")
         .WithDescription("Toggle the checked state or edit the quantity/unit of any item.");
 

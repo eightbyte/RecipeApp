@@ -1,0 +1,424 @@
+using System.Security.Cryptography;
+using System.Text.Json;
+using System.Text.Json.Serialization;
+using System.Text.RegularExpressions;
+using Microsoft.Extensions.Options;
+
+namespace RecipeApp.API.Services.Seeding;
+
+/// <summary>
+/// Owns the on-disk seed cache (Phase 9 §5) — the manifest, the per-stage artefact directories,
+/// and <c>state.json</c>.
+///
+/// <para>The cache is what makes the harvest a one-time cost: every stage writes its output before
+/// the next stage reads it, so a failure late in the pipeline never forces a re-download and a
+/// prompt change never forces a re-fetch.</para>
+///
+/// <para>Slugs arrive from a remote index and are used as filenames, so every path-building entry
+/// point runs them through <see cref="ValidateSlug"/> first.</para>
+/// </summary>
+public class SeedCacheStore
+{
+    private const string ManifestFileName = "manifest.json";
+    private const string StateFileName    = "state.json";
+    private const string RawExtension     = ".html";
+    private const string JsonExtension    = ".json";
+
+    /// <summary>Suffix for the temporary file an atomic write moves into place.</summary>
+    private const string TempExtension = ".tmp";
+
+    /// <summary>
+    /// Drupal pathauto slugs: lowercase alphanumerics separated by single hyphens or underscores.
+    /// Anchored and deliberately narrow — this is the path-traversal guard, not a tidiness check,
+    /// so it admits no separators, no dots and no percent escapes.
+    /// </summary>
+    private static readonly Regex SlugPattern =
+        new(@"^[a-z0-9]+(?:[-_][a-z0-9]+)*$", RegexOptions.Compiled);
+
+    private static readonly JsonSerializerOptions JsonOptions = new()
+    {
+        PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
+        WriteIndented        = true,
+        Converters           = { new JsonStringEnumConverter(JsonNamingPolicy.CamelCase) },
+    };
+
+    private readonly ILogger<SeedCacheStore> _logger;
+    private SeedState? _state;
+
+    public SeedCacheStore(
+        IOptions<RecipeSeedingOptions> options,
+        IHostEnvironment environment,
+        ILogger<SeedCacheStore> logger)
+    {
+        _logger = logger;
+
+        var configured = options.Value.CacheDirectory;
+        RootPath = Path.IsPathRooted(configured)
+            ? configured
+            : Path.Combine(environment.ContentRootPath, configured);
+    }
+
+    public string RootPath { get; }
+
+    public string RawDirectory        => Path.Combine(RootPath, "raw");
+    public string ParsedDirectory     => Path.Combine(RootPath, "parsed");
+    public string NormalisedDirectory => Path.Combine(RootPath, "normalised");
+    public string ImagesDirectory     => Path.Combine(RootPath, "images");
+
+    public string ManifestPath => Path.Combine(RootPath, ManifestFileName);
+    public string StatePath    => Path.Combine(RootPath, StateFileName);
+
+    /// <summary>Creates every cache directory. Safe to call repeatedly.</summary>
+    public void EnsureDirectories()
+    {
+        Directory.CreateDirectory(RootPath);
+        Directory.CreateDirectory(RawDirectory);
+        Directory.CreateDirectory(ParsedDirectory);
+        Directory.CreateDirectory(NormalisedDirectory);
+        Directory.CreateDirectory(ImagesDirectory);
+    }
+
+    // ── Slug safety ───────────────────────────────────────────────────────────
+
+    /// <summary>Whether a slug is safe to use as a cache filename.</summary>
+    public static bool IsValidSlug(string? slug) =>
+        !string.IsNullOrEmpty(slug) && SlugPattern.IsMatch(slug);
+
+    /// <summary>
+    /// Returns the slug unchanged, or throws if it could escape the cache directory.
+    /// Called by every method that turns a slug into a path.
+    /// </summary>
+    public static string ValidateSlug(string? slug)
+    {
+        if (!IsValidSlug(slug))
+            throw new ArgumentException(
+                $"'{slug}' is not a usable cache slug. Slugs are used as filenames and must be " +
+                "lowercase alphanumerics separated by single hyphens or underscores.",
+                nameof(slug));
+
+        return slug!;
+    }
+
+    // ── manifest.json ─────────────────────────────────────────────────────────
+
+    public bool HasManifest() => File.Exists(ManifestPath);
+
+    /// <summary>Reads the manifest, or null when it is absent or unreadable.</summary>
+    public async Task<SeedManifest?> TryLoadManifestAsync(CancellationToken ct = default)
+    {
+        if (!File.Exists(ManifestPath)) return null;
+
+        try
+        {
+            await using var stream = File.OpenRead(ManifestPath);
+            return await JsonSerializer.DeserializeAsync<SeedManifest>(stream, JsonOptions, ct);
+        }
+        catch (JsonException ex)
+        {
+            _logger.LogWarning(ex, "Seed manifest at {Path} is unreadable. Re-run discovery.", ManifestPath);
+            return null;
+        }
+    }
+
+    public async Task SaveManifestAsync(SeedManifest manifest, CancellationToken ct = default)
+    {
+        EnsureDirectories();
+        await WriteJsonAtomicallyAsync(ManifestPath, manifest, ct);
+    }
+
+    // ── state.json ────────────────────────────────────────────────────────────
+
+    /// <summary>
+    /// Loads progress state, caching it for the lifetime of this store. A corrupt file is
+    /// discarded rather than thrown on: state is derived bookkeeping, and losing it costs
+    /// a re-scan of the cache directories, not a re-download.
+    /// </summary>
+    public async Task<SeedState> LoadStateAsync(CancellationToken ct = default)
+    {
+        if (_state is not null) return _state;
+
+        if (!File.Exists(StatePath))
+            return _state = new SeedState();
+
+        try
+        {
+            await using var stream = File.OpenRead(StatePath);
+            _state = await JsonSerializer.DeserializeAsync<SeedState>(stream, JsonOptions, ct)
+                     ?? new SeedState();
+        }
+        catch (JsonException ex)
+        {
+            _logger.LogWarning(ex,
+                "Seed state at {Path} is corrupt and has been discarded. Progress will be " +
+                "rebuilt from the cache directories.", StatePath);
+            _state = new SeedState();
+        }
+
+        return _state;
+    }
+
+    public async Task SaveStateAsync(CancellationToken ct = default)
+    {
+        var state = await LoadStateAsync(ct);
+        state.UpdatedAt = DateTime.UtcNow;
+
+        EnsureDirectories();
+        await WriteJsonAtomicallyAsync(StatePath, state, ct);
+    }
+
+    /// <summary>
+    /// Records the stage a slug has reached and flushes state to disk, so an interrupted run
+    /// resumes from the last completed page rather than the start.
+    /// </summary>
+    public async Task RecordStageAsync(
+        string slug, SeedStage stage, string? error = null, CancellationToken ct = default)
+    {
+        ValidateSlug(slug);
+
+        var state     = await LoadStateAsync(ct);
+        var slugState = state.GetOrAdd(slug);
+
+        slugState.Stage     = stage;
+        slugState.LastError = error;
+
+        await SaveStateAsync(ct);
+    }
+
+    /// <summary>Increments the attempt counter for a slug without flushing — the caller records the outcome.</summary>
+    public async Task<int> RecordAttemptAsync(string slug, CancellationToken ct = default)
+    {
+        ValidateSlug(slug);
+
+        var state = await LoadStateAsync(ct);
+        return ++state.GetOrAdd(slug).Attempts;
+    }
+
+    // ── Stage artefacts ───────────────────────────────────────────────────────
+
+    public string RawPath(string slug) =>
+        Path.Combine(RawDirectory, ValidateSlug(slug) + RawExtension);
+
+    public string ParsedPath(string slug) =>
+        Path.Combine(ParsedDirectory, ValidateSlug(slug) + JsonExtension);
+
+    public string NormalisedPath(string slug) =>
+        Path.Combine(NormalisedDirectory, ValidateSlug(slug) + JsonExtension);
+
+    public bool HasRaw(string slug) => File.Exists(RawPath(slug));
+
+    /// <summary>Writes the archived response bytes verbatim — decoding is the parser's problem, not the cache's.</summary>
+    public async Task WriteRawAsync(string slug, byte[] content, CancellationToken ct = default)
+    {
+        EnsureDirectories();
+        await WriteBytesAtomicallyAsync(RawPath(slug), content, ct);
+    }
+
+    public Task<string> ReadRawAsync(string slug, CancellationToken ct = default) =>
+        File.ReadAllTextAsync(RawPath(slug), ct);
+
+    // ── Parsed recipes (Stage 3) ──────────────────────────────────────────────
+
+    public bool HasParsed(string slug) => File.Exists(ParsedPath(slug));
+
+    public async Task WriteParsedAsync(
+        string slug, ParsedSeedRecipe recipe, CancellationToken ct = default)
+    {
+        EnsureDirectories();
+        await WriteJsonAtomicallyAsync(ParsedPath(slug), recipe, ct);
+    }
+
+    /// <summary>The cached Stage 3 output for a slug, or null when it is absent or unreadable.</summary>
+    public async Task<ParsedSeedRecipe?> TryLoadParsedAsync(string slug, CancellationToken ct = default)
+    {
+        var path = ParsedPath(slug);
+        if (!File.Exists(path)) return null;
+
+        try
+        {
+            await using var stream = File.OpenRead(path);
+            return await JsonSerializer.DeserializeAsync<ParsedSeedRecipe>(stream, JsonOptions, ct);
+        }
+        catch (JsonException ex)
+        {
+            // Same posture as the raw cache: a derived artefact that cannot be read is discarded
+            // and rebuilt, because re-parsing costs milliseconds and needs no network.
+            _logger.LogWarning(ex,
+                "Parsed recipe at {Path} is unreadable and will be re-parsed.", path);
+            return null;
+        }
+    }
+
+    /// <summary>
+    /// Hash of a slug's cached Stage 3 output, or null when it has none.
+    ///
+    /// <para>Taken over the file's bytes rather than the deserialised recipe, so it is cheap and
+    /// stable: the writer's serializer options are fixed, so the same parse produces the same bytes
+    /// on any machine. Stage 4 records it, which is what lets <c>--parse --force</c> re-derive the
+    /// corpus without silently leaving hours of LLM output behind that was computed from a page the
+    /// parser no longer reads the same way.</para>
+    /// </summary>
+    public async Task<string?> TryComputeParsedFingerprintAsync(
+        string slug, CancellationToken ct = default)
+    {
+        var path = ParsedPath(slug);
+        if (!File.Exists(path)) return null;
+
+        await using var stream = File.OpenRead(path);
+        var hash = await SHA256.HashDataAsync(stream, ct);
+        return Convert.ToHexStringLower(hash);
+    }
+
+    // ── Normalised recipes (Stage 4) ──────────────────────────────────────────
+
+    public bool HasNormalised(string slug) => File.Exists(NormalisedPath(slug));
+
+    public async Task WriteNormalisedAsync(
+        string slug, NormalisedSeedRecipe recipe, CancellationToken ct = default)
+    {
+        EnsureDirectories();
+        await WriteJsonAtomicallyAsync(NormalisedPath(slug), recipe, ct);
+    }
+
+    /// <summary>The cached Stage 4 output for a slug, or null when it is absent or unreadable.</summary>
+    public async Task<NormalisedSeedRecipe?> TryLoadNormalisedAsync(
+        string slug, CancellationToken ct = default)
+    {
+        var path = NormalisedPath(slug);
+        if (!File.Exists(path)) return null;
+
+        try
+        {
+            await using var stream = File.OpenRead(path);
+            return await JsonSerializer.DeserializeAsync<NormalisedSeedRecipe>(stream, JsonOptions, ct);
+        }
+        catch (JsonException ex)
+        {
+            // Unlike a parsed recipe, re-deriving this one costs a GPU pass — but keeping an
+            // unreadable file would cost the recipe entirely, so it is discarded and redone.
+            _logger.LogWarning(ex,
+                "Normalised recipe at {Path} is unreadable and will be re-normalised.", path);
+            return null;
+        }
+    }
+
+    // ── Images (Stage 2b) ─────────────────────────────────────────────────────
+
+    /// <summary>Path of the cached image for a slug, whatever its extension, or null if none was harvested.</summary>
+    public string? FindImage(string slug)
+    {
+        ValidateSlug(slug);
+        if (!Directory.Exists(ImagesDirectory)) return null;
+
+        return Directory.EnumerateFiles(ImagesDirectory, slug + ".*").FirstOrDefault();
+    }
+
+    public bool HasImage(string slug) => FindImage(slug) is not null;
+
+    public async Task WriteImageAsync(
+        string slug, byte[] content, string extension, CancellationToken ct = default)
+    {
+        EnsureDirectories();
+        await WriteBytesAtomicallyAsync(
+            Path.Combine(ImagesDirectory, ValidateSlug(slug) + extension), content, ct);
+    }
+
+    // ── Cache maintenance ─────────────────────────────────────────────────────
+
+    /// <summary>
+    /// Discards every cached page and image and rewinds all progress, for <c>--refresh-cache</c>.
+    /// The manifest survives: re-harvesting the same pinned snapshots is the point.
+    /// </summary>
+    public async Task ClearFetchedContentAsync(CancellationToken ct = default)
+    {
+        DeleteDirectoryContents(RawDirectory);
+        DeleteDirectoryContents(ImagesDirectory);
+
+        var state = await LoadStateAsync(ct);
+        state.RewindToDiscovered();
+        await SaveStateAsync(ct);
+
+        _logger.LogInformation("Discarded cached pages and images under {Path}.", RootPath);
+    }
+
+    /// <summary>
+    /// Discards every parsed recipe and rewinds any slug that had got past Stage 3, so
+    /// <c>--parse --force</c> re-derives them. Cached pages and images are untouched — the point
+    /// of the 2→3 cache boundary is that re-parsing never costs a re-download.
+    /// </summary>
+    public Task ClearParsedContentAsync(CancellationToken ct = default) =>
+        ClearDerivedContentAsync(ParsedDirectory, "parsed recipes", ct);
+
+    /// <summary>
+    /// Discards every normalised recipe and rewinds any slug that had got past Stage 4, for
+    /// <c>--normalise --force</c>. Parsed recipes, cached pages and images are untouched — this
+    /// throws away a GPU pass, not a harvest.
+    /// </summary>
+    public Task ClearNormalisedContentAsync(CancellationToken ct = default) =>
+        ClearDerivedContentAsync(NormalisedDirectory, "normalised recipes", ct);
+
+    /// <summary>
+    /// Empties one derived-artefact directory and rewinds every slug to whatever its surviving
+    /// files still justify. Shared by both <c>--force</c> paths because the rewind rule is the
+    /// same one in each: progress is claimed from the cache, never from the previous claim.
+    /// </summary>
+    private async Task ClearDerivedContentAsync(
+        string directory, string description, CancellationToken ct)
+    {
+        DeleteDirectoryContents(directory);
+
+        var state = await LoadStateAsync(ct);
+        foreach (var (slug, slugState) in state.Slugs)
+        {
+            if (slugState.Stage == SeedStage.Discovered) continue;
+
+            slugState.Stage     = RewoundStage(slug);
+            slugState.Attempts  = 0;
+            slugState.LastError = null;
+        }
+
+        await SaveStateAsync(ct);
+        _logger.LogInformation("Discarded {Description} under {Path}.", description, directory);
+    }
+
+    /// <summary>
+    /// The furthest stage a slug's surviving artefacts still justify. The cached files are the
+    /// authority, so a page that never fetched is not credited with a fetch and a recipe whose
+    /// parse was discarded is not credited with a parse.
+    /// </summary>
+    private SeedStage RewoundStage(string slug) =>
+        HasParsed(slug) ? SeedStage.Parsed
+        : HasRaw(slug)  ? SeedStage.Fetched
+        : SeedStage.Discovered;
+
+    private static void DeleteDirectoryContents(string directory)
+    {
+        if (!Directory.Exists(directory)) return;
+
+        foreach (var file in Directory.EnumerateFiles(directory))
+            File.Delete(file);
+    }
+
+    // ── Atomic writes ─────────────────────────────────────────────────────────
+
+    // state.json is rewritten after every page of a multi-hour run. Writing through a temporary
+    // file means an interruption mid-write leaves the previous state intact instead of truncating
+    // the record of a thousand fetches.
+
+    private static async Task WriteJsonAtomicallyAsync<T>(string path, T value, CancellationToken ct)
+    {
+        var tempPath = path + TempExtension;
+
+        await using (var stream = File.Create(tempPath))
+            await JsonSerializer.SerializeAsync(stream, value, JsonOptions, ct);
+
+        File.Move(tempPath, path, overwrite: true);
+    }
+
+    private static async Task WriteBytesAtomicallyAsync(string path, byte[] content, CancellationToken ct)
+    {
+        var tempPath = path + TempExtension;
+
+        await File.WriteAllBytesAsync(tempPath, content, ct);
+        File.Move(tempPath, path, overwrite: true);
+    }
+}

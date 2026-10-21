@@ -26,7 +26,7 @@
           class="mb-2"
         />
 
-        <div class="d-flex gap-3">
+        <div class="d-flex ga-4">
           <v-text-field
             v-model.number="form.servings"
             label="Servings"
@@ -87,7 +87,7 @@
         <div
           v-for="(ing, idx) in form.ingredients"
           :key="idx"
-          class="d-flex gap-2 align-start mb-3"
+          class="d-flex ga-2 align-start mb-3"
         >
           <!-- Drag handle future: just a number for now -->
           <div class="text-caption text-medium-emphasis mt-4" style="min-width: 20px">
@@ -120,7 +120,7 @@
               </template>
             </v-autocomplete>
 
-            <div class="d-flex gap-2">
+            <div class="d-flex ga-2">
               <v-text-field
                 v-model.number="ing.amount"
                 label="Amount"
@@ -185,7 +185,7 @@
           :key="sIdx"
           class="mb-4"
         >
-          <div class="d-flex align-start gap-2">
+          <div class="d-flex align-start ga-2">
             <v-avatar color="primary" size="28" class="text-white text-caption font-weight-bold mt-3">
               {{ sIdx + 1 }}
             </v-avatar>
@@ -205,7 +205,7 @@
               <div class="text-caption text-medium-emphasis mb-1">
                 Ingredients used in this step:
               </div>
-              <div class="d-flex flex-wrap gap-1">
+              <div class="d-flex flex-wrap ga-1">
                 <v-chip
                   v-for="(ing, iIdx) in form.ingredients"
                   :key="iIdx"
@@ -244,7 +244,7 @@
         {{ submitError }}
       </v-alert>
 
-      <div class="d-flex gap-3">
+      <div class="d-flex ga-4">
         <v-btn
           variant="outlined"
           :to="isEdit ? { name: 'recipe-detail', params: { id: route.params.id } } : { name: 'recipes' }"
@@ -283,6 +283,16 @@
             v-model="newIng.defaultUnit"
             :items="units"
             label="Default unit"
+            class="mb-2"
+          />
+          <v-text-field
+            v-model.number="newIng.gramsPerMillilitre"
+            label="Density (g/ml)"
+            type="number"
+            min="0"
+            step="0.01"
+            hint="Leave blank to keep volume measurements as stated."
+            persistent-hint
           />
         </v-card-text>
         <v-card-actions>
@@ -303,6 +313,7 @@ import { ref, reactive, computed, onMounted, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useRecipeStore }     from '@/stores/recipes'
 import { useIngredientStore } from '@/stores/ingredients'
+import { MEASUREMENT_UNITS, DEFAULT_UNIT, toPayloadMeasurement } from '@/constants/units'
 
 const props = defineProps({ id: String })
 const route  = useRoute()
@@ -313,7 +324,7 @@ const ingredientStore = useIngredientStore()
 
 const isEdit = computed(() => !!(props.id || route.params.id))
 
-const units = ['g', 'kg', 'ml', 'L', 'pcs', 'tsp', 'tbsp']
+const units = MEASUREMENT_UNITS
 
 // ── Form state ─────────────────────────────────────────────────────────────
 const formRef    = ref(null)
@@ -335,7 +346,12 @@ const form = reactive({
 const createIngDialog   = ref(false)
 const creatingIng       = ref(false)
 const pendingIngIdx     = ref(null)
-const newIng = reactive({ displayName: '', category: 'OTHER', defaultUnit: 'g' })
+const newIng = reactive({
+  displayName: '',
+  category: 'OTHER',
+  defaultUnit: DEFAULT_UNIT,
+  gramsPerMillilitre: null,
+})
 
 // ── Load data ───────────────────────────────────────────────────────────────
 onMounted(async () => {
@@ -364,6 +380,10 @@ function populateForm(recipe) {
     amount:       i.amount,
     unit:         i.unit,
     notes:        i.notes ?? '',
+    // Provenance is carried through untouched: UpdateAsync deletes and recreates every
+    // ingredient row, so dropping these here would silently destroy an import's history.
+    sourceAmount: i.sourceAmount ?? null,
+    sourceUnit:   i.sourceUnit ?? null,
   }))
 
   form.steps = steps.map(s => ({
@@ -376,7 +396,15 @@ function populateForm(recipe) {
 
 // ── Ingredient management ───────────────────────────────────────────────────
 function addIngredient() {
-  form.ingredients.push({ ingredientId: null, amount: 1, unit: 'g', notes: '' })
+  // Hand-entered rows have no source measurement — the unit chosen here IS the source.
+  form.ingredients.push({
+    ingredientId: null,
+    amount:       1,
+    unit:         DEFAULT_UNIT,
+    notes:        '',
+    sourceAmount: null,
+    sourceUnit:   null,
+  })
 }
 
 function removeIngredient(idx) {
@@ -409,10 +437,11 @@ function ingredientLabel(ing) {
 
 function openCreateIngredient(idx) {
   pendingIngIdx.value = idx
-  newIng.displayName  = ''
-  newIng.category     = 'OTHER'
-  newIng.defaultUnit  = 'g'
-  createIngDialog.value = true
+  newIng.displayName        = ''
+  newIng.category           = 'OTHER'
+  newIng.defaultUnit        = DEFAULT_UNIT
+  newIng.gramsPerMillilitre = null
+  createIngDialog.value     = true
 }
 
 async function confirmCreateIngredient() {
@@ -420,13 +449,14 @@ async function confirmCreateIngredient() {
   const name = newIng.displayName.trim().toLowerCase()
   const created = await ingredientStore.createIngredient({
     name,
-    displayName: newIng.displayName.trim(),
-    category:    newIng.category,
-    defaultUnit: newIng.defaultUnit,
+    displayName:        newIng.displayName.trim(),
+    category:           newIng.category,
+    defaultUnit:        newIng.defaultUnit,
+    gramsPerMillilitre: newIng.gramsPerMillilitre || null,
   })
   if (pendingIngIdx.value !== null) {
     form.ingredients[pendingIngIdx.value].ingredientId = created.id
-    form.ingredients[pendingIngIdx.value].unit = created.defaultUnit ?? 'g'
+    form.ingredients[pendingIngIdx.value].unit = created.defaultUnit ?? DEFAULT_UNIT
   }
   creatingIng.value     = false
   createIngDialog.value = false
@@ -478,10 +508,12 @@ async function submit() {
       servings:    form.servings,
       ingredients: form.ingredients.map((ing, i) => ({
         ingredientId: ing.ingredientId,
-        amount:       Number(ing.amount),
-        unit:         ing.unit,
+        // An empty amount round-trips as null, never as 0 (Phase 9.1 §3.4).
+        ...toPayloadMeasurement(ing.amount, ing.unit),
         notes:        ing.notes?.trim() || null,
         displayOrder: i,
+        sourceAmount: ing.sourceAmount ?? null,
+        sourceUnit:   ing.sourceUnit ?? null,
       })),
       steps: form.steps.map((s, i) => ({
         stepNumber:       i + 1,

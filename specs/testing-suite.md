@@ -71,7 +71,7 @@ These run in-process with no I/O. Use `FluentValidation.TestHelper` (`TestValida
 | DisplayName empty | `{ DisplayName: "" }` | Error on `DisplayName` |
 | DisplayName exceeds 200 chars | 201-char string | Error on `DisplayName` |
 | Category invalid | `{ Category: "JUNK" }` | Error on `Category` |
-| Category valid (each value) | All 10 `IngredientCategory` constants | No errors |
+| Category valid (each value) | Every `IngredientCategory.All` constant | No errors |
 | DefaultUnit exceeds 20 chars | 21-char string | Error on `DefaultUnit` |
 | DefaultUnit null | `{ DefaultUnit: null }` | No errors (optional) |
 
@@ -293,7 +293,7 @@ Use the `RecipeAppFactory` HTTP client. Assert HTTP status codes, response body 
 | List empty search | `GET /api/v1/ingredients?search=` | 200 | All ingredients |
 | Get by ID | `GET /api/v1/ingredients/{id}` | 200 | Correct ingredient |
 | Get not found | `GET /api/v1/ingredients/{unknownId}` | 404 | — |
-| Get categories | `GET /api/v1/ingredients/categories` | 200 | Array of all 10 category strings |
+| Get categories | `GET /api/v1/ingredients/categories` | 200 | `IngredientCategory.All`, in aisle order |
 | Create valid | `POST /api/v1/ingredients` with valid body | 201 | Created ingredient in response |
 | Create duplicate name | POST same name twice | 409 | Error message in body |
 | Create invalid body | POST with empty Name | 422 | Validation error details |
@@ -586,8 +586,16 @@ cd backend
 dotnet test RecipeApp.Tests/RecipeApp.Tests.csproj
 
 # With coverage
-dotnet test --collect:"XPlat Code Coverage"
+dotnet test RecipeApp.Tests/RecipeApp.Tests.csproj --coverage --coverage-output-format cobertura
 ```
+
+The suite runs on **Microsoft.Testing.Platform** (MTP), not VSTest — xunit.v3 4.0 dropped the
+VSTest bridge, and the .NET 10 SDK refuses to run MTP test projects through the VSTest target.
+The repository-root `global.json` opts `dotnet test` into the MTP runner; without it every
+backend test run fails with *"Testing with VSTest target is no longer supported"*. Coverage
+comes from `Microsoft.Testing.Extensions.CodeCoverage` and is written to
+`RecipeApp.Tests/TestResults/`, so the old VSTest `--collect:"XPlat Code Coverage"` collector
+no longer applies.
 
 Requires Docker (for Testcontainers). The PostgreSQL container is pulled automatically on first run.
 

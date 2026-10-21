@@ -1,5 +1,5 @@
-using FluentValidation;
 using RecipeApp.API.DTOs.Scrape;
+using RecipeApp.API.Filters;
 using RecipeApp.API.Services;
 
 namespace RecipeApp.API.Endpoints;
@@ -14,14 +14,9 @@ public static class RecipeScrapeEndpoints
         group.MapPost("/scrape", async (
             ScrapeRecipeRequest request,
             IRecipeScrapeService svc,
-            IValidator<ScrapeRecipeRequest> validator,
             ILogger<Program> logger,
             CancellationToken ct) =>
         {
-            var validation = await validator.ValidateAsync(request, ct);
-            if (!validation.IsValid)
-                return Results.ValidationProblem(validation.ToDictionary());
-
             try
             {
                 var preview = await svc.ScrapeAsync(request.Url, ct);
@@ -45,22 +40,19 @@ public static class RecipeScrapeEndpoints
                 };
             }
         })
+        .WithValidation<ScrapeRecipeRequest>()
         .WithSummary("Scrape a recipe from a URL and return a preview for review");
 
         // POST /recipes/scrape/confirm
         group.MapPost("/scrape/confirm", async (
             ScrapeConfirmRequest request,
             IRecipeScrapeService svc,
-            IValidator<ScrapeConfirmRequest> validator,
             CancellationToken ct) =>
         {
-            var validation = await validator.ValidateAsync(request, ct);
-            if (!validation.IsValid)
-                return Results.ValidationProblem(validation.ToDictionary());
-
             var created = await svc.ConfirmAsync(request, ct);
             return Results.Created($"/api/v1/recipes/{created.Id}", created);
         })
+        .WithValidation<ScrapeConfirmRequest>()
         .WithSummary("Confirm a scraped recipe preview and save it to the database");
 
         return routes;

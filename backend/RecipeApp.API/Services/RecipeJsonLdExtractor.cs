@@ -17,6 +17,29 @@ public static class RecipeJsonLdExtractor
 {
     public static string? TryBuildRecipeText(IDocument document)
     {
+        foreach (var recipe in EnumerateRecipeNodes(document))
+        {
+            var text = BuildText(recipe);
+            if (text is not null) return text;
+        }
+
+        return null;
+    }
+
+    /// <summary>
+    /// The first schema.org Recipe object in the page's JSON-LD, or null if there is none.
+    /// Exposed for callers that need a specific field off the node (the seed harvester reads
+    /// <c>image.url</c>) rather than the rendered prompt text.
+    /// </summary>
+    public static JsonNode? TryFindRecipeNode(IDocument document) =>
+        EnumerateRecipeNodes(document).FirstOrDefault();
+
+    /// <summary>
+    /// Every Recipe node across the page's JSON-LD blocks, in document order. Lazy, so callers
+    /// that reject the first candidate only pay to parse the next one.
+    /// </summary>
+    private static IEnumerable<JsonNode> EnumerateRecipeNodes(IDocument document)
+    {
         foreach (var script in document.QuerySelectorAll("script[type='application/ld+json']"))
         {
             var content = script.TextContent;
@@ -45,14 +68,9 @@ public static class RecipeJsonLdExtractor
                 }
             }
 
-            var recipe = root is null ? null : FindRecipeNode(root);
-            if (recipe is null) continue;
-
-            var text = BuildText(recipe);
-            if (text is not null) return text;
+            if (root is not null && FindRecipeNode(root) is { } recipe)
+                yield return recipe;
         }
-
-        return null;
     }
 
     // ── Locating the Recipe node ────────────────────────────────────────────────

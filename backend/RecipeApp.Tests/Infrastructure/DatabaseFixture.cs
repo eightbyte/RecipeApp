@@ -41,7 +41,8 @@ public class DatabaseFixture : IAsyncLifetime
                 ""MealPlanRecipes"",
                 ""MealPlans"",
                 ""Recipes"",
-                ""Ingredients""
+                ""Ingredients"",
+                ""SeedLedger""
             RESTART IDENTITY CASCADE;
         ");
     }

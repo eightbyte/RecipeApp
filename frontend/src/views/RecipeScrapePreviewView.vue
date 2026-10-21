@@ -33,7 +33,7 @@
           class="mb-2"
         />
 
-        <div class="d-flex gap-3">
+        <div class="d-flex ga-4">
           <v-text-field
             v-model.number="form.servings"
             label="Servings"
@@ -64,13 +64,13 @@
           :key="idx"
           class="mb-4"
         >
-          <div class="d-flex align-center gap-2 mb-1">
+          <div class="d-flex align-center ga-2 mb-1">
             <span class="text-caption text-medium-emphasis" style="min-width: 20px">{{ idx + 1 }}.</span>
             <span class="text-body-2 font-weight-medium">{{ ing.displayName }}</span>
             <v-chip v-if="ing.isNew" size="x-small" color="info" variant="flat">New</v-chip>
           </div>
 
-          <div class="d-flex gap-2 pl-6">
+          <div class="d-flex ga-2 pl-6">
             <v-text-field
               v-model.number="ing.amount"
               label="Amount"
@@ -81,12 +81,13 @@
               hide-details
               style="max-width: 110px"
             />
-            <v-text-field
+            <v-select
               v-model="ing.unit"
+              :items="units"
               label="Unit"
               density="compact"
               hide-details
-              style="max-width: 90px"
+              style="max-width: 100px"
             />
             <v-text-field
               v-model="ing.notes"
@@ -120,7 +121,7 @@
           :key="sIdx"
           class="mb-4"
         >
-          <div class="d-flex align-start gap-2">
+          <div class="d-flex align-start ga-2">
             <v-avatar color="primary" size="28" class="text-white text-caption font-weight-bold mt-3">
               {{ step.stepNumber }}
             </v-avatar>
@@ -137,7 +138,7 @@
               />
 
               <div class="text-caption text-medium-emphasis mb-1">Ingredients used in this step:</div>
-              <div class="d-flex flex-wrap gap-1">
+              <div class="d-flex flex-wrap ga-1">
                 <v-chip
                   v-for="(ing, iIdx) in form.ingredients"
                   :key="iIdx"
@@ -161,7 +162,7 @@
       </v-alert>
 
       <!-- ── Actions ─────────────────────────────────────────────── -->
-      <div class="d-flex gap-3">
+      <div class="d-flex ga-4">
         <v-btn variant="outlined" :to="{ name: 'recipes' }">Cancel</v-btn>
         <v-btn
           color="primary"
@@ -182,14 +183,15 @@
 import { reactive, ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useRecipeStore } from '@/stores/recipes'
+import { MEASUREMENT_UNITS, toPayloadMeasurement } from '@/constants/units'
+import { INGREDIENT_CATEGORY_VALUES } from '@/constants/categories'
 
 const router = useRouter()
 const store  = useRecipeStore()
 
-const categories = [
-  'PRODUCE', 'MEAT_SEAFOOD', 'DAIRY', 'CANNED',
-  'FROZEN', 'DRY_GOODS', 'BAKERY', 'CONDIMENTS', 'BEVERAGES', 'OTHER',
-]
+const units = MEASUREMENT_UNITS
+
+const categories = INGREDIENT_CATEGORY_VALUES
 
 const submitError = ref(null)
 
@@ -216,7 +218,11 @@ onMounted(() => {
     name:          ing.name,
     displayName:   ing.displayName,
     amount:        ing.amount,
-    unit:          ing.unit,
+    // A scraped unit outside the storable set (e.g. "clove") shows unselected and has to be
+    // picked before the recipe can be saved.
+    unit:          units.includes(ing.unit) ? ing.unit : null,
+    sourceAmount:  ing.sourceAmount ?? null,
+    sourceUnit:    ing.sourceUnit ?? null,
     notes:         ing.notes ?? '',
     isNew:         ing.isNew,
     category:      ing.suggestedCategory,
@@ -248,6 +254,11 @@ async function saveRecipe() {
     submitError.value = 'At least one ingredient is required.'
     return
   }
+  const missingUnit = form.ingredients.find(ing => !ing.unit)
+  if (missingUnit) {
+    submitError.value = `Pick a unit for "${missingUnit.displayName}" — the source used one this app cannot store.`
+    return
+  }
 
   const payload = {
     name:        form.name.trim(),
@@ -259,8 +270,10 @@ async function saveRecipe() {
       newIngredientName:      ing.isNew ? ing.name : null,
       newIngredientDisplayName: ing.isNew ? ing.displayName : null,
       category:               ing.isNew ? ing.category : null,
-      amount:                 Number(ing.amount),
-      unit:                   ing.unit,
+      // An empty amount round-trips as null, never as 0 (Phase 9.1 §3.4).
+      ...toPayloadMeasurement(ing.amount, ing.unit),
+      sourceAmount:           ing.sourceAmount ?? null,
+      sourceUnit:             ing.sourceUnit ?? null,
       notes:                  ing.notes?.trim() || null,
       displayOrder:           i,
     })),

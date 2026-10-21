@@ -15,6 +15,7 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
     public DbSet<MealPlanRecipe> MealPlanRecipes => Set<MealPlanRecipe>();
     public DbSet<ShoppingList> ShoppingLists => Set<ShoppingList>();
     public DbSet<ShoppingListItem> ShoppingListItems => Set<ShoppingListItem>();
+    public DbSet<SeedLedgerEntry> SeedLedger => Set<SeedLedgerEntry>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -25,7 +26,14 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
         {
             e.HasIndex(i => i.Name).IsUnique();
             e.Property(i => i.Category).HasDefaultValue("OTHER");
+            e.Property(i => i.GramsPerMillilitre).HasPrecision(8, 4);
             e.Property(i => i.CreatedAt).HasDefaultValueSql("NOW()");
+
+            // text[], defaulting to empty rather than null so every consumer can enumerate it
+            // without a guard. Deliberately unindexed: every caller already loads the whole
+            // catalogue to build an in-memory dictionary (Phase 9.3 §4.6), so the lookup is never
+            // a query, and at ~1,100 rows a GIN index would cost writes to serve nothing.
+            e.Property(i => i.Aliases).HasDefaultValueSql("'{}'::text[]");
         });
 
         // ── Recipe ────────────────────────────────────────────────────────────
@@ -40,6 +48,8 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
         modelBuilder.Entity<RecipeIngredient>(e =>
         {
             e.Property(ri => ri.Amount).HasPrecision(10, 3);
+            e.Property(ri => ri.SourceAmount).HasPrecision(10, 3);
+            e.Property(ri => ri.SourceUnit).HasMaxLength(32);
 
             e.HasOne(ri => ri.Recipe)
                 .WithMany(r => r.Ingredients)
@@ -134,6 +144,18 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
                 .WithMany()
                 .HasForeignKey(i => i.IngredientId)
                 .OnDelete(DeleteBehavior.Restrict);
+        });
+
+        // ── SeedLedgerEntry (Phase 10 §4.1) ───────────────────────────────────
+        modelBuilder.Entity<SeedLedgerEntry>(e =>
+        {
+            e.ToTable("SeedLedger");
+
+            // The natural key is the guard: a second insert for the same step fails, so two
+            // hosts racing on a fresh database cannot both record (and both run) a step.
+            e.HasKey(l => l.Key);
+            e.Property(l => l.Key).ValueGeneratedNever();
+            e.Property(l => l.AppliedAt).HasDefaultValueSql("NOW()");
         });
     }
 }

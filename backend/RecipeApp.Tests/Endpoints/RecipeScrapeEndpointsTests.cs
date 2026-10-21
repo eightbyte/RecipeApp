@@ -44,6 +44,8 @@ public class RecipeScrapeEndpointsTests(DatabaseFixture db) : IAsyncLifetime
                 DisplayName:       "Beef Mince",
                 Amount:            500m,
                 Unit:              "g",
+                SourceAmount:      500m,
+                SourceUnit:        "g",
                 Notes:             null,
                 IsNew:             true,
                 SuggestedCategory: IngredientCategory.MeatSeafood,

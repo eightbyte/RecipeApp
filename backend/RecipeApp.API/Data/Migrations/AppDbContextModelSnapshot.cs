@@ -17,7 +17,7 @@ namespace RecipeApp.API.Data.Migrations
         {
 #pragma warning disable 612, 618
             modelBuilder
-                .HasAnnotation("ProductVersion", "10.0.8")
+                .HasAnnotation("ProductVersion", "10.0.11")
                 .HasAnnotation("Relational:MaxIdentifierLength", 63);
 
             NpgsqlModelBuilderExtensions.UseIdentityByDefaultColumns(modelBuilder);
@@ -27,6 +27,12 @@ namespace RecipeApp.API.Data.Migrations
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uuid");
+
+                    b.PrimitiveCollection<string[]>("Aliases")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("text[]")
+                        .HasDefaultValueSql("'{}'::text[]");
 
                     b.Property<string>("Category")
                         .IsRequired()
@@ -45,6 +51,10 @@ namespace RecipeApp.API.Data.Migrations
                     b.Property<string>("DisplayName")
                         .IsRequired()
                         .HasColumnType("text");
+
+                    b.Property<decimal?>("GramsPerMillilitre")
+                        .HasPrecision(8, 4)
+                        .HasColumnType("numeric(8,4)");
 
                     b.Property<string>("Name")
                         .IsRequired()
@@ -174,7 +184,7 @@ namespace RecipeApp.API.Data.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uuid");
 
-                    b.Property<decimal>("Amount")
+                    b.Property<decimal?>("Amount")
                         .HasPrecision(10, 3)
                         .HasColumnType("numeric(10,3)");
 
@@ -190,8 +200,15 @@ namespace RecipeApp.API.Data.Migrations
                     b.Property<Guid>("RecipeId")
                         .HasColumnType("uuid");
 
+                    b.Property<decimal?>("SourceAmount")
+                        .HasPrecision(10, 3)
+                        .HasColumnType("numeric(10,3)");
+
+                    b.Property<string>("SourceUnit")
+                        .HasMaxLength(32)
+                        .HasColumnType("character varying(32)");
+
                     b.Property<string>("Unit")
-                        .IsRequired()
                         .HasColumnType("text");
 
                     b.HasKey("Id");
@@ -239,6 +256,28 @@ namespace RecipeApp.API.Data.Migrations
                     b.HasIndex("RecipeIngredientId");
 
                     b.ToTable("RecipeStepIngredients");
+                });
+
+            modelBuilder.Entity("RecipeApp.API.Models.SeedLedgerEntry", b =>
+                {
+                    b.Property<string>("Key")
+                        .HasColumnType("text");
+
+                    b.Property<DateTime>("AppliedAt")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("timestamp with time zone")
+                        .HasDefaultValueSql("NOW()");
+
+                    b.Property<int>("ArtefactVersion")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("Outcome")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.HasKey("Key");
+
+                    b.ToTable("SeedLedger", (string)null);
                 });
 
             modelBuilder.Entity("RecipeApp.API.Models.ShoppingList", b =>

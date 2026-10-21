@@ -17,7 +17,7 @@
     <div v-else-if="mealPlanStore.currentPlan">
       <!-- Header -->
       <div class="mb-4">
-        <div class="d-flex align-center gap-2 mb-1">
+        <div class="d-flex align-center ga-2 mb-1">
           <h1 class="text-h6 font-weight-bold">{{ mealPlanStore.currentPlan.name }}</h1>
           <v-chip size="x-small" :color="mealPlanStore.currentPlan.isActive ? 'success' : 'default'">
             {{ mealPlanStore.currentPlan.isActive ? 'Active' : 'Closed' }}
@@ -38,7 +38,7 @@
         class="mb-3"
         variant="outlined"
       >
-        <div class="d-flex align-center pa-3 gap-3">
+        <div class="d-flex align-center pa-3 ga-4">
           <div class="text-center" style="min-width: 44px">
             <template v-if="meal.scheduledDate">
               <div class="text-caption font-weight-bold">{{ formatDay(meal.scheduledDate) }}</div>

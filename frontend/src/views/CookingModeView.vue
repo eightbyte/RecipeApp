@@ -49,7 +49,7 @@
     <template v-else>
       <!-- Sticky header -->
       <header ref="headerEl" tabindex="-1" class="cooking-header safe-area-top">
-        <div class="d-flex align-center gap-2 px-2 py-2">
+        <div class="d-flex align-center ga-2 px-2 py-2">
           <v-btn
             icon="mdi-close"
             variant="text"
@@ -84,7 +84,7 @@
           }"
           @click="toggleStep(step)"
         >
-          <div class="d-flex align-start gap-3">
+          <div class="d-flex align-start ga-4">
             <v-checkbox-btn
               :model-value="isDone(step)"
               color="primary"
@@ -101,7 +101,7 @@
               </div>
 
               <!-- Per-step ingredient chips; the current step's are highlighted -->
-              <div v-if="stepIngredients(step).length" class="d-flex flex-wrap gap-2 mt-3">
+              <div v-if="stepIngredients(step).length" class="d-flex flex-wrap ga-2 mt-3">
                 <v-chip
                   v-for="ing in stepIngredients(step)"
                   :key="ing.id"
@@ -109,7 +109,12 @@
                   :color="isCurrent(index) ? 'primary' : undefined"
                   :variant="isCurrent(index) ? 'flat' : 'tonal'"
                 >
-                  <span class="font-weight-medium mr-1">{{ formatAmount(ing.amount, ing.unit) }}</span>
+                  <!-- Absent for an ingredient whose source stated no quantity (Phase 9.1 §3.4) -->
+                  <span
+                    v-if="formatAmount(ing.amount, ing.unit)"
+                    class="font-weight-medium mr-1"
+                  >{{ formatAmount(ing.amount, ing.unit) }}</span>
+                  <span v-if="formatSource(ing)" class="text-caption mr-1">{{ formatSource(ing) }}</span>
                   {{ ing.ingredientDisplayName }}
                 </v-chip>
               </div>
@@ -155,6 +160,7 @@
 import { ref, computed, onMounted, nextTick } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useRecipeStore } from '@/stores/recipes'
+import { formatMeasurement, formatSourceMeasurement } from '@/constants/units'
 import { useUiStore } from '@/stores/ui'
 import { useWakeLock } from '@/composables/useWakeLock'
 import EmptyState from '@/components/EmptyState.vue'
@@ -215,10 +221,19 @@ function stepIngredients(step) {
     .filter(Boolean)
 }
 
+/**
+ * Short-circuits on a null amount rather than delegating: `null * 2` is `0` in JavaScript,
+ * which would turn an ingredient with no stated quantity into a rendered `0` (Phase 9.1 §3.4).
+ */
 function formatAmount(baseAmount, unit) {
-  const scaled = baseAmount * portionMultiplier.value
-  const n = Math.round(scaled * 100) / 100
-  return `${n} ${unit}`
+  if (baseAmount == null) return null
+  return formatMeasurement(baseAmount * portionMultiplier.value, unit)
+}
+
+/** The measurement as the source recipe stated it; null when there is nothing to add. */
+function formatSource(ing) {
+  return formatSourceMeasurement(
+    ing.sourceAmount, ing.sourceUnit, ing.unit, portionMultiplier.value)
 }
 
 function toggleStep(step) {

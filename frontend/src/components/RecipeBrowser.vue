@@ -1,7 +1,7 @@
 <template>
   <div>
     <!-- Search controls -->
-    <div class="d-flex gap-2 mb-3">
+    <div class="d-flex ga-2 mb-3">
       <v-text-field
         v-model="searchQuery"
         label="Search recipes"
@@ -15,7 +15,7 @@
       />
     </div>
 
-    <div class="d-flex align-center gap-3 mb-3">
+    <div class="d-flex align-center ga-4 mb-3">
       <v-switch
         v-model="hideRecentlyCooked"
         label="Hide recently cooked"

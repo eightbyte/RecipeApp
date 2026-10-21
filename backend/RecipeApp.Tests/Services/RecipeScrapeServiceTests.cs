@@ -60,81 +60,57 @@ public class RecipeScrapeServiceTests
         result.Should().Contain("Hello World");
     }
 
-    // ── Unit conversion ───────────────────────────────────────────────────────
-
-    [Theory]
-    [InlineData("oz",           1.0,  28.350, "g")]
-    [InlineData("ounce",        2.0,  56.699, "g")]
-    [InlineData("ounces",       3.0,  85.049, "g")]
-    [InlineData("lb",           1.0, 453.592, "g")]
-    [InlineData("lbs",          2.0, 907.184, "g")]
-    [InlineData("pound",        1.0, 453.592, "g")]
-    [InlineData("pounds",       1.0, 453.592, "g")]
-    [InlineData("fl oz",        1.0,  29.574, "ml")]
-    [InlineData("fluid oz",     1.0,  29.574, "ml")]
-    [InlineData("fluid ounce",  1.0,  29.574, "ml")]
-    [InlineData("cup",          1.0, 240.0,   "ml")]
-    [InlineData("cups",         2.0, 480.0,   "ml")]
-    [InlineData("pt",           1.0, 473.176, "ml")]
-    [InlineData("pint",         1.0, 473.176, "ml")]
-    [InlineData("pints",        1.0, 473.176, "ml")]
-    [InlineData("qt",           1.0, 946.353, "ml")]
-    [InlineData("quart",        1.0, 946.353, "ml")]
-    [InlineData("quarts",       1.0, 946.353, "ml")]
-    [InlineData("gal",          1.0,   3.785, "L")]
-    [InlineData("gallon",       1.0,   3.785, "L")]
-    [InlineData("gallons",      2.0,   7.571, "L")]
-    public void ConvertUnit_ConvertsImperialToMetric(string unit, double input, double expectedApprox, string expectedUnit)
-    {
-        var (amount, outUnit) = RecipeScrapeService.ConvertUnit(input, unit);
-        outUnit.Should().Be(expectedUnit);
-        ((double)amount).Should().BeApproximately(expectedApprox, 0.01);
-    }
-
-    [Theory]
-    [InlineData("g")]
-    [InlineData("kg")]
-    [InlineData("ml")]
-    [InlineData("L")]
-    [InlineData("tsp")]
-    [InlineData("tbsp")]
-    [InlineData("pcs")]
-    [InlineData("piece")]
-    [InlineData("pieces")]
-    [InlineData("clove")]
-    [InlineData("pinch")]
-    public void ConvertUnit_MetricUnitsPassThrough(string unit)
-    {
-        var (_, outUnit) = RecipeScrapeService.ConvertUnit(100.0, unit);
-        outUnit.Should().Be(unit);
-    }
-
-    [Fact]
-    public void ConvertUnit_RoundsToThreeDecimalPlaces()
-    {
-        var (amount, _) = RecipeScrapeService.ConvertUnit(1.0, "oz");
-        var decimals = amount.ToString().Contains('.') ? amount.ToString().Split('.')[1].Length : 0;
-        decimals.Should().BeLessThanOrEqualTo(3);
-    }
-
     // ── Keyword heuristic ─────────────────────────────────────────────────────
 
     [Theory]
-    [InlineData("chicken breast",       IngredientCategory.MeatSeafood)]
-    [InlineData("salmon fillet",        IngredientCategory.MeatSeafood)]
-    [InlineData("cheddar cheese",       IngredientCategory.Dairy)]
-    [InlineData("full cream milk",      IngredientCategory.Dairy)]
-    [InlineData("canned chickpea",      IngredientCategory.Canned)]
-    [InlineData("tinned tomatoes",      IngredientCategory.Canned)]
-    [InlineData("frozen peas",          IngredientCategory.Frozen)]
-    [InlineData("sourdough bread",      IngredientCategory.Bakery)]
-    [InlineData("vegetable stock",      IngredientCategory.Beverages)]
-    [InlineData("olive oil",            IngredientCategory.Condiments)]
-    [InlineData("plain flour",          IngredientCategory.DryGoods)]
-    [InlineData("brown sugar",          IngredientCategory.DryGoods)]
-    [InlineData("garlic clove",         IngredientCategory.Produce)]
-    [InlineData("red onion",            IngredientCategory.Produce)]
-    [InlineData("xylitol crystals",     IngredientCategory.Other)]
+    [InlineData("chicken breast",         IngredientCategory.MeatSeafood)]
+    [InlineData("salmon fillet",          IngredientCategory.MeatSeafood)]
+    [InlineData("cheddar cheese",         IngredientCategory.Dairy)]
+    [InlineData("full cream milk",        IngredientCategory.Dairy)]
+    [InlineData("canned chickpea",        IngredientCategory.Canned)]
+    [InlineData("tinned tomatoes",        IngredientCategory.Canned)]
+    [InlineData("frozen peas",            IngredientCategory.Frozen)]
+    [InlineData("sourdough bread",        IngredientCategory.Bakery)]
+    [InlineData("vegetable stock",        IngredientCategory.SoupsBroth)]
+    [InlineData("vegetable broth",        IngredientCategory.SoupsBroth)]
+    [InlineData("apple juice",            IngredientCategory.Beverages)]
+    [InlineData("margarine",              IngredientCategory.Dairy)]
+    [InlineData("unflavored gelatin",     IngredientCategory.BakingSpices)]
+    [InlineData("pizza crust",            IngredientCategory.Bakery)]
+    [InlineData("olive oil",              IngredientCategory.Condiments)]
+    [InlineData("plain flour",            IngredientCategory.BakingSpices)]
+    [InlineData("brown sugar",            IngredientCategory.BakingSpices)]
+    [InlineData("garlic clove",           IngredientCategory.Produce)]
+    [InlineData("red onion",              IngredientCategory.Produce)]
+    [InlineData("xylitol crystals",       IngredientCategory.Other)]
+    [InlineData("walnuts",                IngredientCategory.DryGoods)]
+    [InlineData("brown rice",             IngredientCategory.GrainsRice)]
+    [InlineData("marinara sauce",         IngredientCategory.PastaSauces)]
+    [InlineData("tomato sauce",           IngredientCategory.Canned)]
+    [InlineData("pizza sauce",            IngredientCategory.PastaSauces)]
+    [InlineData("taco sauce",             IngredientCategory.Condiments)]
+    [InlineData("salt and pepper",        IngredientCategory.BakingSpices)]
+    [InlineData("apricot jam",            IngredientCategory.JamNutButter)]
+    [InlineData("maple syrup",            IngredientCategory.JamNutButter)]
+    [InlineData("ground coffee",          IngredientCategory.CoffeeTea)]
+    [InlineData("green tea",              IngredientCategory.CoffeeTea)]
+    [InlineData("bamboo skewers",         IngredientCategory.Kitchen)]
+    [InlineData("cooking spray",          IngredientCategory.Condiments)]
+    // Substring collisions the table's order exists to settle.
+    [InlineData("peanut butter",          IngredientCategory.JamNutButter)]
+    [InlineData("egg noodles",            IngredientCategory.PastaSauces)]
+    [InlineData("aluminum foil",          IngredientCategory.Kitchen)]
+    [InlineData("rice vinegar",           IngredientCategory.Condiments)]
+    [InlineData("rice flour",             IngredientCategory.BakingSpices)]
+    [InlineData("ground nutmeg",          IngredientCategory.BakingSpices)]
+    [InlineData("garlic powder",          IngredientCategory.BakingSpices)]
+    [InlineData("black pepper",           IngredientCategory.BakingSpices)]
+    [InlineData("rolled oats",            IngredientCategory.GrainsRice)]
+    [InlineData("chicken broth",          IngredientCategory.SoupsBroth)]
+    [InlineData("beef bouillon cube",     IngredientCategory.SoupsBroth)]
+    [InlineData("cheddar cheese soup",    IngredientCategory.SoupsBroth)]
+    [InlineData("cream of mushroom soup", IngredientCategory.SoupsBroth)]
+    [InlineData("tomato soup",            IngredientCategory.SoupsBroth)]
     public void CategoriseIngredient_ReturnsExpectedCategory(string name, string expected)
     {
         var result = RecipeScrapeService.CategoriseIngredient(name);

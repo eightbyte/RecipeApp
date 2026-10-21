@@ -31,7 +31,7 @@
         </p>
       </v-card-text>
 
-      <v-card-actions class="px-4 pb-4 gap-2">
+      <v-card-actions class="px-4 pb-4 ga-2">
         <v-btn variant="outlined" @click="handleDismiss">Cancel</v-btn>
         <v-btn
           color="primary"

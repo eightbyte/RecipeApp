@@ -54,11 +54,84 @@ public class RecipeValidatorTests
     [InlineData("pcs")]
     [InlineData("tsp")]
     [InlineData("tbsp")]
+    [InlineData("cup")]
     public void Ingredient_EachValidUnit_HasNoError(string unit)
     {
         var result = _ingredientValidator.TestValidate(
             new RecipeIngredientRequest(Guid.NewGuid(), 100m, unit, null, 0));
         result.ShouldNotHaveValidationErrorFor(x => x.Unit);
+    }
+
+    [Theory]
+    [InlineData("Cup")]
+    [InlineData("CUP")]
+    [InlineData("Tbsp")]
+    [InlineData("cups")]
+    [InlineData("teaspoon")]
+    public void Ingredient_NonCanonicalUnitSpelling_HasErrorOnUnit(string unit)
+    {
+        // MeasurementUnit.IsValid is deliberately strict: stored units are always the canonical
+        // spelling, which is what lets shopping-list consolidation group by plain equality.
+        var result = _ingredientValidator.TestValidate(
+            new RecipeIngredientRequest(Guid.NewGuid(), 100m, unit, null, 0));
+        result.ShouldHaveValidationErrorFor(x => x.Unit);
+    }
+
+    // ── Unquantified ingredients (Phase 9.1 §3.1) ─────────────────────────────
+
+    [Fact]
+    public void Ingredient_NullAmountAndNullUnit_HasNoErrors()
+    {
+        // "salt" states no quantity. Null asserts that; it is not a placeholder for an unknown.
+        var result = _ingredientValidator.TestValidate(
+            new RecipeIngredientRequest(Guid.NewGuid(), null, null, null, 0));
+        result.ShouldNotHaveAnyValidationErrors();
+    }
+
+    [Fact]
+    public void Ingredient_NullAmountWithUnit_HasErrorOnUnit()
+    {
+        // A unit measuring nothing is as fabricated as a mass derived from an unknown density.
+        var result = _ingredientValidator.TestValidate(
+            new RecipeIngredientRequest(Guid.NewGuid(), null, "g", null, 0));
+        result.ShouldHaveValidationErrorFor(x => x.Unit);
+    }
+
+    [Fact]
+    public void Ingredient_AmountWithNullUnit_HasErrorOnUnit()
+    {
+        var result = _ingredientValidator.TestValidate(
+            new RecipeIngredientRequest(Guid.NewGuid(), 100m, null, null, 0));
+        result.ShouldHaveValidationErrorFor(x => x.Unit);
+    }
+
+    [Fact]
+    public void Ingredient_NullAmount_StillCarriesSourceProvenance()
+    {
+        // Provenance is independent of the canonical measurement: an imported line can record
+        // what it said while stating no quantity of its own.
+        var result = _ingredientValidator.TestValidate(
+            new RecipeIngredientRequest(Guid.NewGuid(), null, null, null, 0,
+                SourceAmount: null, SourceUnit: null));
+        result.ShouldNotHaveAnyValidationErrors();
+    }
+
+    [Fact]
+    public void Ingredient_SourceMeasurement_IsOptionalAndRoundTrips()
+    {
+        var result = _ingredientValidator.TestValidate(
+            new RecipeIngredientRequest(Guid.NewGuid(), 240m, "g", null, 0,
+                SourceAmount: 2m, SourceUnit: "cups"));
+        result.ShouldNotHaveAnyValidationErrors();
+    }
+
+    [Fact]
+    public void Ingredient_NonPositiveSourceAmount_HasErrorOnSourceAmount()
+    {
+        var result = _ingredientValidator.TestValidate(
+            new RecipeIngredientRequest(Guid.NewGuid(), 240m, "g", null, 0,
+                SourceAmount: 0m, SourceUnit: "cups"));
+        result.ShouldHaveValidationErrorFor(x => x.SourceAmount);
     }
 
     [Fact]

@@ -1,4 +1,5 @@
 using FluentAssertions;
+using RecipeApp.API.DTOs.Recipes;
 using RecipeApp.API.Services;
 using RecipeApp.Tests.Helpers;
 using RecipeApp.Tests.Infrastructure;
@@ -218,6 +219,67 @@ public class RecipeServiceTests(DatabaseFixture db) : IAsyncLifetime
         result.Name.Should().Be("New Recipe");
         result.Ingredients.Should().HaveCount(3);
         result.Steps.Should().HaveCount(2);
+    }
+
+    [Fact]
+    public async Task CreateAsync_UnquantifiedIngredient_RoundTripsAsNull()
+    {
+        // "salt" states no quantity, and null is the true statement of that (Phase 9.1 §3.1).
+        // Zero would render as "0 g Salt" and sum into a shopping list.
+        await using var ctx = db.CreateDbContext();
+        var ing = TestDataBuilder.Ingredient();
+        ctx.Ingredients.Add(ing);
+        await ctx.SaveChangesAsync();
+
+        var svc = new RecipeService(ctx);
+        var result = await svc.CreateAsync(new CreateRecipeRequest(
+            "Seasoned Recipe", null, null, 4,
+            [new RecipeIngredientRequest(ing.Id, null, null, null, 0)],
+            [new RecipeStepRequest(1, "Season to taste", [])]));
+
+        var stored = result.Ingredients.Single();
+        stored.Amount.Should().BeNull();
+        stored.Unit.Should().BeNull();
+    }
+
+    [Fact]
+    public async Task CreateAsync_NullAmountWithAUnit_DropsTheUnitRatherThanStoringAHalfSetPair()
+    {
+        // ConfirmAsync and CreateAsync perform no validation of their own — validation lives in
+        // the endpoint filter, which a service-level caller such as the Phase 9 seeder bypasses
+        // entirely. The invariant "Unit is null whenever Amount is" therefore holds at the entity
+        // boundary rather than only at the edge (Phase 9.1 §1.2).
+        await using var ctx = db.CreateDbContext();
+        var ing = TestDataBuilder.Ingredient();
+        ctx.Ingredients.Add(ing);
+        await ctx.SaveChangesAsync();
+
+        var svc = new RecipeService(ctx);
+        var result = await svc.CreateAsync(new CreateRecipeRequest(
+            "Seasoned Recipe", null, null, 4,
+            [new RecipeIngredientRequest(ing.Id, null, "g", null, 0)],
+            [new RecipeStepRequest(1, "Season to taste", [])]));
+
+        result.Ingredients.Single().Unit.Should().BeNull();
+    }
+
+    [Fact]
+    public async Task CreateAsync_AmountWithNoUnit_KeepsTheAmount()
+    {
+        // The converse is deliberately not coerced: an amount the caller stated is real data, and
+        // the validators reject it loudly rather than having it quietly discarded.
+        await using var ctx = db.CreateDbContext();
+        var ing = TestDataBuilder.Ingredient();
+        ctx.Ingredients.Add(ing);
+        await ctx.SaveChangesAsync();
+
+        var svc = new RecipeService(ctx);
+        var result = await svc.CreateAsync(new CreateRecipeRequest(
+            "Unitless Recipe", null, null, 4,
+            [new RecipeIngredientRequest(ing.Id, 100m, null, null, 0)],
+            [new RecipeStepRequest(1, "Cook", [])]));
+
+        result.Ingredients.Single().Amount.Should().Be(100m);
     }
 
     [Fact]

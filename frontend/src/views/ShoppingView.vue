@@ -1,7 +1,7 @@
 <template>
   <v-container class="pa-4" max-width="600">
 
-    <h1 class="visually-hidden">Shopping list</h1>
+    <h1 class="d-sr-only">Shopping list</h1>
 
     <!-- ── Loading skeleton ───────────────────────────────────────────────── -->
     <template v-if="store.loading && !store.list">
@@ -26,7 +26,7 @@
         class="mb-4"
         closable
       >
-        <div class="d-flex align-center justify-space-between flex-wrap gap-2">
+        <div class="d-flex align-center justify-space-between flex-wrap ga-2">
           <span>Your meal plan has changed — tap to update your shopping list.</span>
           <v-btn
             size="small"
@@ -59,7 +59,7 @@
       <div v-if="visibleGroups.length">
         <div v-for="group in visibleGroups" :key="group.category" class="mb-4">
           <div class="text-overline text-medium-emphasis mb-2 px-1">
-            {{ categoryLabel(group.category) }}
+            {{ formatCategory(group.category) }}
           </div>
 
           <v-card>
@@ -88,7 +88,7 @@
                   </v-list-item-subtitle>
 
                   <template #append>
-                    <div class="d-flex align-center gap-1">
+                    <div class="d-flex align-center ga-1">
                       <!-- Review flag -->
                       <v-tooltip
                         v-if="item.needsReview"
@@ -180,6 +180,7 @@
 import { ref, computed, onMounted } from 'vue'
 import { useShoppingListStore } from '@/stores/shoppingList'
 import { useUiStore } from '@/stores/ui'
+import { formatCategory } from '@/constants/categories'
 import AddCustomItemDialog from '@/components/AddCustomItemDialog.vue'
 import EmptyState from '@/components/EmptyState.vue'
 import ErrorState from '@/components/ErrorState.vue'
@@ -241,22 +242,5 @@ async function onRegenerate() {
 
 function formatAmount(amount, unit) {
   return `${amount} ${unit}`
-}
-
-const categoryLabels = {
-  PRODUCE:      '🥦 Produce',
-  MEAT_SEAFOOD: '🥩 Meat & Seafood',
-  DAIRY:        '🥛 Dairy',
-  CANNED:       '🥫 Canned Goods',
-  FROZEN:       '🧊 Frozen',
-  DRY_GOODS:    '🌾 Dry Goods & Pasta',
-  BAKERY:       '🍞 Bakery',
-  CONDIMENTS:   '🫙 Condiments & Sauces',
-  BEVERAGES:    '🧃 Beverages',
-  OTHER:        '📦 Other',
-}
-
-function categoryLabel(cat) {
-  return categoryLabels[cat] ?? cat
 }
 </script>

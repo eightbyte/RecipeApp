@@ -12,7 +12,8 @@ const isTest = process.env.VITEST === 'true'
 export default defineConfig({
   plugins: [
     vue(),
-    vuetify({ autoImport: true }),
+    // Compile Vuetify's Sass with the app's settings (typeface) instead of its precompiled CSS.
+    vuetify({ autoImport: true, styles: { configFile: 'src/styles/settings.scss' } }),
     ...(isTest ? [] : [
       VitePWA({
         registerType: 'autoUpdate',

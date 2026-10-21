@@ -22,13 +22,26 @@ public class RecipeScrapeService(
     ILlmStructuredClient llm,
     AppDbContext db,
     IHeadlessRenderer headlessRenderer,
+    MeasurementConverter measurementConverter,
     ILogger<RecipeScrapeService> logger) : IRecipeScrapeService
 {
     private readonly RecipeScrapingOptions _options = options.Value;
 
     // ── Recipe extraction schema ──────────────────────────────────────────────
 
-    private const string RecipeSchemaJson = """
+    /// <summary>
+    /// The one extraction schema, shared by the Phase 3 scrape and the Phase 9 seed normaliser.
+    ///
+    /// <para><b>Every property a caller wants back must be listed in <c>required</c>.</b>
+    /// <see cref="Llm.JsonSchemaGrammar"/> omits non-required properties from the grammar
+    /// altogether, so an optional property is not "the model may skip it" — it is one the model
+    /// cannot emit at all. That is why <c>notes</c> and <c>description</c> are required and
+    /// nullable rather than optional: measured on the seed corpus, an unreachable <c>notes</c> did
+    /// not make the model drop preparation detail, it made it write the detail into <c>unit</c>
+    /// (<c>"pound, chunks"</c>, <c>"teaspoon, optional"</c>), which fails the storable-unit gate
+    /// and loses the whole recipe. Same shape as Phase 9.1's finding about <c>amount</c>.</para>
+    /// </summary>
+    internal const string RecipeSchemaJson = """
         {
           "type": "object",
           "properties": {
@@ -59,19 +72,19 @@ public class RecipeScrapeService(
                     "description": "Ingredient name as it should be displayed (e.g. 'Onion', 'Chicken Breast')."
                   },
                   "amount": {
-                    "type": "number",
-                    "description": "Numeric quantity. Use the amount as stated on the page."
+                    "type": ["number", "null"],
+                    "description": "Numeric quantity exactly as stated on the page. Null if the line states no quantity (e.g. 'salt', 'salt and pepper to taste', 'nonstick cooking spray'). Never invent a quantity."
                   },
                   "unit": {
-                    "type": "string",
-                    "description": "Unit of measurement as stated on the page. Preserve the original unit; do not convert."
+                    "type": ["string", "null"],
+                    "description": "Unit of measurement as stated on the page. Preserve the original unit; do not convert. Null when amount is null."
                   },
                   "notes": {
                     "type": ["string", "null"],
-                    "description": "Preparation notes (e.g. 'finely chopped', 'optional'). Null if none."
+                    "description": "Preparation and descriptive detail (e.g. 'finely chopped', 'optional', 'low-sodium', the container or size word). Null if none."
                   }
                 },
-                "required": ["name", "display_name", "amount", "unit"]
+                "required": ["name", "display_name", "amount", "unit", "notes"]
               }
             },
             "steps": {
@@ -98,7 +111,7 @@ public class RecipeScrapeService(
               }
             }
           },
-          "required": ["name", "servings", "ingredients", "steps"]
+          "required": ["name", "description", "servings", "ingredients", "steps"]
         }
         """;
 
@@ -130,52 +143,42 @@ public class RecipeScrapeService(
         "You are a recipe data extraction assistant. " +
         "Extract the complete recipe from the web page text provided by the user. " +
         "If any information is missing or ambiguous, make a reasonable best-guess rather than omitting it. " +
+        "Never invent a quantity: if an ingredient line states no amount, emit null for both amount and unit. " +
         "Respond with a single JSON object conforming to the schema and nothing else.";
 
     // ── Ingredient category heuristic ─────────────────────────────────────────
 
+    // First match wins, so order is where substring collisions are settled: SOUPS_BROTH leads
+    // because its names are built from other aisles' words and every later row would claim them
+    // first ("chicken broth" is MEAT_SEAFOOD, "cheddar cheese soup" and "cream of mushroom soup"
+    // are DAIRY, "tomato soup" is PRODUCE); JAM_NUT_BUTTER precedes DAIRY ("peanut butter"),
+    // PASTA_SAUCES precedes DAIRY ("egg noodles"), KITCHEN precedes CONDIMENTS ("foil" contains
+    // "oil"), CONDIMENTS precedes GRAINS_RICE ("rice vinegar"), BAKING_SPICES precedes
+    // GRAINS_RICE ("rice flour"), DRY_GOODS ("nutmeg") and PRODUCE ("garlic powder", "black
+    // pepper"), and GRAINS_RICE precedes BAKERY ("rolled oats").
     private static readonly (string Category, string[] Keywords)[] CategoryPriority =
     [
-        (IngredientCategory.MeatSeafood, ["chicken", "beef", "pork", "lamb", "turkey", "duck", "bacon", "ham", "sausage", "mince", "steak", "fillet", "breast", "thigh", "salmon", "tuna", "cod", "prawn", "shrimp", "crab", "lobster", "mussel", "anchovy", "chorizo", "salami", "pepperoni"]),
-        (IngredientCategory.Dairy,       ["milk", "cream", "butter", "cheese", "yogurt", "yoghurt", "egg", "parmesan", "mozzarella", "cheddar", "ricotta", "brie", "ghee", "crème fraîche", "sour cream"]),
-        (IngredientCategory.Canned,      ["canned", "tinned", "kidney bean", "chickpea", "black bean", "cannellini", "coconut milk", "chopped tomato", "diced tomato", "tomato paste"]),
-        (IngredientCategory.Frozen,      ["frozen"]),
-        (IngredientCategory.Bakery,      ["bread", "roll", "bun", "baguette", "pita", "tortilla", "wrap", "crumpet", "croissant"]),
-        (IngredientCategory.Beverages,   ["stock", "broth", "wine", "beer", "juice", "coffee", "tea"]),
-        (IngredientCategory.Condiments,  ["oil", "vinegar", "sauce", "soy", "fish sauce", "worcestershire", "mustard", "ketchup", "mayonnaise", "honey", "miso", "tahini", "paprika", "cumin", "turmeric", "cinnamon", "nutmeg", "curry", "chilli flake", "cayenne", "vanilla", "extract", "seasoning", "spice", "herb"]),
-        (IngredientCategory.DryGoods,    ["flour", "sugar", "salt", "rice", "pasta", "noodle", "oat", "breadcrumb", "lentil", "quinoa", "couscous", "baking powder", "baking soda", "yeast", "cornstarch", "cornflour", "cocoa", "chocolate", "almond", "walnut", "cashew", "peanut", "sesame", "seed", "nut"]),
-        (IngredientCategory.Produce,     ["onion", "garlic", "carrot", "celery", "tomato", "potato", "lettuce", "spinach", "kale", "broccoli", "pepper", "capsicum", "zucchini", "cucumber", "avocado", "lemon", "lime", "orange", "apple", "banana", "mushroom", "corn", "asparagus", "pea", "parsley", "basil", "coriander", "thyme", "rosemary", "mint", "dill", "chive", "scallion", "leek", "shallot", "ginger", "chilli", "eggplant", "beetroot", "pumpkin", "squash", "berry"]),
+        (IngredientCategory.SoupsBroth,   ["broth", "stock", "bouillon", "consomme", "consommé", "soup", "bisque", "chowder"]),
+        (IngredientCategory.MeatSeafood,  ["chicken", "beef", "pork", "lamb", "turkey", "duck", "bacon", "ham", "sausage", "mince", "steak", "fillet", "breast", "thigh", "salmon", "tuna", "cod", "prawn", "shrimp", "crab", "lobster", "mussel", "anchovy", "chorizo", "salami", "pepperoni"]),
+        (IngredientCategory.JamNutButter, ["peanut butter", "almond butter", "cashew butter", "nut butter", "seed butter", "jam", "jelly", "preserves", "marmalade", "honey", "syrup"]),
+        (IngredientCategory.PastaSauces,  ["pasta", "spaghetti", "macaroni", "noodle", "penne", "lasagna", "linguine", "fettuccine", "rotini", "fusilli", "orzo", "marinara", "pizza sauce"]),
+        (IngredientCategory.Dairy,        ["milk", "cream", "butter", "margarine", "cheese", "yogurt", "yoghurt", "egg", "parmesan", "mozzarella", "cheddar", "ricotta", "brie", "ghee", "crème fraîche", "sour cream"]),
+        (IngredientCategory.Canned,       ["canned", "tinned", "kidney bean", "chickpea", "black bean", "cannellini", "coconut milk", "chopped tomato", "diced tomato", "tomato paste", "tomato sauce"]),
+        (IngredientCategory.Frozen,       ["frozen"]),
+        (IngredientCategory.Kitchen,      ["foil", "parchment", "wax paper", "plastic wrap", "skewer", "toothpick", "muffin liner", "cupcake liner", "paper cup", "popsicle stick", "craft stick"]),
+        (IngredientCategory.CoffeeTea,    ["coffee", "espresso", "tea"]),
+        (IngredientCategory.Beverages,    ["wine", "beer", "juice"]),
+        (IngredientCategory.Condiments,   ["oil", "cooking spray", "vinegar", "sauce", "soy", "fish sauce", "worcestershire", "mustard", "ketchup", "mayonnaise", "miso", "tahini", "curry paste"]),
+        (IngredientCategory.BakingSpices, ["flour", "sugar", "salt", "baking powder", "baking soda", "yeast", "cornstarch", "cornflour", "cornmeal", "cocoa", "chocolate", "gelatin", "vanilla", "extract", "black pepper", "peppercorn", "paprika", "cumin", "turmeric", "cinnamon", "nutmeg", "curry powder", "chili powder", "chilli flake", "pepper flake", "cayenne", "garlic powder", "onion powder", "oregano", "seasoning", "spice", "herb"]),
+        (IngredientCategory.GrainsRice,   ["rice", "oat", "quinoa", "couscous", "barley", "bulgur", "farro", "millet", "grits", "polenta"]),
+        (IngredientCategory.Bakery,       ["bread", "roll", "bun", "baguette", "pita", "tortilla", "wrap", "crumpet", "croissant", "pizza crust", "pizza shell"]),
+        (IngredientCategory.DryGoods,     ["breadcrumb", "lentil", "almond", "walnut", "cashew", "peanut", "sesame", "seed", "nut"]),
+        (IngredientCategory.Produce,      ["onion", "garlic", "carrot", "celery", "tomato", "potato", "lettuce", "spinach", "kale", "broccoli", "pepper", "capsicum", "zucchini", "cucumber", "avocado", "lemon", "lime", "orange", "apple", "banana", "mushroom", "corn", "asparagus", "pea", "parsley", "basil", "coriander", "thyme", "rosemary", "mint", "dill", "chive", "scallion", "leek", "shallot", "ginger", "chilli", "eggplant", "beetroot", "pumpkin", "squash", "berry"]),
     ];
 
-    // ── Imperial-to-metric unit conversion ────────────────────────────────────
-
-    private static readonly Dictionary<string, (string MetricUnit, double Factor)> UnitConversions =
-        new(StringComparer.OrdinalIgnoreCase)
-        {
-            ["oz"]           = ("g",  28.3495),
-            ["ounce"]        = ("g",  28.3495),
-            ["ounces"]       = ("g",  28.3495),
-            ["lb"]           = ("g",  453.592),
-            ["lbs"]          = ("g",  453.592),
-            ["pound"]        = ("g",  453.592),
-            ["pounds"]       = ("g",  453.592),
-            ["fl oz"]        = ("ml", 29.5735),
-            ["fluid oz"]     = ("ml", 29.5735),
-            ["fluid ounce"]  = ("ml", 29.5735),
-            ["cup"]          = ("ml", 240.0),
-            ["cups"]         = ("ml", 240.0),
-            ["pt"]           = ("ml", 473.176),
-            ["pint"]         = ("ml", 473.176),
-            ["pints"]        = ("ml", 473.176),
-            ["qt"]           = ("ml", 946.353),
-            ["quart"]        = ("ml", 946.353),
-            ["quarts"]       = ("ml", 946.353),
-            ["gal"]          = ("L",  3.78541),
-            ["gallon"]       = ("L",  3.78541),
-            ["gallons"]      = ("L",  3.78541),
-        };
-
-    private static readonly JsonSerializerOptions JsonOptions = new()
+    /// <summary>How every response to a RecipeSchemaJson-shaped prompt is read. Shared with the
+    /// Phase 9 seed normaliser, which sends the same schema and must read the answer identically.</summary>
+    internal static readonly JsonSerializerOptions LlmJsonOptions = new()
     {
         PropertyNamingPolicy        = JsonNamingPolicy.SnakeCaseLower,
         DefaultIgnoreCondition      = JsonIgnoreCondition.WhenWritingNull,
@@ -229,13 +232,16 @@ public class RecipeScrapeService(
         for (int i = 0; i < orderedIngredients.Count; i++)
         {
             var ing = orderedIngredients[i];
+            var (amount, unit) = RecipeIngredient.ToStoredMeasurement(ing.Amount, ing.Unit);
             var ri = new RecipeIngredient
             {
                 Id           = Guid.NewGuid(),
                 RecipeId     = recipe.Id,
                 IngredientId = resolvedIngredientIds[i],
-                Amount       = ing.Amount,
-                Unit         = ing.Unit,
+                Amount       = amount,
+                Unit         = unit,
+                SourceAmount = ing.SourceAmount,
+                SourceUnit   = ing.SourceUnit?.Trim(),
                 Notes        = ing.Notes?.Trim(),
                 DisplayOrder = ing.DisplayOrder,
             };
@@ -424,7 +430,7 @@ public class RecipeScrapeService(
                 "Recipe extraction failed. Please try again or create the recipe manually.");
         }
 
-        var extracted = json.Deserialize<ExtractedRecipe>(JsonOptions)
+        var extracted = json.Deserialize<ExtractedRecipe>(LlmJsonOptions)
             ?? throw new RecipeScrapeException(RecipeScrapeError.NoContent,
                 "No recipe content could be extracted from this page.");
 
@@ -444,11 +450,38 @@ public class RecipeScrapeService(
 
         var dbIngredients = await db.Ingredients
             .AsNoTracking()
-            .Select(i => new { i.Id, i.Name, i.DisplayName, i.Category })
+            .Select(i => new { i.Id, i.Name, i.DisplayName, i.Category, i.GramsPerMillilitre, i.Aliases })
             .ToListAsync(ct);
 
-        var exactLookup = dbIngredients
-            .ToDictionary(i => i.Name, i => i.Id, StringComparer.OrdinalIgnoreCase);
+        // Keyed by Name and by every alias, so a known synonym resolves here rather than costing a
+        // pass-2 model call (Phase 9.3 §4.6). Names are loaded first and aliases only with TryAdd,
+        // so a name always outranks an alias: the alias invariant forbids the collision, and if a
+        // hand-edited row ever breaks it the entry's own name is the answer that wins.
+        var exactLookup = new Dictionary<string, Guid>(StringComparer.OrdinalIgnoreCase);
+        foreach (var ingredient in dbIngredients)
+            exactLookup[ingredient.Name] = ingredient.Id;
+
+        foreach (var ingredient in dbIngredients)
+            foreach (var alias in ingredient.Aliases)
+                exactLookup.TryAdd(alias, ingredient.Id);
+
+        var densityById = dbIngredients
+            .Where(i => i.GramsPerMillilitre.HasValue)
+            .ToDictionary(i => i.Id, i => i.GramsPerMillilitre);
+
+        // Stage B: resolve an import-resolvable unit (cup) against the matched ingredient's
+        // density. An ingredient with no catalogue row has no density by construction, so it
+        // keeps its measurement as stated. An unquantified row has nothing to resolve and is
+        // handed through untouched — a null amount never reaches the converter (Phase 9.1 §3.5).
+        ScrapePreviewIngredient ResolveAgainstCatalogue(ScrapePreviewIngredient row, Guid ingredientId)
+        {
+            if (row.Amount is not { } statedAmount || row.Unit is not { } statedUnit) return row;
+
+            densityById.TryGetValue(ingredientId, out var density);
+            var (resolvedAmount, resolvedUnit) =
+                measurementConverter.ResolveForImport(statedAmount, statedUnit, density);
+            return row with { Amount = resolvedAmount, Unit = resolvedUnit };
+        }
 
         // Pass 1: exact match
         var previewIngredients = new List<ScrapePreviewIngredient>();
@@ -458,35 +491,53 @@ public class RecipeScrapeService(
         {
             var ing            = extracted.Ingredients[i];
             var normalisedName = ing.Name.Trim().ToLowerInvariant();
-            var (amount, unit) = ConvertUnit(ing.Amount, ing.Unit);
+
+            // Stage A. The source measurement is recorded verbatim first, so a conversion can
+            // always be audited or recomputed later (Phase 8.5.1 §6.2). A line the model reported
+            // as unquantified carries neither a canonical nor a source measurement: there is
+            // nothing to convert and nothing to record, and a unit without an amount would be as
+            // invented as the amount itself (Phase 9.1 §3.1).
+            decimal? amount       = null;
+            string?  unit         = null;
+            decimal? sourceAmount = null;
+            string?  sourceUnit   = null;
+
+            if (ing.Amount is { } statedAmount)
+            {
+                (amount, unit) = MeasurementConverter.ToCanonical(statedAmount, ing.Unit ?? string.Empty);
+                sourceAmount   = Math.Round((decimal)statedAmount, 3);
+                sourceUnit     = ing.Unit?.Trim();
+            }
+
+            var row = new ScrapePreviewIngredient(
+                IngredientId:      null,
+                Name:              normalisedName,
+                DisplayName:       ing.DisplayName,
+                Amount:            amount,
+                Unit:              unit,
+                SourceAmount:      sourceAmount,
+                SourceUnit:        sourceUnit,
+                Notes:             string.IsNullOrWhiteSpace(ing.Notes) ? null : ing.Notes,
+                IsNew:             true,
+                SuggestedCategory: CategoriseIngredient(normalisedName),
+                DisplayOrder:      i);
 
             if (exactLookup.TryGetValue(normalisedName, out var existingId))
             {
-                previewIngredients.Add(new ScrapePreviewIngredient(
-                    IngredientId:      existingId,
-                    Name:              normalisedName,
-                    DisplayName:       ing.DisplayName,
-                    Amount:            amount,
-                    Unit:              unit,
-                    Notes:             string.IsNullOrWhiteSpace(ing.Notes) ? null : ing.Notes,
-                    IsNew:             false,
-                    SuggestedCategory: IngredientCategory.Other,
-                    DisplayOrder:      i));
+                row = row with
+                {
+                    IngredientId      = existingId,
+                    IsNew             = false,
+                    SuggestedCategory = IngredientCategory.Other,
+                };
+                row = ResolveAgainstCatalogue(row, existingId);
             }
             else
             {
-                previewIngredients.Add(new ScrapePreviewIngredient(
-                    IngredientId:      null,
-                    Name:              normalisedName,
-                    DisplayName:       ing.DisplayName,
-                    Amount:            amount,
-                    Unit:              unit,
-                    Notes:             string.IsNullOrWhiteSpace(ing.Notes) ? null : ing.Notes,
-                    IsNew:             true,
-                    SuggestedCategory: CategoriseIngredient(normalisedName),
-                    DisplayOrder:      i));
                 unmatchedIndexes.Add(i);
             }
+
+            previewIngredients.Add(row);
         }
 
         // Pass 2: semantic match for unmatched ingredients (one batched LLM call)
@@ -522,7 +573,7 @@ public class RecipeScrapeService(
                 var matchJson = await llm.CompleteStructuredAsync(
                     systemPrompt, userContent, matchSchema, maxTokens: 2048, ct);
 
-                var matchResponse = matchJson.Deserialize<MatchingResponse>(JsonOptions);
+                var matchResponse = matchJson.Deserialize<MatchingResponse>(LlmJsonOptions);
                 if (matchResponse?.Results != null)
                 {
                     foreach (var result in matchResponse.Results)
@@ -540,12 +591,14 @@ public class RecipeScrapeService(
                         {
                             // Matched to existing catalogue entry
                             var matchedId = candidates[result.CandidateIndex.Value].ing.Id;
-                            previewIngredients[origIdx] = prevIngred with
-                            {
-                                IngredientId      = matchedId,
-                                IsNew             = false,
-                                SuggestedCategory = IngredientCategory.Other,
-                            };
+                            previewIngredients[origIdx] = ResolveAgainstCatalogue(
+                                prevIngred with
+                                {
+                                    IngredientId      = matchedId,
+                                    IsNew             = false,
+                                    SuggestedCategory = IngredientCategory.Other,
+                                },
+                                matchedId);
                         }
                         else
                         {
@@ -592,6 +645,15 @@ public class RecipeScrapeService(
             .FirstOrDefaultAsync(i => i.Name == normalised, ct);
         if (existing != null) return existing.Id;
 
+        // An alias hit resolves to the entry that owns it rather than creating a second row.
+        // Without this, confirming a hand-typed "garbanzo beans" would insert a row whose Name
+        // equals an alias of "chickpeas" — and since the lookup loads names before aliases, that
+        // new row would then permanently shadow the alias. Ordinary use must not be able to break
+        // the invariant §4.7 enforces at build and seed time.
+        var byAlias = await db.Ingredients
+            .FirstOrDefaultAsync(i => i.Aliases.Contains(normalised), ct);
+        if (byAlias != null) return byAlias.Id;
+
         var newIng = new Ingredient
         {
             Id          = Guid.NewGuid(),
@@ -625,17 +687,6 @@ public class RecipeScrapeService(
         return IngredientCategory.Other;
     }
 
-    public static (decimal Amount, string Unit) ConvertUnit(double rawAmount, string unit)
-    {
-        var trimmed = unit.Trim();
-        if (UnitConversions.TryGetValue(trimmed, out var conversion))
-        {
-            var converted = Math.Round((decimal)(rawAmount * conversion.Factor), 3);
-            return (converted, conversion.MetricUnit);
-        }
-        return (Math.Round((decimal)rawAmount, 3), unit);
-    }
-
     // ── Internal DTOs for LLM responses ──────────────────────────────────────
 
     internal record ExtractedRecipe(
@@ -646,11 +697,17 @@ public class RecipeScrapeService(
         List<ExtractedStep> Steps
     );
 
+    /// <param name="Amount">
+    /// Null when the source line states no quantity. The schema declares
+    /// <c>["number", "null"]</c> precisely so the grammar permits the model to say so rather than
+    /// forcing it to invent a figure (Phase 9.1 §1.3, §3.3).
+    /// </param>
+    /// <param name="Unit">Null exactly when <paramref name="Amount"/> is null.</param>
     internal record ExtractedIngredient(
         string Name,
         [property: JsonPropertyName("display_name")] string DisplayName,
-        double Amount,
-        string Unit,
+        double? Amount,
+        string? Unit,
         string? Notes
     );
 

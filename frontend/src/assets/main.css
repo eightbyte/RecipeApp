@@ -1,7 +1,7 @@
 /*
  * RecipeApp — global styles
  *
- * Vuetify handles component styling; Bootstrap provides utility classes.
+ * Vuetify handles component styling and utility classes.
  * This file contains only app-specific overrides and helpers.
  */
 
@@ -35,6 +35,17 @@ html, body {
 /* A FAB that coexists with the bottom nav: clear the nav AND the home indicator. */
 .fab-above-nav {
   bottom: calc(80px + env(safe-area-inset-bottom, 0px)) !important;
+}
+
+/* ── Date fields ─────────────────────────────────────────────────────────── */
+/* Chromium pads each part of a date input, which makes a date v-text-field
+   2px taller than the other fields. Zero it so every field is the same height. */
+::-webkit-datetime-edit-fields-wrapper,
+::-webkit-datetime-edit-text,
+::-webkit-datetime-edit-day-field,
+::-webkit-datetime-edit-month-field,
+::-webkit-datetime-edit-year-field {
+  padding: 0;
 }
 
 /* ── Recipe image grayscale helper ──────────────────────────────────────── */

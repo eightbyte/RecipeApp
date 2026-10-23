@@ -25,8 +25,9 @@ Tests sit beside their subject as `*.spec.js` (Vitest + Vue Test Utils). Run wit
 - **HTTP:** import `api` from `@/services/api.js`. Never use raw `fetch` or `axios`.
 - **Pinia:** `use<Domain>Store()`. Every API call goes through a store action.
 - **Vuetify first.** Prefer a Vuetify component over raw HTML wherever one exists.
-- **Bootstrap:** utility classes (`d-flex`) and the grid only. No Bootstrap JS or components.
-  It is imported after Vuetify.
+- **Vuetify is the only styling framework** ([ADR 0001](../docs/adr/0001-vuetify-is-the-only-styling-framework.md)).
+  Don't add Bootstrap or another CSS framework. Spacing classes follow Vuetify's 4px-per-step
+  scale (`mb-4` is 16px, `mb-6` is 24px).
 - **Typeface:** the system font stack, set once as `$body-font-family` in `src/styles/settings.scss`.
   Vuetify compiles it into `html` and every typography class (`text-h6`, `text-caption`, …).
 - **Never hard-code a unit or category list.** Consume `constants/units.js` / `constants/categories.js`.

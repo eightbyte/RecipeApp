@@ -3,14 +3,14 @@
 
     <!-- ── Phase 1: Name entry ──────────────────────────────────────────── -->
     <div v-if="!mealPlanStore.currentPlan">
-      <h2 class="text-h6 font-weight-bold mb-4">New Meal Plan</h2>
+      <h2 class="text-h6 font-weight-bold mb-6">New Meal Plan</h2>
 
       <v-alert
         v-if="mealPlanStore.activePlan"
         type="info"
         variant="tonal"
         density="compact"
-        class="mb-4"
+        class="mb-6"
       >
         Creating a new plan closes your current active plan
         “{{ mealPlanStore.activePlan.name }}” and starts a fresh shopping list.
@@ -40,16 +40,16 @@
 
     <!-- ── Phase 2: Recipe builder ──────────────────────────────────────── -->
     <div v-else>
-      <div class="d-flex align-center justify-space-between mb-4">
+      <div class="d-flex align-center justify-space-between mb-6">
         <div>
-          <h2 class="text-h6 font-weight-bold">{{ mealPlanStore.currentPlan.name }}</h2>
+          <h2 class="text-h6 font-weight-bold mb-2">{{ mealPlanStore.currentPlan.name }}</h2>
           <div class="text-caption text-medium-emphasis">Active plan — add recipes below</div>
         </div>
         <v-btn color="primary" variant="tonal" @click="done">Done</v-btn>
       </div>
 
       <!-- Added recipes -->
-      <div v-if="mealPlanStore.currentPlan.recipes.length > 0" class="mb-4">
+      <div v-if="mealPlanStore.currentPlan.recipes.length > 0" class="mb-6">
         <v-card
           v-for="meal in mealPlanStore.currentPlan.recipes"
           :key="meal.id"
@@ -96,7 +96,7 @@
       </div>
 
       <!-- Suggestions -->
-      <div v-if="mealPlanStore.suggestions.length > 0" class="mb-4">
+      <div v-if="mealPlanStore.suggestions.length > 0" class="mb-6">
         <SuggestionsPanel
           :suggestions="mealPlanStore.suggestions"
           @add="addSuggestion"
@@ -104,8 +104,8 @@
       </div>
 
       <!-- Recipe browser -->
-      <v-divider class="mb-3" />
-      <h3 class="text-subtitle-1 font-weight-bold mb-3">Browse recipes</h3>
+      <v-divider class="mb-4" />
+      <h3 class="text-subtitle-1 font-weight-bold mb-4">Browse recipes</h3>
       <RecipeBrowser @add="addRecipe" />
     </div>
 

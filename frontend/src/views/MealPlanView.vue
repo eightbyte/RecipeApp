@@ -3,7 +3,7 @@
 
     <!-- ── Loading skeleton (initial active-plan fetch) ─────────────────── -->
     <template v-if="mealPlanStore.loading && !mealPlanStore.activePlan">
-      <v-skeleton-loader type="heading" class="mb-4" />
+      <v-skeleton-loader type="heading" class="mb-6" />
       <v-skeleton-loader v-for="n in 3" :key="n" type="list-item-avatar-two-line" class="mb-2" />
     </template>
 
@@ -16,9 +16,9 @@
 
     <!-- ── Active plan header ───────────────────────────────────────────── -->
     <div v-else-if="mealPlanStore.activePlan">
-      <div class="d-flex align-center justify-space-between mb-4">
+      <div class="d-flex align-center justify-space-between mb-6">
         <div>
-          <h1 class="text-h6 font-weight-bold">{{ mealPlanStore.activePlan.name }}</h1>
+          <h1 class="text-h6 font-weight-bold mb-2">{{ mealPlanStore.activePlan.name }}</h1>
           <div class="text-caption text-medium-emphasis">Active plan</div>
         </div>
         <div class="d-flex align-center ga-1">
@@ -58,7 +58,7 @@
       <v-card
         v-for="meal in mealPlanStore.activePlan.recipes"
         :key="meal.id"
-        class="mb-3"
+        class="mb-4"
       >
         <div class="d-flex align-center pa-3 ga-4">
           <div class="text-center" style="min-width: 48px">

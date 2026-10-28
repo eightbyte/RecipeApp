@@ -1,4 +1,5 @@
 # ── Build stage ───────────────────────────────────────────────────────────────
+# Node major must match frontend/.nvmrc, which CI reads.
 FROM node:24-alpine AS build
 WORKDIR /app
 

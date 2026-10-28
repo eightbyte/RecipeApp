@@ -1,8 +1,8 @@
 # Phase 11 — Self-Hosted Deployment
 
-**Version:** 0.2
-**Date:** 2026-10-28 (0.1: 2026-10-23)
-**Status:** Planned. Not started.
+**Version:** 0.3
+**Date:** 2026-10-28 (0.2: 2026-10-28, 0.1: 2026-10-23)
+**Status:** In progress. The repo work (stages 1, 2 and 5) is built. Stages 3, 4, 6 and 7 are manual steps on the PC.
 **Depends on:** Phase 10 (first-run seed), Phase 7 (PWA)
 **Leaves alone:** the local LLM layer (Phase 8). It ships disabled and is planned separately.
 
@@ -156,6 +156,9 @@ Triggered on `push` to `master`.
     The `node:24-alpine` tag in `frontend/Dockerfile` must match. A comment in each file points to
     the other.
 - Images are built for `linux/amd64` only, to match the PC.
+- Both images carry the OCI labels `org.opencontainers.image.revision` (the commit SHA) and
+  `org.opencontainers.image.source` (the repo). The updater reads `revision` to name a dump after
+  the image it replaces (§4.5). A container running `latest` records no SHA otherwise.
 
 A failed run sends GitHub's default email (D15). A failed test job means nothing is pushed, so the
 PC keeps running the last good image.
@@ -196,7 +199,13 @@ The dumps sit on the same disk as the Docker volumes. They guard against a bad m
 release, not against losing the PC (§8).
 
 The task is registered by a one-off `deploy/install-update-task.ps1`, so the schedule is in the repo
-and not set by hand.
+and not set by hand. It runs as the logged-in user (Interactive logon, no elevation needed) through
+`conhost.exe --headless`, so no console window appears every 5 minutes. As a result, Task Scheduler's
+"Last Run Result" always reads 0. Failures are recorded in `deploy/logs/`.
+
+The updater's decisions (dump or not, dump name, which dumps to prune) live in
+`deploy/RecipeAppUpdate.psm1` and are tested with Pester 3.4, the version inbox with Windows:
+`Invoke-Pester deploy\tests`.
 
 ### 4.6 Tailscale
 
@@ -283,9 +292,9 @@ migrations on first start, as it does in development.
 | Not reachable off-tailnet | Same URL with Tailscale off fails |
 | Second user | The shared user loads the app and can't see other tailnet machines |
 | Migrated data | Recipe count is 1,123 (+ any added since). A recipe image loads. The startup log shows the seed steps as skipped |
-| Production mode | `/scalar/v1` returns 404. The log shows the LLM-not-loaded warning and no errors |
+| Production mode | `/scalar/v1` on the API returns 404 (e.g. `wget` from the frontend container to `http://api:8080/scalar/v1`; through nginx the path falls to the SPA). The log shows the LLM-not-loaded warning and no errors other than EF Core's probe of the missing `__EFMigrationsHistory` on an empty database |
 | Scraping | Importing a recipe from a URL that needs the Chromium fallback succeeds |
-| Health check is real | With the API stopped, `http://127.0.0.1:${RECIPEAPP_HTTP_PORT}/health/ready` does not return 200. With it running, it returns 200 and a JSON body, not `index.html` |
+| Health check is real | With the API stopped, `http://127.0.0.1:${RECIPEAPP_HTTP_PORT}/health/ready` does not return 200. With it running, it returns 200 and the text `Healthy`, not `index.html` |
 | Local image build | `docker compose build frontend` succeeds on the Windows development machine |
 | Auto-deploy | A merge to `master` is running on the PC within about 5 minutes after the workflow finishes, and the updater log records it |
 | Pre-update dump | An update that changes the API image leaves a new file in `deploy/backups/`, and `pg_restore --list` reads it. A frontend-only update leaves none. Only `RECIPEAPP_BACKUP_KEEP` dumps remain |
@@ -328,4 +337,43 @@ None at time of writing.
 
 ## 10. Results
 
-_To be filled in when the phase closes._
+§10.1 records the repo work. The results of the PC stages and the full §6 run are added when the phase
+closes.
+
+### 10.1 Repo work (stages 1, 2, 5), 2026-10-28
+
+Built: `docker-compose.prod.yml`, `.env.example`, the nginx health locations, `frontend/.dockerignore`,
+the `global.json` SDK pin, `frontend/.nvmrc`, `.github/workflows/deploy.yml`, `deploy/update.ps1`,
+`deploy/RecipeAppUpdate.psm1` (+ Pester tests), `deploy/install-update-task.ps1`, and ignore rules for
+`deploy/backups/` and `deploy/logs/`.
+
+Checked on the development machine against a scratch compose project (own project name and volumes,
+locally built images, `pull_policy: never`):
+
+| §6 check | Result |
+|---|---|
+| Postgres and API are not on the host | Pass. Only the frontend is published, on `127.0.0.1` |
+| Frontend is not on the LAN | Pass. The LAN IP on the published port does not answer |
+| Production mode | Pass. `ASPNETCORE_ENVIRONMENT=Production`, `/scalar/v1` is 404 on the API, LLM-not-loaded warning logged |
+| Health check is real | Pass. 200 `Healthy` through nginx; 504 with the API stopped |
+| Local image build | Pass. `docker compose build frontend` on the Windows host |
+| Pre-update dump | Pass. An API change wrote a dump `pg_restore --list` reads; a frontend-only change wrote none; `RECIPEAPP_BACKUP_KEEP=2` left two |
+| Failed dump cancels the update | Pass. With Postgres stopped the run logged the failure, exited 1, and the API kept its old image. The next run, with Postgres back, dumped and updated |
+| Restore | Pass. A dump restored into a scratch database gave the same recipe count |
+
+Findings and deviations from the design above:
+
+- `!reset` with a value discards it, so the frontend's port is replaced with `!override`, not `!reset`.
+- Windows PowerShell 5.1 strips embedded double quotes from native arguments, so the updater reads
+  image labels with `{{json .Config.Labels}}` rather than an `index` template.
+- A `pull` also fetches newer `postgres:16-alpine` patch builds, so the updater can recreate Postgres
+  on its own. That run takes no dump (only an API change does) and is logged like any other.
+- `/health/ready` answers with plain text, so §6 now says `Healthy`, not a JSON body.
+- The log records 12-character local image IDs (as `docker images` shows them), not registry digests.
+  They are what the updater compares, and they stay available for images that were never pushed.
+- `RECIPEAPP_HTTP_PORT` and `RECIPEAPP_BACKUP_KEEP` are read through `docker compose config
+  --environment`, so `.env` has one parser. A value that is not a whole number of 1 or more fails the
+  run before anything changes. The database name and user come from the compose config too.
+- The workflow uses `actions/checkout@v5`, `setup-dotnet@v5` and `setup-node@v5`, the Node 24 majors.
+- Not checked here: the workflow on GitHub, GHCR visibility, Tailscale, the data migration, the
+  task on the PC, and "exits quietly if Docker Desktop is not running". These belong to stages 2–4, 6, 7.

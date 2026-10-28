@@ -1,7 +1,7 @@
 # Phase 11 — Self-Hosted Deployment
 
-**Version:** 0.1
-**Date:** 2026-10-23
+**Version:** 0.2
+**Date:** 2026-10-28 (0.1: 2026-10-23)
 **Status:** Planned. Not started.
 **Depends on:** Phase 10 (first-run seed), Phase 7 (PWA)
 **Leaves alone:** the local LLM layer (Phase 8). It ships disabled and is planned separately.
@@ -45,7 +45,8 @@ Tailscale removes it: a private network with no router ports opened and no publi
 | D13 | Production hardening: Postgres is not published on the host, `ASPNETCORE_ENVIRONMENT=Production`, and the database password lives in an untracked `.env` |
 | D14 | Docker Desktop starts only at Windows login. After an unattended reboot the app stays down until the next login. Accepted |
 | D15 | Failure alerting is GitHub's default email when a workflow run fails. No uptime monitoring |
-| D16 | Backups, uptime monitoring and LLM hosting are out of scope (§8) |
+| D16 | Scheduled and off-machine backups, uptime monitoring and LLM hosting are out of scope (§8) |
+| D17 | Before the updater recreates the API container, it dumps the database (§4.5). A new API image may apply EF Core migrations, and rolling back the image does not undo them (§4.8), so the dump is the way back. A failed dump cancels the update |
 
 ## 3. Current state
 
@@ -65,6 +66,16 @@ Tailscale removes it: a private network with no router ports opened and no publi
 - Scalar and OpenAPI are mapped only in Development, so production serves no API docs.
 - There is no `.github/workflows/` directory. CI does not exist yet.
 - `.gitignore` already ignores `.env` (and allows `.env.example`).
+- The API maps `/health` and `/health/ready` at its root, not under `/api/`. nginx proxies only `/api/`
+  and `/uploads/`, so a request for `/health` through the frontend hits the SPA fallback and returns
+  `index.html` with status 200, whether or not the API is up.
+- `global.json` sets only the test runner. It names no SDK version.
+- `frontend/package.json` has no `engines` field and there is no `.nvmrc`. The only statement of the
+  Node version is the `node:24-alpine` base image in `frontend/Dockerfile`.
+- `backend/RecipeApp.API/.dockerignore` exists, but `frontend/` has none. A local
+  `docker compose build frontend` copies the host's `node_modules` over the Linux one that `npm ci`
+  installed in the image, so `vite build` loses its native binaries on a Windows host. A clean CI
+  checkout has no `node_modules`, so CI is not affected.
 
 ## 4. Design
 
@@ -100,6 +111,17 @@ which current Docker Desktop includes.
 
 The development `docker-compose.yml` is not changed.
 
+### 4.2.1 Image build fixes
+
+These apply to development and production alike.
+
+- **`frontend/nginx.conf`** gains two exact-match locations, `location = /health` and
+  `location = /health/ready`, that proxy to `api:8080` with the same headers as `/api/`. Exact matches
+  leave every SPA route untouched. The updater (§4.5) can then check the API through the one port it
+  can reach.
+- **`frontend/.dockerignore`** excludes `node_modules/` and `dist/`, so a local build installs and
+  builds inside the image only.
+
 ### 4.3 Secrets — `.env` / `.env.example`
 
 Commit a `.env.example` at the repo root listing every variable the override reads, with
@@ -110,6 +132,7 @@ placeholders. On the PC, copy it to `.env` and fill it in. `.env` is already git
 | `POSTGRES_PASSWORD` | Production database password. Generated once, stored only in `.env` |
 | `RECIPEAPP_IMAGE_TAG` | `latest` by default. Set to a commit SHA to pin or roll back (§4.8) |
 | `RECIPEAPP_HTTP_PORT` | Host port `tailscale serve` targets. Default `80`. Change it if something on the PC already uses 80 |
+| `RECIPEAPP_BACKUP_KEEP` | How many pre-update dumps the updater keeps (§4.5). Default `10` |
 
 The `postgres_data` volume is initialised with whatever `POSTGRES_PASSWORD` holds on first start.
 Changing it later requires `ALTER USER` inside the database, not just editing `.env`.
@@ -126,8 +149,12 @@ Triggered on `push` to `master`.
 
 - The image names, `ghcr.io/eightbyte/recipeapp-api` and `ghcr.io/eightbyte/recipeapp-frontend`, are
   defined once as workflow-level `env` values.
-- The .NET SDK and Node versions come from `global.json` and `frontend/package.json` (`engines`, or a
-  `.nvmrc` if that is added), not hard-coded in the workflow.
+- The .NET SDK and Node versions come from files in the repo, not from the workflow:
+  - `global.json` gains `"sdk": { "version": "10.0.300", "rollForward": "latestFeature" }`.
+    `actions/setup-dotnet` reads it through `global-json-file`. Local builds honour it too.
+  - A new `frontend/.nvmrc` holds `24`. `actions/setup-node` reads it through `node-version-file`.
+    The `node:24-alpine` tag in `frontend/Dockerfile` must match. A comment in each file points to
+    the other.
 - Images are built for `linux/amd64` only, to match the PC.
 
 A failed run sends GitHub's default email (D15). A failed test job means nothing is pushed, so the
@@ -140,15 +167,33 @@ the logged-in user does:
 
 1. `git pull --ff-only` so changes to the compose files and the script itself reach the PC.
 2. `docker compose -f docker-compose.yml -f docker-compose.prod.yml pull`
-3. `docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d --remove-orphans`. Compose
+3. **Pre-update dump (D17).** If the API image just pulled differs from the one the running API
+   container uses, dump the database before going further:
+   - Compare the running container's image ID (`docker inspect <api container> --format '{{.Image}}'`)
+     with the pulled image's ID (`docker image inspect <api image ref> --format '{{.Id}}'`). Only an API
+     change triggers a dump, because only the API applies migrations. A frontend-only release does not.
+   - Skip the dump if no API container or no Postgres container exists yet. That is the first
+     bootstrap, when there is nothing to protect.
+   - Run `pg_dump --format=custom` **inside** the Postgres container to a file there, then copy it
+     out with `docker compose cp`. Do not redirect `pg_dump`'s stdout from PowerShell. Windows
+     PowerShell re-encodes native output as text and corrupts a binary dump.
+   - Save it as `deploy/backups/recipeapp-<UTC timestamp>-<old image short SHA>.dump`
+     (git-ignored), then delete the oldest dumps beyond `RECIPEAPP_BACKUP_KEEP`.
+   - If any part of the dump fails, log it, run nothing further and exit non-zero. The old containers
+     keep running, and the next scheduled run tries again.
+4. `docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d --remove-orphans`. Compose
    recreates only the containers whose image changed.
-4. If a container was recreated, poll `http://127.0.0.1:${RECIPEAPP_HTTP_PORT}/health` until it is
-   healthy or a timeout passes.
-5. Append one line per run that changed something (timestamp, image digests, health result) to a
-   rotating log under `deploy/logs/` (git-ignored).
+5. If a container was recreated, poll `http://127.0.0.1:${RECIPEAPP_HTTP_PORT}/health/ready` until it
+   returns 200 or a timeout passes. nginx proxies this path to the API (§4.2.1). `/health/ready` also
+   checks the database, and the API serves it only after startup migrations and seeding finish.
+6. Append one line per run that changed something (timestamp, image digests, dump file name if any,
+   health result) to a rotating log under `deploy/logs/` (git-ignored).
 
 The script exits quietly if Docker Desktop is not running, which is the case before login (D14).
 Old images are cleaned up with `docker image prune -f` after a successful update.
+
+The dumps sit on the same disk as the Docker volumes. They guard against a bad migration or a bad
+release, not against losing the PC (§8).
 
 The task is registered by a one-off `deploy/install-update-task.ps1`, so the schedule is in the repo
 and not set by hand.
@@ -183,6 +228,18 @@ phone for the app to load. Pages and images the PWA has already cached still ope
 To resume following releases, set it back to `latest`. Rolling back an image does **not** roll back
 EF Core migrations the newer image applied. A release that adds a migration that can't be reversed
 should say so in its notes.
+
+If the older image can't run against the newer schema, also restore the pre-update dump the updater
+took before that release (§4.5):
+
+1. Stop the API: `docker compose -f docker-compose.yml -f docker-compose.prod.yml stop api`.
+2. Copy the dump into the Postgres container with `docker compose cp`.
+3. `pg_restore --clean --if-exists --no-owner --role=recipeapp -d recipeapp <dump>` inside the
+   container.
+4. Pin the older SHA (steps 2–3 above) so the API starts on the image that matches the restored
+   schema.
+
+Anything written to the database after that dump is lost.
 
 ### 4.9 Data migration (D6, one-time)
 
@@ -228,26 +285,35 @@ migrations on first start, as it does in development.
 | Migrated data | Recipe count is 1,123 (+ any added since). A recipe image loads. The startup log shows the seed steps as skipped |
 | Production mode | `/scalar/v1` returns 404. The log shows the LLM-not-loaded warning and no errors |
 | Scraping | Importing a recipe from a URL that needs the Chromium fallback succeeds |
+| Health check is real | With the API stopped, `http://127.0.0.1:${RECIPEAPP_HTTP_PORT}/health/ready` does not return 200. With it running, it returns 200 and a JSON body, not `index.html` |
+| Local image build | `docker compose build frontend` succeeds on the Windows development machine |
 | Auto-deploy | A merge to `master` is running on the PC within about 5 minutes after the workflow finishes, and the updater log records it |
+| Pre-update dump | An update that changes the API image leaves a new file in `deploy/backups/`, and `pg_restore --list` reads it. A frontend-only update leaves none. Only `RECIPEAPP_BACKUP_KEEP` dumps remain |
+| Failed dump cancels the update | With the dump forced to fail (e.g. Postgres stopped), the run logs the failure, exits non-zero and leaves the running API on its old image |
+| Restore | Restoring a dump into a scratch database gives the same recipe count as the source |
 | Rollback | Pinning the previous SHA brings the previous version back (§4.8) |
 | Reboot | After a reboot and login, the app comes back with no manual steps |
 
 ## 7. Implementation stages
 
-1. **Production compose.** `docker-compose.prod.yml` and `.env.example`. Check locally with `build`
-   still in place (temporarily) to confirm the port and environment hardening.
-2. **CI workflow.** `.github/workflows/deploy.yml`. Merge to `master` through `develop`, check the
-   images, make the packages public.
+1. **Production compose.** `docker-compose.prod.yml`, `.env.example`, and the image build fixes
+   (§4.2.1: nginx health locations, `frontend/.dockerignore`). Check locally with `build` still in place
+   (temporarily) to confirm the port and environment hardening and the health check.
+2. **CI workflow.** The `global.json` SDK pin, `frontend/.nvmrc`, and `.github/workflows/deploy.yml`.
+   Merge to `master` through `develop`, check the images, make the packages public.
 3. **PC bootstrap.** Docker Desktop, clone, `.env`, first `up`, Tailscale + `serve`.
 4. **Data migration.** §4.9.
-5. **Updater.** `deploy/update.ps1`, `deploy/install-update-task.ps1`, the `deploy/logs/` ignore rule.
+5. **Updater.** `deploy/update.ps1` (including the pre-update dump), `deploy/install-update-task.ps1`,
+   and ignore rules for `deploy/logs/` and `deploy/backups/`.
 6. **Phones.** Machine share, PWA install on both phones.
 7. **Verification.** All of §6. Record the results in §10.
 
 ## 8. Out of scope
 
-- **Backups.** Nightly `pg_dump` plus an `uploads/` copy to a synced cloud folder was proposed and
-  deferred. Until it exists, the only copy of production data is on the PC's Docker volumes.
+- **Scheduled and off-machine backups.** Nightly `pg_dump` plus an `uploads/` copy to a synced cloud
+  folder was proposed and deferred. The pre-update dump (D17) is in scope, but it covers the database
+  only, runs only when the API image changes, and stays on the same PC. Until a real backup exists,
+  losing the PC's disk loses the production data, and `uploads/` has no copy at all.
 - **Uptime monitoring.**
 - **LLM hosting.** The intended direction is to keep the model on the GPU machine and reach it from the
   API over the tailnet. That needs its own design (remote provider vs. moving the model) in a later

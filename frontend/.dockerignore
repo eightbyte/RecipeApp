@@ -1,0 +1,5 @@
+# Install and build inside the image only. A host node_modules (e.g. Windows binaries) copied
+# over the image's `npm ci` result breaks `vite build` (Phase 11 §4.2.1).
+node_modules/
+dist/
+coverage/

@@ -23,7 +23,7 @@
         v-if="store.list?.isStale"
         type="warning"
         variant="tonal"
-        class="mb-4"
+        class="mb-6"
         closable
       >
         <div class="d-flex align-center justify-space-between flex-wrap ga-2">
@@ -41,7 +41,7 @@
       </v-alert>
 
       <!-- ── Toolbar ─────────────────────────────────────────────────────── -->
-      <div v-if="store.list" class="d-flex align-center justify-space-between mb-4">
+      <div v-if="store.list" class="d-flex align-center justify-space-between mb-6">
         <div class="text-body-2 text-medium-emphasis">
           {{ uncheckedCount }} item{{ uncheckedCount !== 1 ? 's' : '' }} remaining
         </div>
@@ -57,7 +57,7 @@
 
       <!-- ── Grouped list ────────────────────────────────────────────────── -->
       <div v-if="visibleGroups.length">
-        <div v-for="group in visibleGroups" :key="group.category" class="mb-4">
+        <div v-for="group in visibleGroups" :key="group.category" class="mb-6">
           <div class="text-overline text-medium-emphasis mb-2 px-1">
             {{ formatCategory(group.category) }}
           </div>

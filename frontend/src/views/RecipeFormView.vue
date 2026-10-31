@@ -1,14 +1,14 @@
 <template>
   <v-container class="pa-4" max-width="600">
-    <h1 class="text-h6 font-weight-bold mb-4">
+    <h1 class="text-h6 font-weight-bold mb-6">
       {{ isEdit ? 'Edit Recipe' : 'New Recipe' }}
     </h1>
 
     <v-form ref="formRef" @submit.prevent="submit">
 
       <!-- ── Basic info ──────────────────────────────────────────────── -->
-      <v-card class="mb-4 pa-4">
-        <div class="text-subtitle-2 text-medium-emphasis mb-3">Basic Info</div>
+      <v-card class="mb-6 pa-4">
+        <div class="text-subtitle-2 text-medium-emphasis mb-4">Basic Info</div>
 
         <v-text-field
           v-model="form.name"
@@ -45,8 +45,8 @@
       </v-card>
 
       <!-- ── Image ────────────────────────────────────────────────────── -->
-      <v-card class="mb-4 pa-4">
-        <div class="text-subtitle-2 text-medium-emphasis mb-3">Photo</div>
+      <v-card class="mb-6 pa-4">
+        <div class="text-subtitle-2 text-medium-emphasis mb-4">Photo</div>
 
         <v-img
           v-if="imagePreview"
@@ -54,7 +54,7 @@
           height="160"
           cover
           rounded="lg"
-          class="mb-3"
+          class="mb-4"
         />
 
         <v-file-input
@@ -70,8 +70,8 @@
       </v-card>
 
       <!-- ── Ingredients ────────────────────────────────────────────── -->
-      <v-card class="mb-4 pa-4">
-        <div class="d-flex align-center justify-space-between mb-3">
+      <v-card class="mb-6 pa-4">
+        <div class="d-flex align-center justify-space-between mb-4">
           <div class="text-subtitle-2 text-medium-emphasis">Ingredients</div>
           <v-btn
             size="small"
@@ -87,10 +87,10 @@
         <div
           v-for="(ing, idx) in form.ingredients"
           :key="idx"
-          class="d-flex ga-2 align-start mb-3"
+          class="d-flex ga-2 align-start mb-4"
         >
           <!-- Drag handle future: just a number for now -->
-          <div class="text-caption text-medium-emphasis mt-4" style="min-width: 20px">
+          <div class="text-caption text-medium-emphasis mt-6" style="min-width: 20px">
             {{ idx + 1 }}.
           </div>
 
@@ -166,8 +166,8 @@
       </v-card>
 
       <!-- ── Steps ─────────────────────────────────────────────────── -->
-      <v-card class="mb-4 pa-4">
-        <div class="d-flex align-center justify-space-between mb-3">
+      <v-card class="mb-6 pa-4">
+        <div class="d-flex align-center justify-space-between mb-4">
           <div class="text-subtitle-2 text-medium-emphasis">Steps</div>
           <v-btn
             size="small"
@@ -183,10 +183,10 @@
         <div
           v-for="(step, sIdx) in form.steps"
           :key="sIdx"
-          class="mb-4"
+          class="mb-6"
         >
           <div class="d-flex align-start ga-2">
-            <v-avatar color="primary" size="28" class="text-white text-caption font-weight-bold mt-3">
+            <v-avatar color="primary" size="28" class="text-white text-caption font-weight-bold mt-4">
               {{ sIdx + 1 }}
             </v-avatar>
 
@@ -231,7 +231,7 @@
               @click="removeStep(sIdx)"
             />
           </div>
-          <v-divider v-if="sIdx < form.steps.length - 1" class="mt-3" />
+          <v-divider v-if="sIdx < form.steps.length - 1" class="mt-4" />
         </div>
 
         <div v-if="!form.steps.length" class="text-caption text-medium-emphasis text-center py-2">
@@ -240,7 +240,7 @@
       </v-card>
 
       <!-- ── Submit ──────────────────────────────────────────────────── -->
-      <v-alert v-if="submitError" type="error" class="mb-4" closable @click:close="submitError = null">
+      <v-alert v-if="submitError" type="error" class="mb-6" closable @click:close="submitError = null">
         {{ submitError }}
       </v-alert>
 

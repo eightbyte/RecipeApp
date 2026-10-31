@@ -7,16 +7,25 @@
 # - Images are pulled from GHCR (built by .github/workflows/deploy.yml), never built here.
 # - Postgres and the API are not published on the host.
 # - The frontend binds to 127.0.0.1 only, so it is off the LAN; `tailscale serve` proxies to it.
+# - The project has its own name and no fixed container names, so it can run on the development
+#   machine beside the dev stack without sharing its containers or volumes (D18, §4.10).
 # `!reset` (drop a value) and `!override` (replace it instead of merging) need Docker Compose 2.24+.
+
+# Without this the project is named after the clone's folder: `recipeapp`, the same as the dev clone.
+name: recipeapp-prod
 
 services:
 
+  # docker-compose.yml's fixed container names are unique per machine and would clash with the dev
+  # stack. With them reset, Compose names the containers recipeapp-prod-<service>-1.
   postgres:
+    container_name: !reset null
     environment:
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD must be set in .env}
     ports: !reset []
 
   api:
+    container_name: !reset null
     image: ghcr.io/eightbyte/recipeapp-api:${RECIPEAPP_IMAGE_TAG:-latest}
     build: !reset null
     environment:
@@ -27,6 +36,7 @@ services:
     ports: !reset []
 
   frontend:
+    container_name: !reset null
     image: ghcr.io/eightbyte/recipeapp-frontend:${RECIPEAPP_IMAGE_TAG:-latest}
     build: !reset null
     ports: !override

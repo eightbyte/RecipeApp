@@ -1,8 +1,9 @@
 # Phase 11 — Self-Hosted Deployment
 
-**Version:** 0.3
-**Date:** 2026-10-28 (0.2: 2026-10-28, 0.1: 2026-10-23)
+**Version:** 0.4
+**Date:** 2026-10-31 (0.3: 2026-10-28, 0.2: 2026-10-28, 0.1: 2026-10-23)
 **Status:** In progress. The repo work (stages 1, 2 and 5) is built. Stages 3, 4, 6 and 7 are manual steps on the PC.
+Until the PC is ready, production runs on the development machine (D18, §4.10).
 **Depends on:** Phase 10 (first-run seed), Phase 7 (PWA)
 **Leaves alone:** the local LLM layer (Phase 8). It ships disabled and is planned separately.
 
@@ -47,6 +48,7 @@ Tailscale removes it: a private network with no router ports opened and no publi
 | D15 | Failure alerting is GitHub's default email when a workflow run fails. No uptime monitoring |
 | D16 | Scheduled and off-machine backups, uptime monitoring and LLM hosting are out of scope (§8) |
 | D17 | Before the updater recreates the API container, it dumps the database (§4.5). A new API image may apply EF Core migrations, and rolling back the image does not undo them (§4.8), so the dump is the way back. A failed dump cancels the update |
+| D18 | Until the always-on PC (D1) is ready, production runs on the development machine beside the dev stack, from its own clone on `master` (§4.10). The production Compose project has its own name and no fixed container names, so the two stacks never share containers or volumes |
 
 ## 3. Current state
 
@@ -101,6 +103,8 @@ The PC runs `docker compose -f docker-compose.yml -f docker-compose.prod.yml …
 
 | Service | Change |
 |---|---|
+| Project | `name: recipeapp-prod` |
+| All three | `container_name: !reset null` |
 | `postgres` | `ports: !reset []`. Password from `${POSTGRES_PASSWORD}` |
 | `api` | `image: ghcr.io/eightbyte/recipeapp-api:${RECIPEAPP_IMAGE_TAG:-latest}`. `build: !reset null`. `ports: !reset []`. `ASPNETCORE_ENVIRONMENT: Production`. Connection string built from `.env` values |
 | `frontend` | `image: ghcr.io/eightbyte/recipeapp-frontend:${RECIPEAPP_IMAGE_TAG:-latest}`. `build: !reset null`. Ports reset to `127.0.0.1:${RECIPEAPP_HTTP_PORT:-80}:80` |
@@ -108,6 +112,16 @@ The PC runs `docker compose -f docker-compose.yml -f docker-compose.prod.yml …
 Binding the frontend to `127.0.0.1` keeps the app off the PC's LAN interface. `tailscale serve`
 proxies to localhost, so tailnet access is unaffected. `!reset` needs Docker Compose 2.24 or later,
 which current Docker Desktop includes.
+
+The project name and the container-name reset let production run on the development machine (D18).
+Without the name, Compose names the project after the clone's folder, so a clone in a folder called
+`RecipeApp` would share the dev project, `recipeapp`, and take over its containers and database
+volume. `docker-compose.yml`'s fixed container names (`recipeapp-postgres` and so on) are unique per
+machine, so under any project name production could not start while the dev Postgres runs. With them
+reset, Compose names the production containers `recipeapp-prod-<service>-1`. The updater and the
+restore steps (§4.8) reach services through Compose, never by container name. `COMPOSE_PROJECT_NAME`
+or `-p` still overrides `name:`, which is how a scratch stack is tried beside a real one (§10.1,
+§10.2).
 
 The development `docker-compose.yml` is not changed.
 
@@ -268,17 +282,51 @@ Order matters. If the API starts against an empty database, `FirstRunSeeder` see
 If the development database's migration history is behind the image's, the API applies the missing
 migrations on first start, as it does in development.
 
+### 4.10 Interim host: the development machine (D18)
+
+Until the always-on PC is ready, production runs on the development machine, beside the dev stack.
+
+- Production runs from its own clone on `master`, outside the development tree (e.g.
+  `C:\deploy\RecipeApp`). The updater fast-forwards whichever clone it sits in, and the development
+  tree is on `develop` with local changes. Nothing is edited in the production clone, or
+  `git pull --ff-only` fails.
+- `.env` lives only in the production clone. A production command run from the development tree by
+  mistake then fails on the missing `POSTGRES_PASSWORD` before it touches anything.
+- `RECIPEAPP_HTTP_PORT` is a port the dev stack does not use. The full dev stack publishes 80, 5000
+  and 5432; Vite uses 3000 and `dotnet run` 5197. `tailscale serve` targets the same port.
+- The data migration (§4.9) needs no copy between machines. The dump is taken inside the dev Postgres
+  container (`recipeapp-postgres`) and copied out with `docker cp`, and the uploads come from
+  `backend/RecipeApp.API/uploads/`.
+- The update task is registered from the production clone, so it runs that clone's `update.ps1`.
+- Pausing Docker Desktop or letting the machine sleep stops production too.
+- Cleaning up after development must not reach the production stack: no `docker compose down -v` in
+  the production clone, no `docker system prune --volumes`, and no Docker Desktop **Clean / Purge
+  data** or **Reset to factory defaults**.
+
+When production moves to the PC:
+
+- Migrate from the production stack (a dump and the `recipeapp-prod_recipe_uploads` volume), not from
+  the development database, which no longer matches it.
+- The `ts.net` name follows the machine. The URL changes unless this machine is renamed or removed
+  and the PC takes its Tailscale name. The machine share (§4.7) is made again for the PC. A PWA
+  installed against a URL that changes has to be reinstalled.
+
 ## 5. One-time setup checklist (manual)
 
-- [ ] Docker Desktop: WSL2 backend, **Start Docker Desktop when you sign in** turned on.
-- [ ] Clone the repo on the PC and check out `master`.
-- [ ] Create `.env` from `.env.example` and generate a strong `POSTGRES_PASSWORD`.
-- [ ] After the first successful workflow run, set both GHCR packages to **Public** (new packages
+- [x] Docker Desktop: WSL2 backend, **Start Docker Desktop when you sign in** turned on.
+- [ ] Clone the repo on the PC and check out `master`. On the development machine, a separate clone
+      outside the development tree (§4.10).
+- [x] Create `.env` from `.env.example` and generate a strong `POSTGRES_PASSWORD`.
+- [ ] On the development machine: move `.env` into the production clone and set
+      `RECIPEAPP_HTTP_PORT` to a port the dev stack does not use (§4.10).
+- [x] After the first successful workflow run, set both GHCR packages to **Public** (new packages
       start private) (D10).
-- [ ] Tailscale setup (§4.6) and machine share (§4.7).
+- [x] Tailscale install, MagicDNS and HTTPS certificates (§4.6 steps 1–2) and machine share (§4.7).
 - [ ] Data migration (§4.9).
-- [ ] Register the update task (`deploy/install-update-task.ps1`).
-- [ ] Install the PWA on both phones.
+- [ ] `tailscale serve --bg <RECIPEAPP_HTTP_PORT>` (§4.6 step 3).
+- [ ] Register the update task from the production clone (`deploy/install-update-task.ps1`).
+- [ ] Install the PWA on both phones. While production is on the development machine, see §4.10 on
+      the URL changing.
 
 ## 6. Verification
 
@@ -337,8 +385,8 @@ None at time of writing.
 
 ## 10. Results
 
-§10.1 records the repo work. The results of the PC stages and the full §6 run are added when the phase
-closes.
+§10.1 records the repo work, and §10.2 the change for the interim host. The results of the PC stages
+and the full §6 run are added when the phase closes.
 
 ### 10.1 Repo work (stages 1, 2, 5), 2026-10-28
 
@@ -377,3 +425,26 @@ Findings and deviations from the design above:
 - The workflow uses `actions/checkout@v5`, `setup-dotnet@v5` and `setup-node@v5`, the Node 24 majors.
 - Not checked here: the workflow on GitHub, GHCR visibility, Tailscale, the data migration, the
   task on the PC, and "exits quietly if Docker Desktop is not running". These belong to stages 2–4, 6, 7.
+
+### 10.2 Interim host on the development machine (D18), 2026-10-31
+
+Found before bootstrapping production beside the dev stack:
+
+- A production clone in a folder named `RecipeApp` would get the dev clone's Compose project name,
+  `recipeapp`, so its `up` would take over the dev containers and the dev database volume.
+- `docker-compose.yml`'s fixed container names are unique per machine, so production could not start
+  while the dev Postgres runs, whatever its project name.
+- The full dev stack publishes the frontend on 80, the default `RECIPEAPP_HTTP_PORT`.
+
+`docker-compose.prod.yml` now sets `name: recipeapp-prod` and resets `container_name` on all three
+services (§4.2). `.env.example` notes the port choice.
+
+Checked on the development machine, with the dev Postgres (`recipeapp-postgres`) running:
+
+| Check | Result |
+|---|---|
+| Merged config | Pass. Project `recipeapp-prod`, volumes `recipeapp-prod_postgres_data` and `recipeapp-prod_recipe_uploads`, no fixed container names. The dev config alone is unchanged |
+| Runs beside the dev stack | Pass. A scratch stack (`-p recipeapp-prodcheck`, port 8091) pulled both GHCR images while logged out of `ghcr.io`, started as `recipeapp-prodcheck-<service>-1` and answered `Healthy` on `/health/ready`. The dev Postgres container kept its ID and start time |
+| Updater | Pass. `update.ps1 -SkipGitPull` against the scratch stack exited 0 with nothing to change |
+| Dump commands | Pass. The updater's `compose exec postgres pg_dump` and `compose cp` against the scratch stack gave a dump that `pg_restore --list` reads |
+| Pester | Pass. 10 passed, 0 failed |

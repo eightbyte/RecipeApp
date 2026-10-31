@@ -133,6 +133,10 @@ These apply to development and production alike.
   `location = /health/ready`, that proxy to `api:8080` with the same headers as `/api/`. Exact matches
   leave every SPA route untouched. The updater (§4.5) can then check the API through the one port it
   can reach.
+- **`frontend/nginx.conf`**: `location /uploads/` becomes `location ^~ /uploads/`. nginx prefers a
+  matching regex over a plain prefix, so the static-asset rule (`\.(js|css|png|jpg|…)$`) caught every
+  recipe photo and looked for it in the SPA root: 404. Found while rehearsing the data migration on
+  2026-10-31 (§10.2). Development under Vite was unaffected, because Vite proxies `/uploads` itself.
 - **`frontend/.dockerignore`** excludes `node_modules/` and `dist/`, so a local build installs and
   builds inside the image only.
 
@@ -448,3 +452,4 @@ Checked on the development machine, with the dev Postgres (`recipeapp-postgres`)
 | Updater | Pass. `update.ps1 -SkipGitPull` against the scratch stack exited 0 with nothing to change |
 | Dump commands | Pass. The updater's `compose exec postgres pg_dump` and `compose cp` against the scratch stack gave a dump that `pg_restore --list` reads |
 | Pester | Pass. 10 passed, 0 failed |
+| Data migration (§4.9) | Pass after one fix. A scratch stack (`-p recipeapp-rehearsal`, port 8091) took a `pg_restore` of the dev database (exit 0) and the uploads through `compose run --no-deps --entrypoint sh api`, then answered `Healthy`. The API applied no migrations and seeded nothing. Recipe photos returned 404 through nginx until `location ^~ /uploads/` (§4.2.1). With that fix they returned 200, and `/`, `/api/`, `/health/ready` and hashed assets were unchanged |

@@ -32,6 +32,13 @@ frontend/.vite/
 !.env.example
 
 # ========================
+# Self-hosted deployment (Phase 11)
+# ========================
+# Pre-update database dumps and updater logs written on the PC by deploy/update.ps1.
+deploy/backups/
+deploy/logs/
+
+# ========================
 # OS / IDE
 # ========================
 .DS_Store

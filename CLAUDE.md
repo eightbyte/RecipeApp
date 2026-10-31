@@ -4,8 +4,8 @@ Mobile-first web app for storing recipes, building meal plans, and generating sh
 
 **Status:** v1 feature-complete. Phases 1–10 done. Phase 9 built a personal-use MyPlate library of
 1,123 recipes (closed 2026-09-29). Phase 10 made the app distributable: a curated ingredient
-catalogue and 12 original sample recipes seed every fresh database (closed 2026-10-12). No phase
-is in progress.
+catalogue and 12 original sample recipes seed every fresh database (closed 2026-10-12). Phase 11
+(self-hosted deployment, `specs/phase-11-deployment.md`) is in progress.
 
 ## Where things are documented
 
@@ -19,6 +19,7 @@ is in progress.
 | First-run seeding, `import-recipes`, clean-start paths | `backend/CLAUDE.md` |
 | MyPlate seed-import pipeline (personal use) | `backend/RecipeApp.API/Services/Seeding/CLAUDE.md` |
 | Local LLM layer | `backend/RecipeApp.API/Services/Llm/CLAUDE.md` |
+| Self-hosted deployment, CI, updater, rollback | `specs/phase-11-deployment.md` (§4, §5) |
 | Units, amounts, density, portion scaling | `.claude/rules/measurements.md` |
 | Ingredient categories / aisle order | `.claude/rules/ingredient-categories.md` |
 | Past per-phase implementation notes | `docs/history/phase-notes.md` (archive; read only when history matters) |
@@ -35,8 +36,11 @@ frontend/                  Vue 3 SPA (Vite, Pinia, Vuetify)
 specs/                     Phase specifications and results
 docs/                      Reference material and history
 tools/seed-curator/        Throwaway Node tool used once to curate the Phase 9 harvest
+deploy/                    Self-hosted PC updater (update.ps1) and its Task Scheduler installer
+.github/workflows/         deploy.yml: on push to master, test, then push images to GHCR
 docker-compose.yml         Local Postgres (+ full stack)
-global.json                Opts `dotnet test` into Microsoft.Testing.Platform
+docker-compose.prod.yml    Production override layered on docker-compose.yml (reads .env)
+global.json                .NET SDK pin, and opts `dotnet test` into Microsoft.Testing.Platform
 ```
 
 ## Stack
@@ -60,7 +64,11 @@ API docs `/scalar/v1`, health `/health`, readiness `/health/ready`.
 ```bash
 cd backend && dotnet test RecipeApp.Tests/RecipeApp.Tests.csproj   # needs Docker running
 cd frontend && npm test
+powershell -NoProfile -Command "Invoke-Pester deploy\tests"        # updater decisions; Pester 3.4 syntax
 ```
+
+CI (`.github/workflows/deploy.yml`) reads the SDK version from `global.json` and the Node version
+from `frontend/.nvmrc`. Keep `.nvmrc` in step with the `node:` base image in `frontend/Dockerfile`.
 
 ## Git workflow
 

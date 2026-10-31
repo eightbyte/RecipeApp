@@ -1,4 +1,10 @@
 import { setupServer } from 'msw/node'
+import { enableAutoUnmount } from '@vue/test-utils'
+
+// Unmount every wrapper after each test, so component timers stop with it. A mounted v-img polls
+// window.setTimeout forever in jsdom, and a poll that fires after the environment's teardown
+// fails the run with "window is not defined" (guarded by setup.spec.js).
+enableAutoUnmount(afterEach)
 
 // Vuetify uses ResizeObserver internally; jsdom doesn't implement it
 global.ResizeObserver = class ResizeObserver {

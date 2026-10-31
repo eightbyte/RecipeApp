@@ -59,6 +59,12 @@ cd frontend && npm run dev               # http://localhost:3000
 
 API docs `/scalar/v1`, health `/health`, readiness `/health/ready`.
 
+Production may be running on this machine beside the dev stack, from its own clone (Phase 11 D18,
+`specs/phase-11-deployment.md` §4.10). Its Compose project is `recipeapp-prod`. Scope every Docker
+command to the dev project (`recipeapp`) or a scratch project you name with `-p`, and leave every
+`recipeapp-prod` container and volume as it is. Machine-wide cleanup (`docker system prune`,
+`docker volume prune`) can delete production data, so it is off limits.
+
 ## Tests
 
 ```bash

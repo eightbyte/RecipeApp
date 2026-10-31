@@ -18,6 +18,8 @@ amount formatting, portion scaling, unit pickers or category lists.
 | `test/` | Vitest `setup.js` and `factories.js` |
 
 Tests sit beside their subject as `*.spec.js` (Vitest + Vue Test Utils). Run with `npm test`.
+`src/test/setup.js` unmounts every wrapper after each test (`enableAutoUnmount`), so mount inside
+each test or in `beforeEach`; a wrapper mounted in `beforeAll` is gone after the first test.
 
 ## Conventions
 

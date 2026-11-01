@@ -1,7 +1,6 @@
 import { describe, it, expect } from 'vitest'
 import {
   BATCH_SIZES,
-  BATCH_SIZE_VALUES,
   DEFAULT_BATCH_SIZE,
   batchSizeMultiplier,
   formatBatchSize,
@@ -12,7 +11,7 @@ import {
 describe('BATCH_SIZES', () => {
   it('mirrors BatchSize.All on the backend, in the same order', () => {
     // Kept in lockstep with the backend enum, or the toggles offer values the API will reject.
-    expect(BATCH_SIZE_VALUES).toEqual(['HALF', 'REGULAR', 'DOUBLE'])
+    expect(BATCH_SIZES.map(batchSize => batchSize.value)).toEqual(['HALF', 'REGULAR', 'DOUBLE'])
   })
 
   it('gives every Batch Size a distinct colour', () => {
@@ -21,7 +20,7 @@ describe('BATCH_SIZES', () => {
   })
 
   it('offers a default that is itself a Batch Size', () => {
-    expect(BATCH_SIZE_VALUES).toContain(DEFAULT_BATCH_SIZE)
+    expect(BATCH_SIZES.map(batchSize => batchSize.value)).toContain(DEFAULT_BATCH_SIZE)
   })
 })
 

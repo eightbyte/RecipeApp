@@ -1,16 +1,42 @@
 <template>
   <v-container class="pa-4" max-width="600">
 
-    <!-- ── Search bar ───────────────────────────────────────────────────── -->
-    <v-text-field
-      v-model="search"
-      prepend-inner-icon="mdi-magnify"
-      placeholder="Search recipes or ingredients…"
-      clearable
-      hide-details
-      class="mb-6"
-      @update:model-value="onSearch"
-    />
+    <!-- ── Search bar and New recipe menu ───────────────────────────────── -->
+    <div class="d-flex align-stretch ga-2 mb-6">
+      <v-text-field
+        v-model="search"
+        prepend-inner-icon="mdi-magnify"
+        placeholder="Search recipes or ingredients…"
+        clearable
+        hide-details
+        @update:model-value="onSearch"
+      />
+
+      <v-menu>
+        <template #activator="{ props: menuProps }">
+          <v-btn
+            v-bind="menuProps"
+            prepend-icon="mdi-plus"
+            text="New recipe"
+            color="primary"
+            variant="flat"
+            class="h-auto"
+          />
+        </template>
+        <v-list>
+          <v-list-item
+            prepend-icon="mdi-link"
+            title="Import from URL"
+            @click="showImportSheet = true"
+          />
+          <v-list-item
+            prepend-icon="mdi-pencil-outline"
+            title="Add manually"
+            :to="{ name: 'recipe-create' }"
+          />
+        </v-list>
+      </v-menu>
+    </div>
 
     <!-- ── Loading skeleton ─────────────────────────────────────────────── -->
     <div v-if="store.loading">
@@ -104,36 +130,8 @@
       v-else
       :icon="search ? 'mdi-magnify' : 'mdi-chef-hat'"
       :title="search ? 'No recipes match your search' : 'No recipes yet'"
-      :text="search ? 'Try a different search term' : 'Add your first recipe below'"
+      :text="search ? 'Try a different search term' : 'Add your first recipe using the button above'"
     />
-
-    <!-- ── FAB ─────────────────────────────────────────────────────────── -->
-    <v-speed-dial
-      location="bottom end"
-      transition="slide-y-reverse-transition"
-    >
-      <template #activator="{ props: p }">
-        <v-fab v-bind="p" icon="mdi-plus" color="primary" size="large" />
-      </template>
-
-      <v-btn
-        prepend-icon="mdi-link"
-        text="Import from URL"
-        color="secondary"
-        variant="tonal"
-        rounded="xl"
-        @click="showImportSheet = true"
-      />
-
-      <v-btn
-        prepend-icon="mdi-pencil-outline"
-        text="Add manually"
-        color="primary"
-        variant="tonal"
-        rounded="xl"
-        :to="{ name: 'recipe-create' }"
-      />
-    </v-speed-dial>
 
     <!-- ── Import from URL sheet ───────────────────────────────────────── -->
     <RecipeUrlBottomSheet v-model="showImportSheet" />

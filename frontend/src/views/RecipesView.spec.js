@@ -79,13 +79,18 @@ describe('RecipesView', () => {
     expect(card.props('to')).toEqual({ name: 'recipe-detail', params: { id: 'r1' } })
   })
 
-  it('renders a speed-dial FAB for creating a new recipe', async () => {
-    // The "Add manually" button is only rendered when VSpeedDial's overlay is open, so verify the dial and activator instead.
+  it('offers a New recipe button beside the search field instead of a floating button', async () => {
     const { wrapper } = await mountView()
-    const dial = wrapper.findComponent({ name: 'VSpeedDial' })
-    expect(dial.exists()).toBe(true)
 
-    const fab = wrapper.findComponent({ name: 'VFab' })
-    expect(fab.exists()).toBe(true)
+    const newRecipeButton = wrapper
+      .findAll('button')
+      .find((button) => button.text().includes('New recipe'))
+    expect(newRecipeButton).toBeDefined()
+
+    const searchField = wrapper.findComponent({ name: 'VTextField' })
+    expect(searchField.element.parentElement.contains(newRecipeButton.element)).toBe(true)
+
+    expect(wrapper.findComponent({ name: 'VSpeedDial' }).exists()).toBe(false)
+    expect(wrapper.findComponent({ name: 'VFab' }).exists()).toBe(false)
   })
 })

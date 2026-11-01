@@ -88,23 +88,8 @@
       <!-- ── Batch selector ────────────────────────────────────────────── -->
       <v-card class="mb-12 pa-3" variant="outlined">
         <div class="d-flex align-center ga-4">
-          <span id="batch-size-label" class="text-body-2 font-weight-medium">Batch</span>
-          <v-btn-toggle
-            v-model="batchSize"
-            aria-labelledby="batch-size-label"
-            mandatory
-            density="compact"
-            color="primary"
-          >
-            <v-btn
-              v-for="option in BATCH_SIZES"
-              :key="option.value"
-              :value="option.value"
-              size="small"
-            >
-              {{ option.title }}
-            </v-btn>
-          </v-btn-toggle>
+          <span class="text-body-2 font-weight-medium">Batch</span>
+          <BatchSizeToggle v-model="batchSize" button-size="small" density="compact" />
         </div>
       </v-card>
 
@@ -204,9 +189,10 @@ import { ref, computed, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useRecipeStore } from '@/stores/recipes'
 import { formatMeasurement, formatSourceMeasurement } from '@/constants/units'
-import { BATCH_SIZES, DEFAULT_BATCH_SIZE, batchSizeMultiplier } from '@/constants/batchSizes'
+import { DEFAULT_BATCH_SIZE, batchSizeMultiplier } from '@/constants/batchSizes'
 import { cookingRoute } from '@/router/cookingRoute'
 import { useUiStore } from '@/stores/ui'
+import BatchSizeToggle from '@/components/BatchSizeToggle.vue'
 import EmptyState from '@/components/EmptyState.vue'
 import ErrorState from '@/components/ErrorState.vue'
 

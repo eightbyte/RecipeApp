@@ -86,9 +86,7 @@
 
           <div class="flex-grow-1 ml-2">
             <div class="text-body-1 font-weight-medium">{{ meal.recipeName }}</div>
-            <v-chip size="x-small" :color="batchSizeColor(meal.batchSize)" class="mt-1">
-              {{ formatBatchSize(meal.batchSize) }}
-            </v-chip>
+            <BatchSizeChip :batch-size="meal.batchSize" size="x-small" class="mt-1" />
           </div>
 
           <!-- Per-meal overflow menu -->
@@ -182,16 +180,7 @@
       <v-card class="pa-4">
         <v-card-title>Batch</v-card-title>
         <v-card-text>
-          <v-btn-toggle v-model="batchSizePicker.batchSize" mandatory color="primary" class="d-flex">
-            <v-btn
-              v-for="batchSize in BATCH_SIZES"
-              :key="batchSize.value"
-              :value="batchSize.value"
-              class="flex-grow-1"
-            >
-              {{ batchSize.title }}
-            </v-btn>
-          </v-btn-toggle>
+          <BatchSizeToggle v-model="batchSizePicker.batchSize" stretch />
         </v-card-text>
         <v-card-actions>
           <v-btn variant="text" @click="batchSizePicker.open = false">Cancel</v-btn>
@@ -209,8 +198,10 @@ import { useRouter } from 'vue-router'
 import { useMealPlanStore } from '@/stores/mealPlans'
 import { useRecipeStore } from '@/stores/recipes'
 import { useUiStore } from '@/stores/ui'
-import { BATCH_SIZES, DEFAULT_BATCH_SIZE, batchSizeColor, formatBatchSize } from '@/constants/batchSizes'
+import { DEFAULT_BATCH_SIZE } from '@/constants/batchSizes'
 import { cookingRoute } from '@/router/cookingRoute'
+import BatchSizeToggle from '@/components/BatchSizeToggle.vue'
+import BatchSizeChip from '@/components/BatchSizeChip.vue'
 import RecipeBrowser from '@/components/RecipeBrowser.vue'
 import EmptyState from '@/components/EmptyState.vue'
 import ErrorState from '@/components/ErrorState.vue'

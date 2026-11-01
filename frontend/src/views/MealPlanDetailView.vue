@@ -56,9 +56,7 @@
 
           <div class="flex-grow-1 ml-1">
             <div class="text-body-2 font-weight-medium">{{ meal.recipeName }}</div>
-            <v-chip size="x-small" :color="batchSizeColor(meal.batchSize)" class="mt-1">
-              {{ formatBatchSize(meal.batchSize) }}
-            </v-chip>
+            <BatchSizeChip :batch-size="meal.batchSize" size="x-small" class="mt-1" />
           </div>
         </div>
       </v-card>
@@ -83,7 +81,7 @@
 <script setup>
 import { onMounted } from 'vue'
 import { useMealPlanStore } from '@/stores/mealPlans'
-import { batchSizeColor, formatBatchSize } from '@/constants/batchSizes'
+import BatchSizeChip from '@/components/BatchSizeChip.vue'
 import EmptyState from '@/components/EmptyState.vue'
 import ErrorState from '@/components/ErrorState.vue'
 

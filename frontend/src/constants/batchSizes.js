@@ -8,9 +8,6 @@ export const BATCH_SIZES = [
 /** Batch Size for a newly Planned Meal — the backend's column default. */
 export const DEFAULT_BATCH_SIZE = 'REGULAR'
 
-/** The Batch Size values alone, in order. */
-export const BATCH_SIZE_VALUES = BATCH_SIZES.map(batchSize => batchSize.value)
-
 const batchSizesByValue = new Map(BATCH_SIZES.map(batchSize => [batchSize.value, batchSize]))
 
 /** How many times the recipe's amounts are multiplied, falling back to 1 for an unknown value as `BatchSize.Multiplier` does. */

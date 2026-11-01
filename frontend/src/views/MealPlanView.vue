@@ -273,10 +273,9 @@ async function saveDateChange() {
   datePicker.value.open = false
   const planId = mealPlanStore.activePlan?.id
   if (!planId) return
-  await mealPlanStore.updatePlannedMeal(planId, plannedMealId, {
-    scheduledDate: date || null,
-    batchSize: mealPlanStore.activePlan.plannedMeals.find(candidate => candidate.id === plannedMealId)?.batchSize ?? DEFAULT_BATCH_SIZE,
-  })
+  const meal = mealPlanStore.activePlan.plannedMeals.find(candidate => candidate.id === plannedMealId)
+  if (!meal) return
+  await mealPlanStore.updatePlannedMeal(planId, meal, { scheduledDate: date })
 }
 
 function openBatchSizePicker(meal) {
@@ -289,10 +288,8 @@ async function saveBatchSizeChange() {
   const planId = mealPlanStore.activePlan?.id
   if (!planId) return
   const meal = mealPlanStore.activePlan.plannedMeals.find(candidate => candidate.id === plannedMealId)
-  await mealPlanStore.updatePlannedMeal(planId, plannedMealId, {
-    scheduledDate: meal?.scheduledDate ?? null,
-    batchSize,
-  })
+  if (!meal) return
+  await mealPlanStore.updatePlannedMeal(planId, meal, { batchSize })
 }
 
 async function removePlannedMeal(plannedMealId) {

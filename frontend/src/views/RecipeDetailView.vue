@@ -80,7 +80,7 @@
         size="large"
         prepend-icon="mdi-chef-hat"
         class="mb-6"
-        :to="{ name: 'recipe-cooking', params: { id: recipe.id }, query: { batch: batchSize } }"
+        :to="cookingRoute(recipe.id, batchSize)"
       >
         Start cooking
       </v-btn>
@@ -190,6 +190,7 @@ import { useRoute, useRouter } from 'vue-router'
 import { useRecipeStore } from '@/stores/recipes'
 import { formatMeasurement, formatSourceMeasurement } from '@/constants/units'
 import { DEFAULT_BATCH_SIZE, batchSizeMultiplier } from '@/constants/batchSizes'
+import { cookingRoute } from '@/router/cookingRoute'
 import { useUiStore } from '@/stores/ui'
 import BatchSizeToggle from '@/components/BatchSizeToggle.vue'
 import EmptyState from '@/components/EmptyState.vue'

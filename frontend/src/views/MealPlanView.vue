@@ -199,6 +199,7 @@ import { useMealPlanStore } from '@/stores/mealPlans'
 import { useRecipeStore } from '@/stores/recipes'
 import { useUiStore } from '@/stores/ui'
 import { DEFAULT_BATCH_SIZE } from '@/constants/batchSizes'
+import { cookingRoute } from '@/router/cookingRoute'
 import BatchSizeToggle from '@/components/BatchSizeToggle.vue'
 import BatchSizeChip from '@/components/BatchSizeChip.vue'
 import RecipeBrowser from '@/components/RecipeBrowser.vue'
@@ -226,11 +227,7 @@ function startNewPlan() {
 }
 
 function startCooking(meal) {
-  router.push({
-    name: 'recipe-cooking',
-    params: { id: meal.recipeId },
-    query: { batch: meal.batchSize },
-  })
+  router.push(cookingRoute(meal.recipeId, meal.batchSize))
 }
 
 async function markMealCooked(meal) {
@@ -267,10 +264,9 @@ async function saveDateChange() {
   datePicker.value.open = false
   const planId = mealPlanStore.activePlan?.id
   if (!planId) return
-  await mealPlanStore.updatePlannedMeal(planId, plannedMealId, {
-    scheduledDate: date || null,
-    batchSize: mealPlanStore.activePlan.plannedMeals.find(candidate => candidate.id === plannedMealId)?.batchSize ?? DEFAULT_BATCH_SIZE,
-  })
+  const meal = mealPlanStore.activePlan.plannedMeals.find(candidate => candidate.id === plannedMealId)
+  if (!meal) return
+  await mealPlanStore.updatePlannedMeal(planId, meal, { scheduledDate: date })
 }
 
 function openBatchSizePicker(meal) {
@@ -283,10 +279,8 @@ async function saveBatchSizeChange() {
   const planId = mealPlanStore.activePlan?.id
   if (!planId) return
   const meal = mealPlanStore.activePlan.plannedMeals.find(candidate => candidate.id === plannedMealId)
-  await mealPlanStore.updatePlannedMeal(planId, plannedMealId, {
-    scheduledDate: meal?.scheduledDate ?? null,
-    batchSize,
-  })
+  if (!meal) return
+  await mealPlanStore.updatePlannedMeal(planId, meal, { batchSize })
 }
 
 async function removePlannedMeal(plannedMealId) {

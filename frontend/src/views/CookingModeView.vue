@@ -162,7 +162,8 @@ import { ref, computed, onMounted, nextTick } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useRecipeStore } from '@/stores/recipes'
 import { formatMeasurement, formatSourceMeasurement } from '@/constants/units'
-import { batchSizeMultiplier, toBatchSize } from '@/constants/batchSizes'
+import { batchSizeMultiplier } from '@/constants/batchSizes'
+import { batchSizeFromCookingQuery } from '@/router/cookingRoute'
 import { useUiStore } from '@/stores/ui'
 import { useWakeLock } from '@/composables/useWakeLock'
 import BatchSizeChip from '@/components/BatchSizeChip.vue'
@@ -180,8 +181,8 @@ useWakeLock()
 
 const recipeId = props.id ?? route.params.id
 
-// Carried from a Planned Meal or the recipe detail view via ?batch=…
-const batchSize = computed(() => toBatchSize(route.query.batch))
+// Carried in the query from a Planned Meal or the recipe detail view, so a reload keeps it.
+const batchSize = computed(() => batchSizeFromCookingQuery(route.query))
 const batchMultiplier = computed(() => batchSizeMultiplier(batchSize.value))
 
 const recipe   = computed(() => store.currentRecipe)

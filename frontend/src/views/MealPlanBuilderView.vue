@@ -76,7 +76,7 @@
                 hide-details
                 clearable
                 style="min-width: 160px; flex: 1"
-                @update:model-value="(v) => updateDate(meal, v || null)"
+                @update:model-value="(v) => updateDate(meal, v)"
               />
               <BatchSizeToggle
                 :model-value="meal.batchSize"
@@ -172,19 +172,13 @@ async function removePlannedMeal(plannedMealId) {
 async function updateDate(meal, newDate) {
   const planId = mealPlanStore.currentPlan?.id
   if (!planId) return
-  await mealPlanStore.updatePlannedMeal(planId, meal.id, {
-    scheduledDate: newDate,
-    batchSize: meal.batchSize,
-  })
+  await mealPlanStore.updatePlannedMeal(planId, meal, { scheduledDate: newDate })
 }
 
 async function updateBatchSize(meal, batchSize) {
   const planId = mealPlanStore.currentPlan?.id
   if (!planId) return
-  await mealPlanStore.updatePlannedMeal(planId, meal.id, {
-    scheduledDate: meal.scheduledDate ?? null,
-    batchSize,
-  })
+  await mealPlanStore.updatePlannedMeal(planId, meal, { batchSize })
 }
 
 function done() {

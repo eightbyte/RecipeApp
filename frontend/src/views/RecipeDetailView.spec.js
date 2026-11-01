@@ -120,8 +120,7 @@ describe('RecipeDetailView', () => {
   })
 
   it('renders an unquantified ingredient as its name alone', async () => {
-    // "salt" states no quantity, so it is stored with a null amount and a null unit and must
-    // render as "Salt", never "0 g Salt" (Phase 9.1 §3.4).
+    // "salt" states no quantity, so it is stored with a null amount and unit and must render as "Salt", never "0 g Salt".
     const wrapper = await mountView({
       ingredients: [{
         id: 'ri-1',
@@ -138,9 +137,7 @@ describe('RecipeDetailView', () => {
       }],
     })
 
-    // The row is exactly the name — no amount, no unit, and no bare "0". Scaling a null amount
-    // by the portion multiplier yields 0 in JavaScript, so asserting only on "0 g" would pass
-    // against exactly that bug.
+    // Assert the row is exactly the name, because scaling a null amount by the multiplier yields 0 in JavaScript and "0 g" alone would pass against that bug.
     expect(wrapper.get('#ingredient-ri-1').text().trim()).toBe('Salt')
     expect(wrapper.vm.formatAmount(null, null)).toBeNull()
   })
@@ -221,7 +218,7 @@ describe('RecipeDetailView', () => {
   })
 })
 
-describe('RecipeDetailView — Phase 7', () => {
+describe('RecipeDetailView — cooking, loading and error states', () => {
   function mountRaw() {
     return mount(RecipeDetailView, {
       props: { id: 'r1' },

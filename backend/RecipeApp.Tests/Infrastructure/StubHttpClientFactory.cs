@@ -3,11 +3,7 @@ using System.Text;
 
 namespace RecipeApp.Tests.Infrastructure;
 
-/// <summary>
-/// An <see cref="IHttpClientFactory"/> whose responses are decided per request, so a test can
-/// script different bodies per URL or a rate-limit-then-succeed sequence. Every request is
-/// recorded, which is how the retry and image-harvest tests assert on call counts.
-/// </summary>
+/// <summary>An <see cref="IHttpClientFactory"/> whose responses are decided per request and recorded, so tests can script per-URL bodies and assert on call counts.</summary>
 public class StubHttpClientFactory : IHttpClientFactory
 {
     private readonly Func<HttpRequestMessage, HttpResponseMessage> _respond;

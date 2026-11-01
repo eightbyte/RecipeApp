@@ -109,7 +109,7 @@
                   :color="isCurrent(index) ? 'primary' : undefined"
                   :variant="isCurrent(index) ? 'flat' : 'tonal'"
                 >
-                  <!-- Absent for an ingredient whose source stated no quantity (Phase 9.1 §3.4) -->
+                  <!-- Absent for an ingredient whose source stated no quantity -->
                   <span
                     v-if="formatAmount(ing.amount, ing.unit)"
                     class="font-weight-medium mr-1"
@@ -190,7 +190,7 @@ const recipe   = computed(() => store.currentRecipe)
 const headerEl = ref(null)
 const finishing = ref(false)
 
-// Ephemeral, component-local "done" state — not persisted (spec §3.4).
+// Ephemeral, component-local "done" state that is not persisted.
 const doneStepIds = ref(new Set())
 
 const totalSteps = computed(() => recipe.value?.steps?.length ?? 0)
@@ -221,10 +221,7 @@ function stepIngredients(step) {
     .filter(Boolean)
 }
 
-/**
- * Short-circuits on a null amount rather than delegating: `null * 2` is `0` in JavaScript,
- * which would turn an ingredient with no stated quantity into a rendered `0` (Phase 9.1 §3.4).
- */
+/** Short-circuits on a null amount, because `null * 2` is `0` in JavaScript and would render an ingredient with no stated quantity as `0`. */
 function formatAmount(baseAmount, unit) {
   if (baseAmount == null) return null
   return formatMeasurement(baseAmount * portionMultiplier.value, unit)
@@ -291,8 +288,7 @@ onMounted(load)
 </script>
 
 <style scoped>
-/* Full-viewport overlay — owns the whole screen, independent of v-main padding.
-   100dvh keeps the sticky footer clear of mobile browser chrome (spec §8). */
+/* Full-viewport overlay that owns the whole screen, with 100dvh keeping the sticky footer clear of mobile browser chrome. */
 .cooking-mode {
   position: fixed;
   inset: 0;

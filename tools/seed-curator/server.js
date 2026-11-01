@@ -1,17 +1,8 @@
 'use strict';
 
 /**
- * Seed corpus curator — a throwaway, zero-dependency local tool for manually reducing the Phase 9
- * MyPlate harvest before Stage 3 parses it.
- *
- * Deliberately outside RecipeApp.API: curation is a one-time human step, so it has no business
- * being an API surface the app carries forever. It reads the same cache the harvester writes and
- * speaks only to 127.0.0.1.
- *
- * Deleting a recipe removes its cached page, its photo, any parsed/normalised artefacts, its
- * `manifest.json` entry and its `state.json` entry. The manifest is what every Phase 9 stage
- * iterates, so dropping the entry is what actually takes a recipe out of the pipeline — deleting
- * the files alone would leave `--harvest` free to download them again.
+ * Seed corpus curator: a throwaway, zero-dependency local tool for manually reducing the MyPlate harvest, kept outside
+ * RecipeApp.API and bound to 127.0.0.1, where deleting a recipe must also drop its manifest entry or `--harvest` would re-download it.
  *
  * Usage: node tools/seed-curator/server.js [--port 5174] [--cache <path>]
  */
@@ -77,7 +68,7 @@ function parseCommandLine(argv) {
 }
 
 const HELP_TEXT = `
-Seed corpus curator — review and prune the Phase 9 MyPlate harvest.
+Seed corpus curator — review and prune the MyPlate harvest.
 
   node tools/seed-curator/server.js [options]
 
@@ -103,10 +94,7 @@ class SeedCachePaths {
     this.statePath = path.join(rootPath, 'state.json');
   }
 
-  /**
-   * Resolves a path inside the cache, refusing anything that escapes it. Slugs originate from a
-   * remote archive index and are used as filenames, so they are never trusted.
-   */
+  /** Resolves a path inside the cache, refusing anything that escapes it because slugs come from a remote index. */
   resolveWithin(...segments) {
     const resolved = path.resolve(this.rootPath, ...segments);
     const boundary = this.rootPath.endsWith(path.sep) ? this.rootPath : this.rootPath + path.sep;
@@ -153,10 +141,7 @@ function assertSafeSlug(slug) {
 
 // ── JSON files ────────────────────────────────────────────────────────────────
 
-/**
- * Reads a JSON file, remembering its line endings. The harvester writes CRLF on Windows;
- * preserving that keeps a delete's git diff to the entries actually removed.
- */
+/** Reads a JSON file, remembering its line endings so a delete's git diff stays limited to the entries removed. */
 function readJsonFile(filePath) {
   const text = fs.readFileSync(filePath, 'utf8').replace(/^﻿/, '');
   return { value: JSON.parse(text), newline: text.includes('\r\n') ? '\r\n' : '\n' };
@@ -174,10 +159,7 @@ function writeJsonFileAtomically(filePath, value, newline) {
 
 // ── Index ─────────────────────────────────────────────────────────────────────
 
-/**
- * Reads every cached page into a searchable record set. Rebuilt on startup rather than cached:
- * the full corpus parses in about a second, which is cheaper than reasoning about a stale index.
- */
+/** Reads every cached page into a searchable record set, rebuilt on startup because the full corpus parses in about a second. */
 function buildIndex(cachePaths) {
   const startedAt = Date.now();
 
@@ -249,13 +231,7 @@ function unlinkIfExists(filePath) {
   return true;
 }
 
-/**
- * Permanently removes recipes from the seed corpus.
- *
- * Files go first, then the manifest, then state — so an interruption leaves entries pointing at
- * missing files (which `--harvest` simply re-fetches) rather than orphaned files no stage will
- * ever look at again.
- */
+/** Permanently removes recipes from the seed corpus, deleting files before the manifest and state so an interruption leaves entries `--harvest` can re-fetch. */
 function deleteRecipes(cachePaths, index, requestedSlugs) {
   const knownSlugs = new Set(index.recipes.map((recipe) => recipe.slug));
 

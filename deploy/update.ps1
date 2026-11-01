@@ -1,17 +1,17 @@
 <#
 .SYNOPSIS
-    Pulls the latest RecipeApp release onto this PC and restarts what changed (Phase 11 §4.5).
+    Pulls the latest RecipeApp release onto this PC and restarts what changed.
 
 .DESCRIPTION
     Run every 5 minutes by the task deploy/install-update-task.ps1 registers. Each run:
       1. git pull --ff-only, so compose and updater changes reach the PC.
       2. docker compose pull.
       3. If the API image changed, dumps the database to deploy/backups/ first. A failed dump
-         stops the run before anything is recreated (D17).
+         stops the run before anything is recreated.
       4. docker compose up -d --remove-orphans.
       5. If a container was recreated, waits for /health/ready through nginx.
       6. Logs one line to deploy/logs/ for any run that changed something or failed.
-    Exits quietly when Docker Desktop is not running (before login, D14).
+    Exits quietly when Docker Desktop is not running (before login).
 
     Windows PowerShell 5.1 compatible.
 
@@ -226,7 +226,7 @@ function Wait-ForReadiness {
 Import-Module (Join-Path $PSScriptRoot 'RecipeAppUpdate.psm1') -Force
 Push-Location $RepoRoot
 try {
-    # Docker Desktop starts only at login (D14). Before then there is nothing to do.
+    # Docker Desktop starts only at login, so before then there is nothing to do.
     if ((Invoke-Native -FilePath 'docker' -Arguments @('info', '--format', '{{.ServerVersion}}') -AllowFailure).ExitCode -ne 0) {
         exit 0
     }

@@ -16,13 +16,7 @@ using System.Text.RegularExpressions;
 
 namespace RecipeApp.Tests.Filters;
 
-/// <summary>
-/// Covers <c>ValidationFilter&lt;TRequest&gt;</c>, which replaced the hand-copied
-/// validate-and-return block that used to open every mutating endpoint. The response contract
-/// is asserted here because the filter is the only thing standing between a bad request and
-/// the handler — it must reject exactly what the inline block rejected, and let through
-/// exactly what it let through.
-/// </summary>
+/// <summary>Covers <c>ValidationFilter&lt;TRequest&gt;</c>, which must reject exactly what the old inline validate-and-return block rejected and let through exactly what it let through.</summary>
 [Collection("Database")]
 public class ValidationFilterTests(DatabaseFixture db) : IAsyncLifetime
 {
@@ -54,8 +48,7 @@ public class ValidationFilterTests(DatabaseFixture db) : IAsyncLifetime
         var problem = await response.Content.ReadFromJsonAsync<ValidationProblemDetails>(
             TestContext.Current.CancellationToken);
 
-        // ValidationResult.ToDictionary() keys by property name — the half of the response
-        // contract FluentValidation owns, and the half this phase could have changed.
+        // ValidationResult.ToDictionary() keys by property name, the half of the response contract FluentValidation owns.
         problem!.Status.Should().Be(StatusCodes.Status400BadRequest);
         problem.Errors.Should().ContainKey(nameof(CreateIngredientRequest.Name));
     }
@@ -81,8 +74,7 @@ public class ValidationFilterTests(DatabaseFixture db) : IAsyncLifetime
     [Fact]
     public async Task InvalidBody_DoesNotReachTheHandler()
     {
-        // A filter that ran the handler anyway would still 400 on the way out, so the
-        // absence of the side effect is what actually proves the short-circuit.
+        // A filter that ran the handler anyway would still 400 on the way out, so the absence of the side effect proves the short-circuit.
         await Client.PostAsJsonAsync(
             "/api/v1/ingredients",
             ValidCreate() with { Name = "" },
@@ -127,10 +119,7 @@ public class ValidationFilterTests(DatabaseFixture db) : IAsyncLifetime
     [Fact]
     public async Task ValidatorResolvesPerRequest_AcrossConsecutiveRequests()
     {
-        // Validators are registered scoped and the filter takes IValidator<T> as a constructor
-        // dependency. If AddEndpointFilter built the filter from the root provider, the first
-        // request would throw (500) rather than validate; if it captured one scope, a later
-        // request would fail on a disposed one. Three requests through one client cover both.
+        // Validators are scoped, so building the filter from the root provider or capturing one scope would fail, which three requests through one client cover.
         for (var attempt = 0; attempt < 3; attempt++)
         {
             var response = await Client.PostAsJsonAsync(
@@ -147,9 +136,7 @@ public class ValidationFilterTests(DatabaseFixture db) : IAsyncLifetime
     [Fact]
     public async Task GeneratedOpenApiDocument_DeclaresThe400OnExactlyTheValidatedEndpoints()
     {
-        // Asserted against the document Scalar renders at /scalar/v1, not just the endpoint
-        // metadata behind it. Both halves matter: every validated endpoint must document the
-        // 400, and nothing else may — a filter applied too widely is as wrong as one missing.
+        // Asserted against the document Scalar renders, because every validated endpoint must document the 400 and nothing else may.
         var expected = DiscoverValidatedOperations();
 
         expected.Should().HaveCount(12,
@@ -169,12 +156,7 @@ public class ValidationFilterTests(DatabaseFixture db) : IAsyncLifetime
         documented.Should().BeEquivalentTo(expected);
     }
 
-    /// <summary>
-    /// The endpoints that take a request type with a registered <c>IValidator&lt;T&gt;</c>, as
-    /// OpenAPI (method, path) pairs. Discovered rather than listed, so a future endpoint that
-    /// forgets <c>.WithValidation&lt;T&gt;()</c> fails this test instead of quietly shipping
-    /// an undocumented 400.
-    /// </summary>
+    /// <summary>The endpoints that take a request type with a registered validator, as OpenAPI (method, path) pairs, discovered so a future endpoint missing <c>.WithValidation&lt;T&gt;()</c> fails this test.</summary>
     private List<(string Method, string Path)> DiscoverValidatedOperations()
     {
         using var scope = db.Factory.Services.CreateScope();
@@ -193,11 +175,7 @@ public class ValidationFilterTests(DatabaseFixture db) : IAsyncLifetime
             .ToList();
     }
 
-    /// <summary>
-    /// Route patterns carry inline constraints and the group's trailing slash
-    /// (<c>/api/v1/ingredients/{id:guid}</c>); OpenAPI paths carry neither
-    /// (<c>/api/v1/ingredients/{id}</c>).
-    /// </summary>
+    /// <summary>Converts a route pattern with inline constraints and a trailing slash to the OpenAPI form, such as <c>/api/v1/ingredients/{id}</c>.</summary>
     private static string ToOpenApiPath(string routePattern)
     {
         var withoutConstraints = Regex.Replace(routePattern, @"\{(\w+)[^}]*\}", "{$1}");

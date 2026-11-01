@@ -3,14 +3,7 @@ using RecipeApp.API.Services.Llm;
 
 namespace RecipeApp.Tests.Infrastructure;
 
-/// <summary>
-/// An <see cref="ILlmStructuredClient"/> whose answer is decided per call, so a test can script a
-/// rejected-then-corrected sequence without a GPU. Every call is recorded, which is how the retry
-/// tests assert on attempt counts and the prompt tests read what the model was actually asked.
-///
-/// <para>Phase 9 §17.3 assumes exactly this seam: CI has no GPU, so nothing in the suite may reach
-/// real inference.</para>
-/// </summary>
+/// <summary>An <see cref="ILlmStructuredClient"/> whose answer is decided per call and recorded, so tests can script retries and read what the model was asked without a GPU.</summary>
 public class StubLlmStructuredClient : ILlmStructuredClient
 {
     private readonly Func<int, JsonNode> _respond;

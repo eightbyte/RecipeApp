@@ -4,10 +4,7 @@ using RecipeApp.API.Services;
 
 namespace RecipeApp.Tests.Services;
 
-/// <summary>
-/// Unit tests for RecipeScrapeService.FetchAndStripHtmlAsync — the JSON-LD-first,
-/// headless-render-as-last-resort orchestration.
-/// </summary>
+/// <summary>Tests for the JSON-LD-first, headless-render-as-last-resort orchestration in <c>FetchAndStripHtmlAsync</c>.</summary>
 public class RecipeScrapeServiceFetchTests
 {
     private const string RecipeJsonLdHtml = """

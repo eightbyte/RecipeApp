@@ -1,47 +1,27 @@
 namespace RecipeApp.API.Services.Seeding;
 
-/// <summary>
-/// Why Stage 5 declined to persist a recipe. Each is recorded against the slug and the run moves on
-/// (Phase 9 §16: one bad recipe never aborts a run; no suspect recipe is ever persisted).
-/// </summary>
+/// <summary>Why Stage 5 declined to persist a recipe, recorded against the slug while the run moves on.</summary>
 public enum SeedPersistFailure
 {
-    /// <summary>
-    /// The normalised artefact was derived from a different <c>parsed/</c> file than the one on disk
-    /// now — the page was re-parsed and not re-normalised. Re-run <c>--normalise</c>.
-    /// </summary>
+    /// <summary>The normalised artefact was derived from a different <c>parsed/</c> file than the one on disk now, so <c>--normalise</c> must be re-run.</summary>
     StaleArtefact,
 
-    /// <summary>
-    /// The artefact's ingredient rows no longer pair one-to-one with the parsed lines (§11.3). Stage 4
-    /// never writes this, so it means the file was edited outside the pipeline (§24.4.2).
-    /// </summary>
+    /// <summary>The artefact's ingredient rows no longer pair one-to-one with the parsed lines, so the file was edited outside the pipeline.</summary>
     IngredientCountMismatch,
 
-    /// <summary>A step points at an ingredient row that does not exist — the other half of §24.4.2.</summary>
+    /// <summary>A step points at an ingredient row that does not exist.</summary>
     IngredientIndexOutOfRange,
 
-    /// <summary>An ingredient name the committed catalogue cannot resolve (§12.1, §24.4.1).</summary>
+    /// <summary>An ingredient name the committed catalogue cannot resolve.</summary>
     CatalogueMiss,
 
-    /// <summary>
-    /// The name, composed description or serving count falls outside <c>RecipeLimits</c>, so the
-    /// recipe could be imported but never edited and saved in the UI.
-    /// </summary>
+    /// <summary>The name, composed description or serving count falls outside <c>RecipeLimits</c>, so the recipe could be imported but never saved from the UI.</summary>
     ExceedsRecipeLimits,
 
-    /// <summary>
-    /// <c>--force</c> asked to replace a recipe that a meal plan references. Deleting it is refused by
-    /// the database (<c>MealPlanRecipe → Recipe</c> is <c>Restrict</c>), and silently removing it from
-    /// someone's plan would be worse. The existing row is left as it is.
-    /// </summary>
+    /// <summary><c>--force</c> asked to replace a recipe that a meal plan references, which the database refuses and which is left as it is.</summary>
     RecipeInUse,
 
-    /// <summary>
-    /// Excluded by the §18 Q3 quality filter. Only raised when
-    /// <see cref="RecipeSeedingOptions.ApplyQualityFilter"/> is on; counted separately from real
-    /// failures so the §20 "≥ 95% persisted" bar stays measurable.
-    /// </summary>
+    /// <summary>Excluded by the quality filter, counted separately from real failures and only raised when <see cref="RecipeSeedingOptions.ApplyQualityFilter"/> is on.</summary>
     BelowQualityThreshold,
 }
 
@@ -58,11 +38,6 @@ public class SeedPersistException(SeedPersistFailure failure, string detail)
 }
 
 /// <summary>What persisting one recipe did, for the run summary.</summary>
-/// <param name="Replaced">An existing row was deleted first, under <c>--force</c>.</param>
-/// <param name="NonIngredientRowsRemoved">Heading and note rows dropped by <see cref="SeedNonIngredientRows"/>.</param>
-/// <param name="StaleSkipListLines">Skip-list lines this recipe did not contain.</param>
-/// <param name="AmountsDropped">Rows stored unquantified because their amount was unexplained (§24.3a).</param>
-/// <param name="HasImage">Whether a harvested photo was copied into image storage.</param>
 public record SeedPersistOutcome(
     bool Replaced,
     int NonIngredientRowsRemoved,
@@ -79,7 +54,7 @@ public record SeedPersistResult
     /// <summary>Of <see cref="Persisted"/>, how many replaced an existing row under <c>--force</c>.</summary>
     public int Replaced { get; init; }
 
-    /// <summary>Recipes already in the database and left alone — re-running is a no-op (§20).</summary>
+    /// <summary>Recipes already in the database and left alone, so re-running is a no-op.</summary>
     public int AlreadyPersisted { get; init; }
 
     /// <summary>Manifest entries with no normalised artefact yet — Stage 4 has not reached them.</summary>
@@ -91,10 +66,7 @@ public record SeedPersistResult
     /// <summary>Recipes the quality filter excluded (only when it is on).</summary>
     public int FilteredOut { get; init; }
 
-    /// <summary>
-    /// Recipes persisted that the quality filter <i>would</i> have excluded — reported while the
-    /// filter is off so its thresholds can be chosen from evidence after the trial (§18 Q3).
-    /// </summary>
+    /// <summary>Recipes persisted that the quality filter would have excluded, reported while the filter is off so its thresholds can be chosen from evidence.</summary>
     public int BelowQualityThreshold { get; init; }
 
     /// <summary>Heading and note rows removed across the persisted recipes.</summary>

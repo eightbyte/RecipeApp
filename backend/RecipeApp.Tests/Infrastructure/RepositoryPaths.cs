@@ -1,10 +1,6 @@
 namespace RecipeApp.Tests.Infrastructure;
 
-/// <summary>
-/// Locates source-tree files that tests check as artefacts, such as the shipped ingredient
-/// catalogue and the local MyPlate cache. Found by walking up from the test binaries, so it works
-/// from any build output directory.
-/// </summary>
+/// <summary>Locates source-tree files that tests check as artefacts, found by walking up from the test binaries so it works from any build output directory.</summary>
 public static class RepositoryPaths
 {
     private const string ApiProjectDirectory = "RecipeApp.API";

@@ -9,16 +9,8 @@ using Microsoft.Extensions.Options;
 namespace RecipeApp.API.Services.Seeding;
 
 /// <summary>
-/// Stages 1, 2 and 2b — discovery and caching of USDA MyPlate recipe pages from the Internet
-/// Archive (Phase 9 §8–§9).
-///
-/// <para>The live site was retired in January 2026, so the archive is the only remaining channel.
-/// Its content is the USDA's own public-domain work, but the archive itself is a shared,
-/// rate-limited service: requests are strictly sequential, spaced by
-/// <see cref="RecipeSeedingOptions.FetchDelayMilliseconds"/>, and backed off on 429/5xx.
-/// Parallelising this would earn a block, not a speed-up.</para>
-///
-/// <para>Not thread-safe by design — it drives one sequential harvest at a time, from the CLI.</para>
+/// Stages 1, 2 and 2b: discovery and caching of MyPlate recipe pages from the Internet Archive, strictly sequential and
+/// backed off on 429/5xx because it is a shared, rate-limited service.
 /// </summary>
 public class WaybackHarvester(
     IHttpClientFactory httpClientFactory,
@@ -67,8 +59,7 @@ public class WaybackHarvester(
                 continue;
             }
 
-            // Keep whichever capture the preference rules favour; the losing row is a duplicate
-            // of the same recipe (a www./non-www. host or an earlier snapshot), not a drop.
+            // Keep whichever capture the preference rules favour, since the losing row is a duplicate of the same recipe.
             bySlug[slug] = bySlug.TryGetValue(slug, out var existing)
                 ? PreferredSnapshot(existing, row, _options.PreferredSnapshotYear)
                 : row;
@@ -122,21 +113,14 @@ public class WaybackHarvester(
 
     private async Task<IReadOnlyList<CdxRow>> QueryCdxAsync(CancellationToken ct)
     {
-        // Deliberately *not* collapsed by urlkey. CDX collapse keeps the first capture of each
-        // key, which would hand back one arbitrary early snapshot per recipe and make the
-        // preferred-year rule below inert — measured against the live archive, collapsing pins
-        // 1,086 of 1,123 recipes to a 2024 capture, while the uncollapsed set resolves 1,121 of
-        // them to the 2025 captures taken shortly before the site was retired. Same slugs either
-        // way; this is purely about getting the last published version of each page. The cost is
-        // a ~5 MB response, paid once.
+        // Deliberately not collapsed by urlkey, because collapse keeps the first capture per key and would make the preferred-year rule inert.
         var requestUrl =
             $"{_options.WaybackCdxUrl}?url={Uri.EscapeDataString(_options.SourceUrlPattern)}" +
             "&output=json&fl=original,timestamp,statuscode&filter=statuscode:200";
 
         logger.LogInformation("Querying the Wayback CDX index: {Url}", requestUrl);
 
-        // The index query is one large response rather than a page fetch, so it gets its own,
-        // longer budget instead of the per-page timeout.
+        // The index query is one large response, so it gets its own longer budget instead of the per-page timeout.
         var outcome = await SendWithRetriesAsync(
             requestUrl, ct, TimeSpan.FromSeconds(_options.DiscoveryTimeoutSeconds));
         if (!outcome.Succeeded)
@@ -160,8 +144,7 @@ public class WaybackHarvester(
                 "The Wayback CDX index returned no captures for " +
                 $"'{_options.SourceUrlPattern}'. The archive or the URL pattern has changed.");
 
-        // The first row names the columns. Reading them by name rather than by position keeps
-        // discovery working if the archive ever reorders its output.
+        // Read the columns by name rather than position so discovery survives the archive reordering its output.
         var columns = (table[0] as JsonArray)?
             .Select((column, index) => (Name: column?.GetValue<string>() ?? string.Empty, Index: index))
             .ToDictionary(column => column.Name, column => column.Index, StringComparer.OrdinalIgnoreCase);
@@ -188,13 +171,9 @@ public class WaybackHarvester(
         return rows;
     }
 
-    // ── Stage 1 — filter rules (§8) ───────────────────────────────────────────
+    // ── Stage 1 — filter rules ────────────────────────────────────────────────
 
-    /// <summary>
-    /// Reduces an archived URL to its canonical recipe slug, or returns null with the rule that
-    /// rejected it. Host case and a leading <c>www.</c> are collapsed so the two spellings of the
-    /// same recipe key together.
-    /// </summary>
+    /// <summary>Reduces an archived URL to its canonical recipe slug, or returns null with the rule that rejected it, collapsing host case and a leading <c>www.</c>.</summary>
     internal static string? TryExtractSlug(string originalUrl, string recipePathPrefix, out string? dropReason)
     {
         dropReason = null;
@@ -211,8 +190,7 @@ public class WaybackHarvester(
             return null;
         }
 
-        // Pagination and tracking variants (?page=1, ?utm_source=…) are duplicates of the page
-        // they hang off, and archive to a different urlkey.
+        // Pagination and tracking variants are duplicates of the page they hang off and archive to a different urlkey.
         if (!string.IsNullOrEmpty(uri.Query))
         {
             dropReason = DiscoveryDropReason.QueryString;
@@ -250,11 +228,7 @@ public class WaybackHarvester(
         return slug;
     }
 
-    /// <summary>
-    /// Picks between two captures of the same recipe: the latest snapshot inside the preferred
-    /// year, and failing that the latest overall. Timestamps are fixed-width, so text comparison
-    /// is chronological comparison.
-    /// </summary>
+    /// <summary>Picks between two captures of the same recipe: the latest inside the preferred year, else the latest overall.</summary>
     internal static CdxRow PreferredSnapshot(CdxRow first, CdxRow second, int preferredYear)
     {
         var firstPreferred  = IsFromYear(first.Timestamp, preferredYear);
@@ -298,8 +272,7 @@ public class WaybackHarvester(
             if (pageAlreadyCached)
             {
                 skipped++;
-                // The cached file is the authority: a state entry that lags behind it (an
-                // interrupted flush, a hand-copied cache) is corrected rather than trusted.
+                // The cached file is the authority, so a state entry that lags behind it is corrected rather than trusted.
                 if (!state.GetOrAdd(entry.Slug).HasReached(SeedStage.Fetched))
                     await cache.RecordStageAsync(entry.Slug, SeedStage.Fetched, error: null, ct);
             }
@@ -358,10 +331,7 @@ public class WaybackHarvester(
 
     private enum ImageOutcome { Fetched, Skipped, Failed }
 
-    /// <summary>
-    /// Downloads the recipe photo referenced by the page's JSON-LD. Always non-fatal: a recipe
-    /// without a photo still imports, so a failure here is counted and moved past.
-    /// </summary>
+    /// <summary>Downloads the recipe photo referenced by the page's JSON-LD, non-fatally because a recipe without a photo still imports.</summary>
     private async Task<ImageOutcome> HarvestImageAsync(SeedManifestEntry entry, CancellationToken ct)
     {
         if (cache.HasImage(entry.Slug)) return ImageOutcome.Skipped;
@@ -395,8 +365,7 @@ public class WaybackHarvester(
         var extension = ResolveImageExtension(outcome.Content!, outcome.ContentType, imageUrl);
         if (extension is null)
         {
-            // The archive serves its own interstitial and error pages with a 200, so a successful
-            // status is not evidence that the bytes are a photograph.
+            // The archive serves interstitial and error pages with a 200, so a successful status does not prove the bytes are a photograph.
             logger.LogWarning(
                 "{Slug} image response was {ContentType}, not a usable image. Importing without a photo.",
                 entry.Slug, outcome.ContentType ?? "of unknown type");
@@ -433,12 +402,7 @@ public class WaybackHarvester(
     private static readonly Regex SnapshotPrefixPattern =
         new(@"/web/(?<timestamp>\d{14})(?<modifier>[a-z_]*)/", RegexOptions.Compiled);
 
-    /// <summary>
-    /// Rewrites an archived image reference to the <c>im_</c> snapshot form, which serves the
-    /// captured bytes directly. Without the modifier the archive redirects to its HTML viewer and
-    /// the "image" downloads as a page — the original image host was decommissioned with the
-    /// site, so there is no unwrapped URL to fall back to.
-    /// </summary>
+    /// <summary>Rewrites an archived image reference to the <c>im_</c> snapshot form, which serves the captured bytes directly instead of the HTML viewer.</summary>
     private string ArchivedImageUrl(string imageUrl, string timestamp)
     {
         var match = SnapshotPrefixPattern.Match(imageUrl);
@@ -449,18 +413,13 @@ public class WaybackHarvester(
             : $"{_options.WaybackContentUrl.TrimEnd('/')}/{timestamp}im_/{imageUrl}";
     }
 
-    /// <summary>
-    /// The extension to store a harvested image under, or null when the payload is not a usable
-    /// image at all. The bytes decide first: a remote path and a remote header are both weaker
-    /// evidence than the file's own signature.
-    /// </summary>
+    /// <summary>The extension to store a harvested image under, or null when the payload is not a usable image, with the file's own signature outranking the path and header.</summary>
     private string? ResolveImageExtension(byte[] content, string? contentType, string imageUrl)
     {
         if (DetectImageExtension(content) is { } detected)
             return _options.ImageExtensions.Contains(detected) ? detected : null;
 
-        // An unrecognised signature is only trusted as an image if the server said so, and even
-        // then the extension comes from the allow-list rather than from the remote path.
+        // An unrecognised signature is trusted as an image only if the server said so, and the extension still comes from the allow-list.
         if (contentType?.StartsWith("image/", StringComparison.OrdinalIgnoreCase) != true)
             return null;
 
@@ -504,19 +463,14 @@ public class WaybackHarvester(
         public static FetchOutcome Failure(string error) => new(null, null, error);
     }
 
-    /// <summary>
-    /// Fetches one archive URL, waiting out the politeness delay first and retrying transient
-    /// failures with exponential backoff. Returns a failure rather than throwing: one bad page
-    /// must never abort a thousand-page harvest.
-    /// </summary>
+    /// <summary>Fetches one archive URL after the politeness delay, retrying transient failures with exponential backoff and returning a failure rather than throwing.</summary>
     private async Task<FetchOutcome> SendWithRetriesAsync(
         string url, CancellationToken ct, TimeSpan? timeout = null)
     {
         var client        = httpClientFactory.CreateClient(HttpClientName);
         var totalAttempts = _options.MaxFetchRetries + 1;
 
-        // The factory hands back a fresh HttpClient over a pooled handler, so raising the budget
-        // for a single long request affects nothing else.
+        // The factory hands back a fresh HttpClient over a pooled handler, so raising the budget for one request affects nothing else.
         if (timeout is { } budget) client.Timeout = budget;
 
         var effectiveTimeout = timeout ?? client.Timeout;
@@ -571,8 +525,7 @@ public class WaybackHarvester(
     private async Task BackOffAsync(
         int attempt, TimeSpan? retryAfter, string url, string reason, CancellationToken ct)
     {
-        // The archive's own Retry-After wins when it sends one — it knows its load better than
-        // a doubling schedule does.
+        // The archive's own Retry-After wins when it sends one.
         var backoff = retryAfter is { } requested && requested > TimeSpan.Zero
             ? requested
             : TimeSpan.FromMilliseconds(_options.RetryBackoffMilliseconds * Math.Pow(2, attempt - 1));

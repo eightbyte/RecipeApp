@@ -5,11 +5,7 @@ using RecipeApp.API.Validators;
 
 namespace RecipeApp.Tests.Validators;
 
-/// <summary>
-/// The scrape validators guard the LLM import path — the one place where measurements and
-/// ingredient names arrive from outside the app rather than from a person filling in a form.
-/// Phase 8.5.1 added the unit whitelist here; these tests exercise it directly.
-/// </summary>
+/// <summary>The scrape validators guard the LLM import path, where measurements and ingredient names arrive from outside the app, including the unit whitelist.</summary>
 public class ScrapeValidatorTests
 {
     private readonly ScrapeRecipeRequestValidator _urlValidator = new();
@@ -52,8 +48,7 @@ public class ScrapeValidatorTests
     [InlineData("javascript:alert(1)")]
     public void Url_NonHttpScheme_HasErrorOnUrl(string url)
     {
-        // The scraper fetches whatever it is handed, so the scheme gate is a boundary check,
-        // not a formatting preference.
+        // The scraper fetches whatever it is handed, so the scheme gate is a boundary check and not a formatting preference.
         var result = _urlValidator.TestValidate(new ScrapeRecipeRequest(url));
         result.ShouldHaveValidationErrorFor(x => x.Url);
     }
@@ -72,8 +67,7 @@ public class ScrapeValidatorTests
     [Fact]
     public void Ingredient_NoIdAndNoNewIngredientFields_HasErrorOnEach()
     {
-        // Without an IngredientId the confirm step has to create the ingredient, so all three
-        // fields it needs become required together.
+        // Without an IngredientId the confirm step has to create the ingredient, so all three fields it needs become required together.
         var result = _ingredientValidator.TestValidate(
             Ingredient() with { NewIngredientName = null, NewIngredientDisplayName = null, Category = null });
 
@@ -137,9 +131,7 @@ public class ScrapeValidatorTests
     [InlineData("oz")]
     public void Ingredient_NonCanonicalUnit_HasErrorOnUnit(string unit)
     {
-        // The whitelist is deliberately strict: canonicalisation happens upstream in
-        // MeasurementConverter, so anything reaching the validator uncanonicalised is a bug
-        // to surface, not a spelling to accept.
+        // The whitelist is strict because canonicalisation happens upstream, so an uncanonicalised unit reaching the validator is a bug to surface.
         var result = _ingredientValidator.TestValidate(Ingredient() with { Unit = unit });
         result.ShouldHaveValidationErrorFor(x => x.Unit);
     }
@@ -153,13 +145,12 @@ public class ScrapeValidatorTests
         result.ShouldHaveValidationErrorFor(x => x.Amount);
     }
 
-    // ── Unquantified ingredients (Phase 9.1 §3.1) ─────────────────────────────
+    // ── Unquantified ingredients ──────────────────────────────────────────────
 
     [Fact]
     public void Ingredient_NullAmountAndNullUnit_HasNoErrors()
     {
-        // A scraped page reading "salt to taste" has always had this problem; before Phase 9.1
-        // the preview showed a number the model invented to satisfy the schema.
+        // A scraped page reading "salt to taste" has always had this problem, and the preview used to show a number the model invented.
         var result = _ingredientValidator.TestValidate(
             Ingredient() with { Amount = null, Unit = null });
 
@@ -199,8 +190,7 @@ public class ScrapeValidatorTests
     [Fact]
     public void Ingredient_SourceMeasurement_RoundTripsUnvalidatedAgainstTheWhitelist()
     {
-        // SourceUnit records what the page said, verbatim — "cups", "cloves", anything.
-        // It is provenance, never arithmetic, so the storable-unit whitelist must not apply.
+        // SourceUnit records what the page said verbatim and is provenance rather than arithmetic, so the storable-unit whitelist must not apply.
         var result = _ingredientValidator.TestValidate(
             Ingredient() with { Amount = 240m, Unit = MeasurementUnit.Millilitre, SourceAmount = 1m, SourceUnit = "cups" });
 
@@ -280,8 +270,7 @@ public class ScrapeValidatorTests
     [Fact]
     public void Confirm_InvalidChildIngredient_HasErrorOnThatIngredient()
     {
-        // Proves RuleForEach actually runs the child validator — the whitelist is only a
-        // guard on the import path if it reaches the ingredients inside the request.
+        // Proves RuleForEach runs the child validator, since the whitelist only guards the import path if it reaches the ingredients.
         var result = _confirmValidator.TestValidate(
             ConfirmRequest() with { Ingredients = [Ingredient() with { Unit = "clove" }] });
 
@@ -342,8 +331,7 @@ public class ScrapeValidatorTests
     [Fact]
     public void Confirm_SecondStepInvalid_ErrorIsKeyedToItsOwnIndex()
     {
-        // The failure keys are built by hand in a Custom block, so the index they carry is
-        // worth pinning: a reviewer fixing step 2 should not be sent to step 1.
+        // The failure keys are built by hand, so the index they carry is pinned: a reviewer fixing step 2 should not be sent to step 1.
         var result = _confirmValidator.TestValidate(ConfirmRequest() with
         {
             Steps =

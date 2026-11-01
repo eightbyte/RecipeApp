@@ -380,8 +380,7 @@ function populateForm(recipe) {
     amount:       i.amount,
     unit:         i.unit,
     notes:        i.notes ?? '',
-    // Provenance is carried through untouched: UpdateAsync deletes and recreates every
-    // ingredient row, so dropping these here would silently destroy an import's history.
+    // Provenance is carried through untouched, because UpdateAsync recreates every ingredient row and dropping it would destroy an import's history.
     sourceAmount: i.sourceAmount ?? null,
     sourceUnit:   i.sourceUnit ?? null,
   }))
@@ -508,7 +507,7 @@ async function submit() {
       servings:    form.servings,
       ingredients: form.ingredients.map((ing, i) => ({
         ingredientId: ing.ingredientId,
-        // An empty amount round-trips as null, never as 0 (Phase 9.1 §3.4).
+        // An empty amount round-trips as null, never as 0.
         ...toPayloadMeasurement(ing.amount, ing.unit),
         notes:        ing.notes?.trim() || null,
         displayOrder: i,

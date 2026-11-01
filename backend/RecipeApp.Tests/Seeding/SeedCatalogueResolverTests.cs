@@ -9,14 +9,7 @@ using RecipeApp.Tests.Infrastructure;
 
 namespace RecipeApp.Tests.Seeding;
 
-/// <summary>
-/// Stage 5's ingredient resolution (Phase 9.3 §4.8): a dictionary lookup where Phase 9 §12 had a
-/// per-recipe LLM call whose candidate list grew as the run proceeded.
-///
-/// <para>The resolver takes no <c>ILlmStructuredClient</c> at all, which is the strongest form the
-/// "zero LLM calls" guarantee can take — there is no seam through which inference could happen.
-/// These tests exercise the lookup, the name-beats-alias rule, and the density arm of Stage B.</para>
-/// </summary>
+/// <summary>Stage 5's ingredient resolution as a dictionary lookup, covering the name-beats-alias rule and the density arm of Stage B, with no LLM seam at all.</summary>
 [Collection("Database")]
 public class SeedCatalogueResolverTests(DatabaseFixture db) : IAsyncLifetime
 {
@@ -96,8 +89,7 @@ public class SeedCatalogueResolverTests(DatabaseFixture db) : IAsyncLifetime
     [Fact]
     public async Task ANameBeatsAnotherEntrysAlias()
     {
-        // The artefact's validation forbids this collision outright. This is what makes the outcome
-        // defined anyway if a hand-edited row ever introduces one.
+        // The artefact's validation forbids this collision outright, and this is what makes the outcome defined anyway if a hand-edited row introduces one.
         await SeedIngredientAsync("tomato", ["diced tomatoes"]);
         var diced = await SeedIngredientAsync("diced tomatoes");
 
@@ -165,8 +157,7 @@ public class SeedCatalogueResolverTests(DatabaseFixture db) : IAsyncLifetime
     [Fact]
     public async Task KeepsACupAsStatedWhenTheEntryHasNoDensity()
     {
-        // GramsPerMillilitre == null means "no reliable density — do not invent a mass". Liquids
-        // and packing-dominated ingredients are deliberately left null.
+        // GramsPerMillilitre == null means "no reliable density, do not invent a mass", which liquids and packing-dominated ingredients deliberately keep.
         await SeedIngredientAsync("water");
         var resolver = BuildResolver();
 
@@ -181,8 +172,7 @@ public class SeedCatalogueResolverTests(DatabaseFixture db) : IAsyncLifetime
     [Fact]
     public async Task AnUnquantifiedRowStaysUnquantified()
     {
-        // Phase 9.1: null means "the source states no quantity". Never zero — 0 renders as
-        // '0 g Salt' and sums into shopping lists.
+        // Null means "the source states no quantity", never zero, which would render as '0 g Salt' and sum into shopping lists.
         await SeedIngredientAsync("salt", density: 1.2m);
         var resolver = BuildResolver();
 
@@ -216,8 +206,7 @@ public class SeedCatalogueResolverTests(DatabaseFixture db) : IAsyncLifetime
     [Fact]
     public async Task DisplayOrderFollowsTheNormalisedOrderExactly()
     {
-        // Step linkage is by position into the ingredients array, so a reordering here would
-        // silently relink every step in the corpus.
+        // Step linkage is by position into the ingredients array, so a reordering here would silently relink every step.
         await SeedIngredientAsync("onion");
         await SeedIngredientAsync("garlic");
         await SeedIngredientAsync("carrot");

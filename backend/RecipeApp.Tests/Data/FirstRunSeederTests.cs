@@ -14,10 +14,7 @@ using static RecipeApp.Tests.RecipePacks.RecipePackFixtures;
 
 namespace RecipeApp.Tests.Data;
 
-/// <summary>
-/// First-run seeding against a real Postgres (Phase 10 §4.2, §4.3, §6), with the shipped catalogue
-/// and the shipped sample pack unless a test points the pack elsewhere.
-/// </summary>
+/// <summary>First-run seeding against a real Postgres, with the shipped catalogue and sample pack unless a test points the pack elsewhere.</summary>
 [Collection("Database")]
 public class FirstRunSeederTests(DatabaseFixture db) : IAsyncLifetime
 {
@@ -128,7 +125,7 @@ public class FirstRunSeederTests(DatabaseFixture db) : IAsyncLifetime
     [Fact]
     public async Task DeletedSampleRecipesDoNotComeBack()
     {
-        // D2: the ledger, not an empty Recipes table, says the step has run.
+        // The ledger, not an empty Recipes table, says the step has run.
         await RunAsync();
         await using (var context = db.CreateDbContext())
             await context.Recipes.ExecuteDeleteAsync();
@@ -138,7 +135,7 @@ public class FirstRunSeederTests(DatabaseFixture db) : IAsyncLifetime
         (await CountsAsync()).Recipes.Should().Be(0);
     }
 
-    // ── A database that already has data (§4.3) ──────────────────────────────
+    // ── A database that already has data ──────────────────────────────────────
 
     [Fact]
     public async Task ExistingRecipesWithNoLedgerAreLeftAloneAndRecordedAsSkipped()
@@ -211,8 +208,7 @@ public class FirstRunSeederTests(DatabaseFixture db) : IAsyncLifetime
     [Fact]
     public async Task AStepAnotherHostAlreadyRecordedIsNotRunAgain()
     {
-        // The ledger row is the only evidence consulted: a recorded step is skipped even though its
-        // target is empty.
+        // The ledger row is the only evidence consulted, so a recorded step is skipped even though its target is empty.
         await using (var context = db.CreateDbContext())
         {
             context.SeedLedger.Add(new SeedLedgerEntry

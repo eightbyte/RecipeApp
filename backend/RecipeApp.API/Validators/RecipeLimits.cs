@@ -1,10 +1,8 @@
 namespace RecipeApp.API.Validators;
 
 /// <summary>
-/// Field limits a stored recipe must satisfy to be editable. The create and update validators
-/// enforce them at the endpoint; the Phase 9 seed import checks them at persist time, because
-/// <c>ConfirmAsync</c> validates nothing and a recipe imported beyond them could be viewed but never
-/// saved again from the UI.
+/// Field limits a stored recipe must satisfy to be editable, enforced by the validators at the endpoint and checked at persist time
+/// by the seed import because <c>ConfirmAsync</c> validates nothing.
 /// </summary>
 public static class RecipeLimits
 {

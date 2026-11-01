@@ -1,7 +1,7 @@
 <template>
   <v-container class="pa-4" max-width="600">
 
-    <!-- ── Phase 1: Name entry ──────────────────────────────────────────── -->
+    <!-- ── Step 1: Name entry ────────────────────────────────────────── -->
     <div v-if="!mealPlanStore.currentPlan">
       <h2 class="text-h6 font-weight-bold mb-6">New Meal Plan</h2>
 
@@ -38,7 +38,7 @@
       </v-btn>
     </div>
 
-    <!-- ── Phase 2: Recipe builder ──────────────────────────────────────── -->
+    <!-- ── Step 2: Recipe builder ────────────────────────────────────── -->
     <div v-else>
       <div class="d-flex align-center justify-space-between mb-6">
         <div>
@@ -126,8 +126,7 @@ const planName  = ref('')
 const nameError = ref('')
 const creating  = ref(false)
 
-// Always open the builder at the name-entry step for a brand-new plan,
-// discarding any plan left in the store from a previously viewed plan.
+// Always open the builder at the name-entry step, discarding any plan left in the store from a previously viewed plan.
 onMounted(() => {
   mealPlanStore.currentPlan = null
 })

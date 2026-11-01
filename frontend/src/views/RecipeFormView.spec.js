@@ -143,8 +143,7 @@ describe('RecipeFormView — edit mode', () => {
   })
 
   it('sends an empty amount as null, never as 0', async () => {
-    // A hand-entered "salt" row with no quantity. Coercing to 0 would render as "0 g Salt"
-    // and sum into the shopping list (Phase 9.1 §3.4).
+    // A hand-entered "salt" row with no quantity must not be coerced to 0, which would render as "0 g Salt".
     const detail = makeRecipeDetail({ id: 'r1' })
 
     const wrapper = mountForm({ id: 'r1' })

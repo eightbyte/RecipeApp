@@ -3,10 +3,7 @@ using RecipeApp.API.Services.Seeding;
 
 namespace RecipeApp.Tests.Seeding;
 
-/// <summary>
-/// Stage 4's quantity gate (Phase 9.1 §3.2), which replaces Phase 9 §11.3's blanket
-/// <c>Any ingredient has Amount &lt;= 0</c>. Pure predicate — no database, no network, no inference.
-/// </summary>
+/// <summary>Stage 4's quantity gate, a pure predicate with no database, network or inference.</summary>
 public class SeedQuantityGateTests
 {
     // ── HasStatedQuantity ─────────────────────────────────────────────────────
@@ -30,10 +27,7 @@ public class SeedQuantityGateTests
     public void HasStatedQuantity_NoDigitAndNoNumberWord_IsUnquantified(string line) =>
         SeedQuantityGate.HasStatedQuantity(line).Should().BeFalse();
 
-    /// <summary>
-    /// U+00BC–U+00BE. Storing these as unquantified would be silent data loss, which this project
-    /// treats as worse than a loud failure (Phase 9.1 §2).
-    /// </summary>
+    /// <summary>Vulgar fractions carry no ASCII digit, and storing them as unquantified would be silent data loss.</summary>
     [Theory]
     [InlineData('¼')]
     [InlineData('½')]
@@ -64,10 +58,7 @@ public class SeedQuantityGateTests
     public void HasStatedQuantity_LeadingNumberWord_IsQuantified(string line) =>
         SeedQuantityGate.HasStatedQuantity(line).Should().BeTrue();
 
-    /// <summary>
-    /// The leading-token restriction is what makes the number-word clause safe: a number word
-    /// buried in a prep note describes the cut, not the quantity.
-    /// </summary>
+    /// <summary>The leading-token restriction keeps a number word buried in a prep note from counting as a quantity.</summary>
     [Theory]
     [InlineData("green pepper, cut into one-inch pieces")]
     [InlineData("carrots, quartered")]
@@ -155,10 +146,7 @@ public class SeedQuantityGateTests
         verdict.Unit.Should().BeNull();
     }
 
-    /// <summary>
-    /// The new tooth. The rule this replaces had nothing to say about a model inventing
-    /// <c>1 tsp</c> for a line reading <c>salt</c> — it sailed through as a positive amount.
-    /// </summary>
+    /// <summary>An invented <c>1 tsp</c> for a line reading <c>salt</c> must be rejected, which the old blanket rule let through as a positive amount.</summary>
     [Theory]
     [InlineData(1)]
     [InlineData(0)]
@@ -171,10 +159,7 @@ public class SeedQuantityGateTests
         verdict.Rejection.Should().Be(SeedQuantityRejection.InventedQuantity);
     }
 
-    /// <summary>
-    /// A unit with no amount is the same fabrication in a different column, and it is also the
-    /// half-set pair both request validators reject — so the gate must not admit one either.
-    /// </summary>
+    /// <summary>A unit with no amount is the same fabrication in a different column and the half-set pair both validators reject, so the gate must not admit one.</summary>
     [Fact]
     public void Check_UnquantifiedSource_UnitWithoutAmount_Rejects()
     {
@@ -184,10 +169,7 @@ public class SeedQuantityGateTests
         verdict.Rejection.Should().Be(SeedQuantityRejection.InventedUnit);
     }
 
-    /// <summary>
-    /// The exemption is earned from the source text, never granted by the model's own output: a
-    /// model cannot opt a quantified line out of the gate by returning nothing for it.
-    /// </summary>
+    /// <summary>The exemption is earned from the source text, so a model cannot opt a quantified line out by returning nothing for it.</summary>
     [Fact]
     public void Check_ExemptionCannotBeSelfGranted()
     {
@@ -200,10 +182,7 @@ public class SeedQuantityGateTests
 
     // ── CheckAgainstStatedNumber ──────────────────────────────────────────────
 
-    /// <summary>
-    /// 7,136 of 8,601 corpus lines (83.0%) state exactly one number, and for those the model's
-    /// amount is checkable by arithmetic rather than by judgement.
-    /// </summary>
+    /// <summary>For the lines that state exactly one number, the model's amount is checkable by arithmetic rather than by judgement.</summary>
     [Theory]
     [InlineData("3/4 cup unsalted dry roasted peanuts", 0.75)]
     [InlineData("1/4 teaspoon cayenne pepper", 0.25)]
@@ -217,10 +196,7 @@ public class SeedQuantityGateTests
     public void TryReadSoleNumber_ALineStatingOneNumber_ReadsIt(string line, double expected) =>
         SeedQuantityGate.TryReadSoleNumber(line).Should().BeApproximately((decimal)expected, 0.001m);
 
-    /// <summary>
-    /// Ambiguity is always resolved as "not checkable". A container line's right answer is a choice
-    /// between its numbers or a product of them, and guessing which would reject correct output.
-    /// </summary>
+    /// <summary>Ambiguity is always resolved as "not checkable", because guessing which number a container line means would reject correct output.</summary>
     [Theory]
     [InlineData("1 can (14.5 ounces) no salt added diced tomatoes")]
     [InlineData("2 cans (15 ounces each) low-sodium black beans")]
@@ -268,20 +244,14 @@ public class SeedQuantityGateTests
 
     // ── Cut sizes are not quantities ──────────────────────────────────────────
 
-    /// <summary>
-    /// The two corpus lines whose only number is a dimension. Counting it made the gate demand an
-    /// amount the line never stated, and reject the model for correctly reporting none.
-    /// </summary>
+    /// <summary>A line whose only number is a dimension must not make the gate demand an amount the line never stated.</summary>
     [Theory]
     [InlineData("carrot, sliced into 3 inch pieces")]
     [InlineData("aluminum foil (10x12 inches square)")]
     public void HasStatedQuantity_ALineWhoseOnlyNumberIsACutSize_IsUnquantified(string line) =>
         SeedQuantityGate.HasStatedQuantity(line).Should().BeFalse();
 
-    /// <summary>
-    /// The other 117 inch-bearing lines carry a real quantity as well, and stripping the dimension
-    /// must not reach it. This is the direction that would cause silent data loss.
-    /// </summary>
+    /// <summary>Stripping a dimension must not reach the real quantity on the other inch-bearing lines, which would cause silent data loss.</summary>
     [Theory]
     [InlineData("6 medium russet potatoes, peeled and sliced into 1/4 inch slices")]
     [InlineData("10 (6-inch) corn tortillas")]
@@ -314,10 +284,7 @@ public class SeedQuantityGateTests
         SeedQuantityGate.TryReadCountedQuantity("4-6 handfuls corn shucks", CountWords)
             .Should().Be(4m);
 
-    /// <summary>
-    /// A line naming a real unit is measuring, not counting. Without this guard
-    /// <c>1/2 cup onion, chopped into 4 slices</c> reads as four pieces of onion.
-    /// </summary>
+    /// <summary>A line naming a real unit is measuring, not counting, so <c>1/2 cup onion, chopped into 4 slices</c> is not read as four pieces.</summary>
     [Theory]
     [InlineData("1/2 cup onion, chopped into 4 slices")]
     [InlineData("2 cups flour")]
@@ -347,27 +314,20 @@ public class SeedQuantityGateTests
         string line, string expected) =>
         SeedQuantityGate.TryReadSoleStatedUnit(line).Should().Be(expected);
 
-    /// <summary>
-    /// The longest phrase wins, so <c>us fluid ounces</c> is not read as the <c>ounces</c> inside it.
-    /// Those differ by a factor of 29.6 against 28.3 and by dimension, mass against volume.
-    /// </summary>
+    /// <summary>The longest phrase wins, so <c>us fluid ounces</c> is not read as the <c>ounces</c> inside it, which differs by dimension.</summary>
     [Fact]
     public void TryReadSoleStatedUnit_PrefersTheLongestUnitPhrase() =>
         SeedQuantityGate.TryReadSoleStatedUnit("6 us fluid ounces orange juice")
             .Should().Be("us fluid ounces");
 
-    /// <summary>
-    /// A line stating several numbers names its unit in a parenthetical equivalence rather than for
-    /// its own quantity. 37 corpus rows are this shape, and every one is a count of whole things.
-    /// </summary>
+    /// <summary>A line stating several numbers names its unit in a parenthetical equivalence rather than for its own quantity.</summary>
     [Theory]
     [InlineData("12 large egg whites (about 1 1/2 cups)")]
     [InlineData("1 medium head of lettuce (about 10 cups)")]
     [InlineData("1 can (14.5 ounces) diced tomatoes")]
     [InlineData("2 large potatoes (about 2 pounds)")]
     [InlineData("1 clove garlic, minced (or 1/4 teaspoon garlic powder)")]
-    // A percentage in the product name is a second number, so even a line whose unit sits right
-    // after the quantity stands down. Conservative in the safe direction.
+    // A percentage in the product name is a second number, so even a line whose unit sits right after the quantity stands down.
     [InlineData("12 fluid ounces 100% fruit juice concentrate")]
     public void TryReadSoleStatedUnit_ALineStatingSeveralNumbers_StandsAside(string line) =>
         SeedQuantityGate.TryReadSoleStatedUnit(line).Should().BeNull();
@@ -382,7 +342,7 @@ public class SeedQuantityGateTests
     public void TryReadSoleStatedUnit_NoUnitImmediatelyAfterTheNumber_IsNull(string line) =>
         SeedQuantityGate.TryReadSoleStatedUnit(line).Should().BeNull();
 
-    // ── IsAmountExplainedByLine (Stage 5, §24.3a) ─────────────────────────────
+    // ── IsAmountExplainedByLine ───────────────────────────────────────────────
 
     [Theory]
     [InlineData("1 pound 85% lean ground turkey", "1.85")]                         // percentage absorbed

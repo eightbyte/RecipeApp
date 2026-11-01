@@ -1,12 +1,6 @@
 namespace RecipeApp.API.Enums;
 
-/// <summary>
-/// Shopping list category groupings for ingredients.
-///
-/// <para><b>The order of <see cref="All"/> is the shopping list's aisle order</b> —
-/// <c>ShoppingListService</c> sorts by index. A new category belongs beside its nearest relative,
-/// not at the end.</para>
-/// </summary>
+/// <summary>Shopping list category groupings for ingredients, where the order of <see cref="All"/> is the aisle order and a new category belongs beside its nearest relative.</summary>
 public static class IngredientCategory
 {
     public const string Produce       = "PRODUCE";

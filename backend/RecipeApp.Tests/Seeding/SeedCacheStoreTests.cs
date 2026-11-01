@@ -6,9 +6,7 @@ using RecipeApp.Tests.Infrastructure;
 
 namespace RecipeApp.Tests.Seeding;
 
-/// <summary>
-/// The on-disk seed cache (Phase 9 §5). Pure file system — no database, no network, no inference.
-/// </summary>
+/// <summary>The on-disk seed cache, as pure file system work with no database, network or inference.</summary>
 public class SeedCacheStoreTests : IDisposable
 {
     private readonly string _contentRoot =
@@ -79,8 +77,7 @@ public class SeedCacheStoreTests : IDisposable
     [InlineData(null)]
     public void ValidateSlug_RejectsAnythingThatCouldEscapeTheCache(string? slug)
     {
-        // Slugs come from a remote index and are used as filenames, so this is a security guard,
-        // not a tidiness check.
+        // Slugs come from a remote index and are used as filenames, so this is a security guard, not a tidiness check.
         var reject = () => SeedCacheStore.ValidateSlug(slug);
 
         reject.Should().Throw<ArgumentException>();

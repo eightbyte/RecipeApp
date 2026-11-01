@@ -224,8 +224,7 @@ function isRecentlyCookedMeal(meal) {
 }
 
 function startNewPlan() {
-  // The builder creates a new active plan; the backend closes the current one
-  // and the shopping list regenerates from the new plan on next visit.
+  // The builder creates a new active plan, so the backend closes the current one and the shopping list regenerates on next visit.
   router.push({ name: 'meal-plan-create' })
 }
 

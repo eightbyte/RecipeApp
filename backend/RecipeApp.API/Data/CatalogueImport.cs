@@ -4,13 +4,8 @@ using RecipeApp.API.Services.Seeding;
 namespace RecipeApp.API.Data;
 
 /// <summary>
-/// Migrates the database, then loads the committed ingredient catalogue and the curated densities —
-/// in that order, because a density can only attach to a row that exists (Phase 9.3 §4.5).
-///
-/// <para>Shared by <c>import-catalogue</c> and by <c>seed-recipes</c>'s persist stage, so the
-/// catalogue → densities → recipes ordering is enforced by the one path both take rather than
-/// documented and hoped for. Idempotent without <paramref name="force"/>: an already-imported
-/// catalogue only has its nulls filled and new aliases merged in.</para>
+/// Migrates the database, then loads the committed catalogue and the curated densities in that order, because a density can only
+/// attach to a row that exists; idempotent without <paramref name="force"/>.
 /// </summary>
 public static class CatalogueImport
 {

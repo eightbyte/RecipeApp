@@ -7,14 +7,7 @@ using RecipeApp.Tests.Infrastructure;
 
 namespace RecipeApp.Tests.Seeding;
 
-/// <summary>
-/// The Stage 3 and Stage 4 runners — the loops around <see cref="MyPlateRecipeParser"/> and
-/// <see cref="SeedRecipeNormaliser"/> that walk the manifest, isolate a bad recipe, and leave the
-/// run resumable. File system only; no database, no network, and inference is scripted through
-/// <see cref="StubLlmStructuredClient"/>.
-///
-/// <para>Stage 5 needs a database and has its own class, <see cref="SeedPersistTests"/>.</para>
-/// </summary>
+/// <summary>The Stage 3 and Stage 4 runners that walk the manifest, isolate a bad recipe and leave the run resumable, using the file system only and scripted inference.</summary>
 public class RecipeLibrarySeederTests : IDisposable
 {
     private readonly string _contentRoot =
@@ -186,7 +179,7 @@ public class RecipeLibrarySeederTests : IDisposable
         cache.HasParsed("three").Should().BeFalse();
     }
 
-    // ── Isolation (§10.4) ─────────────────────────────────────────────────────
+    // ── Isolation ─────────────────────────────────────────────────────────────
 
     [Fact]
     public async Task ParseAsync_IsolatesAnUnparseablePageFromTheRestOfTheRun()
@@ -393,11 +386,7 @@ public class RecipeLibrarySeederTests : IDisposable
         llm.CallCount.Should().Be(1, "a skipped recipe must not cost a GPU pass");
     }
 
-    /// <summary>
-    /// The staleness the fingerprint exists for: <c>--parse --force</c> leaves normalised output
-    /// alone, so without this check a re-parse would silently keep an answer to a question the
-    /// corpus no longer asks.
-    /// </summary>
+    /// <summary>A re-parse leaves normalised output alone, so the fingerprint check must catch an answer to a question the corpus no longer asks.</summary>
     [Fact]
     public async Task NormaliseAsync_RedoesARecipeWhoseParsedInputChangedUnderneathIt()
     {
@@ -406,9 +395,7 @@ public class RecipeLibrarySeederTests : IDisposable
         var seeder = BuildSeeder(cache, llm);
         await seeder.NormaliseAsync(ManifestOf("first"));
 
-        // The page is re-harvested and re-parsed with a corrected ingredient line. The quantity is
-        // left alone: changing it would make the cached answer wrong as well as stale, and this
-        // test is about staleness.
+        // The page is re-parsed with a corrected ingredient line, leaving the quantity alone because this test is about staleness.
         await GivenCachedPageAsync(cache, "first",
             RecipePage(ingredients: "<li>1 cup brown rice</li>"));
         await seeder.ParseAsync(ManifestOf("first"), force: true);
@@ -519,11 +506,7 @@ public class RecipeLibrarySeederTests : IDisposable
         result.Retried.Should().Be(1);
     }
 
-    /// <summary>
-    /// §16's rule is that one bad recipe never aborts a run. This is the other case: no answer comes
-    /// back at all, so inference itself is unavailable and every remaining recipe would fail the
-    /// same way.
-    /// </summary>
+    /// <summary>When no answer comes back at all, inference itself is unavailable and every remaining recipe would fail the same way, so the run aborts.</summary>
     [Fact]
     public async Task NormaliseAsync_StopsOnceNoAnswerHasComeBackForEveryRecipeInARow()
     {
@@ -539,17 +522,7 @@ public class RecipeLibrarySeederTests : IDisposable
         result.Failures.Should().NotContainKey("three", "the run stopped before reaching it");
     }
 
-    /// <summary>
-    /// The failure that wedged the corpus pass completely, and the reason the abort guard counts only
-    /// systemic failures.
-    ///
-    /// <para>Cached successes are skipped before the counter is reached, so on a resumed run every
-    /// recipe attempted below the high-water mark is one that already failed — and those failures
-    /// reproduce. The guard fired on the first five of a thirty-recipe backlog and stopped at
-    /// manifest position 77 with nothing normalised, leaving 744 recipes that had never been tried,
-    /// and every re-run did the same thing. A gate rejection means the model answered, the grammar
-    /// held and the gate disagreed: the pipeline working, never evidence that it is broken.</para>
-    /// </summary>
+    /// <summary>A gate rejection proves the pipeline works, so the abort guard counts only systemic failures, because counting rejections wedged resumed runs.</summary>
     [Fact]
     public async Task NormaliseAsync_DoesNotAbortWhenEveryRecipeIsRejectedByTheGate()
     {
@@ -569,11 +542,7 @@ public class RecipeLibrarySeederTests : IDisposable
         result.Failures.Should().ContainKey("three", "the run must reach the end of the manifest");
     }
 
-    /// <summary>
-    /// A recipe that burned its retries and lost read <c>attempts: 0</c> in <c>state.json</c>,
-    /// because the runner only ever added the attempt count of a recipe that succeeded. The GPU time
-    /// a failure cost is exactly what <c>--report</c> needs to show.
-    /// </summary>
+    /// <summary>A recipe that burned its retries and lost must still record its attempts in <c>state.json</c>, since <c>--report</c> needs the GPU time a failure cost.</summary>
     [Fact]
     public async Task NormaliseAsync_RecordsTheAttemptsAFailedRecipeConsumed()
     {

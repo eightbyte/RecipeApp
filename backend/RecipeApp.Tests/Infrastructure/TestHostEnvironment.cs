@@ -3,10 +3,7 @@ using Microsoft.Extensions.Hosting;
 
 namespace RecipeApp.Tests.Infrastructure;
 
-/// <summary>
-/// Minimal <see cref="IHostEnvironment"/> for services that only need a content root — the seed
-/// cache resolves its relative cache directory against one.
-/// </summary>
+/// <summary>Minimal <see cref="IHostEnvironment"/> for services that only need a content root.</summary>
 public class TestHostEnvironment : IHostEnvironment
 {
     public TestHostEnvironment(string contentRootPath)

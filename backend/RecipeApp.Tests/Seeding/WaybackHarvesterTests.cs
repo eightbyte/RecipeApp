@@ -7,13 +7,7 @@ using RecipeApp.Tests.Infrastructure;
 
 namespace RecipeApp.Tests.Seeding;
 
-/// <summary>
-/// Stages 1, 2 and 2b (Phase 9 §8–§9): CDX discovery, the recipe-page filter rules, snapshot
-/// selection, and the resumable fetch loop.
-///
-/// <para>Every archive call is stubbed. CI must never depend on the Wayback Machine being up, and
-/// the retry and politeness paths are only testable with time-free delays anyway.</para>
-/// </summary>
+/// <summary>Stages 1, 2 and 2b: CDX discovery, the recipe-page filter rules, snapshot selection and the resumable fetch loop, with every archive call stubbed.</summary>
 public class WaybackHarvesterTests : IDisposable
 {
     private readonly string _contentRoot =
@@ -25,10 +19,7 @@ public class WaybackHarvesterTests : IDisposable
         GC.SuppressFinalize(this);
     }
 
-    /// <summary>
-    /// Politeness delays, retry backoff and the discovery floor are neutralised by default, so
-    /// tests assert on behaviour rather than on waiting.
-    /// </summary>
+    /// <summary>Politeness delays, retry backoff and the discovery floor are neutralised by default, so tests assert on behaviour rather than on waiting.</summary>
     private static RecipeSeedingOptions TestOptions(
         bool downloadImages = false,
         int maxFetchRetries = 3,
@@ -62,7 +53,7 @@ public class WaybackHarvesterTests : IDisposable
         return body.Append(']').ToString();
     }
 
-    // ── Stage 1: filter rules (§8) ────────────────────────────────────────────
+    // ── Stage 1: filter rules ─────────────────────────────────────────────────
 
     [Theory]
     [InlineData("https://www.myplate.gov/recipes/20-minute-chicken-creole", "20-minute-chicken-creole")]
@@ -181,8 +172,7 @@ public class WaybackHarvesterTests : IDisposable
     [Fact]
     public async Task DiscoverAsync_AsksTheIndexForEveryCaptureRatherThanACollapsedOne()
     {
-        // CDX collapse=urlkey keeps the *first* capture of each key, which would silently pin
-        // every recipe to an arbitrary early snapshot and make the preferred-year rule inert.
+        // CDX collapse=urlkey keeps the first capture of each key, which would pin every recipe to an early snapshot and make the preferred-year rule inert.
         var http = StubHttpClientFactory.Returning(CdxResponse(
             ("https://www.myplate.gov/recipes/3-can-chili", "20250104120000")),
             mediaType: "application/json");
@@ -362,8 +352,7 @@ public class WaybackHarvesterTests : IDisposable
     [Fact]
     public async Task HarvestAsync_CorrectsStateThatLagsBehindTheCacheContents()
     {
-        // A cache copied between machines, or an interrupted state flush: the file on disk is the
-        // authority, so the skipped page is still recorded as fetched.
+        // The file on disk is the authority, so a skipped page is still recorded as fetched after a cache copy or an interrupted flush.
         var options = TestOptions(downloadImages: false);
         var (harvester, cache) = Build(StubHttpClientFactory.Returning("<html></html>"), options);
 
@@ -504,8 +493,7 @@ public class WaybackHarvesterTests : IDisposable
     [Fact]
     public async Task HarvestAsync_RejectsAnArchiveErrorPageServedInPlaceOfAPhoto()
     {
-        // The Wayback Machine returns its own interstitial and error pages with a 200, so a
-        // successful status is not evidence that the bytes are a photograph.
+        // The Wayback Machine returns interstitial and error pages with a 200, so a successful status does not prove the bytes are a photograph.
         var http = new StubHttpClientFactory(request =>
             request.RequestUri!.ToString().Contains("Chili.jpg")
                 ? StubHttpClientFactory.Ok("<!DOCTYPE html><html><title>Wayback Machine</title></html>")
@@ -605,8 +593,7 @@ public class WaybackHarvesterTests : IDisposable
     [Fact]
     public async Task HarvestAsync_WrapsAPhotoUrlTheArchiveDidNotRewrite()
     {
-        // The original image host was decommissioned with the site, so an unrewritten URL is only
-        // reachable through the same snapshot.
+        // The original image host was decommissioned, so an unrewritten URL is only reachable through the same snapshot.
         const string pageWithLiveImageUrl = """
             <html><head><script type="application/ld+json">
             {"@type":"Recipe","name":"3 Can Chili",

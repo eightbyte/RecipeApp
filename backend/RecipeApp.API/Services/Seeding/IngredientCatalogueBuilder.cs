@@ -8,31 +8,7 @@ using RecipeApp.API.Services.Llm;
 
 namespace RecipeApp.API.Services.Seeding;
 
-/// <summary>
-/// Stage 4.5 (Phase 9.3 §4.3): derives an ingredient catalogue from the normalised corpus. Four
-/// passes, of which only the second uses the model.
-///
-/// <para><b>The output is a reference, not the shipped catalogue.</b> It is written to
-/// <see cref="CatalogueBuildFileStore"/> with its corpus counts. The shipped
-/// <c>ingredient-catalogue.json</c> was curated from an earlier build and is edited by hand
-/// (Phase 10 §4.7).</para>
-///
-/// <para><b>Why a catalogue is derived rather than generated.</b> The retired
-/// <c>IngredientCatalogueSeeder</c> asked a model for "common household cooking ingredients", which
-/// produced a list whose relationship to this corpus was coincidental by construction — 41
-/// hand-written names matched 22.9% of corpus rows, and six of them named nothing in the library at
-/// all (§2.2). The recipes are the best available evidence for what the catalogue should contain,
-/// and using them turns Stage 5's most expensive step into a dictionary lookup.</para>
-///
-/// <para><b>What the model is and is not asked.</b> Grouping and category, because no mechanical
-/// rule gets them right — folding <c>onions</c> into <c>onion</c> is safe, folding
-/// <c>diced tomatoes</c> into <c>tomatoes</c> is wrong, and the keyword categoriser files peanut
-/// butter under Dairy (§2.3, §2.4). Not the default unit: the corpus states that 8,882 times, and
-/// replacing observations with a guess would be a downgrade (§2.5). Not the canonical name either:
-/// that is the group's most-used member, for the same reason. Never the density — that is
-/// curated, cited and human-reviewed in <see cref="Data.IngredientDensitySeeder"/>, and two sources
-/// would be one too many.</para>
-/// </summary>
+/// <summary>Derives a reference ingredient catalogue from the normalised corpus in four passes, only the second using the model.</summary>
 public class IngredientCatalogueBuilder(
     SeedCacheStore cache,
     CatalogueBuildFileStore buildStore,
@@ -42,7 +18,7 @@ public class IngredientCatalogueBuilder(
 {
     private readonly RecipeSeedingOptions _options = options.Value;
 
-    /// <summary>Verbatim source lines shown to the model per name (§4.3 pass 2).</summary>
+    /// <summary>Verbatim source lines shown to the model per name.</summary>
     public const int SampleLinesPerName = 3;
 
     /// <summary>Corpus identifier recorded in the artefact's provenance block.</summary>
@@ -50,34 +26,7 @@ public class IngredientCatalogueBuilder(
 
     // ── The grouping schema ───────────────────────────────────────────────────
 
-    /// <summary>
-    /// <b>One object per labelled name</b> — the shape Phase 9 Stage 4 proved at 100% — rather than
-    /// a list of groups. Groups are assembled afterwards from <c>same_as</c>.
-    ///
-    /// <para><b>Why not ask for groups.</b> The first three real runs did, and retained about 40% of
-    /// the names where §8 expects 70–78%; one batch put all 39 of its names in a single group (§12.1).
-    /// A partition of forty names is one global, combinatorial judgement. <c>same_as</c> turns it
-    /// into forty local ones, and makes the failure expensive to reach: collapsing a batch now means
-    /// writing the same label forty times, not emitting one object.</para>
-    ///
-    /// <para><b>Property order is decode order.</b> <see cref="JsonSchemaGrammar"/> emits properties
-    /// in the order they appear here, so the model copies <c>label</c> and <c>name</c> — putting the
-    /// name it is judging immediately in front of it — before it writes <c>same_as</c>. The echoed
-    /// name is also the misalignment check Stage 4 lacked: there, an answer that drifted by one label
-    /// was only detectable when it ran off the end.</para>
-    ///
-    /// <para>Every property is <b>required</b>, deliberately. <see cref="JsonSchemaGrammar"/> omits
-    /// non-required properties from the grammar entirely, so an optional property is not one the
-    /// model may skip — it is one the model <i>cannot emit</i>. Phase 9.1 lost every ingredient
-    /// description to exactly that, and Stage 4 lost recipes because <c>notes</c> was unreachable
-    /// and preparation words went into <c>unit</c> instead.</para>
-    ///
-    /// <para><b><c>category</c> is an enum, generated from <see cref="IngredientCategory.All"/>.</b>
-    /// As a free string, the first run's opening batches came back with <c>SPICES</c> and
-    /// <c>CONDIMENT</c>: the prompt said "MUST be exactly one value from this list" and the grammar
-    /// did not, so the grammar won and the keyword table — the thing this phase replaces — decided
-    /// those names instead.</para>
-    /// </summary>
+    /// <summary>The grouping schema: one object per labelled name, properties in decode order and all required so the grammar can emit them.</summary>
     internal static readonly string GroupingSchemaJson = $$"""
         {
           "type": "object",
@@ -105,24 +54,7 @@ public class IngredientCatalogueBuilder(
     internal sealed record WorkedExampleName(
         string Name, int Rows, string SourceLine, int SameAs, string DisplayName, string Category);
 
-    /// <summary>
-    /// The worked example, held as data so the prompt renders it through the same code that renders
-    /// a real batch, and a test can run its answer through the same reader a real answer goes
-    /// through. An example the reader would not accept teaches a shape nothing downstream honours.
-    ///
-    /// <para><b>A family this corpus does not contain.</b> Plums appear only as <c>plum tomato</c>.
-    /// The first version used the real tomato family, which handed the tomato batch its answer —
-    /// exactly the menu Phase 9 §23.3 measured this model family choosing from instead of reading the
-    /// evidence. An absent family teaches the rules without answering any batch's question.</para>
-    ///
-    /// <para><b>The labels are in the order the builder would produce.</b> Most-used first within
-    /// the <c>plum</c> family, then <c>plum sauce</c>'s own family — so the example looks exactly like
-    /// a real batch, and <c>same_as</c> is shown pointing both at the next name and further back.</para>
-    ///
-    /// <para><b>It splits more than it merges, and on purpose.</b> Seven names become four purchases
-    /// across four aisles. Every §5 rule the corpus exercises most is here: plural, redundant
-    /// qualifier and sugar variant merge; canned, dried and a compound product do not.</para>
-    /// </summary>
+    /// <summary>The worked example, held as data so the prompt and the tests render it through the same code as a real batch.</summary>
     internal static readonly IReadOnlyList<WorkedExampleName> WorkedExample =
     [
         new("plums",                  40, "4 ripe plums, pitted and sliced",            0, "Plums",                  IngredientCategory.Produce),
@@ -136,37 +68,7 @@ public class IngredientCatalogueBuilder(
         new("plum sauce",              1, "2 tablespoons plum sauce",                   8, "Plum Sauce",             IngredientCategory.Condiments),
     ];
 
-    /// <summary>
-    /// Where each aisle's boundary falls, for the categories whose names alone do not settle it.
-    ///
-    /// <para><b>Declared before <see cref="GroupingSystemPrompt"/> on purpose</b> — static
-    /// initialisers run in textual order, and the prompt is built from this.</para>
-    ///
-    /// <para><b>Each line is a boundary, not a menu of this corpus's names.</b> The rule that
-    /// replaced a missing one measurably worked: with nothing said about spices the model invented
-    /// <c>SPICES</c>. The boundaries that most need stating are the ones the old ten categories
-    /// straddled — salt was <c>DRY_GOODS</c> while pepper was <c>CONDIMENTS</c>, honey came back
-    /// <c>OTHER</c>, cooking spray <c>OTHER</c>, maple syrup <c>BEVERAGES</c>.</para>
-    ///
-    /// <para><b>The catch-all categories need boundaries too, and the most-missed item goes first.</b>
-    /// Measured on a nine-batch preview: with salt named last in the baking line, and no line at all
-    /// for <c>DRY_GOODS</c> or <c>CONDIMENTS</c>, the model filed all six salts under <c>DRY_GOODS</c>,
-    /// every syrup under <c>CONDIMENTS</c> and <c>dried thyme</c> under <c>PRODUCE</c> — each against
-    /// a rule it had been given. Leading with salt and syrups, stating what <c>DRY_GOODS</c> and
-    /// <c>CONDIMENTS</c> hold, and telling the model to read the source lines for herbs fixed all of
-    /// them on re-preview, and moved fresh sage and rosemary to <c>PRODUCE</c> in the same pass.</para>
-    ///
-    /// <para><b>Unstated boundaries drift between runs, not only between categories.</b> The first full
-    /// build on these rules moved broth from <c>CANNED</c> to <c>BEVERAGES</c>, spreads and egg
-    /// substitute from <c>DAIRY</c> to <c>OTHER</c>, and pizza shells to <c>KITCHEN</c> — none of them
-    /// categories this change touched. The previous artefact had them right by chance, so each now has
-    /// a line.</para>
-    ///
-    /// <para><b>Cooking spray is <see cref="IngredientCategory.Condiments"/></b>, beside the oils it is
-    /// shelved with, not <see cref="IngredientCategory.Kitchen"/>. Plain canned tomato sauce is
-    /// <see cref="IngredientCategory.Canned"/>; only jarred pasta sauce is pasta. Breakfast cereal
-    /// stays <see cref="IngredientCategory.DryGoods"/> even when it is made of rice.</para>
-    /// </summary>
+    /// <summary>Aisle boundaries for the categories whose names alone do not settle it, declared before the prompt built from it.</summary>
     internal static readonly string CategoryAisleRules =
         $"- {IngredientCategory.BakingSpices}: salt of every kind (table, kosher, garlic, celery, seasoned), " +
         "pepper, spices, seasoning blends, extracts, flour, sugar, baking powder and soda, yeast, " +
@@ -204,24 +106,7 @@ public class IngredientCatalogueBuilder(
         "anything a recipe uses.\n" +
         $"- {IngredientCategory.Other}: only when no other value fits.\n";
 
-    /// <summary>
-    /// The §5 rules, each derived from a measured corpus case rather than from taste, phrased as the
-    /// per-name <c>same_as</c> decision the schema asks for.
-    ///
-    /// <para><b>The tie-break is stated last and on purpose.</b> An over-split catalogue shows two
-    /// lines in a shopping list, which a user can see and understand. An over-merged one silently
-    /// sums a can of tomatoes into a punnet of fresh ones, which they cannot.</para>
-    ///
-    /// <para><b>No proposed grouping for the actual names appears here or in the user message.</b>
-    /// Mechanical folding routes names into batches so a family is judged in one call, and is then
-    /// thrown away. Phase 9 §23.3 measured what this prompt family does with a menu: given the ten
-    /// fraction conversions it needed, the model stopped reading the source line and started
-    /// choosing from the list, and the error class got nearly three times worse.</para>
-    ///
-    /// <para><b>The warning that the shared word is not evidence survives from the group-shaped
-    /// prompt</b>, where it measurably helped — one batch went from 1 group to 19. It was not enough
-    /// on its own, because the task shape was the larger cause (§12.1).</para>
-    /// </summary>
+    /// <summary>The merge rules as a per-name <c>same_as</c> decision, with the tie-break last because an over-split catalogue is the safe failure.</summary>
     private static readonly string GroupingSystemPrompt = BuildSystemPrompt();
 
     /// <summary>Exposed so a test can assert the prompt states the rules and proposes no grouping.</summary>
@@ -323,11 +208,7 @@ public class IngredientCatalogueBuilder(
 
     // ── Entry point ───────────────────────────────────────────────────────────
 
-    /// <summary>
-    /// Runs all four passes and writes the build output. Nothing is written unless validator rules
-    /// 1–4 hold and the entry floor is met — a catalogue that contradicts itself is no use as a
-    /// reference for curation.
-    /// </summary>
+    /// <summary>Runs all four passes and writes the build output, but only if the validator rules hold and the entry floor is met.</summary>
     public async Task<CatalogueBuildResult> BuildAsync(
         SeedManifest manifest, CancellationToken ct = default)
     {
@@ -377,12 +258,7 @@ public class IngredientCatalogueBuilder(
         return result with { Path = buildStore.Path };
     }
 
-    /// <summary>
-    /// Runs the grouping pass on the named batches only (1-based, as the build log numbers them),
-    /// logging every merge, and writes nothing — the prompt-iteration loop <c>--slug</c> gives
-    /// Stage 4. Pass 1 still reads the whole corpus, because batch composition depends on it: a
-    /// batch number only means the same names if every name is there to be batched.
-    /// </summary>
+    /// <summary>Runs the grouping pass on the named 1-based batches only, logging every merge and writing nothing.</summary>
     public async Task<CataloguePreviewResult> PreviewAsync(
         SeedManifest manifest, IReadOnlyCollection<int> batchNumbers, CancellationToken ct = default)
     {
@@ -398,14 +274,7 @@ public class IngredientCatalogueBuilder(
     private record CorpusSummary(
         IReadOnlyList<CorpusIngredientName> Names, int Rows, int Recipes);
 
-    /// <summary>
-    /// Walks <c>normalised/</c> and accumulates, per distinct name, everything the later passes are
-    /// allowed to reason from. No model and no database.
-    ///
-    /// <para>Fails loudly rather than building a partial catalogue. The artefact must describe the
-    /// corpus that will actually be persisted, and one silently missing recipe is a handful of names
-    /// that Stage 5 then cannot resolve.</para>
-    /// </summary>
+    /// <summary>Walks <c>normalised/</c> and accumulates, per distinct name, what the later passes may reason from, failing loudly rather than building a partial catalogue.</summary>
     private async Task<CorpusSummary> CollectAsync(SeedManifest manifest, CancellationToken ct)
     {
         var accumulators = new Dictionary<string, NameAccumulator>(StringComparer.OrdinalIgnoreCase);
@@ -433,11 +302,7 @@ public class IngredientCatalogueBuilder(
                 continue;
             }
 
-            // The parsed file is a gitignored intermediate, so a fresh clone may hold a complete
-            // normalised/ and no parsed/ at all. Its absence is therefore not an error — but where
-            // it IS present and disagrees, the normalised output answers a question the parser no
-            // longer asks, and a catalogue derived from it would describe a corpus that no longer
-            // exists.
+            // A missing parsed file is not an error, but one that disagrees with the normalised output would make the catalogue describe a stale corpus.
             var fingerprint = await cache.TryComputeParsedFingerprintAsync(entry.Slug, ct);
             if (fingerprint is not null)
             {
@@ -524,10 +389,7 @@ public class IngredientCatalogueBuilder(
             UnquantifiedRows  = _unquantified,
             DisplayNameCounts = _displayNames,
 
-            // Most-used lines first, then ordinal, so the sample is stable across runs and a
-            // regenerated artefact diffs cleanly. Identical lines collapse, so a name whose lines
-            // genuinely vary — 'cranberries' is fresh in some and dried in others — shows that
-            // variation rather than three copies of its commonest form.
+            // Most-used lines first, then ordinal, so the sample is stable and a regenerated artefact diffs cleanly.
             SampleLines = [.. _lines
                 .OrderByDescending(pair => pair.Value)
                 .ThenBy(pair => pair.Key, StringComparer.Ordinal)
@@ -538,18 +400,8 @@ public class IngredientCatalogueBuilder(
 
     // ── Pass 2: group and categorise (LLM) ────────────────────────────────────
 
-    /// <summary>
-    /// Batches names by family and asks the model, per name, which earlier name it is the same
-    /// purchase as.
-    ///
-    /// <para>A failed batch is not fatal. Its names fall through to pass 3's gap recovery as
-    /// single-name entries, which is an over-split catalogue rather than a lost one — and §5's
-    /// tie-break already says an over-split catalogue is the safe direction to fail in.</para>
-    /// </summary>
-    /// <param name="onlyBatches">
-    /// 1-based batch numbers to run, or null for all of them. A number past the last batch is
-    /// reported rather than silently yielding an empty preview.
-    /// </param>
+    /// <summary>Batches names by family and asks the model, per name, which earlier name it is the same purchase as.</summary>
+    /// <param name="onlyBatches">1-based batch numbers to run, or null for all of them.</param>
     private async Task<GroupingOutcome> GroupAsync(
         IReadOnlyList<CorpusIngredientName> names, IReadOnlySet<int>? onlyBatches, CancellationToken ct)
     {
@@ -578,9 +430,7 @@ public class IngredientCatalogueBuilder(
             run++;
             judged += batch.Count;
 
-            // The best answer seen for this batch, not the last one. A later attempt can throw, or
-            // come back worse than the one before it, and discarding a good partial answer for a
-            // failed retry would cost grouping this batch had already earned.
+            // Keep the best answer seen rather than the last, because a later attempt can throw or come back worse.
             BatchReading? best = null;
             var attemptsUsed = 0;
 
@@ -597,11 +447,7 @@ public class IngredientCatalogueBuilder(
 
                     if (best is null || reading.Defects < best.Defects) best = reading;
 
-                    // One object per name is the prompt's central instruction, so an answer that
-                    // leaves names out has not done the job. Measured on the first real run: one
-                    // batch came back empty — valid JSON, no exception, and nine names silently
-                    // demoted to the keyword categoriser this phase exists to stop relying on.
-                    // A collapsed answer has not done it either, just less visibly.
+                    // An answer that leaves names out or collapses them has not done the job, so it is retried.
                     if (reading.Defects == 0) break;
 
                     logger.LogInformation(
@@ -611,10 +457,7 @@ public class IngredientCatalogueBuilder(
                 }
                 catch (Exception ex) when (ex is not OperationCanceledException)
                 {
-                    // Recorded and retried, then skipped, exactly as Stages 3 and 4 isolate one bad
-                    // recipe. Losing a batch costs grouping quality for those names, never the names
-                    // themselves — they fall through to gap recovery as single-name entries, which
-                    // is an over-split catalogue rather than a lost one.
+                    // A failed batch is recorded and skipped, and its names fall through to gap recovery as single-name entries.
                     logger.LogWarning(ex,
                         "[{Index}/{Total}] grouping call failed on attempt {Attempt} of {Cap}.",
                         index + 1, batches.Count, attempt, attemptCap);
@@ -637,19 +480,14 @@ public class IngredientCatalogueBuilder(
 
             var batchGroups = best is null ? [] : AssembleGroups(best, batch, index + 1, batches.Count);
 
-            // Every merge, named. A count alone cannot tell a family-dense batch from an
-            // over-merging model — batch 1 of the corpus is 37 names that honestly form about 20
-            // purchases — and the merges are exactly what §8's review has to judge against §5.
+            // Log every merge by name, because a count alone cannot tell a family-dense batch from an over-merging model.
             foreach (var merge in batchGroups.Where(group => group.Members.Count > 1))
                 logger.LogInformation(
                     "[{Index}/{Total}] merged: {Canonical} ← {Absorbed} ({Category})",
                     index + 1, batches.Count, merge.Members[0],
                     string.Join(" | ", merge.Members.Skip(1)), merge.Category);
 
-            // Every category, one line per aisle in shopping-list order. A category is as much a
-            // judgement for review as a merge is, and the merge lines above only name the categories
-            // of groups — most names stand alone, so their aisle was otherwise invisible until the
-            // artefact was written.
+            // Log every category, because most names stand alone and their aisle would otherwise be invisible.
             foreach (var category in IngredientCategory.All)
             {
                 var named = batchGroups.Where(group => group.Category == category)
@@ -675,16 +513,7 @@ public class IngredientCatalogueBuilder(
     private sealed record GroupingOutcome(
         IReadOnlyList<CatalogueGroup> Groups, int Calls, int TotalBatches, int BatchesRun, int NamesJudged);
 
-    /// <summary>
-    /// One attempt's answer as the builder judged it.
-    /// </summary>
-    /// <param name="Answers">Accepted answers, keyed by label.</param>
-    /// <param name="Components">
-    /// The labels grouped into connected components of <c>same_as</c>, each flagged when it spans
-    /// more families than <see cref="RecipeSeedingOptions.CatalogueMaxFamiliesPerGroup"/>.
-    /// </param>
-    /// <param name="Unanswered">Labels with no accepted answer.</param>
-    /// <param name="Collapsed">Names inside a flagged component.</param>
+    /// <summary>One attempt's answer: accepted answers by label, the <c>same_as</c> components (flagged when they span too many families), unanswered labels and collapsed names.</summary>
     private sealed record BatchReading(
         IReadOnlyDictionary<int, CatalogueNameResponse> Answers,
         IReadOnlyList<(IReadOnlyList<int> Labels, bool Collapsed)> Components,
@@ -695,16 +524,7 @@ public class IngredientCatalogueBuilder(
         public int Defects => Unanswered + Collapsed;
     }
 
-    /// <summary>
-    /// Names batched by <b>family</b> — their final word, with a plural folded onto its singular —
-    /// so every member of a family is judged in the same call.
-    ///
-    /// <para>This is the whole reason batching is not arbitrary: <c>tomato</c>, <c>tomatoes</c>,
-    /// <c>diced tomatoes</c>, <c>crushed tomatoes</c> and <c>low-sodium tomatoes</c> split across
-    /// two calls <i>guarantee</i> an inconsistent answer, because neither call can see what the
-    /// other decided. A family larger than the cap is split by frequency, most-frequent first, so
-    /// the split falls between the rare members rather than through the common ones.</para>
-    /// </summary>
+    /// <summary>Batches names by family (final word, plural folded) so every member of a family is judged in the same call.</summary>
     internal static IReadOnlyList<IReadOnlyList<CorpusIngredientName>> BuildBatches(
         IReadOnlyList<CorpusIngredientName> names, int batchSize)
     {
@@ -722,8 +542,7 @@ public class IngredientCatalogueBuilder(
 
         foreach (var family in families)
         {
-            // A family that cannot fit in any batch is chunked on its own rather than dragging a
-            // partly-filled batch along with it.
+            // A family too large for any batch is chunked on its own instead of dragging a partly filled batch along.
             if (family.Count > cap)
             {
                 if (current.Count > 0) { batches.Add(current); current = []; }
@@ -745,24 +564,7 @@ public class IngredientCatalogueBuilder(
         return batches;
     }
 
-    /// <summary>
-    /// Each name's family key: its final word, with a plural folded onto the singular <b>when the
-    /// corpus itself uses that singular</b> as some name's final word.
-    ///
-    /// <para><b>Why the fold exists.</b> Keyed on the raw final word, <c>tomato</c> and
-    /// <c>tomatoes</c> are different families. They sort next to each other, so they usually share
-    /// a batch — but greedy packing can put the boundary between them, and then the rule with the
-    /// most evidence behind it (§2.3: 86 singular/plural families, 2,234 rows) is one the model can
-    /// never apply. Measured against the corpus before this was written: 8 families were split that
-    /// way, <c>tomato</c>, <c>mushroom</c>, <c>bean</c> and <c>pea</c> among them. With the fold,
-    /// 68 plurals join their singular and only <c>pepper</c> spans batches — because it is larger
-    /// than the cap, which is chunked by design.</para>
-    ///
-    /// <para><b>Why the corpus decides, not a stemmer.</b> A candidate singular is used only if it
-    /// already occurs, so <c>chilies</c> finds <c>chili</c> and <c>tomatoes</c> finds
-    /// <c>tomato</c>, while <c>molasses</c> and <c>hummus</c> have no candidate to fall into. This
-    /// is routing only: a wrong key costs one family a batch boundary, never an answer.</para>
-    /// </summary>
+    /// <summary>Each name's family key: its final word, with a plural folded onto its singular when the corpus itself uses that singular.</summary>
     internal static IReadOnlyDictionary<string, string> FamilyKeys(IReadOnlyList<CorpusIngredientName> names)
     {
         var finalWords = names
@@ -779,11 +581,7 @@ public class IngredientCatalogueBuilder(
         return keys;
     }
 
-    /// <summary>
-    /// English plural endings, most specific first: <c>berries → berry</c>, <c>tomatoes → tomato</c>,
-    /// <c>onions → onion</c>. Only candidates — <see cref="FamilyKeys"/> accepts one only when the
-    /// corpus already uses it.
-    /// </summary>
+    /// <summary>English plural endings, most specific first; <see cref="FamilyKeys"/> accepts a candidate only when the corpus already uses it.</summary>
     private static IEnumerable<string> SingularCandidates(string word)
     {
         if (word.Length > "ies".Length && word.EndsWith("ies", StringComparison.Ordinal))
@@ -796,31 +594,14 @@ public class IngredientCatalogueBuilder(
             yield return word[..^"s".Length];
     }
 
-    /// <summary>
-    /// The last whitespace-separated word of a name, which is the head noun in every shape the
-    /// corpus uses — <c>diced tomatoes</c>, <c>low-sodium chicken broth</c>, <c>fresh spinach</c>.
-    /// </summary>
+    /// <summary>The last whitespace-separated word of a name, which is its head noun.</summary>
     private static string FinalWord(string name)
     {
         var words = name.Split(' ', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
         return words.Length == 0 ? name : words[^1];
     }
 
-    /// <summary>
-    /// One batch as the model sees it: a labelled list of names, each with its corpus frequency and
-    /// its verbatim source lines.
-    ///
-    /// <para><b>Labels, because labels are what is asked back.</b> Stage 4 established that this
-    /// model family will not reliably derive an index it was not handed — asked for 0-based
-    /// positions while the list was numbered from 1, a single answer mixed both bases and only the
-    /// overrun past the end was detectable. Here the labels count from zero, and both
-    /// <c>label</c> and <c>same_as</c> are those same labels, copied.</para>
-    ///
-    /// <para><b>The source lines are evidence, not decoration.</b> <c>diced tomatoes</c> is only
-    /// identifiable as canned from its line — all 32 read <c>1 can (14.5 ounces) … diced
-    /// tomatoes</c> — and <c>cranberries</c> covers both <c>2 cups fresh or frozen cranberries</c>
-    /// and <c>1 cup dried cranberries</c>, which are different purchases.</para>
-    /// </summary>
+    /// <summary>One batch as the model sees it: labelled names with their corpus frequency and verbatim source lines.</summary>
     internal static string BuildUserContent(IReadOnlyList<CorpusIngredientName> batch)
     {
         var content = new StringBuilder();
@@ -835,10 +616,7 @@ public class IngredientCatalogueBuilder(
         return content.ToString();
     }
 
-    /// <summary>
-    /// One labelled name and its evidence. Shared by <see cref="BuildUserContent"/> and the worked
-    /// example, so the example is rendered exactly as a real batch is.
-    /// </summary>
+    /// <summary>One labelled name and its evidence, shared with the worked example so both render identically.</summary>
     private static void AppendName(
         StringBuilder content, int label, string name, int rows, IEnumerable<string> sampleLines)
     {
@@ -867,16 +645,7 @@ public class IngredientCatalogueBuilder(
         }
     }
 
-    /// <summary>
-    /// Reads one batch's answer: which of the batch's labels it answered, discarding anything the
-    /// labels cannot justify.
-    ///
-    /// <para><b>An object is accepted only when its echoed name is the name its label carries.</b>
-    /// A mismatch means the answer has drifted out of step with the list — the silent off-by-one
-    /// Stage 4 could only catch when it ran off the end — and a <c>same_as</c> from a drifted object
-    /// would merge whatever name it happens to be sitting beside. Discarding it leaves that name
-    /// unanswered, which the retry loop then sees.</para>
-    /// </summary>
+    /// <summary>Reads one batch's answer, discarding any object whose echoed name does not match its label because that signals drift.</summary>
     private BatchReading ReadAnswer(
         JsonNode answer,
         IReadOnlyList<CorpusIngredientName> batch,
@@ -907,9 +676,7 @@ public class IngredientCatalogueBuilder(
                 continue;
             }
 
-            // First answer wins. Two answers for one name are a contradiction the model cannot
-            // resolve for us, and honouring both could put one corpus name in two entries — which
-            // is precisely the ambiguous-alias corruption §4.7 rule 4 exists to stop.
+            // First answer wins, because honouring two answers for one name could put it in two entries.
             if (!accepted.TryAdd(label, item))
                 logger.LogWarning("Label [{Label}] ({Name}) was answered twice; the first answer is " +
                                   "kept.", label, batch[label].Name);
@@ -926,15 +693,7 @@ public class IngredientCatalogueBuilder(
             Collapsed:  components.Where(component => component.Collapsed).Sum(component => component.Labels.Count));
     }
 
-    /// <summary>
-    /// Whether a group reaches across more families than any real merge was measured to — the shape
-    /// of a collapsed answer rather than of a judgement.
-    ///
-    /// <para><b>A signal, never a decision.</b> It does not say which names belong together; it only
-    /// refuses to trust an answer that put <c>toothpicks</c> and <c>whipped topping</c> into
-    /// <c>tomatoes</c>, which is what the first full per-name run did with one batch of 36 names.
-    /// Mechanical folding still routes and never proposes (§4.3).</para>
-    /// </summary>
+    /// <summary>Whether a group spans more families than any real merge was measured to, which marks a collapsed answer rather than a judgement.</summary>
     private bool SpansTooManyFamilies(
         IReadOnlyList<int> labels,
         IReadOnlyList<CorpusIngredientName> batch,
@@ -944,21 +703,7 @@ public class IngredientCatalogueBuilder(
             .Distinct(StringComparer.OrdinalIgnoreCase)
             .Count() > _options.CatalogueMaxFamiliesPerGroup;
 
-    /// <summary>
-    /// Whether an echoed name is a copy of the name its label carries — allowing for the tidying a
-    /// model does when it copies — and not the name of a different label, which is what drift looks
-    /// like.
-    ///
-    /// <para><b>Why not an exact comparison.</b> The corpus names are not clean: Stage 4 kept
-    /// asides such as <c>paprika (optional)</c> and <c>green onions (scallions)</c> inside the name.
-    /// Measured on the first run of this shape, the model copied those as <c>paprika</c> and
-    /// <c>green onions</c>, an exact check called three faithful answers drift, and the batch spent
-    /// two retries recovering names it had answered correctly the first time.</para>
-    ///
-    /// <para>So a copy matches when the two agree once case, punctuation and bracketed asides are
-    /// set aside, or when the echo is the leading words of the name. Neither relaxation may admit a
-    /// neighbour: an echo that is <i>exactly</i> some other label's name is refused outright.</para>
-    /// </summary>
+    /// <summary>Whether an echoed name is a faithful copy of its label's name, tolerating case, punctuation and bracketed asides but never another label's exact name.</summary>
     internal static bool IsFaithfulEcho(string? echoed, int label, IReadOnlyList<CorpusIngredientName> batch)
     {
         if (string.IsNullOrWhiteSpace(echoed)) return false;
@@ -981,10 +726,7 @@ public class IngredientCatalogueBuilder(
         leading.Length <= words.Length
         && leading.SequenceEqual(words.Take(leading.Length), StringComparer.Ordinal);
 
-    /// <summary>
-    /// A name's words, lowercased, with punctuation removed — and bracketed asides either dropped or
-    /// kept as plain words, since a copy may do either.
-    /// </summary>
+    /// <summary>A name's lowercase words without punctuation, with bracketed asides dropped or kept as plain words.</summary>
     private static string[] ComparableWords(string name, bool keepAsides)
     {
         var words = new StringBuilder();
@@ -1004,21 +746,7 @@ public class IngredientCatalogueBuilder(
         return words.ToString().Split(' ', StringSplitOptions.RemoveEmptyEntries);
     }
 
-    /// <summary>
-    /// The groups a judged answer yields.
-    ///
-    /// <para><b>A name the model never answered for still joins a group another name pointed it
-    /// into</b>, because that pointer is the model's judgement about it. A name nobody answered for
-    /// and nobody pointed at is left out entirely, for pass 3's gap recovery.</para>
-    ///
-    /// <para><b>A group still flagged as collapsed after every retry is dissolved</b>: each answered
-    /// name in it stands alone, keeping the category and display name the model gave it. That
-    /// discards whatever real merges were inside, which is the over-split direction §5's tie-break
-    /// already chose.</para>
-    ///
-    /// <para><b>Every other group is refined by <see cref="CatalogueMergeVocabulary"/></b>: a name
-    /// stays with the group only if it differs from a kept name by §5's merge vocabulary alone.</para>
-    /// </summary>
+    /// <summary>The groups a judged answer yields, dissolving any group still flagged as collapsed and refining the rest by <see cref="CatalogueMergeVocabulary"/>.</summary>
     private IReadOnlyList<CatalogueGroup> AssembleGroups(
         BatchReading reading, IReadOnlyList<CorpusIngredientName> batch, int batchNumber, int totalBatches) =>
         reading.Components
@@ -1029,12 +757,7 @@ public class IngredientCatalogueBuilder(
             .Select(labels => ToGroup(labels, reading, batch))
             .ToList();
 
-    /// <summary>
-    /// Splits one of the model's groups into the parts whose names differ only by
-    /// <see cref="CatalogueMergeVocabulary"/>. Each name joins the first part, in canonical order,
-    /// whose leading name it matches; the match is an equality of cores, so this is a partition and
-    /// its result does not depend on that order.
-    /// </summary>
+    /// <summary>Splits one model group into the parts whose names differ only by <see cref="CatalogueMergeVocabulary"/>.</summary>
     private IReadOnlyList<IReadOnlyList<int>> RefineByMergeVocabulary(
         IReadOnlyList<int> labels, IReadOnlyList<CorpusIngredientName> batch, int batchNumber, int totalBatches)
     {
@@ -1051,8 +774,7 @@ public class IngredientCatalogueBuilder(
             else home.Add(label);
         }
 
-        // Logged so the review can see every merge the model proposed and the vocabulary refused —
-        // the list a reviewer reads to decide whether a word belongs in the table.
+        // Log every merge the model proposed and the vocabulary refused, for the review.
         if (parts.Count > 1)
             logger.LogInformation(
                 "[{Index}/{Total}] kept apart: {Canonical} | {Others}",
@@ -1062,11 +784,7 @@ public class IngredientCatalogueBuilder(
         return parts;
     }
 
-    /// <summary>
-    /// The connected components of <c>same_as</c>, resolved by union-find — so a chain
-    /// (<c>[2]→[1]→[0]</c>) and a cycle are both harmless, and the result does not depend on the
-    /// order the answers arrived in. Every label is in exactly one component, answered or not.
-    /// </summary>
+    /// <summary>The connected components of <c>same_as</c> by union-find, so chains and cycles are harmless and answer order does not matter.</summary>
     private IReadOnlyList<IReadOnlyList<int>> Connect(
         IReadOnlyDictionary<int, CatalogueNameResponse> answers, IReadOnlyList<CorpusIngredientName> batch)
     {
@@ -1108,8 +826,7 @@ public class IngredientCatalogueBuilder(
     private CatalogueGroup ToGroup(
         IReadOnlyList<int> labels, BatchReading reading, IReadOnlyList<CorpusIngredientName> batch)
     {
-        // In canonical order, so the member the entry will be named after (see ChooseCanonicalName)
-        // is the one whose answer is consulted first.
+        // Canonical order, so the member the entry is named after is consulted first.
         var ordered = OrderMostUsedFirst(labels, label => batch[label]).ToList();
 
         var canonical = ordered[0];
@@ -1125,14 +842,7 @@ public class IngredientCatalogueBuilder(
             Members:     [.. ordered.Select(label => batch[label].Name)]);
     }
 
-    /// <summary>
-    /// The category the most-used answered member was given, when it is one of ours; otherwise the
-    /// next member's; otherwise the keyword table's guess for the most-used name.
-    ///
-    /// <para>The keyword table is a poor fallback by design — §2.4 measured it filing peanut butter
-    /// under Dairy and chicken broth under Meat — but "the model answered with something that is not
-    /// a category" leaves nothing better, and it beats defaulting everything to OTHER.</para>
-    /// </summary>
+    /// <summary>The category of the most-used answered member when valid, else the next member's, else the keyword table's guess.</summary>
     private string ResolveCategory(
         IReadOnlyList<int> orderedLabels, BatchReading reading, IReadOnlyList<CorpusIngredientName> batch)
     {
@@ -1158,15 +868,7 @@ public class IngredientCatalogueBuilder(
 
     // ── Passes 3 and 4: derive, recover, order ────────────────────────────────
 
-    /// <summary>
-    /// Turns the model's groups into catalogue entries, deriving the units and display names the
-    /// model was never asked for, and folding in every name the grouping pass failed to place.
-    /// </summary>
-    /// <param name="recoveredNames">
-    /// Names the model never returned, which became single-name entries. A dropped name is a recipe
-    /// Stage 5 cannot persist, so a gap is repaired rather than propagated, and counted so it can be
-    /// reviewed.
-    /// </param>
+    /// <summary>Turns the model's groups into catalogue entries, deriving units and display names and recovering every name the grouping pass dropped.</summary>
     private IReadOnlyList<CatalogueBuildEntry> BuildEntries(
         IReadOnlyList<CatalogueGroup> groups,
         IReadOnlyList<CorpusIngredientName> corpusNames,
@@ -1178,9 +880,7 @@ public class IngredientCatalogueBuilder(
 
         foreach (var group in groups)
         {
-            // Batches partition the corpus, so a name can only reach two groups through a defect
-            // upstream. The first group keeps it: one name in two entries is §4.7 rule 4's
-            // ambiguous alias, and the validator would refuse the whole artefact over it.
+            // Batches partition the corpus, so a name in two groups is an upstream defect and the first group keeps it.
             var members = group.Members
                 .Where(member => byName.ContainsKey(member))
                 .Where(member => placed.Add(member))
@@ -1224,29 +924,11 @@ public class IngredientCatalogueBuilder(
     private sealed record MergedGroup(
         string Name, string? DisplayName, string Category, List<CorpusIngredientName> Members);
 
-    /// <summary>
-    /// The group's canonical name: its most-used member, ties going to the shorter name.
-    ///
-    /// <para><b>Derived, never asked for</b>, for the same reason the default unit is. Only this pass
-    /// sees the whole corpus, and a name the model proposed could be some other batch's corpus name —
-    /// making one string both an entry's name here and an alias there, which resolves by row order
-    /// rather than by intent (§4.7 rule 4). A member of the group's own is always safe to claim,
-    /// because batches partition the corpus. And the most-used form is the corpus's own answer to
-    /// what the thing is called.</para>
-    /// </summary>
+    /// <summary>The group's canonical name: its most-used member, ties going to the shorter name.</summary>
     private static string ChooseCanonicalName(IReadOnlyList<CorpusIngredientName> members) =>
         OrderMostUsedFirst(members, member => member).First().Name;
 
-    /// <summary>
-    /// The one ordering of names the builder uses: most rows first; a tie goes to the shorter name —
-    /// <c>onion</c> before <c>onions</c>, <c>milk</c> before <c>skim milk</c>, the unqualified form
-    /// being the likelier canonical one — and then ordinally, so the order is total and a regenerated
-    /// artefact diffs cleanly.
-    ///
-    /// <para>Shared by batching, group assembly and the canonical-name choice on purpose. The name an
-    /// entry is called by is then always the earliest label of its family in the batch, which is
-    /// exactly where the prompt tells <c>same_as</c> to point.</para>
-    /// </summary>
+    /// <summary>The one ordering of names the builder uses: most rows first, then shorter, then ordinal, so output is total and diffs cleanly.</summary>
     private static IOrderedEnumerable<T> OrderMostUsedFirst<T>(
         IEnumerable<T> source, Func<T, CorpusIngredientName> nameOf) =>
         source
@@ -1256,18 +938,13 @@ public class IngredientCatalogueBuilder(
 
     private CatalogueBuildEntry ToEntry(MergedGroup group)
     {
-        // Pass 3a — the default unit is the modal unit over the MERGED group's rows. Derived, never
-        // asked for: the corpus states a unit 8,882 times, and 'onion' being 176 pcs against 131 cup
-        // is a measured answer about how you buy an onion. Null when no row in the group is
-        // quantified at all — Phase 9.1's population, which the column already allows.
+        // The default unit is the modal unit over the merged group's rows, null when no row is quantified.
         var unitCounts = new Dictionary<string, int>(StringComparer.Ordinal);
         foreach (var member in group.Members)
             foreach (var (unit, count) in member.UnitCounts)
                 unitCounts[unit] = unitCounts.GetValueOrDefault(unit) + count;
 
-        // Ties break on the canonical unit order, so the same corpus always yields the same
-        // artefact — a regenerated file must diff cleanly, and a tie resolved by dictionary
-        // enumeration order would not.
+        // Ties break on the canonical unit order so the same corpus always yields the same artefact.
         var defaultUnit = unitCounts
             .OrderByDescending(pair => pair.Value)
             .ThenBy(pair => CanonicalUnitOrder(pair.Key))
@@ -1275,15 +952,11 @@ public class IngredientCatalogueBuilder(
             .Select(pair => pair.Key)
             .FirstOrDefault();
 
-        // Canonicalised before storing, so a corpus that ever carried a non-canonical spelling
-        // cannot put one in the artefact for MeasurementUnit.IsValid to reject at seed time.
+        // Canonicalise before storing so a non-canonical spelling cannot reach the artefact.
         if (defaultUnit is not null && MeasurementUnit.TryCanonicalise(defaultUnit, out var canonical))
             defaultUnit = canonical;
 
-        // Pass 3b — the display name. The model wins when it supplied one, because §2.7 found the
-        // corpus modal form is sometimes a leaked worked example: 13 rows across 4 recipes carry
-        // 'Diced Tomatoes' on things that are not tomatoes, and dirty-rice has it on all ten of its
-        // rows including 'water' and 'black pepper'.
+        // The model's display name wins when supplied, because the corpus modal form is sometimes a leaked worked example.
         var displayName = group.DisplayName;
         if (string.IsNullOrWhiteSpace(displayName))
         {
@@ -1313,28 +986,13 @@ public class IngredientCatalogueBuilder(
             Aliases:       aliases,
             CorpusRows:    group.Members.Sum(member => member.Rows),
 
-            // Unioned, not summed. A recipe using two names from one group — 'tomatoes' beside
-            // 'diced tomatoes' is exactly that shape — is still one recipe, and a provenance figure
-            // a reviewer cannot trust is worse than none.
+            // Union the recipe slugs rather than summing, because a recipe using two names from one group is still one recipe.
             CorpusRecipes: group.Members.SelectMany(member => member.RecipeSlugs)
                                         .Distinct(StringComparer.Ordinal)
                                         .Count());
     }
 
-    /// <summary>
-    /// Attaches the regional spellings of <see cref="RegionalIngredientSpellings"/>, under two rules
-    /// that keep §4.7 rule 4 true.
-    ///
-    /// <para>A spelling that is <i>itself</i> a corpus name is skipped: the grouping pass has
-    /// already judged it on evidence, and overriding that from a hardcoded table would both
-    /// contradict the review and risk making one name an alias of two entries. A spelling whose
-    /// target is not in this corpus is skipped too — there is nothing to attach it to.</para>
-    ///
-    /// <para><b>The target is found by name or by alias.</b> The table names the American corpus
-    /// form (<c>beet</c>), but the entry is named after its most-used member, which may be the plural
-    /// (<c>beets</c>) with the table's form as its alias. Looking the target up by name alone would
-    /// skip <c>beetroot</c> silently.</para>
-    /// </summary>
+    /// <summary>Attaches the regional spellings of <see cref="RegionalIngredientSpellings"/>, skipping any that is itself a corpus name or whose target is absent.</summary>
     private IReadOnlyList<CatalogueBuildEntry> AttachRegionalSpellings(
         IReadOnlyList<CatalogueBuildEntry> entries)
     {
@@ -1342,8 +1000,7 @@ public class IngredientCatalogueBuilder(
         var reachable   = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         var indexByForm = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
 
-        // Names first, then aliases through TryAdd, so a name always wins — the same precedence
-        // every lookup against the seeded catalogue uses.
+        // Names first, then aliases through TryAdd, so a name always wins.
         for (var index = 0; index < result.Count; index++)
         {
             reachable.Add(result[index].Name);

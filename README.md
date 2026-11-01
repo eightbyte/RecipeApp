@@ -1,19 +1,19 @@
 # RecipeApp
 
-A mobile-first web app for storing recipes, building meal plans, and generating shopping lists. It emphasises three things: a clean step-by-step cooking view, meal-planning that turns straight into a grouped shopping list, and importing recipes straight from a URL using a locally-run LLM (no cloud AI calls, no per-request API cost).
+A mobile-first web app for storing recipes, building meal plans, and generating shopping lists. It emphasises three things: a clean step-by-step cooking view, meal planning that turns straight into a grouped shopping list, and importing recipes from a URL using a locally run LLM (no cloud AI calls, no per-request cost).
 
-**Status:** v1 feature-complete (Phases 1–10). A fresh install starts with a curated ingredient catalogue and 12 sample recipes. See [SPEC.md](SPEC.md) and [specs/](specs/) for history, and [CLAUDE.md](CLAUDE.md) for conventions.
+**Status:** v1 is feature-complete and self-hosted. A push to `master` runs the tests, publishes Docker images, and updates the host PC within about five minutes. The app is reached from phones over [Tailscale](https://tailscale.com/), with nothing exposed to the public internet. A fresh install starts with a curated ingredient catalogue and 12 sample recipes.
 
 ## Features
 
-- **Recipe management** — create, edit, and browse recipes with ingredient lists and numbered steps; portion scaling (½× / 1× / 2×) applied at display time only.
+- **Recipe management** — create, edit, and browse recipes with ingredient lists and numbered steps. Portion scaling (½× / 1× / 2×) is applied at display time only.
 - **Recipe scraping** — paste a URL and a local LLM extracts the name, ingredients, and steps into a preview you can edit before saving. Ingredients are matched against your catalogue automatically.
 - **Meal planning** — build a plan from your recipe collection, assign dates and portion sizes, and see waste-reduction suggestions (recipes that use up a leftover partial ingredient).
-- **Shopping lists** — auto-generated from the active meal plan, grouped by category, with unit consolidation and support for custom (non-recipe) items.
-- **Cooking mode** — full-screen, large-type, step-by-step view with screen wake-lock so your phone doesn't sleep mid-recipe.
+- **Shopping lists** — generated from the active meal plan, grouped by category in aisle order, with unit consolidation and support for custom (non-recipe) items.
+- **Cooking mode** — full-screen, large-type, step-by-step view with a screen wake-lock so your phone doesn't sleep mid-recipe.
 - **PWA** — installable, with offline caching of recipes you've already viewed.
 
-Food waste *tracking* (as opposed to the reduction suggestions above) is specified but deferred — see [specs/phase-6-food-waste-tracking.md](specs/phase-6-food-waste-tracking.md).
+Food waste *tracking* (as opposed to the reduction suggestions above) is not built.
 
 ## Tech stack
 
@@ -21,37 +21,19 @@ Food waste *tracking* (as opposed to the reduction suggestions above) is specifi
 |---|---|
 | Frontend | Vue 3 (Composition API, `<script setup>`) + Vite + Pinia + Vue Router + Vuetify 3 |
 | Backend | .NET 10 Minimal API |
-| ORM | EF Core 10 + Npgsql |
-| Database | PostgreSQL 16 |
-| Recipe scraping | AngleSharp (HTML parsing) + LLamaSharp (local LLM inference, GGUF models) |
+| ORM / database | EF Core 10 + Npgsql, PostgreSQL 16 |
+| Recipe scraping | AngleSharp (HTML parsing), Playwright Chromium (render fallback), LLamaSharp (local GGUF model) |
 | Validation | FluentValidation |
-
-See [CLAUDE.md](CLAUDE.md) for the full repository structure and coding conventions.
+| Hosting | Docker Compose on a Windows PC, images from GitHub Container Registry, access over Tailscale |
 
 ## Prerequisites
 
-- [.NET 10 SDK](https://dotnet.microsoft.com/download)
-- [Node.js](https://nodejs.org/) 20+
-- [Docker Desktop](https://www.docker.com/products/docker-desktop/) (for PostgreSQL, and for the optional full-container run)
-- A GGUF-format instruction-tuned LLM model (e.g. Qwen2.5-7B-Instruct, Gemma) for recipe scraping — see [LLM model setup](#llm-model-setup) below. The app runs fine without one; only URL scraping is disabled.
-- An NVIDIA GPU + CUDA 12 drivers are recommended for fast LLM inference (`LLamaSharp.Backend.Cuda12`). CPU-only inference works but is much slower — set `Llm:Local:GpuLayerCount` to `0` to force it.
+- [.NET 10 SDK](https://dotnet.microsoft.com/download). `global.json` pins the version.
+- [Node.js](https://nodejs.org/) 24. `frontend/.nvmrc` holds the version, which must match `frontend/Dockerfile`.
+- [Docker Desktop](https://www.docker.com/products/docker-desktop/), for PostgreSQL, the backend tests, and the optional full-container run.
+- Optional, for URL scraping only: a GGUF instruction-tuned chat model (see [LLM model setup](#llm-model-setup)) and, for fast inference, an NVIDIA GPU with CUDA 12 drivers. The app runs without either. Only "Import from URL" is unavailable.
 
-## Quick start (Docker Compose)
-
-This runs PostgreSQL, the API, and an Nginx-served production build of the frontend.
-
-```bash
-docker compose up -d
-```
-
-- Frontend: http://localhost
-- API: http://localhost:5000 (health: `/health`, readiness: `/health/ready`, docs: `/scalar/v1`)
-
-On its first start against an empty database the API creates the schema and loads the starter data (see [Starter data](#starter-data)).
-
-To enable recipe scraping in this mode, mount your GGUF model into the `api` container and set `Llm__Local__ModelPath` accordingly (see [docker-compose.yml](docker-compose.yml)).
-
-## Running locally (for development)
+## Running locally (development)
 
 **1. Start PostgreSQL**
 
@@ -61,7 +43,7 @@ docker compose up -d postgres
 
 **2. Configure the backend**
 
-Create `backend/RecipeApp.API/appsettings.Development.json` (gitignored — not committed) with at least a connection string:
+Create `backend/RecipeApp.API/appsettings.Development.json`. It is gitignored. The connection string matches the password in `docker-compose.yml`:
 
 ```json
 {
@@ -69,18 +51,14 @@ Create `backend/RecipeApp.API/appsettings.Development.json` (gitignored — not 
     "DefaultConnection": "Host=localhost;Port=5432;Database=recipeapp;Username=recipeapp;Password=devpassword"
   },
   "Llm": {
-    "Provider": "Local",
     "Local": {
-      "ModelPath": "C:\\path\\to\\your-model.gguf",
-      "ContextSize": 8192,
-      "GpuLayerCount": 999,
-      "ChatTemplate": "chatml"
+      "ModelPath": "C:\\path\\to\\your-model.gguf"
     }
   }
 }
 ```
 
-`ChatTemplate` should match your model's expected prompt format — `chatml` (Qwen, Mistral, etc.), `llama3`, or `gemma`. Leave `Llm:Local:ModelPath` empty to run without scraping support.
+Leave `Llm:Local:ModelPath` empty (the default) to run without a model.
 
 **3. Run the API**
 
@@ -89,11 +67,10 @@ cd backend/RecipeApp.API
 dotnet run
 ```
 
-Migrations run automatically on every start. An empty database also gets the starter data (see [Starter data](#starter-data)). The API listens on **http://localhost:5197** (see `Properties/launchSettings.json`).
+The API listens on **http://localhost:5197**. On every start it applies migrations, and an empty database also receives the [starter data](#starter-data).
 
-- Scalar API docs: http://localhost:5197/scalar/v1
-- Health check: http://localhost:5197/health
-- Readiness check: http://localhost:5197/health/ready
+- API docs (Scalar): http://localhost:5197/scalar/v1
+- Health: http://localhost:5197/health, readiness: http://localhost:5197/health/ready
 
 **4. Run the frontend**
 
@@ -103,22 +80,30 @@ npm install
 npm run dev
 ```
 
-→ http://localhost:3000 (already configured via `frontend/.env.development` to call the API at `http://localhost:5197/api/v1`).
+Open http://localhost:3000. The committed `frontend/.env.development` points it at the API on port 5197.
+
+## Running everything in Docker
+
+```bash
+docker compose up -d
+```
+
+This builds and starts PostgreSQL, the API and the nginx-served frontend. The app is at http://localhost and the API at http://localhost:5000. To enable scraping in this mode, mount a GGUF model into the `api` container and set `Llm__Local__ModelPath` (see [docker-compose.yml](docker-compose.yml)).
 
 ## LLM model setup
 
-Recipe scraping requires a local GGUF model. Any reasonably capable instruction-tuned chat model works (7B+ parameters recommended for reliable structured extraction):
+Recipe scraping needs a local GGUF model. Any capable instruction-tuned chat model works. The project has been tuned against Qwen3.5-9B (Q6_K), and 7B+ parameters are recommended for reliable structured extraction.
 
-1. Download a `.gguf` model file (e.g. from Hugging Face — search for `Qwen2.5-7B-Instruct-GGUF` or similar).
+1. Download a `.gguf` model file, for example from Hugging Face.
 2. Set `Llm:Local:ModelPath` to its absolute path in `appsettings.Development.json`.
-3. Set `Llm:Local:ChatTemplate` to match the model family (`chatml`, `llama3`, or `gemma`).
-4. Set `Llm:Local:GpuLayerCount` to `0` for CPU-only inference, or leave at `999` to offload all layers to a CUDA GPU.
+3. Set `Llm:Local:ChatTemplate` to the model family: `chatml` (the default; Qwen, Mistral), `llama3` or `gemma`.
+4. Leave `Llm:Local:GpuLayerCount` at `999` to offload every layer to a CUDA GPU, or set it to `0` for CPU-only inference, which is much slower.
 
-Without a configured model, the app starts normally and logs a warning — every feature except "Import from URL" works as usual.
+Without a configured model the app starts normally and logs a warning. Every feature except "Import from URL" works. See [Services/Llm/CLAUDE.md](backend/RecipeApp.API/Services/Llm/CLAUDE.md) for the details.
 
 ## Starter data
 
-The first time the API starts against an empty database, it loads:
+The first time the API starts against an empty database it loads:
 
 - **An ingredient catalogue** of about 640 common ingredients, with shopping categories, default units, alternative names and the densities used to convert cups to grams.
 - **12 sample recipes**, written for this project, so there is something to cook, plan and shop from straight away.
@@ -128,21 +113,21 @@ Each step runs once per database. Deleting the sample recipes does not bring the
 Other data commands, run from `backend/RecipeApp.API`:
 
 ```bash
-dotnet run -- import-catalogue                    # Re-apply the shipped catalogue (fills gaps, keeps your edits)
-dotnet run -- import-recipes <pack.json> [--create-missing] [--force]   # Import a recipe pack
+dotnet run -- import-catalogue                                        # Re-apply the shipped catalogue (fills gaps, keeps your edits)
+dotnet run -- import-recipes <pack.json> [--create-missing] [--force] # Import a recipe pack
 ```
 
-A **recipe pack** is a JSON file of recipes. The format is described in [specs/phase-10-first-run-seed.md](specs/phase-10-first-run-seed.md) §4.4, and [sample-recipes.json](backend/RecipeApp.API/seed-data/sample-recipes.json) is an example. See [backend/CLAUDE.md](backend/CLAUDE.md) for every CLI command and flag.
+A **recipe pack** is a JSON file of recipes, described in [docs/recipe-packs.md](docs/recipe-packs.md). [sample-recipes.json](backend/RecipeApp.API/seed-data/sample-recipes.json) is an example. [backend/CLAUDE.md](backend/CLAUDE.md) lists every CLI command and flag.
 
-The USDA MyPlate recipe library from Phase 9 is a personal-use tool and is not distributed. Most of its recipes are not public domain. See [Services/Seeding/CLAUDE.md](backend/RecipeApp.API/Services/Seeding/CLAUDE.md) if you have your own local copy.
+A library of USDA MyPlate recipes can also be imported for personal use. It is not distributed, because most of its recipes are not public domain. See [Services/Seeding/CLAUDE.md](backend/RecipeApp.API/Services/Seeding/CLAUDE.md) if you have your own local copy.
 
 ## Running tests
 
-**Backend** (requires Docker running — tests spin up a real PostgreSQL container via Testcontainers):
+**Backend** (Docker must be running, because the tests start a real PostgreSQL container through Testcontainers):
 
 ```bash
-cd backend/RecipeApp.API
-dotnet test ../RecipeApp.Tests/RecipeApp.Tests.csproj
+cd backend
+dotnet test RecipeApp.Tests/RecipeApp.Tests.csproj
 ```
 
 **Frontend:**
@@ -154,9 +139,20 @@ npm run test:watch       # watch mode
 npm run test:coverage    # with coverage report
 ```
 
-## Further reading
+**Deployment updater** (Pester 3.4, which ships with Windows):
 
-- [SPEC.md](SPEC.md) — full feature specification and data model
-- [CLAUDE.md](CLAUDE.md) — repository structure and conventions (with [backend/CLAUDE.md](backend/CLAUDE.md), [frontend/CLAUDE.md](frontend/CLAUDE.md) and [.claude/rules/](.claude/rules/))
-- [docs/history/phase-notes.md](docs/history/phase-notes.md) — archived per-phase implementation notes
-- [specs/](specs/) — detailed per-phase specification documents
+```powershell
+Invoke-Pester deploy\tests
+```
+
+## Deployment
+
+`master` is the release branch. Pushing to it runs both test suites in GitHub Actions and, if they pass, publishes the API and frontend images to GHCR. The host PC pulls `latest` every five minutes, dumps the database before any API update, and restarts what changed. The app is served only over Tailscale, so it needs no authentication.
+
+[docs/deployment.md](docs/deployment.md) covers setting up a host, the Tailscale and phone setup, rollback and restore, and running production beside the development stack on one machine.
+
+## Repository guide
+
+- [CLAUDE.md](CLAUDE.md) — repository layout and conventions, with [backend/CLAUDE.md](backend/CLAUDE.md), [frontend/CLAUDE.md](frontend/CLAUDE.md) and [.claude/rules/](.claude/rules/)
+- [CONTEXT.md](CONTEXT.md) — the domain vocabulary
+- [docs/](docs/) — deployment, recipe packs, architecture decision records and archived implementation notes

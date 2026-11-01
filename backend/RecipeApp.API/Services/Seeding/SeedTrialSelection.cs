@@ -1,18 +1,14 @@
 namespace RecipeApp.API.Services.Seeding;
 
 /// <summary>
-/// The 20 recipes <c>seed-recipes --trial</c> imports (Phase 9 §14): pinned in source so the trial
-/// is identical on every machine, and stratified rather than alphabetical so it hits the hard cases.
-///
-/// <para>Each slug was chosen as the first corpus recipe satisfying its stratum, walking the slugs in
-/// reversed-string order to spread the picks across the alphabet (2026-09-28). The comment on each
-/// line is the stratum it was picked for; most exercise several.</para>
+/// The 20 recipes <c>seed-recipes --trial</c> imports, pinned in source so the trial is identical on every machine and
+/// stratified so it hits the hard cases, each line commented with the stratum it was picked for.
 /// </summary>
 public static class SeedTrialSelection
 {
     public static readonly IReadOnlyList<string> Slugs =
     [
-        // ── §14 strata ────────────────────────────────────────────────────────
+        // ── Strata ────────────────────────────────────────────────────────────
         "apple-crisp-0",              // baking: dry cups of flour, sugar and oats (density coverage)
         "red-beans-and-rice1",        // canned goods: 1 can (14.5 ounces)
         "ratatouille-0",              // whole produce counted as pcs: 2 medium …

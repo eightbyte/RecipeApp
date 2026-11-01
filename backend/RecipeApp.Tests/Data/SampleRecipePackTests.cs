@@ -8,16 +8,12 @@ using RecipeApp.Tests.Infrastructure;
 
 namespace RecipeApp.Tests.Data;
 
-/// <summary>
-/// The shipped sample pack, <c>seed-data/sample-recipes.json</c>, checked as an artefact against the
-/// shipped catalogue (Phase 10 §4.5, §6). No database: names resolve the way the importer resolves
-/// them, by entry name and then alias.
-/// </summary>
+/// <summary>The shipped sample pack checked as an artefact against the shipped catalogue, with names resolving the way the importer resolves them.</summary>
 public class SampleRecipePackTests
 {
     private const int ExpectedRecipeCount = 12;
 
-    /// <summary>Every aisle a shopper walks for food. Non-food aisles and OTHER are exempt (§4.5).</summary>
+    /// <summary>Every aisle a shopper walks for food, exempting non-food aisles and OTHER.</summary>
     private static readonly string[] FoodAisleCategories =
     [
         IngredientCategory.Produce, IngredientCategory.MeatSeafood, IngredientCategory.Dairy,
@@ -119,7 +115,7 @@ public class SampleRecipePackTests
         }
     }
 
-    // ── §4.5 feature coverage ─────────────────────────────────────────────────
+    // ── Feature coverage ──────────────────────────────────────────────────────
 
     [Fact]
     public void SharedIngredientsAppearInAtLeastTwoRecipes()
@@ -166,7 +162,7 @@ public class SampleRecipePackTests
         ResolvedRows().Should().Contain(row => row.Entry.Name == "all-purpose flour" && row.Row.Unit == MeasurementUnit.Cup);
     }
 
-    // ── Shipping (§4.6) ───────────────────────────────────────────────────────
+    // ── Shipping ──────────────────────────────────────────────────────────────
 
     [Theory]
     [InlineData("ingredient-catalogue.json")]

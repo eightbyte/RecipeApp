@@ -3,9 +3,7 @@ using RecipeApp.API.Services.Llm;
 
 namespace RecipeApp.Tests.Services.Llm;
 
-/// <summary>
-/// Returns canned JsonNode responses in order. No model is loaded.
-/// </summary>
+/// <summary>Returns canned JsonNode responses in order, with no model loaded.</summary>
 public class FakeLlmStructuredClient : ILlmStructuredClient
 {
     private readonly Queue<JsonNode> _responses;

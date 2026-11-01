@@ -8,8 +8,7 @@ import {
 
 describe('INGREDIENT_CATEGORIES', () => {
   it('mirrors IngredientCategory.All on the backend, in the same order', () => {
-    // Kept in lockstep with backend/RecipeApp.API/Enums/IngredientCategory.cs. The order is the
-    // shopping list's aisle order, so a reordering here is a visible change, not a cosmetic one.
+    // Kept in lockstep with the backend enum, whose order is the shopping list's aisle order.
     expect(INGREDIENT_CATEGORY_VALUES).toEqual([
       'PRODUCE', 'MEAT_SEAFOOD', 'DAIRY', 'CANNED', 'SOUPS_BROTH',
       'FROZEN', 'DRY_GOODS', 'GRAINS_RICE', 'PASTA_SAUCES', 'BAKING_SPICES',

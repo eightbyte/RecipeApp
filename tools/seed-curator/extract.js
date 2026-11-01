@@ -1,16 +1,8 @@
 'use strict';
 
-/**
- * Turns one cached MyPlate page into a searchable record.
- *
- * This is deliberately independent of the Phase 9 Stage 3 parser: it only has to be good enough
- * to *find* a recipe by name or ingredient, never good enough to import one. Anything it cannot
- * read degrades to an empty field rather than throwing, so a single odd page never costs you the
- * whole index.
- */
+/** Turns one cached MyPlate page into a searchable record, independent of the seed pipeline's parser and degrading to empty fields rather than throwing. */
 
-// Two Drupal content types are present in the corpus. The `mp-` class covers 1,058 pages; the
-// bare class covers the 65 legacy pages. Neither class name is a substring of the other.
+// Two Drupal content types are present: the `mp-` class covers 1,058 pages and the bare class the 65 legacy ones.
 const INGREDIENT_FIELD_CLASSES = [
   'field--name-field-mp-ingredients',
   'field--name-field-ingredients',
@@ -78,10 +70,7 @@ function toPlainText(fragment) {
   return collapseWhitespace(decodeHtmlEntities(stripTags(fragment)));
 }
 
-/**
- * Finds the first element carrying `className` and returns it with its content, using depth
- * counting rather than a lazy `.*?` so a nested element of the same tag cannot end the match early.
- */
+/** Finds the first element carrying `className` and returns it with its content, counting depth so a nested element of the same tag cannot end the match early. */
 function extractElementByClass(html, className) {
   const openTagPattern = /<([a-z][\w-]*)\b([^>]*)>/gi;
   let openTag;
@@ -193,12 +182,7 @@ function extractHeadingTitle(html) {
   return title ? toPlainText(title[1]) : '';
 }
 
-/**
- * Builds the search record for one cached page.
- *
- * @param {string} slug Cache key, also the recipe's filename stem.
- * @param {string} html Raw cached page markup.
- */
+/** Builds the search record for one cached page. */
 function extractRecipeRecord(slug, html) {
   const jsonLd = extractJsonLdRecipe(html) || {};
 

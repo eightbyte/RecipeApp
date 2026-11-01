@@ -4,15 +4,7 @@ using RecipeApp.API.Services.Seeding;
 
 namespace RecipeApp.Tests.Seeding;
 
-/// <summary>
-/// Phase 9.3 §4.7's rules 1–4, each failing on its own. Rule 5 is the local-only
-/// <see cref="ShippedCatalogueTests"/> check; rule 6 was deleted with the corpus counts (Phase 10 §4.7).
-///
-/// <para>These are the invariants that make the catalogue trustworthy enough to be a dictionary
-/// rather than a suggestion, and rule 4 is the one that corrupts silently — an alias claimed by two
-/// entries, or one that shadows a name, resolves by whichever row the lookup saw first, which is a
-/// function of row order rather than of intent.</para>
-/// </summary>
+/// <summary>Rules 1–4 of the catalogue validator, each failing on its own, where rule 4 is the one that corrupts silently.</summary>
 public class IngredientCatalogueValidatorTests
 {
     private static IngredientCatalogueEntry Entry(
@@ -103,8 +95,7 @@ public class IngredientCatalogueValidatorTests
     [Fact]
     public void Rule3_RejectsANonCanonicalSpellingBecauseValidatorsAreStrict()
     {
-        // MeasurementUnit.IsValid is strict by design — that is what lets consolidation group by
-        // plain equality — so a hand-edited "teaspoons" here would never match a stored row.
+        // MeasurementUnit.IsValid is strict by design, so a hand-edited "teaspoons" would never match a stored row.
         IngredientCatalogueValidator.Validate([Entry("salt", defaultUnit: "teaspoons")])
             .Should().ContainSingle(e => e.Contains("teaspoons"));
     }
@@ -134,8 +125,7 @@ public class IngredientCatalogueValidatorTests
     [Fact]
     public void Rule4_RejectsAnAliasThatShadowsAnEntrysName()
     {
-        // The lookup loads names before aliases, so this alias would be permanently unreachable —
-        // and which entry a caller meant becomes a question about insertion order.
+        // The lookup loads names before aliases, so this alias would be permanently unreachable.
         var entries = new[]
         {
             Entry("tomato", aliases: ["diced tomatoes"]),

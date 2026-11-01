@@ -141,7 +141,7 @@ The migration keeps today's rendered values, so the framework change and the des
    | `mb-5` | 48px | `mb-12` |
 
    Rename steps 5 and 4 before step 3. Otherwise a `-3` already renamed to `-4` gets renamed
-   again. Add `mb-2` to the five headings in conflict 7. Update `SPEC.md`, `CLAUDE.md`,
+   again. Add `mb-2` to the five headings in conflict 7. Update `CLAUDE.md`,
    `frontend/CLAUDE.md`, and the comments in `src/main.js` and `src/assets/main.css`.
 
    Accepted changes in that PR, which the reviewer confirms: divider margins drop to 0 (what #22

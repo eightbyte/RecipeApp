@@ -30,16 +30,8 @@ public class RecipeScrapeService(
     // ── Recipe extraction schema ──────────────────────────────────────────────
 
     /// <summary>
-    /// The one extraction schema, shared by the Phase 3 scrape and the Phase 9 seed normaliser.
-    ///
-    /// <para><b>Every property a caller wants back must be listed in <c>required</c>.</b>
-    /// <see cref="Llm.JsonSchemaGrammar"/> omits non-required properties from the grammar
-    /// altogether, so an optional property is not "the model may skip it" — it is one the model
-    /// cannot emit at all. That is why <c>notes</c> and <c>description</c> are required and
-    /// nullable rather than optional: measured on the seed corpus, an unreachable <c>notes</c> did
-    /// not make the model drop preparation detail, it made it write the detail into <c>unit</c>
-    /// (<c>"pound, chunks"</c>, <c>"teaspoon, optional"</c>), which fails the storable-unit gate
-    /// and loses the whole recipe. Same shape as Phase 9.1's finding about <c>amount</c>.</para>
+    /// The one extraction schema shared by the scrape and the seed normaliser, where every property a caller wants back must be
+    /// required because the grammar cannot emit an optional one.
     /// </summary>
     internal const string RecipeSchemaJson = """
         {
@@ -148,14 +140,8 @@ public class RecipeScrapeService(
 
     // ── Ingredient category heuristic ─────────────────────────────────────────
 
-    // First match wins, so order is where substring collisions are settled: SOUPS_BROTH leads
-    // because its names are built from other aisles' words and every later row would claim them
-    // first ("chicken broth" is MEAT_SEAFOOD, "cheddar cheese soup" and "cream of mushroom soup"
-    // are DAIRY, "tomato soup" is PRODUCE); JAM_NUT_BUTTER precedes DAIRY ("peanut butter"),
-    // PASTA_SAUCES precedes DAIRY ("egg noodles"), KITCHEN precedes CONDIMENTS ("foil" contains
-    // "oil"), CONDIMENTS precedes GRAINS_RICE ("rice vinegar"), BAKING_SPICES precedes
-    // GRAINS_RICE ("rice flour"), DRY_GOODS ("nutmeg") and PRODUCE ("garlic powder", "black
-    // pepper"), and GRAINS_RICE precedes BAKERY ("rolled oats").
+    // First match wins, so order settles substring collisions: a category built from other aisles' words must lead
+    // (SOUPS_BROTH before MEAT_SEAFOOD, KITCHEN before CONDIMENTS, GRAINS_RICE before BAKERY).
     private static readonly (string Category, string[] Keywords)[] CategoryPriority =
     [
         (IngredientCategory.SoupsBroth,   ["broth", "stock", "bouillon", "consomme", "consommé", "soup", "bisque", "chowder"]),
@@ -176,8 +162,7 @@ public class RecipeScrapeService(
         (IngredientCategory.Produce,      ["onion", "garlic", "carrot", "celery", "tomato", "potato", "lettuce", "spinach", "kale", "broccoli", "pepper", "capsicum", "zucchini", "cucumber", "avocado", "lemon", "lime", "orange", "apple", "banana", "mushroom", "corn", "asparagus", "pea", "parsley", "basil", "coriander", "thyme", "rosemary", "mint", "dill", "chive", "scallion", "leek", "shallot", "ginger", "chilli", "eggplant", "beetroot", "pumpkin", "squash", "berry"]),
     ];
 
-    /// <summary>How every response to a RecipeSchemaJson-shaped prompt is read. Shared with the
-    /// Phase 9 seed normaliser, which sends the same schema and must read the answer identically.</summary>
+    /// <summary>How every response to a <c>RecipeSchemaJson</c>-shaped prompt is read, shared with the seed normaliser, which sends the same schema.</summary>
     internal static readonly JsonSerializerOptions LlmJsonOptions = new()
     {
         PropertyNamingPolicy        = JsonNamingPolicy.SnakeCaseLower,
@@ -299,8 +284,7 @@ public class RecipeScrapeService(
                 url, TimeSpan.FromSeconds(_options.HeadlessRenderTimeoutSeconds), ct);
             var (renderedText, renderedSufficient) = await ExtractCandidateTextAsync(renderedHtml);
 
-            // Prefer the rendered result if it cleared the bar, or is simply more substantial
-            // than what the static fetch produced (e.g. JSON-LD injected only after hydration).
+            // Prefer the rendered result if it cleared the bar or is simply more substantial than the static fetch.
             if (renderedSufficient || renderedText.Length > text.Length)
                 return renderedText;
         }
@@ -353,9 +337,7 @@ public class RecipeScrapeService(
         return await response.Content.ReadAsStringAsync(ct);
     }
 
-    /// <summary>Tries JSON-LD recipe markup first (clean, structured, and unaffected by the
-    /// script-stripping below); falls back to stripped visible body text. "Sufficient" means the
-    /// caller doesn't need to try harder (JSON-LD found, or stripped text clears the length bar).</summary>
+    /// <summary>Tries JSON-LD recipe markup first, falling back to stripped visible body text, and reports whether the result is sufficient for the caller to stop trying.</summary>
     private async Task<(string Text, bool Sufficient)> ExtractCandidateTextAsync(string html)
     {
         var parser = new HtmlParser();
@@ -453,10 +435,7 @@ public class RecipeScrapeService(
             .Select(i => new { i.Id, i.Name, i.DisplayName, i.Category, i.GramsPerMillilitre, i.Aliases })
             .ToListAsync(ct);
 
-        // Keyed by Name and by every alias, so a known synonym resolves here rather than costing a
-        // pass-2 model call (Phase 9.3 §4.6). Names are loaded first and aliases only with TryAdd,
-        // so a name always outranks an alias: the alias invariant forbids the collision, and if a
-        // hand-edited row ever breaks it the entry's own name is the answer that wins.
+        // Keyed by name and by every alias so a known synonym resolves here, with names loaded first so a name always outranks an alias.
         var exactLookup = new Dictionary<string, Guid>(StringComparer.OrdinalIgnoreCase);
         foreach (var ingredient in dbIngredients)
             exactLookup[ingredient.Name] = ingredient.Id;
@@ -469,10 +448,7 @@ public class RecipeScrapeService(
             .Where(i => i.GramsPerMillilitre.HasValue)
             .ToDictionary(i => i.Id, i => i.GramsPerMillilitre);
 
-        // Stage B: resolve an import-resolvable unit (cup) against the matched ingredient's
-        // density. An ingredient with no catalogue row has no density by construction, so it
-        // keeps its measurement as stated. An unquantified row has nothing to resolve and is
-        // handed through untouched — a null amount never reaches the converter (Phase 9.1 §3.5).
+        // Stage B: resolve an import-resolvable unit against the matched ingredient's density, leaving an unmatched or unquantified row as stated.
         ScrapePreviewIngredient ResolveAgainstCatalogue(ScrapePreviewIngredient row, Guid ingredientId)
         {
             if (row.Amount is not { } statedAmount || row.Unit is not { } statedUnit) return row;
@@ -492,11 +468,7 @@ public class RecipeScrapeService(
             var ing            = extracted.Ingredients[i];
             var normalisedName = ing.Name.Trim().ToLowerInvariant();
 
-            // Stage A. The source measurement is recorded verbatim first, so a conversion can
-            // always be audited or recomputed later (Phase 8.5.1 §6.2). A line the model reported
-            // as unquantified carries neither a canonical nor a source measurement: there is
-            // nothing to convert and nothing to record, and a unit without an amount would be as
-            // invented as the amount itself (Phase 9.1 §3.1).
+            // Stage A: record the source measurement verbatim first so a conversion can be audited, and record nothing for an unquantified line.
             decimal? amount       = null;
             string?  unit         = null;
             decimal? sourceAmount = null;
@@ -645,11 +617,7 @@ public class RecipeScrapeService(
             .FirstOrDefaultAsync(i => i.Name == normalised, ct);
         if (existing != null) return existing.Id;
 
-        // An alias hit resolves to the entry that owns it rather than creating a second row.
-        // Without this, confirming a hand-typed "garbanzo beans" would insert a row whose Name
-        // equals an alias of "chickpeas" — and since the lookup loads names before aliases, that
-        // new row would then permanently shadow the alias. Ordinary use must not be able to break
-        // the invariant §4.7 enforces at build and seed time.
+        // An alias hit resolves to the entry that owns it, because inserting a row named like an existing alias would permanently shadow that alias.
         var byAlias = await db.Ingredients
             .FirstOrDefaultAsync(i => i.Aliases.Contains(normalised), ct);
         if (byAlias != null) return byAlias.Id;
@@ -697,11 +665,7 @@ public class RecipeScrapeService(
         List<ExtractedStep> Steps
     );
 
-    /// <param name="Amount">
-    /// Null when the source line states no quantity. The schema declares
-    /// <c>["number", "null"]</c> precisely so the grammar permits the model to say so rather than
-    /// forcing it to invent a figure (Phase 9.1 §1.3, §3.3).
-    /// </param>
+    /// <param name="Amount">Null when the source line states no quantity, which the schema permits so the model is not forced to invent a figure.</param>
     /// <param name="Unit">Null exactly when <paramref name="Amount"/> is null.</param>
     internal record ExtractedIngredient(
         string Name,

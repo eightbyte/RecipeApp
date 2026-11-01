@@ -8,11 +8,7 @@ using RecipeApp.Tests.Infrastructure;
 
 namespace RecipeApp.Tests.Seeding;
 
-/// <summary>
-/// Stage 4 (Phase 9 §11) against a scripted model: the §11.3 validation gate, the retry loop, and
-/// the narrow slice of the answer the model is actually allowed to keep. No GPU, no database, no
-/// network — the whole point of <see cref="StubLlmStructuredClient"/> (§17.3).
-/// </summary>
+/// <summary>Stage 4 against a scripted model: the validation gate, the retry loop and the narrow slice of the answer the model may keep, with no GPU, database or network.</summary>
 public class SeedRecipeNormaliserTests
 {
     private RecipeSeedingOptions _options = new();
@@ -115,10 +111,7 @@ public class SeedRecipeNormaliserTests
         recipe.Ingredients[0].Amount.Should().Be(expectedAmount);
     }
 
-    /// <summary>
-    /// Phase 9.1: a line stating no quantity stores null, never zero — <c>0</c> renders as
-    /// <c>0 g Salt</c> and sums into shopping lists.
-    /// </summary>
+    /// <summary>A line stating no quantity stores null, never zero, which would render as <c>0 g Salt</c> and sum into shopping lists.</summary>
     [Fact]
     public async Task NormaliseAsync_StoresAnUnquantifiedLineWithNoMeasurementAtAll()
     {
@@ -133,10 +126,7 @@ public class SeedRecipeNormaliserTests
         salt.SourceUnit.Should().BeNull();
     }
 
-    /// <summary>
-    /// §22.1: the page already publishes an ordered step list, so the model's retelling of a step
-    /// is discarded. A paraphrase, a truncation or a leaked footnote cannot enter through here.
-    /// </summary>
+    /// <summary>The page already publishes an ordered step list, so the model's retelling of a step is discarded.</summary>
     [Fact]
     public async Task NormaliseAsync_KeepsThePagesStepWordingRatherThanTheModels()
     {
@@ -190,7 +180,7 @@ public class SeedRecipeNormaliserTests
         recipe.Steps[1].IngredientIndexes.Should().Equal(0, 1);
     }
 
-    // ── The validation gate (§11.3) ───────────────────────────────────────────
+    // ── The validation gate ───────────────────────────────────────────────────
 
     private async Task<SeedNormaliseException> RejectionOf(
         JsonNode answer, ParsedSeedRecipe? parsed = null)
@@ -206,8 +196,7 @@ public class SeedRecipeNormaliserTests
     [Fact]
     public async Task NormaliseAsync_RejectsARowCountThatDoesNotMatchTheSourceLines()
     {
-        // The model split "salt and pepper" — plausible, and exactly what makes positional pairing
-        // unsafe, so the recipe is retried rather than paired against a guess.
+        // The model split "salt and pepper", which makes positional pairing unsafe, so the recipe is retried.
         var rejection = await RejectionOf(Answer(
             [("chicken breast", 1, "pound", null), ("salt", null, null, null),
              ("pepper", null, null, null)],
@@ -257,11 +246,7 @@ public class SeedRecipeNormaliserTests
         rejection.Failure.Should().Be(SeedNormaliseFailure.MissingIngredientName);
     }
 
-    /// <summary>
-    /// The half of the gate that has no other coverage (§14). An invented <c>1 tsp</c> for a line
-    /// reading <c>salt</c> looks exactly like a correct extraction, which is why it is checked
-    /// against the source line rather than against plausibility.
-    /// </summary>
+    /// <summary>An invented <c>1 tsp</c> for a line reading <c>salt</c> looks like a correct extraction, so it is checked against the source line rather than plausibility.</summary>
     [Fact]
     public async Task NormaliseAsync_RejectsAQuantityInventedForAnUnquantifiedLine()
     {
@@ -284,10 +269,7 @@ public class SeedRecipeNormaliserTests
         rejection.Detail.Should().Contain(nameof(SeedQuantityRejection.InventedUnit));
     }
 
-    /// <summary>
-    /// A container line states several numbers, so nothing in the line settles which one is the
-    /// quantity and it cannot be filled in. A model that reports none still loses the recipe.
-    /// </summary>
+    /// <summary>A container line states several numbers, so nothing settles which is the quantity and a model that reports none still loses the recipe.</summary>
     [Fact]
     public async Task NormaliseAsync_RejectsAQuantifiedLineTheModelReportedAsHavingNoQuantity()
     {
@@ -312,11 +294,7 @@ public class SeedRecipeNormaliserTests
         rejection.Detail.Should().Contain(nameof(SeedQuantityRejection.NonPositiveQuantity));
     }
 
-    /// <summary>
-    /// A unit that is neither a measurement nor a counted thing cannot be stored. Checked after
-    /// canonicalisation and after the count-word rename, so <c>teaspoons</c> and <c>cloves</c> both
-    /// pass while a word the pipeline has no reading for does not.
-    /// </summary>
+    /// <summary>A unit that is neither a measurement nor a counted thing cannot be stored, checked after canonicalisation and the count-word rename.</summary>
     [Theory]
     [InlineData("knob")]
     [InlineData("glug")]
@@ -333,16 +311,7 @@ public class SeedRecipeNormaliserTests
         rejection.Detail.Should().Contain(nameof(SeedQuantityRejection.UnstorableUnit));
     }
 
-    /// <summary>
-    /// The misread that every other rule admits. Observed live: the model read
-    /// <c>3/4 cup unsalted dry roasted peanuts</c> as <c>3.75 cup</c> — positive, storable, and five
-    /// times too much.
-    ///
-    /// <para>The line settles this on its own, so the line answers it. The gate already trusts this
-    /// arithmetic enough to reject a whole recipe on it, which is the same thing as trusting it to
-    /// supply the number; rejecting instead threw away 15 recipes over a digit the source states
-    /// unambiguously. The model keeps the unit, which it reads reliably.</para>
-    /// </summary>
+    /// <summary>The misread every other rule admits, such as <c>3/4 cup</c> read as <c>3.75 cup</c>, is corrected from the line, which settles it on its own.</summary>
     [Fact]
     public async Task NormaliseAsync_CorrectsAnAmountThatContradictsTheOneNumberTheLineStates()
     {
@@ -359,11 +328,7 @@ public class SeedRecipeNormaliserTests
             "provenance must convert to the stored amount, or it audits nothing");
     }
 
-    /// <summary>
-    /// Every quantity misread measured on the corpus was a plausible positive number, and a zero is
-    /// not one of those — it is an answer that is not a quantity. The substitution deliberately
-    /// stops short of it so a row the model failed on outright is still excluded.
-    /// </summary>
+    /// <summary>A zero is not a plausible misread but an answer that is not a quantity, so the substitution stops short of it and the row is still excluded.</summary>
     [Theory]
     [InlineData(0)]
     [InlineData(-2)]
@@ -378,10 +343,7 @@ public class SeedRecipeNormaliserTests
         rejection.Detail.Should().Contain(nameof(SeedQuantityRejection.NonPositiveQuantity));
     }
 
-    /// <summary>
-    /// A line stating several numbers does not settle which one is the quantity, so the substitution
-    /// has nothing to substitute and must leave a container line alone.
-    /// </summary>
+    /// <summary>A line stating several numbers does not settle which is the quantity, so the substitution leaves a container line alone.</summary>
     [Fact]
     public async Task NormaliseAsync_LeavesAnAmountAloneOnALineStatingSeveralNumbers()
     {
@@ -395,10 +357,7 @@ public class SeedRecipeNormaliserTests
         recipe.Ingredients[0].SourceAmount.Should().Be(30m, "neither 2 nor 15 is the quantity");
     }
 
-    /// <summary>
-    /// A container line's numbers disagree by design — one can, 14.5 ounces — so the arithmetic
-    /// check stands aside rather than rejecting the right answer.
-    /// </summary>
+    /// <summary>A container line's numbers disagree by design, so the arithmetic check stands aside rather than rejecting the right answer.</summary>
     [Fact]
     public async Task NormaliseAsync_DoesNotContradictAContainerQuantityResolvedToItsNetWeight()
     {
@@ -413,11 +372,7 @@ public class SeedRecipeNormaliserTests
         recipe.Ingredients[0].SourceAmount.Should().Be(14.5m);
     }
 
-    /// <summary>
-    /// §11.1: a descriptive size is not a unit, and <c>"1 medium onion"</c> is <c>1 pcs</c> with the
-    /// size in notes. Applied deterministically because the model's compliance was the largest
-    /// single source of rejections in a 37-recipe sample.
-    /// </summary>
+    /// <summary>A descriptive size is not a unit, so <c>"1 medium onion"</c> is <c>1 pcs</c> with the size in notes, applied deterministically.</summary>
     [Theory]
     [InlineData("medium")]
     [InlineData("Large")]
@@ -442,10 +397,7 @@ public class SeedRecipeNormaliserTests
         recipe.Ingredients[0].SourceUnit.Should().Be(stated, "provenance records what the model said");
     }
 
-    /// <summary>
-    /// A bare count on a line that names no unit is pieces — <c>7 apples</c> counts whole things.
-    /// Decided from the source line, not from the model omitting a field.
-    /// </summary>
+    /// <summary>A bare count on a line that names no unit is pieces, decided from the source line and not from the model omitting a field.</summary>
     [Fact]
     public async Task NormaliseAsync_ReadsABareCountAsPiecesWhenTheLineNamesNoUnit()
     {
@@ -459,11 +411,7 @@ public class SeedRecipeNormaliserTests
         recipe.Ingredients[0].Unit.Should().Be("pcs");
     }
 
-    /// <summary>
-    /// The mirror case, and the reason the rule reads the line rather than the answer. A container
-    /// line states several numbers, so the line does not settle which unit belongs to the quantity
-    /// and a dropped unit cannot be recovered from it — which keeps this a rejection.
-    /// </summary>
+    /// <summary>The mirror case: a container line does not settle which unit belongs to the quantity, so a dropped unit stays a rejection.</summary>
     [Fact]
     public async Task NormaliseAsync_RejectsABareCountWhenTheLineNamesAUnitItCannotRecover()
     {
@@ -476,12 +424,7 @@ public class SeedRecipeNormaliserTests
         rejection.Detail.Should().Contain(nameof(SeedQuantityRejection.UnstorableUnit));
     }
 
-    /// <summary>
-    /// The model writes the preparation into the unit when it has nowhere else to put it. The
-    /// measurement is the leading phrase, and a real unit is resolved before any count word. Each
-    /// case pairs with a source line that states the same unit, so what is under test is the phrase
-    /// parsing rather than the line overriding it.
-    /// </summary>
+    /// <summary>The model writes preparation into the unit column, so the measurement is the leading phrase and a real unit is resolved before any count word.</summary>
     [Theory]
     [InlineData("1 pound lean pork, cut into chunks", "pound, chunks",  "g",   453.592)]
     [InlineData("1 cup flour, sifted",                "cups, chopped",  "cup", 1)]
@@ -500,12 +443,7 @@ public class SeedRecipeNormaliserTests
         recipe.Ingredients[0].Amount.Should().Be(expectedAmount);
     }
 
-    /// <summary>
-    /// Correcting the amount alone is not enough, and rescuing a recipe can carry a wrong unit in
-    /// with it. Observed live the first time the substitution ran: <c>1 tablespoon cinnamon</c> came
-    /// back as <c>1 cup</c> — sixteen times too much, positive, storable, and in agreement with the
-    /// line's only number, so every other rule in the gate admitted it.
-    /// </summary>
+    /// <summary>Correcting the amount alone can carry a wrong unit in, as <c>1 tablespoon cinnamon</c> read as <c>1 cup</c>, so the unit is corrected from the line too.</summary>
     [Fact]
     public async Task NormaliseAsync_CorrectsAUnitThatContradictsTheOneTheLineNames()
     {
@@ -520,11 +458,7 @@ public class SeedRecipeNormaliserTests
         recipe.Ingredients[0].Amount.Should().Be(1m);
     }
 
-    /// <summary>
-    /// The same rule recovers a unit the model dropped entirely, where the line names one after its
-    /// only number. This was a rejection, which threw away a recipe over a unit the line states
-    /// plainly.
-    /// </summary>
+    /// <summary>The same rule recovers a unit the model dropped entirely, where the line names one after its only number.</summary>
     [Fact]
     public async Task NormaliseAsync_RecoversAUnitTheModelDroppedFromALineThatNamesOne()
     {
@@ -538,13 +472,7 @@ public class SeedRecipeNormaliserTests
         recipe.Ingredients[0].Unit.Should().Be("cup");
     }
 
-    /// <summary>
-    /// MyPlate states an optional ingredient's quantity in a trailing note, and the word
-    /// <c>optional</c> leads the model to report no quantity at all. 146 lines on 119 recipes. On a
-    /// line stating exactly one number the gate already requires the stored amount to equal it, so
-    /// filling the null produces the one value the gate would have accepted — and rejecting instead
-    /// threw the recipe away. The unit comes off the line by the same rule.
-    /// </summary>
+    /// <summary>An optional ingredient's quantity sits in a trailing note and leads the model to report none, so a line stating exactly one number fills the null.</summary>
     [Theory]
     [InlineData("salt (optional, 1/4 teaspoon)", 0.25, "tsp")]
     [InlineData("powdered sugar, optional (1/3 cup, for glaze)", 0.333, "cup")]
@@ -563,9 +491,7 @@ public class SeedRecipeNormaliserTests
         recipe.Ingredients[0].Unit.Should().Be(expectedUnit);
     }
 
-    /// <summary>
-    /// A bare count gets the same treatment, and the unit still comes from the line naming none.
-    /// </summary>
+    /// <summary>A bare count gets the same treatment, with the unit still coming from the line naming none.</summary>
     [Fact]
     public async Task NormaliseAsync_FillsABareCountTheModelLeftOutAsPieces()
     {
@@ -579,10 +505,7 @@ public class SeedRecipeNormaliserTests
         recipe.Ingredients[0].Unit.Should().Be("pcs");
     }
 
-    /// <summary>
-    /// The limits of the fill. A line stating no quantity, or whose only number is a cut size, stays
-    /// unquantified (Phase 9.1); a line stating several numbers does not settle which one is meant.
-    /// </summary>
+    /// <summary>The limits of the fill: a line stating no quantity, or only a cut size, stays unquantified, and several numbers do not settle which is meant.</summary>
     [Theory]
     [InlineData("nonstick cooking spray")]
     [InlineData("salt and pepper, to taste")]
@@ -599,11 +522,7 @@ public class SeedRecipeNormaliserTests
         recipe.Ingredients[0].Unit.Should().BeNull();
     }
 
-    /// <summary>
-    /// The guard that keeps the unit rule off a parenthetical equivalence. 37 corpus rows name a unit
-    /// only inside one — <c>12 large egg whites (about 1 1/2 cups)</c> is 12 pieces, not cups — and
-    /// every one states more than one number, which is what stands the rule down.
-    /// </summary>
+    /// <summary>The guard that keeps the unit rule off a parenthetical equivalence, since such lines state more than one number.</summary>
     [Theory]
     [InlineData("12 large egg whites (about 1 1/2 cups)")]
     [InlineData("1 medium head of lettuce (about 10 cups)")]
@@ -619,12 +538,7 @@ public class SeedRecipeNormaliserTests
         recipe.Ingredients[0].Unit.Should().Be("pcs", "the count is of whole things, not of cups");
     }
 
-    /// <summary>
-    /// Half the customary table is multi-word, and a single-word test reads <c>us</c> or
-    /// <c>fluid</c> off these and matches nothing. Observed live on
-    /// <c>10 3/4 us fluid ounces 1% low fat milk</c>: the model read the measurement correctly and
-    /// the recipe was lost to an unstorable unit. 15 lines on 14 recipes spell fluid ounces out.
-    /// </summary>
+    /// <summary>Half the customary table is multi-word, so a single-word test would match nothing and lose the recipe to an unstorable unit.</summary>
     [Theory]
     [InlineData("fluid ounces")]
     [InlineData("us fluid ounces")]
@@ -646,12 +560,7 @@ public class SeedRecipeNormaliserTests
 
     // ── Recovering a count the model declined to read ─────────────────────────
 
-    /// <summary>
-    /// <c>1 dash black pepper</c> resembles an unquantified seasoning and the model reads it as one,
-    /// but the line states a count and Phase 9 already decided an unsized measure counts its things
-    /// as <c>pcs</c>. That decision was unreachable: the count-word rename only ever ran on an answer
-    /// that already had an amount, so a null lost the recipe. 44 lines on 43 recipes are this shape.
-    /// </summary>
+    /// <summary><c>1 dash black pepper</c> resembles an unquantified seasoning but states a count, which counts as <c>pcs</c> even when the model returns no amount.</summary>
     [Theory]
     [InlineData("1 dash black pepper", 1)]
     [InlineData("1 dash salt and black pepper", 1)]
@@ -686,11 +595,7 @@ public class SeedRecipeNormaliserTests
         recipe.Ingredients[0].Unit.Should().Be("pcs");
     }
 
-    /// <summary>
-    /// The guard that keeps the recovery from inventing anything. A line naming a real unit is
-    /// measuring, not counting, so its amount belongs to that unit and a missing one stays a
-    /// rejection rather than being read off a later <c>slices</c>.
-    /// </summary>
+    /// <summary>A line naming a real unit is measuring, not counting, so a missing amount stays a rejection rather than being read off a later <c>slices</c>.</summary>
     [Fact]
     public async Task NormaliseAsync_DoesNotRecoverACountFromALineThatNamesARealUnit()
     {
@@ -704,10 +609,7 @@ public class SeedRecipeNormaliserTests
             "four slices is not the quantity of half a cup of onion");
     }
 
-    /// <summary>
-    /// The same guard from the other side. A line naming a real unit is measured in that unit, so
-    /// filling its amount must not also turn it into a count of pieces.
-    /// </summary>
+    /// <summary>The same guard from the other side: filling the amount of a measured line must not also turn it into a count of pieces.</summary>
     [Fact]
     public async Task NormaliseAsync_FillsALineNamingARealUnitInThatUnitRatherThanAsPieces()
     {
@@ -722,7 +624,7 @@ public class SeedRecipeNormaliserTests
         recipe.Ingredients[0].Unit.Should().Be("g");
     }
 
-    /// <summary>A line that genuinely states no quantity must stay unquantified (Phase 9.1).</summary>
+    /// <summary>A line that genuinely states no quantity must stay unquantified.</summary>
     [Theory]
     [InlineData("nonstick cooking spray")]
     [InlineData("salt and pepper, to taste")]
@@ -738,10 +640,7 @@ public class SeedRecipeNormaliserTests
         recipe.Ingredients[0].Unit.Should().BeNull();
     }
 
-    /// <summary>
-    /// A cut size is not a quantity. Two corpus lines state nothing but one, and counting it made
-    /// the gate demand an amount the line never gave.
-    /// </summary>
+    /// <summary>A cut size is not a quantity, so a line stating nothing but one must not make the gate demand an amount.</summary>
     [Theory]
     [InlineData("carrot, sliced into 3 inch pieces")]
     [InlineData("aluminum foil (10x12 inches square)")]
@@ -864,12 +763,7 @@ public class SeedRecipeNormaliserTests
         llm.Calls[0].MaxTokens.Should().Be(_options.MaxLlmOutputTokens);
     }
 
-    /// <summary>
-    /// The prompt promises the model a closed unit vocabulary, and the gate then enforces one. If
-    /// those two lists are ever written down separately they drift, and the symptom is a corpus-wide
-    /// rejection for a unit the prompt said was fine — so the prompt derives its list from the same
-    /// tables the gate consults (CLAUDE.md).
-    /// </summary>
+    /// <summary>The prompt derives its unit vocabulary from the same tables the gate consults, so the two cannot drift apart.</summary>
     [Fact]
     public void SystemPrompt_StatesExactlyTheUnitVocabularyThePipelineAccepts()
     {
@@ -883,20 +777,14 @@ public class SeedRecipeNormaliserTests
         stated.Should().Contain(RecipeApp.API.Enums.MeasurementUnit.AcceptedSpellings);
         stated.Should().Contain(MeasurementConverter.ConvertibleUnits);
 
-        // The worked example teaches units too, and a unit it teaches that the list forbids is a
-        // prompt arguing with itself.
+        // The worked example teaches units too, and a unit it teaches that the list forbids is a prompt arguing with itself.
         foreach (var taught in System.Text.RegularExpressions.Regex
                      .Matches(SeedRecipeNormaliser.SystemPrompt, "\"unit\":\"(?<unit>[^\"]+)\"")
                      .Select(match => match.Groups["unit"].Value))
             stated.Should().Contain(taught);
     }
 
-    /// <summary>
-    /// Guards a removal, not a feature. A table of fraction conversions was added to the prompt and
-    /// measured worse: the model stopped reading the line and started picking from the list, so
-    /// <c>1 teaspoon salt</c> — which states no fraction at all — came back as 0.25. Anything that
-    /// hands the model a menu of plausible amounts belongs nowhere near this prompt.
-    /// </summary>
+    /// <summary>Guards a removal: a fraction conversion table made the model stop reading the line, so nothing that hands it a menu of plausible amounts belongs in this prompt.</summary>
     [Fact]
     public void SystemPrompt_OffersNoMenuOfCandidateAmounts()
     {
@@ -904,9 +792,7 @@ public class SeedRecipeNormaliserTests
 
         prompt.Should().NotContain("copy its value from this table");
 
-        // The worked example states amounts, and that is the point of it. Outside the example, a
-        // couple of decimals demonstrate a rule and a run of them is a menu — the table that failed
-        // listed ten on one line.
+        // The worked example states amounts on purpose, but outside it a run of decimals is a menu.
         var exampleStart = prompt.IndexOf("Worked example", StringComparison.Ordinal);
         exampleStart.Should().BePositive();
 
@@ -932,10 +818,7 @@ public class SeedRecipeNormaliserTests
         content.Should().Contain("3. Serve.");
     }
 
-    /// <summary>
-    /// The ingredient labels are the indexes the answer is asked for, so the model copies a number
-    /// instead of deriving one. Steps keep counting from one, because <c>step_number</c> does.
-    /// </summary>
+    /// <summary>The ingredient labels are the indexes the answer is asked for, so the model copies a number instead of deriving one, while steps keep counting from one.</summary>
     [Fact]
     public void BuildUserContent_LabelsIngredientsFromZeroAndStepsFromOne()
     {
@@ -955,12 +838,7 @@ public class SeedRecipeNormaliserTests
         content.Should().Contain("labels run from [0] to [2]");
     }
 
-    /// <summary>
-    /// Drupal splits one printed line across two spans, and for an optional ingredient the amount
-    /// is in the second one — 109 corpus lines on 87 recipes. The model is shown the whole line and
-    /// the gate reads the whole line, so extracting that amount is accepted rather than punished as
-    /// an invention.
-    /// </summary>
+    /// <summary>The amount for an optional ingredient sits in the second span, and the model and the gate both read the whole line, so extracting it is accepted rather than punished as an invention.</summary>
     [Fact]
     public async Task NormaliseAsync_AcceptsAQuantityStatedOnlyInTheNoteSpan()
     {

@@ -5,17 +5,13 @@ using RecipeApp.Tests.Infrastructure;
 
 namespace RecipeApp.Tests.Data;
 
-/// <summary>
-/// The curated table itself — no database needed. These guard the data, which is the part most
-/// likely to drift as the catalogue grows.
-/// </summary>
+/// <summary>The curated table itself, with no database, guarding the data most likely to drift as the catalogue grows.</summary>
 public class IngredientDensityTableTests
 {
     [Fact]
     public void Table_IsWithinTheTargetedSize()
     {
-        // Phase 8.5.1 §5.6 targets 40–60 curated entries. Far fewer leaves the corpus uncovered;
-        // far more usually means someone started guessing.
+        // Far fewer entries leaves the corpus uncovered, and far more usually means someone started guessing.
         IngredientDensitySeeder.Rows.Should().HaveCountGreaterThanOrEqualTo(40);
         IngredientDensitySeeder.Rows.Should().HaveCountLessThanOrEqualTo(60);
     }
@@ -37,9 +33,7 @@ public class IngredientDensityTableTests
     [Fact]
     public void CatalogueNamesAreNormalisedAndUnique()
     {
-        // Catalogue names are stored lowercase and trimmed, so a mixed-case key would never match.
-        // Uniqueness is enforced by the ByCatalogueName dictionary; asserting it here names the
-        // duplicate instead of failing inside a type initialiser.
+        // Catalogue names are stored lowercase and trimmed, and asserting uniqueness here names the duplicate instead of failing in a type initialiser.
         var allNames = IngredientDensitySeeder.Rows.SelectMany(r => r.CatalogueNames).ToList();
 
         allNames.Should().OnlyContain(n => n == n.Trim().ToLowerInvariant());
@@ -58,8 +52,7 @@ public class IngredientDensityTableTests
     }
 
     [Theory]
-    // Every dry good in the starter catalogue must be covered, or the app ships with a
-    // density table that gives its own seed data nothing (Phase 8.5.1 §5.6).
+    // Every dry good in the starter catalogue must be covered, or the app ships with a density table that gives its own seed data nothing.
     [InlineData("plain flour")]
     [InlineData("rice")]
     [InlineData("breadcrumbs")]
@@ -73,7 +66,7 @@ public class IngredientDensityTableTests
     }
 
     [Theory]
-    // Bought by volume — a gram figure would be correct physics and useless cooking (§5.6).
+    // Bought by volume, so a gram figure would be correct physics and useless cooking.
     [InlineData("water")]
     [InlineData("milk")]
     [InlineData("cream")]
@@ -83,7 +76,7 @@ public class IngredientDensityTableTests
     [InlineData("honey")]
     [InlineData("maple syrup")]
     [InlineData("peanut butter")]
-    // Packing-dominated — no single figure is true (§5.3).
+    // Packing-dominated, so no single figure is true.
     [InlineData("spinach")]
     [InlineData("lettuce")]
     public void LiquidsAndPackingDominatedIngredientsAreDeliberatelyAbsent(string catalogueName)
@@ -94,8 +87,7 @@ public class IngredientDensityTableTests
     [Fact]
     public void PackedAndLooseBrownSugarAreSeparateEntries()
     {
-        // Phase 8.5.1 §14 Q2 — the two pack states differ by ~50%, so they are modelled as
-        // distinct catalogue entries rather than one averaged guess.
+        // The two pack states differ by about 50%, so they are distinct catalogue entries rather than one averaged guess.
         var packed = IngredientDensitySeeder.ByCatalogueName["packed brown sugar"];
         var loose  = IngredientDensitySeeder.ByCatalogueName["loose brown sugar"];
 

@@ -9,13 +9,8 @@ using RecipeApp.Tests.Infrastructure;
 namespace RecipeApp.Tests.Seeding;
 
 /// <summary>
-/// Stage 4.5 (Phase 9.3 §4.3) against a scripted model: the deterministic passes that surround the
-/// one LLM call, and the invariants that stop a self-contradicting catalogue reaching disk.
-/// No GPU, no database, no network.
-///
-/// <para>Every scripted answer is in the per-name shape <c>GroupingSchemaJson</c> constrains the
-/// model to, so its labels must follow the order <see cref="IngredientCatalogueBuilder.BuildBatches"/>
-/// produces: family key ordinally, then most rows first, then the shorter name.</para>
+/// Stage 4.5 against a scripted model: the deterministic passes around the one LLM call and the invariants that stop a
+/// self-contradicting catalogue reaching disk, with scripted labels following the order BuildBatches produces.
 /// </summary>
 public class IngredientCatalogueBuilderTests : IDisposable
 {
@@ -155,8 +150,7 @@ public class IngredientCatalogueBuilderTests : IDisposable
     [Fact]
     public async Task Pass1_SendsUpToThreeDistinctSourceLinesPerName()
     {
-        // The lines are the evidence a merge decision rests on — 'diced tomatoes' is only
-        // identifiable as canned from its line — so they must actually reach the model.
+        // The lines are the evidence a merge decision rests on, so they must actually reach the model.
         var manifest = await SeedCorpusAsync(
             ("a", [("tomatoes", 1m, "pcs", "1 large tomato")]),
             ("b", [("tomatoes", 2m, "pcs", "2 medium tomatoes")]),
@@ -180,8 +174,7 @@ public class IngredientCatalogueBuilderTests : IDisposable
     {
         var manifest = await SeedCorpusAsync(("soup", [("onion", 1m, "pcs", "1 onion")]));
 
-        // A manifest entry with no normalised recipe. A catalogue built from part of the corpus
-        // cannot resolve the rest of it, so this must stop rather than produce a short file.
+        // A manifest entry with no normalised recipe must stop the build rather than produce a short file.
         manifest = manifest with
         {
             Recipes = [.. manifest.Recipes, new SeedManifestEntry(
@@ -201,8 +194,7 @@ public class IngredientCatalogueBuilderTests : IDisposable
     [Fact]
     public void Batching_KeepsAFamilyInOneCall()
     {
-        // The whole reason batching is not arbitrary. A family split across two calls guarantees an
-        // inconsistent answer, because neither call can see what the other decided.
+        // A family split across two calls guarantees an inconsistent answer, because neither call can see what the other decided.
         var names = new[]
         {
             Name("tomatoes", 66), Name("diced tomatoes", 32), Name("crushed tomatoes", 5),
@@ -226,10 +218,7 @@ public class IngredientCatalogueBuilderTests : IDisposable
     [Fact]
     public void Batching_KeepsASingularAndItsPluralInOneCall()
     {
-        // Measured against the corpus: keyed on the raw final word, 'tomato' and 'tomatoes' were
-        // different families, and greedy packing put a batch boundary between them in 8 families —
-        // leaving singular ↔ plural, the merge rule with the most evidence, one the model could
-        // never apply. Here 'apple' fills the first batch just enough to force that boundary.
+        // Here 'apple' fills the first batch just enough to force a batch boundary between 'tomato' and 'tomatoes'.
         var names = new[]
         {
             Name("apple", 5), Name("tomato", 63), Name("tomatoes", 66), Name("diced tomatoes", 32),
@@ -244,8 +233,7 @@ public class IngredientCatalogueBuilderTests : IDisposable
     [Fact]
     public void FamilyKeys_FoldAPluralOnlyOntoASingularTheCorpusUses()
     {
-        // Routing by a stemmer would put 'molasses' in a 'molasse' family. Here a candidate singular
-        // counts only when some corpus name already ends in it.
+        // Routing by a stemmer would put 'molasses' in a 'molasse' family, so a candidate singular counts only when some corpus name already ends in it.
         var names = new[]
         {
             Name("chilies"), Name("green chili"),
@@ -285,8 +273,7 @@ public class IngredientCatalogueBuilderTests : IDisposable
     [Fact]
     public void Batching_BreaksARowTieTowardsTheShorterName()
     {
-        // The name an entry is called by is its family's earliest label, which is where the prompt
-        // tells same_as to point. On a tie the unqualified form should be that name.
+        // The name an entry is called by is its family's earliest label, and on a tie the unqualified form should be that name.
         var names = new[] { Name("skim milk", 3), Name("milk", 3), Name("fat-free milk", 3) };
 
         var batch = IngredientCatalogueBuilder.BuildBatches(names, batchSize: 10).Single();
@@ -313,10 +300,7 @@ public class IngredientCatalogueBuilderTests : IDisposable
     [Fact]
     public void Prompt_ProposesNoGrouping()
     {
-        // Phase 9 §23.3's measured lesson, guarded. Handed a menu of candidate answers, this model
-        // family stops reading the evidence and starts choosing from the list — the fraction table
-        // made its error class nearly three times worse. Mechanical folding routes names into
-        // batches and is then thrown away; it must never reach the model as a suggestion.
+        // Mechanical folding routes names into batches and must never reach the model as a suggestion, because a menu of candidate answers makes it stop reading the evidence.
         var batch = new[]
         {
             Name("tomatoes", 66, lines: ["2 medium tomatoes"]),
@@ -349,7 +333,7 @@ public class IngredientCatalogueBuilderTests : IDisposable
         foreach (var category in IngredientCategory.All)
             prompt.Should().Contain(category, "the model must be told category '{0}' exists", category);
 
-        // The two halves of §5, and the tie-break that resolves the arguable cases.
+        // The two halves of the merge rules, and the tie-break that resolves the arguable cases.
         prompt.Should().Contain("The SAME purchase");
         prompt.Should().Contain("A DIFFERENT purchase");
         prompt.Should().Contain("When a rule is arguable, use its own label.",
@@ -359,9 +343,7 @@ public class IngredientCatalogueBuilderTests : IDisposable
     [Fact]
     public void Prompt_TellsTheModelTheSharedWordIsAnArtefactOfBatching()
     {
-        // Batching by family makes every batch share a word, and a rules-only prompt read that
-        // resemblance as evidence: one batch of the group-shaped prompt put all 39 of its names in a
-        // single group. Stating it outright took one batch from 1 group to 19.
+        // Batching by family makes every batch share a word, so the prompt must state outright that a shared word is not evidence.
         var prompt = IngredientCatalogueBuilder.SystemPrompt;
 
         prompt.Should().Contain("NOT evidence");
@@ -371,9 +353,7 @@ public class IngredientCatalogueBuilderTests : IDisposable
     [Fact]
     public void Prompt_FilesSpicesWhereTheKeywordTableAlreadyDoes()
     {
-        // Measured: with no rule for them, the model invented SPICES. The prompt and the keyword
-        // table a user-scraped name falls back to must agree on the aisle, or a scraped paprika and
-        // a seeded one land in different parts of the same shopping list.
+        // The prompt and the keyword table a user-scraped name falls back to must agree on the aisle.
         IngredientCatalogueBuilder.SystemPrompt.Should().Contain(IngredientCatalogueBuilder.CategoryAisleRules);
         IngredientCatalogueBuilder.CategoryAisleRules.Should().Contain(
             $"- {IngredientCategory.BakingSpices}: salt of every kind");
@@ -387,12 +367,7 @@ public class IngredientCatalogueBuilderTests : IDisposable
     [Fact]
     public void Prompt_StatesAnAisleBoundaryForEveryCategoryItsNameDoesNotSettle()
     {
-        // The ten original categories straddled these boundaries and the artefact showed it: salt
-        // DRY_GOODS but pepper CONDIMENTS, honey OTHER, peanut butter DAIRY, maple syrup BEVERAGES.
-        // DRY_GOODS and CONDIMENTS need one too: without a stated boundary each acted as a catch-all,
-        // and a preview filed salt under DRY_GOODS and syrups under CONDIMENTS despite rules naming both.
-        // And the untouched categories drift between runs: a full build moved broth to BEVERAGES and
-        // spreads to OTHER, which the previous artefact had right only by chance.
+        // These categories straddled boundaries or acted as catch-alls, and untouched categories drift between runs, so each needs a stated boundary.
         string[] needsABoundary =
         [
             IngredientCategory.BakingSpices, IngredientCategory.DryGoods,     IngredientCategory.GrainsRice,
@@ -414,8 +389,7 @@ public class IngredientCatalogueBuilderTests : IDisposable
         IngredientCatalogueBuilder.CategoryAisleRules.Should().Contain(
             $"Broth and stock are {IngredientCategory.SoupsBroth},");
 
-        // SOUPS_BROTH is assembled from other aisles' words, so the categories it was carved out
-        // of have to say so themselves — a name alone sends "cream of mushroom soup" to DAIRY.
+        // SOUPS_BROTH is assembled from other aisles' words, so the categories it was carved out of must say so themselves.
         IngredientCatalogueBuilder.CategoryAisleRules.Should().Contain(
             $"bouillon or soup is {IngredientCategory.SoupsBroth}, canned or not.",
             "CANNED keeps the vegetables and beans, and has to hand back the soups");
@@ -427,8 +401,7 @@ public class IngredientCatalogueBuilderTests : IDisposable
     [Fact]
     public void Schema_ConstrainsCategoryToExactlyOurCategories()
     {
-        // As a free string the model answered SPICES and CONDIMENT. The enum is generated from the
-        // one category table, so a category added there reaches the grammar with no second edit.
+        // The enum is generated from the one category table, so a category added there reaches the grammar with no second edit.
         var schema   = JsonNode.Parse(IngredientCatalogueBuilder.GroupingSchemaJson)!;
         var category = schema["properties"]!["names"]!["items"]!["properties"]!["category"]!;
 
@@ -439,8 +412,7 @@ public class IngredientCatalogueBuilderTests : IDisposable
     [Fact]
     public void WorkedExample_IsRenderedExactlyAsTheBuilderWouldBatchIt()
     {
-        // The example's labels teach where same_as points. If they were not in the order the
-        // builder really produces, the example would teach an ordering no real batch has.
+        // The example's labels teach where same_as points, so they must be in the order the builder really produces.
         var names = IngredientCatalogueBuilder.WorkedExample
             .Select(example => Name(example.Name, example.Rows, lines: [example.SourceLine]))
             .ToList();
@@ -461,10 +433,7 @@ public class IngredientCatalogueBuilderTests : IDisposable
     [Fact]
     public async Task WorkedExample_AnswerGoesThroughTheRealReaderAndSplitsMoreThanItMerges()
     {
-        // Stage 4's lesson about examples teaching the wrong rule: with a bare 'salt' as its null
-        // case the model learned *salt* was the exemption rather than *no number*. An example that
-        // merged a whole family here would teach exactly the failure it exists to prevent. The answer
-        // is lifted out of the prompt text itself, so what the model is shown is what is tested.
+        // An example that merged a whole family would teach the failure it exists to prevent, so the answer is lifted out of the prompt text itself.
         var prompt = IngredientCatalogueBuilder.SystemPrompt;
         var start  = prompt.IndexOf("{\"names\":[", StringComparison.Ordinal);
         var end    = prompt.IndexOf("]}", start, StringComparison.Ordinal) + "]}".Length;
@@ -497,10 +466,7 @@ public class IngredientCatalogueBuilderTests : IDisposable
     [Fact]
     public async Task Pass2_RetriesAnAnswerThatLeavesNamesUnanswered()
     {
-        // Measured on the first real corpus run: one batch came back empty — valid JSON, no
-        // exception — and nine names were silently demoted to the keyword categoriser this phase
-        // exists to stop relying on. One object per name is the prompt's central instruction, so
-        // failing it is detectable and worth one more call.
+        // An answer that leaves names out is detectable and worth one more call, because one object per name is the prompt's central instruction.
         var manifest = await SeedCorpusAsync(
             ("a", [("onion", 1m, "pcs", "1 onion"), ("onions", 2m, "pcs", "2 onions")]));
 
@@ -599,8 +565,7 @@ public class IngredientCatalogueBuilderTests : IDisposable
         var llm    = StubLlmStructuredClient.AlwaysFailing();
         var result = await BuildBuilder(llm).BuildAsync(manifest);
 
-        // An over-split catalogue, not a lost one — which is the direction §5's tie-break already
-        // says to fail in.
+        // An over-split catalogue, not a lost one, is the direction to fail in.
         result.Succeeded.Should().BeTrue();
         result.NamesRecoveredFromGaps.Should().Be(2);
 
@@ -611,9 +576,7 @@ public class IngredientCatalogueBuilderTests : IDisposable
     [Fact]
     public async Task Pass2_AnAnswerOutOfStepWithTheListIsNotTrusted()
     {
-        // Stage 4's silent off-by-one: an answer drifted a label, and only the overrun past the end
-        // was detectable. Here label [1] is 'onions', but the answer for [1] is about 'paprika' —
-        // and its same_as would fold paprika into onion if it were believed.
+        // Label [1] is 'onions' but its answer is about 'paprika', whose same_as would fold paprika into onion if believed.
         var manifest = await SeedCorpusAsync(
             ("a", [("onion", 1m, "pcs", "1 onion"),
                    ("onions", 1m, "pcs", "1 onions"),
@@ -638,9 +601,7 @@ public class IngredientCatalogueBuilderTests : IDisposable
     [Fact]
     public async Task Pass2_AnEchoThatDropsABracketedAsideIsStillFaithful()
     {
-        // Measured on the first run of this shape: the model copied 'paprika (optional)' as
-        // 'paprika', an exact check called it drift, and the batch spent two retries recovering an
-        // answer that was right the first time.
+        // The model copied 'paprika (optional)' as 'paprika', which an exact check would call drift.
         var manifest = await SeedCorpusAsync(
             ("a", [("paprika (optional)", 1m, "tsp", "1/4 teaspoon paprika (optional)")]));
 
@@ -676,8 +637,7 @@ public class IngredientCatalogueBuilderTests : IDisposable
     [Fact]
     public async Task Pass2_AChainOfSameAsResolvesToOneGroup()
     {
-        // Union-find: [2] → [1] → [0] is one purchase however the pointers are arranged, and a
-        // mutual pair is not a contradiction.
+        // Union-find: [2] → [1] → [0] is one purchase however the pointers are arranged, and a mutual pair is not a contradiction.
         var manifest = await SeedCorpusAsync(
             ("a", [("tomatoes", 1m, "pcs", "1 tomatoes"), ("tomatoes", 1m, "pcs", "1 tomatoes"),
                    ("tomatoes", 1m, "pcs", "1 tomatoes"),
@@ -745,8 +705,7 @@ public class IngredientCatalogueBuilderTests : IDisposable
     [Fact]
     public async Task Pass2_ACollapsedAnswerIsRetried()
     {
-        // Measured: one batch of 36 came back with toothpicks, tortellini and whipped topping all
-        // pointing at 'tomatoes'. Every name was answered, so the unanswered count saw nothing wrong.
+        // One batch pointed toothpicks, tortellini and whipped topping at 'tomatoes', and every name was answered, so the unanswered count saw nothing wrong.
         var manifest = await FiveFamilyCorpusAsync();
 
         var llm = new StubLlmStructuredClient(call => call == 1
@@ -784,8 +743,7 @@ public class IngredientCatalogueBuilderTests : IDisposable
     [Fact]
     public async Task Pass2_AGroupAtTheFamilyCapIsKept()
     {
-        // Spelling variants and asides legitimately cross family keys — 'fillet' and 'filet' — and
-        // the measured corpus maximum for a real merge was three.
+        // Spelling variants and asides legitimately cross family keys, and the measured maximum for a real merge was three.
         var manifest = await SeedCorpusAsync(
             ("a", [("tilapia fillet", 1m, "pcs", "2 tilapia fillets"), ("tilapia fillet", 1m, "pcs", "2 tilapia fillets"),
                    ("tilapia filet", 1m, "pcs", "1 tilapia filet"),
@@ -808,9 +766,7 @@ public class IngredientCatalogueBuilderTests : IDisposable
     [Fact]
     public async Task Pass2_AMergeTheVocabularyCannotExplainIsKeptApart()
     {
-        // Measured on the benchmark batches: the model put lasagna noodles into egg noodles on every
-        // prompt tried, including one naming that exact shape. §5's merge list cannot explain the
-        // difference, so the two stay apart — each with the model's own answer, not a fallback.
+        // The model put lasagna noodles into egg noodles on every prompt tried, and the merge vocabulary cannot explain the difference, so the two stay apart.
         var manifest = await SeedCorpusAsync(
             ("a", [("egg noodles", 1m, "cup", "1 pound egg noodles"), ("egg noodles", 1m, "cup", "1 pound egg noodles"),
                    ("lasagna noodles", 1m, "cup", "8 ounces lasagna noodles"),
@@ -920,8 +876,7 @@ public class IngredientCatalogueBuilderTests : IDisposable
     [Fact]
     public async Task Pass3_DefaultUnitIsTheModalUnitOverTheMergedGroup()
     {
-        // 'onion' is pcs in most lines and cup in some; merged with 'onions', the answer is still
-        // pcs — which is how you buy one. Derived from 8,882 observations, never asked for.
+        // 'onion' is pcs in most lines and cup in some, and merged with 'onions' the answer is still pcs, derived and never asked for.
         var manifest = await SeedCorpusAsync(
             ("a", [("onion", 1m, "pcs", "1 onion"), ("onion", 1m, "pcs", "1 onion")]),
             ("b", [("onion", 1m, "cup", "1 cup onion"), ("onions", 2m, "pcs", "2 onions")]));
@@ -939,8 +894,7 @@ public class IngredientCatalogueBuilderTests : IDisposable
     [Fact]
     public async Task Pass3_DefaultUnitIsNullWhenNoRowInTheGroupIsQuantified()
     {
-        // Phase 9.1's population — 'salt and pepper', 'nonstick cooking spray'. The column allows
-        // null, and inventing a unit for something the corpus never measures would be a guess.
+        // 'salt and pepper' and 'nonstick cooking spray' are never measured, so the null default unit is correct and inventing one would be a guess.
         var manifest = await SeedCorpusAsync(
             ("a", [("nonstick cooking spray", null, null, "nonstick cooking spray")]),
             ("b", [("nonstick cooking spray", null, null, "nonstick cooking spray")]));
@@ -957,9 +911,7 @@ public class IngredientCatalogueBuilderTests : IDisposable
     [Fact]
     public async Task Pass3_TheModelsDisplayNameWinsOverTheCorpusModalForm()
     {
-        // §2.7: the modal display name is sometimes a leaked worked example. 13 rows across 4
-        // recipes carry 'Diced Tomatoes' on things that are not tomatoes — dirty-rice has it on all
-        // ten of its rows, including 'water' and 'black pepper'.
+        // The modal display name is sometimes a leaked worked example, such as 'Diced Tomatoes' on things that are not tomatoes.
         var manifest = await SeedCorpusAsync(
             ("dirty-rice", [("water", 2m, "cup", "2 cups water")]),
             ("other",      [("water", 1m, "cup", "1 cup water")]));
@@ -1014,8 +966,7 @@ public class IngredientCatalogueBuilderTests : IDisposable
     [Fact]
     public async Task Pass3_TheEntryIsNamedAfterItsMostUsedMember()
     {
-        // The model is never asked for a name. A proposed one could be another batch's corpus name —
-        // one string both an entry's name and an alias — and no batch can see that.
+        // The model is never asked for a name, because a proposed one could be another batch's corpus name and no batch can see that.
         var manifest = await SeedCorpusAsync(
             ("a", [("tomatoes", 1m, "pcs", "1 tomatoes"), ("tomatoes", 1m, "pcs", "1 tomatoes"),
                    ("tomato", 1m, "pcs", "1 tomato")]));
@@ -1036,8 +987,7 @@ public class IngredientCatalogueBuilderTests : IDisposable
     [Fact]
     public async Task Pass3_RecoversANameTheModelNeverAnswered()
     {
-        // A dropped name is a recipe Stage 5 cannot persist, so a gap in the answer is repaired
-        // rather than propagated.
+        // A dropped name is a recipe Stage 5 cannot persist, so a gap in the answer is repaired rather than propagated.
         var manifest = await SeedCorpusAsync(
             ("a", [("onion", 1m, "pcs", "1 onion"), ("paprika", 1m, "tsp", "1 teaspoon paprika")]));
 
@@ -1058,8 +1008,7 @@ public class IngredientCatalogueBuilderTests : IDisposable
     [Fact]
     public async Task RegionalSpellings_AttachToTheirCorpusEntry()
     {
-        // §2.2's real problem: 'capsicum' seeded as its own row sat permanently beside
-        // 'bell pepper' and never consolidated in a shopping list.
+        // 'capsicum' seeded as its own row would sit beside 'bell pepper' and never consolidate in a shopping list.
         var manifest = await SeedCorpusAsync(("a", [("bell pepper", 1m, "pcs", "1 bell pepper")]));
 
         var llm = new StubLlmStructuredClient(GroupingAnswer(
@@ -1074,8 +1023,7 @@ public class IngredientCatalogueBuilderTests : IDisposable
     [Fact]
     public async Task RegionalSpellings_AttachThroughAnAliasWhenTheEntryIsNamedDifferently()
     {
-        // The table names 'beet', but 'beets' is used more and names the entry. Looking the target
-        // up by entry name alone would skip 'beetroot' without a word.
+        // The table names 'beet' but 'beets' names the entry, so looking the target up by entry name alone would skip 'beetroot' without a word.
         var manifest = await SeedCorpusAsync(
             ("a", [("beets", 1m, "pcs", "2 beets"), ("beets", 1m, "pcs", "3 beets"),
                    ("beet", 1m, "pcs", "1 beet")]));
@@ -1096,9 +1044,7 @@ public class IngredientCatalogueBuilderTests : IDisposable
     [Fact]
     public async Task RegionalSpellings_AreSkippedWhenTheSpellingIsItselfACorpusName()
     {
-        // 'garbanzo beans' is a corpus name in its own right, so the grouping pass has already
-        // judged it on evidence. Overriding that from a hardcoded table would contradict the review
-        // and risk making one name an alias of two entries.
+        // 'garbanzo beans' is a corpus name in its own right, and overriding the grouping pass from a hardcoded table could make one name an alias of two entries.
         var manifest = await SeedCorpusAsync(
             ("a", [("chickpeas", 1m, "cup", "1 cup chickpeas"),
                    ("garbanzo beans", 1m, "cup", "1 cup garbanzo beans")]));
@@ -1142,7 +1088,7 @@ public class IngredientCatalogueBuilderTests : IDisposable
     [Fact]
     public async Task Artefact_IsWrittenToTheBuildFileAndLeavesTheShippedCatalogueUntouched()
     {
-        // Phase 10 §4.7: a re-run must never overwrite the curated catalogue.
+        // A re-run must never overwrite the curated catalogue.
         const string curated = "{ \"formatVersion\": 2, \"note\": \"curated by hand\" }";
         await File.WriteAllTextAsync(_options.CatalogueFilePath, curated);
 

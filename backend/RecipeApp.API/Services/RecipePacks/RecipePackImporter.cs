@@ -8,22 +8,14 @@ using RecipeApp.API.Services.Seeding;
 
 namespace RecipeApp.API.Services.RecipePacks;
 
-/// <summary>How a pack is imported (Phase 10 §4.4.3).</summary>
-/// <param name="CreateMissingIngredients">
-/// Create a catalogue entry for each ingredient the catalogue does not know (<c>--create-missing</c>),
-/// instead of rejecting the pack.
-/// </param>
-/// <param name="ReplaceExisting">
-/// Replace an existing recipe with the same <c>SourceUrl</c> (<c>--force</c>), instead of skipping
-/// it. A recipe a meal plan uses is never replaced.
-/// </param>
+/// <summary>How a pack is imported.</summary>
+/// <param name="CreateMissingIngredients">Create a catalogue entry for each unknown ingredient (<c>--create-missing</c>) instead of rejecting the pack.</param>
+/// <param name="ReplaceExisting">Replace an existing recipe with the same <c>SourceUrl</c> (<c>--force</c>), though a recipe a meal plan uses is never replaced.</param>
 public record RecipePackImportSettings(bool CreateMissingIngredients = false, bool ReplaceExisting = false);
 
-/// <summary>What one import did. Each list holds recipe labels, except <see cref="CreatedIngredients"/>.</summary>
-/// <param name="Errors">Every reason the pack was rejected. When any exist, nothing was written.</param>
-/// <param name="Skipped">Recipes whose <c>SourceUrl</c> already existed, left alone.</param>
-/// <param name="InUse">Recipes <c>--force</c> would have replaced, left alone because a meal plan uses them.</param>
-/// <param name="CreatedIngredients">Catalogue entries <c>--create-missing</c> created.</param>
+/// <summary>What one import did, where each list holds recipe labels except <see cref="CreatedIngredients"/>.</summary>
+/// <param name="Errors">Every reason the pack was rejected, in which case nothing was written.</param>
+/// <param name="InUse">Recipes <c>--force</c> would have replaced but a meal plan uses.</param>
 public record RecipePackImportResult(
     IReadOnlyList<string> Errors,
     IReadOnlyList<string> Imported,
@@ -39,17 +31,8 @@ public record RecipePackImportResult(
 }
 
 /// <summary>
-/// Imports a recipe pack (Phase 10 §4.4.2): resolves every ingredient against the catalogue,
-/// validates the whole pack, then writes it in one transaction.
-///
-/// <para><b>Persistence goes through the real API path.</b> Each recipe becomes a
-/// <see cref="CreateRecipeRequest"/>, is checked by the same validator the endpoint uses, and is
-/// saved by <see cref="RecipeService.CreateAsync"/>. An imported recipe is exactly what a user could
-/// have saved by hand.</para>
-///
-/// <para><b>All or nothing.</b> Nothing is written until the whole pack has resolved and validated,
-/// and every error is reported, not only the first. Skipped and in-use recipes are reported
-/// without failing the pack.</para>
+/// Imports a recipe pack through the normal API path, resolving every ingredient and validating the whole pack before writing
+/// it in one transaction, so it is all or nothing and every error is reported.
 /// </summary>
 public class RecipePackImporter(
     AppDbContext db,
@@ -59,22 +42,13 @@ public class RecipePackImporter(
     ImageService imageService,
     ILogger<RecipePackImporter> logger)
 {
-    /// <summary>
-    /// Stored images are named this plus the new recipe's id. A pack image has no stable name of its
-    /// own, and <see cref="ImageService.ImportAsync"/> overwrites a file with the same name.
-    /// </summary>
+    /// <summary>Stored images are named this plus the new recipe's id, because a pack image has no stable name and <see cref="ImageService.ImportAsync"/> overwrites a same-named file.</summary>
     public const string ImageFileNamePrefix = "pack-";
 
     /// <summary>A recipe that resolved and validated, ready to write.</summary>
     private sealed record PlannedRecipe(string Label, CreateRecipeRequest Request, string? ImagePath);
 
-    /// <summary>
-    /// Imports <paramref name="pack"/>.
-    ///
-    /// <para>Runs in its own transaction, or joins the caller's when one is already open, so the
-    /// first-run seeder can commit the import and its ledger row together. When joined, images
-    /// copied before a later rollback by the caller are not cleaned up here.</para>
-    /// </summary>
+    /// <summary>Imports <paramref name="pack"/> in its own transaction, or joins the caller's so the first-run seeder can commit the import and its ledger row together.</summary>
     /// <param name="packDirectory">The directory image paths resolve against: the pack file's own.</param>
     public async Task<RecipePackImportResult> ImportAsync(
         RecipePackFile pack,
@@ -202,11 +176,7 @@ public class RecipePackImporter(
         return new PlannedRecipe(label, request, imagePath);
     }
 
-    /// <summary>
-    /// The catalogue entry a row names, by name then alias. A miss is an error unless
-    /// <c>--create-missing</c> is set; either way it gets a placeholder entry, so the recipe still
-    /// validates and one run reports every problem. The placeholder is only written when the pack is.
-    /// </summary>
+    /// <summary>The catalogue entry a row names, by name then alias; a miss is an error unless <c>--create-missing</c> is set, but gets a placeholder either way so one run reports every problem.</summary>
     private static Guid ResolveRow(
         string written,
         string label,
@@ -316,8 +286,7 @@ public class RecipePackImporter(
 
                 var recipe = await recipeService.CreateAsync(plan.Request);
 
-                // CreateRecipeRequest has no image field: the UI attaches one by upload afterwards.
-                // Same here, inside the same transaction.
+                // CreateRecipeRequest has no image field, so attach the image here inside the same transaction.
                 if (plan.ImagePath is not null)
                 {
                     var imageUrl = await imageService.ImportAsync(
@@ -342,8 +311,7 @@ public class RecipePackImporter(
             throw;
         }
 
-        // A replaced recipe's old image is removed only once the replacement is committed. Under a
-        // caller's transaction that commit has not happened yet, so the file is left in place.
+        // A replaced recipe's old image is removed only once the replacement is committed, which has not happened yet under a caller's transaction.
         if (ownsTransaction)
             foreach (var imageUrl in replacedImages) imageService.Delete(imageUrl);
 

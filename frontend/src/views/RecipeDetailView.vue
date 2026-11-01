@@ -111,7 +111,7 @@
                 <v-icon size="8" color="grey" class="mr-2">mdi-circle</v-icon>
               </template>
               <v-list-item-title>
-                <!-- Absent for an ingredient whose source stated no quantity (Phase 9.1 §3.4) -->
+                <!-- Absent for an ingredient whose source stated no quantity -->
                 <span v-if="formatAmount(ing.amount, ing.unit)" class="font-weight-medium">
                   {{ formatAmount(ing.amount, ing.unit) }}
                 </span>
@@ -223,21 +223,13 @@ function reload() {
 
 onMounted(reload)
 
-/**
- * Scaling has to short-circuit on a null amount, not delegate it: `null * 2` is `0` in
- * JavaScript, which would turn an ingredient with no stated quantity into a rendered `0`
- * (Phase 9.1 §3.4). Half of nothing is still nothing.
- */
+/** Scaling short-circuits on a null amount, because `null * 2` is `0` in JavaScript, and half of nothing is still nothing. */
 function formatAmount(baseAmount, unit) {
   if (baseAmount == null) return null
   return formatMeasurement(baseAmount * portionMultiplier.value, unit)
 }
 
-/**
- * The measurement as the source recipe stated it, shown alongside the canonical amount
- * so the recipe reads as written while the shopping list still sums grams. Null when the
- * row was hand-entered or nothing was converted.
- */
+/** The measurement as the source recipe stated it, shown alongside the canonical amount, or null when the row was hand-entered or nothing was converted. */
 function formatSource(ing) {
   return formatSourceMeasurement(
     ing.sourceAmount, ing.sourceUnit, ing.unit, portionMultiplier.value)

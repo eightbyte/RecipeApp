@@ -1,7 +1,4 @@
-/**
- * Vuetify 3 plugin configuration.
- * Components and directives are auto-imported by vite-plugin-vuetify.
- */
+/** Vuetify 3 plugin configuration, with components and directives auto-imported by vite-plugin-vuetify. */
 import { createVuetify } from 'vuetify'
 import { aliases, mdi } from 'vuetify/iconsets/mdi'
 import 'vuetify/styles'

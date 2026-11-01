@@ -6,6 +6,7 @@ import { createPinia, setActivePinia } from 'pinia'
 import { useRecipeStore } from '@/stores/recipes'
 import RecipeDetailView from './RecipeDetailView.vue'
 import { makeRecipeDetail } from '@/test/factories'
+import { batchSizeFromCookingQuery } from '@/router/cookingRoute'
 
 vi.mock('@/services/api', () => ({
   default: { get: vi.fn(), post: vi.fn(), put: vi.fn(), delete: vi.fn() },
@@ -242,6 +243,15 @@ describe('RecipeDetailView — cooking, loading and error states', () => {
       name: 'recipe-cooking',
       params: { id: 'test-recipe-1' },
     })
+  })
+
+  it('starts cooking at the chosen Batch Size', async () => {
+    const wrapper = await mountView()
+    wrapper.vm.batchSize = 'DOUBLE'
+    await wrapper.vm.$nextTick()
+    const startBtn = wrapper.findAllComponents({ name: 'VBtn' })
+      .find(b => b.text().includes('Start cooking'))
+    expect(batchSizeFromCookingQuery(startBtn.props('to').query)).toBe('DOUBLE')
   })
 
   it('shows a "Recipe not found" empty state when missing and there is no error', async () => {

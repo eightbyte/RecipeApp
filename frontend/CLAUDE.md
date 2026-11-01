@@ -37,7 +37,7 @@ each test or in `beforeEach`; a wrapper mounted in `beforeAll` is gone after the
 - **Grayscale rule:** add class `grayscale` to a recipe image when `lastCookedAt` is within 7 days.
 - **Routes:** use the names defined in `router/index.js` (`home`, `recipes`, `recipe-detail`,
   `recipe-cooking`, `meal-plan`, `shopping`, …). A route with `meta.fullscreen` hides the top and
-  bottom bars (Cooking Mode).
+  bottom bars (Cooking Mode). Link to and read Cooking Mode only through `router/cookingRoute.js`.
 - **Loading/empty/error states:** use `EmptyState`, `ErrorState`, and the global snackbar
   (`stores/ui.js` + `AppSnackbar`). Store fetches treat a 404 as "not found" (empty state), not
   as an error.

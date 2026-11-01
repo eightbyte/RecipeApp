@@ -5,6 +5,7 @@ import * as directives from 'vuetify/directives'
 import { createPinia, setActivePinia } from 'pinia'
 import MealPlanView from './MealPlanView.vue'
 import { makeMealPlanDetail, makePlannedMeal } from '@/test/factories'
+import { batchSizeFromCookingQuery } from '@/router/cookingRoute'
 
 const pushMock = vi.fn()
 
@@ -88,11 +89,9 @@ describe('MealPlanView', () => {
   it('Start cooking navigates to the cooking route carrying the Batch Size', async () => {
     const { wrapper } = await mountView()
     wrapper.vm.startCooking({ recipeId: 'r9', batchSize: 'DOUBLE' })
-    expect(pushMock).toHaveBeenCalledWith({
-      name: 'recipe-cooking',
-      params: { id: 'r9' },
-      query: { batch: 'DOUBLE' },
-    })
+    const [location] = pushMock.mock.calls[0]
+    expect(location).toMatchObject({ name: 'recipe-cooking', params: { id: 'r9' } })
+    expect(batchSizeFromCookingQuery(location.query)).toBe('DOUBLE')
   })
 
   it('Mark as cooked marks the recipe, refreshes the plan and notifies', async () => {

@@ -78,24 +78,13 @@
                 style="min-width: 160px; flex: 1"
                 @update:model-value="(v) => updateDate(meal, v || null)"
               />
-              <v-btn-toggle
-                aria-label="Batch"
+              <BatchSizeToggle
                 :model-value="meal.batchSize"
-                mandatory
-                color="primary"
+                button-size="small"
                 density="compact"
                 style="height: 40px"
                 @update:model-value="(v) => updateBatchSize(meal, v)"
-              >
-                <v-btn
-                  v-for="batchSize in BATCH_SIZES"
-                  :key="batchSize.value"
-                  :value="batchSize.value"
-                  size="small"
-                >
-                  {{ batchSize.title }}
-                </v-btn>
-              </v-btn-toggle>
+              />
             </div>
           </div>
         </v-card>
@@ -122,7 +111,8 @@
 import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useMealPlanStore } from '@/stores/mealPlans'
-import { BATCH_SIZES, DEFAULT_BATCH_SIZE } from '@/constants/batchSizes'
+import { DEFAULT_BATCH_SIZE } from '@/constants/batchSizes'
+import BatchSizeToggle from '@/components/BatchSizeToggle.vue'
 import RecipeBrowser from '@/components/RecipeBrowser.vue'
 import SuggestionsPanel from '@/components/SuggestionsPanel.vue'
 

@@ -62,9 +62,7 @@
               Step {{ displayIndex }} / {{ totalSteps }}
             </div>
           </div>
-          <v-chip size="small" :color="batchSizeColor(batchSize)" :aria-label="`Batch ${formatBatchSize(batchSize)}`">
-            {{ formatBatchSize(batchSize) }}
-          </v-chip>
+          <BatchSizeChip :batch-size="batchSize" size="small" />
         </div>
         <v-progress-linear
           :model-value="completionPercent"
@@ -164,9 +162,10 @@ import { ref, computed, onMounted, nextTick } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useRecipeStore } from '@/stores/recipes'
 import { formatMeasurement, formatSourceMeasurement } from '@/constants/units'
-import { batchSizeColor, batchSizeMultiplier, formatBatchSize, toBatchSize } from '@/constants/batchSizes'
+import { batchSizeMultiplier, toBatchSize } from '@/constants/batchSizes'
 import { useUiStore } from '@/stores/ui'
 import { useWakeLock } from '@/composables/useWakeLock'
+import BatchSizeChip from '@/components/BatchSizeChip.vue'
 import EmptyState from '@/components/EmptyState.vue'
 import ErrorState from '@/components/ErrorState.vue'
 

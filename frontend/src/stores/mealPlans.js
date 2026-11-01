@@ -2,16 +2,16 @@ import { defineStore } from 'pinia'
 import { ref } from 'vue'
 import api, { assetUrl } from '@/services/api'
 
-function normalizePlanRecipe(mpr) {
-  if (!mpr) return mpr
-  return { ...mpr, recipeImageUrl: assetUrl(mpr.recipeImageUrl) }
+function normalizePlannedMeal(plannedMeal) {
+  if (!plannedMeal) return plannedMeal
+  return { ...plannedMeal, recipeImageUrl: assetUrl(plannedMeal.recipeImageUrl) }
 }
 
 function normalizePlanDetail(plan) {
   if (!plan) return plan
   return {
     ...plan,
-    recipes: (plan.recipes ?? []).map(normalizePlanRecipe),
+    plannedMeals: (plan.plannedMeals ?? []).map(normalizePlannedMeal),
   }
 }
 
@@ -113,21 +113,21 @@ export const useMealPlanStore = defineStore('mealPlans', () => {
     if (currentPlan.value?.id === id) currentPlan.value = null
   }
 
-  // ── Mutations — Plan Recipes ───────────────────────────────────────────────
+  // ── Mutations — Planned Meals ──────────────────────────────────────────────
 
-  async function addRecipe(planId, payload) {
-    await api.post(`/meal-plans/${planId}/recipes`, payload)
+  async function addPlannedMeal(planId, payload) {
+    await api.post(`/meal-plans/${planId}/planned-meals`, payload)
     await _refreshPlan(planId)
     await fetchSuggestions(planId)
   }
 
-  async function updatePlanRecipe(planId, mprId, payload) {
-    await api.put(`/meal-plans/${planId}/recipes/${mprId}`, payload)
+  async function updatePlannedMeal(planId, plannedMealId, payload) {
+    await api.put(`/meal-plans/${planId}/planned-meals/${plannedMealId}`, payload)
     await _refreshPlan(planId)
   }
 
-  async function removePlanRecipe(planId, mprId) {
-    await api.delete(`/meal-plans/${planId}/recipes/${mprId}`)
+  async function removePlannedMeal(planId, plannedMealId) {
+    await api.delete(`/meal-plans/${planId}/planned-meals/${plannedMealId}`)
     await _refreshPlan(planId)
     await fetchSuggestions(planId)
   }
@@ -143,6 +143,6 @@ export const useMealPlanStore = defineStore('mealPlans', () => {
     plans, activePlan, currentPlan, suggestions, loading, error,
     fetchPlans, fetchActivePlan, fetchPlan, fetchSuggestions,
     createPlan, renamePlan, deletePlan,
-    addRecipe, updatePlanRecipe, removePlanRecipe,
+    addPlannedMeal, updatePlannedMeal, removePlannedMeal,
   }
 })

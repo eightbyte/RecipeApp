@@ -46,7 +46,7 @@
               </div>
             </div>
             <div class="text-right">
-              <v-chip size="x-small" class="mb-1">{{ plan.recipeCount }} recipes</v-chip>
+              <v-chip size="x-small" class="mb-1">{{ plan.plannedMealCount }} recipes</v-chip>
               <div class="text-caption text-medium-emphasis">
                 Closed {{ formatDate(plan.closedAt) }}
               </div>

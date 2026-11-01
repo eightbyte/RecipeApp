@@ -34,7 +34,7 @@ export const makeMealPlanListItem = (overrides = {}) => ({
   id: 'plan-1',
   name: 'Week of 2 June',
   isActive: false,
-  recipeCount: 2,
+  plannedMealCount: 2,
   firstScheduledDate: '2026-06-02',
   lastScheduledDate: '2026-06-05',
   createdAt: '2026-06-01T00:00:00Z',
@@ -42,14 +42,14 @@ export const makeMealPlanListItem = (overrides = {}) => ({
   ...overrides,
 })
 
-export const makeMealPlanRecipe = (overrides = {}) => ({
-  id: 'mpr-1',
+export const makePlannedMeal = (overrides = {}) => ({
+  id: 'planned-meal-1',
   recipeId: 'test-recipe-1',
   recipeName: 'Test Recipe',
   recipeImageUrl: null,
   recipeLastCookedAt: null,
   scheduledDate: null,
-  portionSize: 'REGULAR',
+  batchSize: 'REGULAR',
   displayOrder: 1,
   ...overrides,
 })
@@ -60,7 +60,7 @@ export const makeMealPlanDetail = (overrides = {}) => ({
   isActive: true,
   createdAt: '2026-06-01T00:00:00Z',
   closedAt: null,
-  recipes: [makeMealPlanRecipe()],
+  plannedMeals: [makePlannedMeal()],
   ...overrides,
 })
 

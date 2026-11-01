@@ -103,23 +103,23 @@ namespace RecipeApp.API.Data.Migrations
                     b.ToTable("MealPlans");
                 });
 
-            modelBuilder.Entity("RecipeApp.API.Models.MealPlanRecipe", b =>
+            modelBuilder.Entity("RecipeApp.API.Models.PlannedMeal", b =>
                 {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uuid");
+
+                    b.Property<string>("BatchSize")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("text")
+                        .HasDefaultValue("REGULAR");
 
                     b.Property<int>("DisplayOrder")
                         .HasColumnType("integer");
 
                     b.Property<Guid>("MealPlanId")
                         .HasColumnType("uuid");
-
-                    b.Property<string>("PortionSize")
-                        .IsRequired()
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("text")
-                        .HasDefaultValue("REGULAR");
 
                     b.Property<Guid>("RecipeId")
                         .HasColumnType("uuid");
@@ -133,7 +133,7 @@ namespace RecipeApp.API.Data.Migrations
 
                     b.HasIndex("RecipeId");
 
-                    b.ToTable("MealPlanRecipes");
+                    b.ToTable("PlannedMeals");
                 });
 
             modelBuilder.Entity("RecipeApp.API.Models.Recipe", b =>
@@ -356,10 +356,10 @@ namespace RecipeApp.API.Data.Migrations
                     b.ToTable("ShoppingListItems");
                 });
 
-            modelBuilder.Entity("RecipeApp.API.Models.MealPlanRecipe", b =>
+            modelBuilder.Entity("RecipeApp.API.Models.PlannedMeal", b =>
                 {
                     b.HasOne("RecipeApp.API.Models.MealPlan", "MealPlan")
-                        .WithMany("Recipes")
+                        .WithMany("PlannedMeals")
                         .HasForeignKey("MealPlanId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
@@ -460,7 +460,7 @@ namespace RecipeApp.API.Data.Migrations
 
             modelBuilder.Entity("RecipeApp.API.Models.MealPlan", b =>
                 {
-                    b.Navigation("Recipes");
+                    b.Navigation("PlannedMeals");
                 });
 
             modelBuilder.Entity("RecipeApp.API.Models.Recipe", b =>

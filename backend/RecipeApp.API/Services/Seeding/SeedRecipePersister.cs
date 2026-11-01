@@ -224,7 +224,7 @@ public class SeedRecipePersister(
         if (existing.Count == 0) return false;
 
         var ids    = existing.Select(recipe => recipe.Id).ToList();
-        var inPlan = await db.MealPlanRecipes.AnyAsync(entry => ids.Contains(entry.RecipeId), ct);
+        var inPlan = await db.PlannedMeals.AnyAsync(entry => ids.Contains(entry.RecipeId), ct);
         if (inPlan)
             throw new SeedPersistException(SeedPersistFailure.RecipeInUse,
                 "a meal plan uses the existing recipe, so it was left in place rather than replaced");

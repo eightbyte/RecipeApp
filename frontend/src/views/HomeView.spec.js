@@ -4,7 +4,7 @@ import * as components from 'vuetify/components'
 import * as directives from 'vuetify/directives'
 import { createPinia, setActivePinia } from 'pinia'
 import HomeView from './HomeView.vue'
-import { makeMealPlanDetail, makeMealPlanRecipe } from '@/test/factories'
+import { makeMealPlanDetail, makePlannedMeal } from '@/test/factories'
 
 vi.mock('@/services/api', () => ({
   default: { get: vi.fn(), post: vi.fn() },
@@ -51,9 +51,9 @@ describe('HomeView', () => {
   it('renders recipe cards from activePlan', async () => {
     const { wrapper, store } = await mountView()
     store.activePlan = makeMealPlanDetail({
-      recipes: [
-        makeMealPlanRecipe({ id: 'mpr-1', recipeName: 'Soup' }),
-        makeMealPlanRecipe({ id: 'mpr-2', recipeName: 'Pasta' }),
+      plannedMeals: [
+        makePlannedMeal({ id: 'planned-meal-1', recipeName: 'Soup' }),
+        makePlannedMeal({ id: 'planned-meal-2', recipeName: 'Pasta' }),
       ],
     })
     await wrapper.vm.$nextTick()
@@ -65,8 +65,8 @@ describe('HomeView', () => {
     const { wrapper, store } = await mountView()
     const recentDate = new Date(Date.now() - 2 * 86400_000).toISOString()
     store.activePlan = makeMealPlanDetail({
-      recipes: [
-        makeMealPlanRecipe({ id: 'mpr-1', recipeName: 'Soup', recipeImageUrl: '/uploads/soup.jpg', recipeLastCookedAt: recentDate }),
+      plannedMeals: [
+        makePlannedMeal({ id: 'planned-meal-1', recipeName: 'Soup', recipeImageUrl: '/uploads/soup.jpg', recipeLastCookedAt: recentDate }),
       ],
     })
     await wrapper.vm.$nextTick()
@@ -79,8 +79,8 @@ describe('HomeView', () => {
     const { wrapper, store } = await mountView()
     const oldDate = new Date(Date.now() - 10 * 86400_000).toISOString()
     store.activePlan = makeMealPlanDetail({
-      recipes: [
-        makeMealPlanRecipe({ id: 'mpr-1', recipeName: 'Soup', recipeImageUrl: '/uploads/soup.jpg', recipeLastCookedAt: oldDate }),
+      plannedMeals: [
+        makePlannedMeal({ id: 'planned-meal-1', recipeName: 'Soup', recipeImageUrl: '/uploads/soup.jpg', recipeLastCookedAt: oldDate }),
       ],
     })
     await wrapper.vm.$nextTick()
@@ -100,7 +100,7 @@ describe('HomeView', () => {
   it('notifies after marking a meal recipe as cooked', async () => {
     const { wrapper, store } = await mountView()
     store.activePlan = makeMealPlanDetail({
-      recipes: [makeMealPlanRecipe({ recipeId: 'r5', recipeName: 'Stew' })],
+      plannedMeals: [makePlannedMeal({ recipeId: 'r5', recipeName: 'Stew' })],
     })
     await wrapper.vm.$nextTick()
 

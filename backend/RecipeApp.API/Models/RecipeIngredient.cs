@@ -1,13 +1,13 @@
 namespace RecipeApp.API.Models;
 
-/// <summary>Links a specific ingredient, with its amount and unit stored at base (regular) portion, to a recipe.</summary>
+/// <summary>Links a specific ingredient, with its amount and unit stored at the Regular Batch Size, to a recipe.</summary>
 public class RecipeIngredient
 {
     public Guid Id { get; set; }
     public Guid RecipeId { get; set; }
     public Guid IngredientId { get; set; }
 
-    /// <summary>Amount at base portion size in metric units, where null means the source states no quantity; never zero, which would sum into shopping lists.</summary>
+    /// <summary>Amount at the Regular Batch Size in metric units, where null means the source states no quantity; never zero, which would sum into shopping lists.</summary>
     public decimal? Amount { get; set; }
 
     /// <summary>Canonical storable unit (see <see cref="Enums.MeasurementUnit"/>), null exactly when <see cref="Amount"/> is null.</summary>

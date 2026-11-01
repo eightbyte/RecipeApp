@@ -1,6 +1,6 @@
 namespace RecipeApp.API.Models;
 
-public class MealPlanRecipe
+public class PlannedMeal
 {
     public Guid Id { get; set; }
     public Guid MealPlanId { get; set; }
@@ -9,7 +9,7 @@ public class MealPlanRecipe
     /// <summary>Nullable calendar date — undated meals are allowed.</summary>
     public DateOnly? ScheduledDate { get; set; }
 
-    public string PortionSize { get; set; } = Enums.PortionSize.Regular;
+    public string BatchSize { get; set; } = Enums.BatchSize.Regular;
 
     /// <summary>Derived from insertion order; final sort uses dated-first then this value.</summary>
     public int DisplayOrder { get; set; }

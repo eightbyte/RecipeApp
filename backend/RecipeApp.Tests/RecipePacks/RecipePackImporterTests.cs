@@ -306,7 +306,7 @@ public class RecipePackImporterTests(DatabaseFixture db) : IAsyncLifetime
             var recipe = await context.Recipes.SingleAsync();
             var plan   = TestDataBuilder.MealPlan();
             context.MealPlans.Add(plan);
-            context.MealPlanRecipes.Add(TestDataBuilder.MealPlanRecipe(plan.Id, recipe.Id));
+            context.PlannedMeals.Add(TestDataBuilder.PlannedMeal(plan.Id, recipe.Id));
             await context.SaveChangesAsync();
         }
 

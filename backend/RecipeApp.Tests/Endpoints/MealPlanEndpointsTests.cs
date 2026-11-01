@@ -141,7 +141,7 @@ public class MealPlanEndpointsTests(DatabaseFixture db) : IAsyncLifetime
         response.StatusCode.Should().Be(HttpStatusCode.NotFound);
     }
 
-    // ── POST /meal-plans/{id}/recipes ─────────────────────────────────────────
+    // ── POST /meal-plans/{id}/planned-meals ───────────────────────────────────
 
     [Fact]
     public async Task AddRecipe_Valid_Returns201()
@@ -150,13 +150,13 @@ public class MealPlanEndpointsTests(DatabaseFixture db) : IAsyncLifetime
         var recipeId = await SeedRecipeAsync(ingId);
         var plan     = await CreatePlanViaApi("Plan");
 
-        var response = await Client.PostAsJsonAsync($"/api/v1/meal-plans/{plan.Id}/recipes",
-            new { recipeId, scheduledDate = (string?)null, portionSize = "REGULAR" });
+        var response = await Client.PostAsJsonAsync($"/api/v1/meal-plans/{plan.Id}/planned-meals",
+            new { recipeId, scheduledDate = (string?)null, batchSize = "REGULAR" });
 
         response.StatusCode.Should().Be(HttpStatusCode.Created);
-        var mpr = await response.Content.ReadFromJsonAsync<MealPlanRecipeResponse>();
-        mpr!.RecipeId.Should().Be(recipeId);
-        mpr.PortionSize.Should().Be("REGULAR");
+        var plannedMeal = await response.Content.ReadFromJsonAsync<PlannedMealResponse>();
+        plannedMeal!.RecipeId.Should().Be(recipeId);
+        plannedMeal.BatchSize.Should().Be("REGULAR");
     }
 
     [Fact]
@@ -165,7 +165,7 @@ public class MealPlanEndpointsTests(DatabaseFixture db) : IAsyncLifetime
         var ingId    = await SeedIngredientAsync();
         var recipeId = await SeedRecipeAsync(ingId);
 
-        var response = await Client.PostAsJsonAsync($"/api/v1/meal-plans/{Guid.NewGuid()}/recipes",
+        var response = await Client.PostAsJsonAsync($"/api/v1/meal-plans/{Guid.NewGuid()}/planned-meals",
             new { recipeId });
         response.StatusCode.Should().Be(HttpStatusCode.NotFound);
     }
@@ -175,12 +175,12 @@ public class MealPlanEndpointsTests(DatabaseFixture db) : IAsyncLifetime
     {
         var plan = await CreatePlanViaApi("Plan");
 
-        var response = await Client.PostAsJsonAsync($"/api/v1/meal-plans/{plan.Id}/recipes",
+        var response = await Client.PostAsJsonAsync($"/api/v1/meal-plans/{plan.Id}/planned-meals",
             new { recipeId = Guid.NewGuid() });
         response.StatusCode.Should().Be(HttpStatusCode.NotFound);
     }
 
-    // ── PUT /meal-plans/{id}/recipes/{mprId} ──────────────────────────────────
+    // ── PUT /meal-plans/{id}/planned-meals/{plannedMealId} ────────────────────
 
     [Fact]
     public async Task UpdateRecipe_WrongPlanId_Returns404()
@@ -189,16 +189,16 @@ public class MealPlanEndpointsTests(DatabaseFixture db) : IAsyncLifetime
         var recipeId = await SeedRecipeAsync(ingId);
         var plan     = await CreatePlanViaApi("Plan");
 
-        var addResponse = await Client.PostAsJsonAsync($"/api/v1/meal-plans/{plan.Id}/recipes",
+        var addResponse = await Client.PostAsJsonAsync($"/api/v1/meal-plans/{plan.Id}/planned-meals",
             new { recipeId });
-        var mpr = await addResponse.Content.ReadFromJsonAsync<MealPlanRecipeResponse>();
+        var plannedMeal = await addResponse.Content.ReadFromJsonAsync<PlannedMealResponse>();
 
-        var response = await Client.PutAsJsonAsync($"/api/v1/meal-plans/{Guid.NewGuid()}/recipes/{mpr!.Id}",
-            new { portionSize = "DOUBLE" });
+        var response = await Client.PutAsJsonAsync($"/api/v1/meal-plans/{Guid.NewGuid()}/planned-meals/{plannedMeal!.Id}",
+            new { batchSize = "DOUBLE" });
         response.StatusCode.Should().Be(HttpStatusCode.NotFound);
     }
 
-    // ── DELETE /meal-plans/{id}/recipes/{mprId} ───────────────────────────────
+    // ── DELETE /meal-plans/{id}/planned-meals/{plannedMealId} ─────────────────
 
     [Fact]
     public async Task DeleteRecipe_WrongPlanId_Returns404()
@@ -207,11 +207,11 @@ public class MealPlanEndpointsTests(DatabaseFixture db) : IAsyncLifetime
         var recipeId = await SeedRecipeAsync(ingId);
         var plan     = await CreatePlanViaApi("Plan");
 
-        var addResponse = await Client.PostAsJsonAsync($"/api/v1/meal-plans/{plan.Id}/recipes",
+        var addResponse = await Client.PostAsJsonAsync($"/api/v1/meal-plans/{plan.Id}/planned-meals",
             new { recipeId });
-        var mpr = await addResponse.Content.ReadFromJsonAsync<MealPlanRecipeResponse>();
+        var plannedMeal = await addResponse.Content.ReadFromJsonAsync<PlannedMealResponse>();
 
-        var response = await Client.DeleteAsync($"/api/v1/meal-plans/{Guid.NewGuid()}/recipes/{mpr!.Id}");
+        var response = await Client.DeleteAsync($"/api/v1/meal-plans/{Guid.NewGuid()}/planned-meals/{plannedMeal!.Id}");
         response.StatusCode.Should().Be(HttpStatusCode.NotFound);
     }
 

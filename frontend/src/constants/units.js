@@ -4,7 +4,7 @@ export const MEASUREMENT_UNITS = ['g', 'kg', 'ml', 'L', 'pcs', 'tsp', 'tbsp', 'c
 /** Default unit for a freshly added ingredient row. */
 export const DEFAULT_UNIT = 'g'
 
-/** Formats an amount and unit for display, trimming float noise from portion scaling, and returns `null` when there is no amount to show. */
+/** Formats an amount and unit for display, trimming float noise from Batch Size scaling, and returns `null` when there is no amount to show. */
 export function formatMeasurement(amount, unit) {
   if (amount == null) return null
   const rounded = Math.round(amount * 100) / 100
@@ -19,7 +19,7 @@ export function toPayloadMeasurement(amount, unit) {
     : { amount: parsed, unit: unit ?? null }
 }
 
-/** Secondary text showing the measurement as an imported source stated it, scaled by the portion multiplier, or null when there is nothing worth showing. */
+/** Secondary text showing the measurement as an imported source stated it, scaled by the Batch Size multiplier, or null when there is nothing worth showing. */
 export function formatSourceMeasurement(sourceAmount, sourceUnit, unit, multiplier = 1) {
   if (sourceAmount == null || !sourceUnit || sourceUnit === unit) return null
   return `(${formatMeasurement(sourceAmount * multiplier, sourceUnit)})`

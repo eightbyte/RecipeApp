@@ -60,16 +60,16 @@ describe('RecipeDetailView', () => {
     expect(wrapper.text()).toContain('Chocolate Cake')
   })
 
-  it('defaults portion selector to Regular', async () => {
+  it('defaults the Batch selector to Regular', async () => {
     const wrapper = await mountView()
-    expect(wrapper.vm.portionSize).toBe('REGULAR')
+    expect(wrapper.vm.batchSize).toBe('REGULAR')
   })
 
   it('doubles ingredient amounts when switching to Double', async () => {
     const wrapper = await mountView()
-    wrapper.vm.portionSize = 'DOUBLE'
+    wrapper.vm.batchSize = 'DOUBLE'
     await wrapper.vm.$nextTick()
-    expect(wrapper.vm.portionMultiplier).toBe(2)
+    expect(wrapper.vm.batchMultiplier).toBe(2)
     expect(wrapper.vm.formatAmount(100, 'g')).toBe('200 g')
   })
 
@@ -95,7 +95,7 @@ describe('RecipeDetailView', () => {
     expect(wrapper.text()).toContain('(2 cups)')
   })
 
-  it('scales the source measurement with the portion multiplier', async () => {
+  it('scales the source measurement with the Batch Size', async () => {
     const wrapper = await mountView({
       ingredients: [{
         id: 'ri-1',
@@ -112,7 +112,7 @@ describe('RecipeDetailView', () => {
       }],
     })
 
-    wrapper.vm.portionSize = 'DOUBLE'
+    wrapper.vm.batchSize = 'DOUBLE'
     await wrapper.vm.$nextTick()
 
     expect(wrapper.text()).toContain('480 g')
@@ -142,7 +142,7 @@ describe('RecipeDetailView', () => {
     expect(wrapper.vm.formatAmount(null, null)).toBeNull()
   })
 
-  it('leaves an unquantified ingredient unscaled at Double portions', async () => {
+  it('leaves an unquantified ingredient unscaled at a Double Batch Size', async () => {
     // There is nothing to multiply, and 2 x nothing must not become a number.
     const wrapper = await mountView({
       ingredients: [{
@@ -160,7 +160,7 @@ describe('RecipeDetailView', () => {
       }],
     })
 
-    wrapper.vm.portionSize = 'DOUBLE'
+    wrapper.vm.batchSize = 'DOUBLE'
     await wrapper.vm.$nextTick()
 
     expect(wrapper.vm.formatAmount(null, null)).toBeNull()

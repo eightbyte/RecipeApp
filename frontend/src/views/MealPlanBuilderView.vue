@@ -49,9 +49,9 @@
       </div>
 
       <!-- Added recipes -->
-      <div v-if="mealPlanStore.currentPlan.recipes.length > 0" class="mb-6">
+      <div v-if="mealPlanStore.currentPlan.plannedMeals.length > 0" class="mb-6">
         <v-card
-          v-for="meal in mealPlanStore.currentPlan.recipes"
+          v-for="meal in mealPlanStore.currentPlan.plannedMeals"
           :key="meal.id"
           class="mb-2"
           variant="outlined"
@@ -63,7 +63,7 @@
                 <v-icon v-else color="grey" size="16">mdi-food</v-icon>
               </v-avatar>
               <div class="flex-grow-1 text-body-2 font-weight-medium">{{ meal.recipeName }}</div>
-              <v-btn icon="mdi-delete" variant="text" size="x-small" color="error" @click="removeRecipe(meal.id)" />
+              <v-btn icon="mdi-delete" variant="text" size="x-small" color="error" @click="removePlannedMeal(meal.id)" />
             </div>
 
             <div class="d-flex ga-2 flex-wrap">
@@ -79,16 +79,22 @@
                 @update:model-value="(v) => updateDate(meal, v || null)"
               />
               <v-btn-toggle
-                :model-value="meal.portionSize"
+                aria-label="Batch"
+                :model-value="meal.batchSize"
                 mandatory
                 color="primary"
                 density="compact"
                 style="height: 40px"
-                @update:model-value="(v) => updatePortion(meal, v)"
+                @update:model-value="(v) => updateBatchSize(meal, v)"
               >
-                <v-btn value="HALF" size="small">½</v-btn>
-                <v-btn value="REGULAR" size="small">Regular</v-btn>
-                <v-btn value="DOUBLE" size="small">Double</v-btn>
+                <v-btn
+                  v-for="batchSize in BATCH_SIZES"
+                  :key="batchSize.value"
+                  :value="batchSize.value"
+                  size="small"
+                >
+                  {{ batchSize.title }}
+                </v-btn>
               </v-btn-toggle>
             </div>
           </div>
@@ -116,6 +122,7 @@
 import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useMealPlanStore } from '@/stores/mealPlans'
+import { BATCH_SIZES, DEFAULT_BATCH_SIZE } from '@/constants/batchSizes'
 import RecipeBrowser from '@/components/RecipeBrowser.vue'
 import SuggestionsPanel from '@/components/SuggestionsPanel.vue'
 
@@ -149,44 +156,44 @@ async function createPlan() {
 async function addRecipe(recipe) {
   const planId = mealPlanStore.currentPlan?.id
   if (!planId) return
-  await mealPlanStore.addRecipe(planId, {
+  await mealPlanStore.addPlannedMeal(planId, {
     recipeId: recipe.id,
     scheduledDate: null,
-    portionSize: 'REGULAR',
+    batchSize: DEFAULT_BATCH_SIZE,
   })
 }
 
 async function addSuggestion(suggestion) {
   const planId = mealPlanStore.currentPlan?.id
   if (!planId) return
-  await mealPlanStore.addRecipe(planId, {
+  await mealPlanStore.addPlannedMeal(planId, {
     recipeId: suggestion.recipeId,
     scheduledDate: null,
-    portionSize: 'REGULAR',
+    batchSize: DEFAULT_BATCH_SIZE,
   })
 }
 
-async function removeRecipe(mprId) {
+async function removePlannedMeal(plannedMealId) {
   const planId = mealPlanStore.currentPlan?.id
   if (!planId) return
-  await mealPlanStore.removePlanRecipe(planId, mprId)
+  await mealPlanStore.removePlannedMeal(planId, plannedMealId)
 }
 
 async function updateDate(meal, newDate) {
   const planId = mealPlanStore.currentPlan?.id
   if (!planId) return
-  await mealPlanStore.updatePlanRecipe(planId, meal.id, {
+  await mealPlanStore.updatePlannedMeal(planId, meal.id, {
     scheduledDate: newDate,
-    portionSize: meal.portionSize,
+    batchSize: meal.batchSize,
   })
 }
 
-async function updatePortion(meal, newPortion) {
+async function updateBatchSize(meal, batchSize) {
   const planId = mealPlanStore.currentPlan?.id
   if (!planId) return
-  await mealPlanStore.updatePlanRecipe(planId, meal.id, {
+  await mealPlanStore.updatePlannedMeal(planId, meal.id, {
     scheduledDate: meal.scheduledDate ?? null,
-    portionSize: newPortion,
+    batchSize,
   })
 }
 

@@ -80,19 +80,30 @@
         size="large"
         prepend-icon="mdi-chef-hat"
         class="mb-6"
-        :to="{ name: 'recipe-cooking', params: { id: recipe.id }, query: { portion: portionSize } }"
+        :to="{ name: 'recipe-cooking', params: { id: recipe.id }, query: { batch: batchSize } }"
       >
         Start cooking
       </v-btn>
 
-      <!-- ── Portion selector ──────────────────────────────────────────── -->
+      <!-- ── Batch selector ────────────────────────────────────────────── -->
       <v-card class="mb-12 pa-3" variant="outlined">
         <div class="d-flex align-center ga-4">
-          <span class="text-body-2 font-weight-medium">Portion size</span>
-          <v-btn-toggle v-model="portionSize" mandatory density="compact" color="primary">
-            <v-btn value="HALF"    size="small">½</v-btn>
-            <v-btn value="REGULAR" size="small">Regular</v-btn>
-            <v-btn value="DOUBLE"  size="small">Double</v-btn>
+          <span id="batch-size-label" class="text-body-2 font-weight-medium">Batch</span>
+          <v-btn-toggle
+            v-model="batchSize"
+            aria-labelledby="batch-size-label"
+            mandatory
+            density="compact"
+            color="primary"
+          >
+            <v-btn
+              v-for="option in BATCH_SIZES"
+              :key="option.value"
+              :value="option.value"
+              size="small"
+            >
+              {{ option.title }}
+            </v-btn>
           </v-btn-toggle>
         </div>
       </v-card>
@@ -193,6 +204,7 @@ import { ref, computed, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useRecipeStore } from '@/stores/recipes'
 import { formatMeasurement, formatSourceMeasurement } from '@/constants/units'
+import { BATCH_SIZES, DEFAULT_BATCH_SIZE, batchSizeMultiplier } from '@/constants/batchSizes'
 import { useUiStore } from '@/stores/ui'
 import EmptyState from '@/components/EmptyState.vue'
 import ErrorState from '@/components/ErrorState.vue'
@@ -203,18 +215,16 @@ const router = useRouter()
 const store  = useRecipeStore()
 const ui     = useUiStore()
 
-const portionSize            = ref('REGULAR')
+const batchSize               = ref(DEFAULT_BATCH_SIZE)
 const highlightedIngredientId = ref(null)
-const markingCooked          = ref(false)
+const markingCooked           = ref(false)
 
 const recipe = computed(() => store.currentRecipe)
 
-const portionMultiplier = computed(() =>
-  ({ HALF: 0.5, REGULAR: 1, DOUBLE: 2 })[portionSize.value] ?? 1
-)
+const batchMultiplier = computed(() => batchSizeMultiplier(batchSize.value))
 
 const scaledServings = computed(() =>
-  Math.round(recipe.value?.servings * portionMultiplier.value) || 0
+  Math.round(recipe.value?.servings * batchMultiplier.value) || 0
 )
 
 function reload() {
@@ -226,13 +236,13 @@ onMounted(reload)
 /** Scaling short-circuits on a null amount, because `null * 2` is `0` in JavaScript, and half of nothing is still nothing. */
 function formatAmount(baseAmount, unit) {
   if (baseAmount == null) return null
-  return formatMeasurement(baseAmount * portionMultiplier.value, unit)
+  return formatMeasurement(baseAmount * batchMultiplier.value, unit)
 }
 
 /** The measurement as the source recipe stated it, shown alongside the canonical amount, or null when the row was hand-entered or nothing was converted. */
 function formatSource(ing) {
   return formatSourceMeasurement(
-    ing.sourceAmount, ing.sourceUnit, ing.unit, portionMultiplier.value)
+    ing.sourceAmount, ing.sourceUnit, ing.unit, batchMultiplier.value)
 }
 
 function stepIngredients(step) {

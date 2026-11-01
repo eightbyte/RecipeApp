@@ -42,17 +42,17 @@ describe('fetchActivePlan', () => {
     expect(store.error).toBeNull()
   })
 
-  it('normalises recipeImageUrl on plan recipes', async () => {
+  it('normalises recipeImageUrl on Planned Meals', async () => {
     assetUrl.mockImplementation((p) => p ? `http://localhost:5000${p}` : '')
     const plan = makeMealPlanDetail({
-      recipes: [{ id: 'mpr-1', recipeId: 'r1', recipeName: 'A', recipeImageUrl: '/uploads/a.jpg', recipeLastCookedAt: null, scheduledDate: null, portionSize: 'REGULAR', displayOrder: 1 }],
+      plannedMeals: [{ id: 'planned-meal-1', recipeId: 'r1', recipeName: 'A', recipeImageUrl: '/uploads/a.jpg', recipeLastCookedAt: null, scheduledDate: null, batchSize: 'REGULAR', displayOrder: 1 }],
     })
     api.get.mockResolvedValue({ data: plan })
 
     const store = useMealPlanStore()
     await store.fetchActivePlan()
 
-    expect(store.activePlan.recipes[0].recipeImageUrl).toBe('http://localhost:5000/uploads/a.jpg')
+    expect(store.activePlan.plannedMeals[0].recipeImageUrl).toBe('http://localhost:5000/uploads/a.jpg')
   })
 })
 
@@ -84,52 +84,52 @@ describe('createPlan', () => {
   })
 })
 
-// ── addRecipe ─────────────────────────────────────────────────────────────────
+// ── addPlannedMeal ────────────────────────────────────────────────────────────
 
-describe('addRecipe', () => {
-  it('calls POST /meal-plans/:id/recipes and refreshes plan', async () => {
+describe('addPlannedMeal', () => {
+  it('calls POST /meal-plans/:id/planned-meals and refreshes plan', async () => {
     const plan = makeMealPlanDetail({ id: 'plan-1' })
     api.post.mockResolvedValue({ data: {} })
     api.get.mockResolvedValue({ data: plan })
 
     const store = useMealPlanStore()
     store.currentPlan = plan
-    await store.addRecipe('plan-1', { recipeId: 'r1', scheduledDate: null, portionSize: 'REGULAR' })
+    await store.addPlannedMeal('plan-1', { recipeId: 'r1', scheduledDate: null, batchSize: 'REGULAR' })
 
-    expect(api.post).toHaveBeenCalledWith('/meal-plans/plan-1/recipes', expect.any(Object))
+    expect(api.post).toHaveBeenCalledWith('/meal-plans/plan-1/planned-meals', expect.any(Object))
     expect(api.get).toHaveBeenCalledWith('/meal-plans/plan-1')
   })
 })
 
-// ── updatePlanRecipe ──────────────────────────────────────────────────────────
+// ── updatePlannedMeal ─────────────────────────────────────────────────────────
 
-describe('updatePlanRecipe', () => {
-  it('calls PUT /meal-plans/:id/recipes/:mprId', async () => {
+describe('updatePlannedMeal', () => {
+  it('calls PUT /meal-plans/:id/planned-meals/:plannedMealId', async () => {
     const plan = makeMealPlanDetail({ id: 'plan-1' })
     api.put.mockResolvedValue({ data: {} })
     api.get.mockResolvedValue({ data: plan })
 
     const store = useMealPlanStore()
     store.currentPlan = plan
-    await store.updatePlanRecipe('plan-1', 'mpr-1', { portionSize: 'DOUBLE' })
+    await store.updatePlannedMeal('plan-1', 'planned-meal-1', { batchSize: 'DOUBLE' })
 
-    expect(api.put).toHaveBeenCalledWith('/meal-plans/plan-1/recipes/mpr-1', { portionSize: 'DOUBLE' })
+    expect(api.put).toHaveBeenCalledWith('/meal-plans/plan-1/planned-meals/planned-meal-1', { batchSize: 'DOUBLE' })
   })
 })
 
-// ── removePlanRecipe ──────────────────────────────────────────────────────────
+// ── removePlannedMeal ─────────────────────────────────────────────────────────
 
-describe('removePlanRecipe', () => {
-  it('calls DELETE /meal-plans/:id/recipes/:mprId', async () => {
+describe('removePlannedMeal', () => {
+  it('calls DELETE /meal-plans/:id/planned-meals/:plannedMealId', async () => {
     const plan = makeMealPlanDetail({ id: 'plan-1' })
     api.delete.mockResolvedValue({})
     api.get.mockResolvedValue({ data: plan })
 
     const store = useMealPlanStore()
     store.currentPlan = plan
-    await store.removePlanRecipe('plan-1', 'mpr-1')
+    await store.removePlannedMeal('plan-1', 'planned-meal-1')
 
-    expect(api.delete).toHaveBeenCalledWith('/meal-plans/plan-1/recipes/mpr-1')
+    expect(api.delete).toHaveBeenCalledWith('/meal-plans/plan-1/planned-meals/planned-meal-1')
   })
 })
 

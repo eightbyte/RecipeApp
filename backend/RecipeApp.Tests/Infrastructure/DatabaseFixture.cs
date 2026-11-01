@@ -38,7 +38,7 @@ public class DatabaseFixture : IAsyncLifetime
                 ""RecipeIngredients"",
                 ""ShoppingListItems"",
                 ""ShoppingLists"",
-                ""MealPlanRecipes"",
+                ""PlannedMeals"",
                 ""MealPlans"",
                 ""Recipes"",
                 ""Ingredients"",

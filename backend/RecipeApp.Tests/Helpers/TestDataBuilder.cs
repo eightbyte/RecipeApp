@@ -83,25 +83,25 @@ public static class TestDataBuilder
         CreatedAt = createdAt ?? DateTime.UtcNow,
     };
 
-    public static MealPlanRecipe MealPlanRecipe(
+    public static PlannedMeal PlannedMeal(
         Guid mealPlanId,
         Guid recipeId,
         DateOnly? scheduledDate = null,
-        string portionSize = PortionSize.Regular,
+        string batchSize = BatchSize.Regular,
         int displayOrder = 1) => new()
     {
         Id            = Guid.NewGuid(),
         MealPlanId    = mealPlanId,
         RecipeId      = recipeId,
         ScheduledDate = scheduledDate,
-        PortionSize   = portionSize,
+        BatchSize   = batchSize,
         DisplayOrder  = displayOrder,
     };
 
     public static CreateMealPlanRequest CreateMealPlanRequest(string name = "Test Plan") => new(name);
 
-    public static AddMealPlanRecipeRequest AddMealPlanRecipeRequest(
+    public static AddPlannedMealRequest AddPlannedMealRequest(
         Guid recipeId,
         DateOnly? scheduledDate = null,
-        string? portionSize = null) => new(recipeId, scheduledDate, portionSize);
+        string? batchSize = null) => new(recipeId, scheduledDate, batchSize);
 }

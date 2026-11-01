@@ -287,7 +287,7 @@ public class SeedPersistTests(DatabaseFixture db) : IAsyncLifetime
         {
             var plan = new MealPlan { Id = Guid.NewGuid(), Name = "This week", IsActive = true };
             context.MealPlans.Add(plan);
-            context.MealPlanRecipes.Add(new MealPlanRecipe { Id = Guid.NewGuid(), MealPlanId = plan.Id, RecipeId = recipeId });
+            context.PlannedMeals.Add(new PlannedMeal { Id = Guid.NewGuid(), MealPlanId = plan.Id, RecipeId = recipeId });
             await context.SaveChangesAsync();
         }
 

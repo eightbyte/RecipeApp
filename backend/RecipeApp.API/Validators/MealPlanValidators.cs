@@ -20,25 +20,25 @@ public class UpdateMealPlanRequestValidator : AbstractValidator<UpdateMealPlanRe
     }
 }
 
-public class AddMealPlanRecipeRequestValidator : AbstractValidator<AddMealPlanRecipeRequest>
+public class AddPlannedMealRequestValidator : AbstractValidator<AddPlannedMealRequest>
 {
-    public AddMealPlanRecipeRequestValidator()
+    public AddPlannedMealRequestValidator()
     {
         RuleFor(x => x.RecipeId).NotEmpty();
-        RuleFor(x => x.PortionSize)
-            .Must(p => p != null && PortionSize.IsValid(p))
-            .WithMessage($"PortionSize must be one of: {string.Join(", ", PortionSize.All)}")
-            .When(x => x.PortionSize is not null);
+        RuleFor(x => x.BatchSize)
+            .Must(p => p != null && BatchSize.IsValid(p))
+            .WithMessage($"BatchSize must be one of: {string.Join(", ", BatchSize.All)}")
+            .When(x => x.BatchSize is not null);
     }
 }
 
-public class UpdateMealPlanRecipeRequestValidator : AbstractValidator<UpdateMealPlanRecipeRequest>
+public class UpdatePlannedMealRequestValidator : AbstractValidator<UpdatePlannedMealRequest>
 {
-    public UpdateMealPlanRecipeRequestValidator()
+    public UpdatePlannedMealRequestValidator()
     {
-        RuleFor(x => x.PortionSize)
+        RuleFor(x => x.BatchSize)
             .NotEmpty()
-            .Must(PortionSize.IsValid)
-            .WithMessage($"PortionSize must be one of: {string.Join(", ", PortionSize.All)}");
+            .Must(BatchSize.IsValid)
+            .WithMessage($"BatchSize must be one of: {string.Join(", ", BatchSize.All)}");
     }
 }

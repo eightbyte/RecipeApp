@@ -4,7 +4,7 @@ public record MealPlanListItemResponse(
     Guid Id,
     string Name,
     bool IsActive,
-    int RecipeCount,
+    int PlannedMealCount,
     DateOnly? FirstScheduledDate,
     DateOnly? LastScheduledDate,
     DateTime CreatedAt,

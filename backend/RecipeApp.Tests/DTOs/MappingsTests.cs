@@ -10,11 +10,11 @@ file static class MealPlanTestHelpers
 {
     public static MealPlan MakeMealPlan(string name = "Test Plan", bool isActive = true) => new()
     {
-        Id        = Guid.NewGuid(),
-        Name      = name,
-        IsActive  = isActive,
-        CreatedAt = DateTime.UtcNow,
-        Recipes   = [],
+        Id           = Guid.NewGuid(),
+        Name         = name,
+        IsActive     = isActive,
+        CreatedAt    = DateTime.UtcNow,
+        PlannedMeals = [],
     };
 
     public static Recipe MakeRecipe(string name = "Test Recipe") => new()
@@ -28,7 +28,7 @@ file static class MealPlanTestHelpers
         Steps       = [],
     };
 
-    public static MealPlanRecipe MakeMealPlanRecipe(MealPlan plan, Recipe recipe, DateOnly? scheduledDate = null, int displayOrder = 1) => new()
+    public static PlannedMeal MakePlannedMeal(MealPlan plan, Recipe recipe, DateOnly? scheduledDate = null, int displayOrder = 1) => new()
     {
         Id            = Guid.NewGuid(),
         MealPlanId    = plan.Id,
@@ -36,7 +36,7 @@ file static class MealPlanTestHelpers
         RecipeId      = recipe.Id,
         Recipe        = recipe,
         ScheduledDate = scheduledDate,
-        PortionSize   = PortionSize.Regular,
+        BatchSize   = BatchSize.Regular,
         DisplayOrder  = displayOrder,
     };
 }
@@ -249,7 +249,7 @@ public class MappingsTests
         result.Id.Should().Be(plan.Id);
         result.Name.Should().Be("Week Plan");
         result.IsActive.Should().BeTrue();
-        result.RecipeCount.Should().Be(0);
+        result.PlannedMealCount.Should().Be(0);
         result.FirstScheduledDate.Should().BeNull();
         result.LastScheduledDate.Should().BeNull();
     }
@@ -259,17 +259,17 @@ public class MappingsTests
     {
         var plan = MealPlanTestHelpers.MakeMealPlan();
         var recipe = MealPlanTestHelpers.MakeRecipe();
-        plan.Recipes = [
-            MealPlanTestHelpers.MakeMealPlanRecipe(plan, recipe, new DateOnly(2026, 6, 2)),
-            MealPlanTestHelpers.MakeMealPlanRecipe(plan, recipe, new DateOnly(2026, 6, 5)),
-            MealPlanTestHelpers.MakeMealPlanRecipe(plan, recipe, null),
+        plan.PlannedMeals = [
+            MealPlanTestHelpers.MakePlannedMeal(plan, recipe, new DateOnly(2026, 6, 2)),
+            MealPlanTestHelpers.MakePlannedMeal(plan, recipe, new DateOnly(2026, 6, 5)),
+            MealPlanTestHelpers.MakePlannedMeal(plan, recipe, null),
         ];
 
         var result = plan.ToListItem();
 
         result.FirstScheduledDate.Should().Be(new DateOnly(2026, 6, 2));
         result.LastScheduledDate.Should().Be(new DateOnly(2026, 6, 5));
-        result.RecipeCount.Should().Be(3);
+        result.PlannedMealCount.Should().Be(3);
     }
 
     // ── MealPlan.ToDetail ─────────────────────────────────────────────────────
@@ -279,14 +279,14 @@ public class MappingsTests
     {
         var plan   = MealPlanTestHelpers.MakeMealPlan();
         var recipe = MealPlanTestHelpers.MakeRecipe();
-        var undated = MealPlanTestHelpers.MakeMealPlanRecipe(plan, recipe, null, displayOrder: 1);
-        var dated   = MealPlanTestHelpers.MakeMealPlanRecipe(plan, recipe, new DateOnly(2026, 6, 5), displayOrder: 2);
-        plan.Recipes = [undated, dated];
+        var undated = MealPlanTestHelpers.MakePlannedMeal(plan, recipe, null, displayOrder: 1);
+        var dated   = MealPlanTestHelpers.MakePlannedMeal(plan, recipe, new DateOnly(2026, 6, 5), displayOrder: 2);
+        plan.PlannedMeals = [undated, dated];
 
         var result = plan.ToDetail();
 
-        result.Recipes[0].ScheduledDate.Should().Be(new DateOnly(2026, 6, 5));
-        result.Recipes[1].ScheduledDate.Should().BeNull();
+        result.PlannedMeals[0].ScheduledDate.Should().Be(new DateOnly(2026, 6, 5));
+        result.PlannedMeals[1].ScheduledDate.Should().BeNull();
     }
 
     [Fact]
@@ -294,33 +294,33 @@ public class MappingsTests
     {
         var plan   = MealPlanTestHelpers.MakeMealPlan();
         var recipe = MealPlanTestHelpers.MakeRecipe();
-        var later  = MealPlanTestHelpers.MakeMealPlanRecipe(plan, recipe, new DateOnly(2026, 6, 10), displayOrder: 1);
-        var earlier = MealPlanTestHelpers.MakeMealPlanRecipe(plan, recipe, new DateOnly(2026, 6, 2), displayOrder: 2);
-        plan.Recipes = [later, earlier];
+        var later  = MealPlanTestHelpers.MakePlannedMeal(plan, recipe, new DateOnly(2026, 6, 10), displayOrder: 1);
+        var earlier = MealPlanTestHelpers.MakePlannedMeal(plan, recipe, new DateOnly(2026, 6, 2), displayOrder: 2);
+        plan.PlannedMeals = [later, earlier];
 
         var result = plan.ToDetail();
 
-        result.Recipes[0].ScheduledDate.Should().Be(new DateOnly(2026, 6, 2));
-        result.Recipes[1].ScheduledDate.Should().Be(new DateOnly(2026, 6, 10));
+        result.PlannedMeals[0].ScheduledDate.Should().Be(new DateOnly(2026, 6, 2));
+        result.PlannedMeals[1].ScheduledDate.Should().Be(new DateOnly(2026, 6, 10));
     }
 
-    // ── MealPlanRecipe.ToResponse ─────────────────────────────────────────────
+    // ── PlannedMeal.ToResponse ─────────────────────────────────────────────
 
     [Fact]
-    public void MealPlanRecipe_ToResponse_FlattensRecipeFields()
+    public void PlannedMeal_ToResponse_FlattensRecipeFields()
     {
         var plan   = MealPlanTestHelpers.MakeMealPlan();
         var recipe = MealPlanTestHelpers.MakeRecipe("Pasta");
         recipe.ImageUrl     = "/uploads/pasta.jpg";
         recipe.LastCookedAt = DateTime.UtcNow;
-        var mpr = MealPlanTestHelpers.MakeMealPlanRecipe(plan, recipe, new DateOnly(2026, 6, 5));
+        var plannedMeal = MealPlanTestHelpers.MakePlannedMeal(plan, recipe, new DateOnly(2026, 6, 5));
 
-        var result = mpr.ToResponse();
+        var result = plannedMeal.ToResponse();
 
         result.RecipeName.Should().Be("Pasta");
         result.RecipeImageUrl.Should().Be("/uploads/pasta.jpg");
         result.RecipeLastCookedAt.Should().Be(recipe.LastCookedAt);
         result.ScheduledDate.Should().Be(new DateOnly(2026, 6, 5));
-        result.PortionSize.Should().Be(PortionSize.Regular);
+        result.BatchSize.Should().Be(BatchSize.Regular);
     }
 }

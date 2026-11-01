@@ -1,6 +1,6 @@
 namespace RecipeApp.API.DTOs.MealPlans;
 
-public record UpdateMealPlanRecipeRequest(
+public record UpdatePlannedMealRequest(
     DateOnly? ScheduledDate,
-    string PortionSize
+    string BatchSize
 );

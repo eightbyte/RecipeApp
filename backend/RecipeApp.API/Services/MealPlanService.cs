@@ -14,7 +14,7 @@ public class MealPlanService(AppDbContext db)
     public async Task<List<MealPlanListItemResponse>> GetListAsync()
     {
         var plans = await db.MealPlans
-            .Include(p => p.Recipes)
+            .Include(p => p.PlannedMeals)
             .AsNoTracking()
             .OrderByDescending(p => p.IsActive)
             .ThenByDescending(p => p.CreatedAt)
@@ -26,7 +26,7 @@ public class MealPlanService(AppDbContext db)
     public async Task<MealPlanDetailResponse?> GetActiveAsync()
     {
         var plan = await db.MealPlans
-            .Include(p => p.Recipes).ThenInclude(mpr => mpr.Recipe)
+            .Include(p => p.PlannedMeals).ThenInclude(plannedMeal => plannedMeal.Recipe)
             .AsNoTracking()
             .FirstOrDefaultAsync(p => p.IsActive);
 
@@ -36,7 +36,7 @@ public class MealPlanService(AppDbContext db)
     public async Task<MealPlanDetailResponse?> GetByIdAsync(Guid id)
     {
         var plan = await db.MealPlans
-            .Include(p => p.Recipes).ThenInclude(mpr => mpr.Recipe)
+            .Include(p => p.PlannedMeals).ThenInclude(plannedMeal => plannedMeal.Recipe)
             .AsNoTracking()
             .FirstOrDefaultAsync(p => p.Id == id);
 
@@ -49,9 +49,9 @@ public class MealPlanService(AppDbContext db)
         if (!planExists) return null;
 
         // Get distinct ingredient IDs used by all recipes in this plan
-        var planIngredientIds = await db.MealPlanRecipes
-            .Where(mpr => mpr.MealPlanId == planId)
-            .SelectMany(mpr => mpr.Recipe.Ingredients.Select(ri => ri.IngredientId))
+        var planIngredientIds = await db.PlannedMeals
+            .Where(plannedMeal => plannedMeal.MealPlanId == planId)
+            .SelectMany(plannedMeal => plannedMeal.Recipe.Ingredients.Select(ri => ri.IngredientId))
             .Distinct()
             .ToListAsync();
 
@@ -59,9 +59,9 @@ public class MealPlanService(AppDbContext db)
             return [];
 
         // Get recipe IDs already in the plan (to exclude)
-        var planRecipeIds = await db.MealPlanRecipes
-            .Where(mpr => mpr.MealPlanId == planId)
-            .Select(mpr => mpr.RecipeId)
+        var planRecipeIds = await db.PlannedMeals
+            .Where(plannedMeal => plannedMeal.MealPlanId == planId)
+            .Select(plannedMeal => plannedMeal.RecipeId)
             .Distinct()
             .ToListAsync();
 
@@ -137,9 +137,9 @@ public class MealPlanService(AppDbContext db)
         return true;
     }
 
-    // ── Mutations — Meal Plan Recipes ─────────────────────────────────────────
+    // ── Mutations — Planned Meals ──────────────────────────────────────────────
 
-    public async Task<MealPlanRecipeResponse?> AddRecipeAsync(Guid planId, AddMealPlanRecipeRequest request)
+    public async Task<PlannedMealResponse?> AddPlannedMealAsync(Guid planId, AddPlannedMealRequest request)
     {
         var planExists   = await db.MealPlans.AnyAsync(p => p.Id == planId);
         if (!planExists) return null;
@@ -147,61 +147,61 @@ public class MealPlanService(AppDbContext db)
         var recipeExists = await db.Recipes.AnyAsync(r => r.Id == request.RecipeId);
         if (!recipeExists) return null;
 
-        var maxOrder = await db.MealPlanRecipes
-            .Where(mpr => mpr.MealPlanId == planId)
-            .MaxAsync(mpr => (int?)mpr.DisplayOrder) ?? 0;
+        var maxOrder = await db.PlannedMeals
+            .Where(plannedMeal => plannedMeal.MealPlanId == planId)
+            .MaxAsync(plannedMeal => (int?)plannedMeal.DisplayOrder) ?? 0;
 
-        var mpr = new MealPlanRecipe
+        var plannedMeal = new PlannedMeal
         {
             Id            = Guid.NewGuid(),
             MealPlanId    = planId,
             RecipeId      = request.RecipeId,
             ScheduledDate = request.ScheduledDate,
-            PortionSize   = request.PortionSize ?? PortionSize.Regular,
+            BatchSize   = request.BatchSize ?? BatchSize.Regular,
             DisplayOrder  = maxOrder + 1,
         };
-        db.MealPlanRecipes.Add(mpr);
+        db.PlannedMeals.Add(plannedMeal);
 
         var plan = await db.MealPlans.FindAsync(planId);
         if (plan is not null) plan.UpdatedAt = DateTime.UtcNow;
 
         await db.SaveChangesAsync();
 
-        var loaded = await db.MealPlanRecipes
+        var loaded = await db.PlannedMeals
             .Include(m => m.Recipe)
             .AsNoTracking()
-            .FirstAsync(m => m.Id == mpr.Id);
+            .FirstAsync(m => m.Id == plannedMeal.Id);
 
         return loaded.ToResponse();
     }
 
-    public async Task<MealPlanRecipeResponse?> UpdateRecipeAsync(Guid planId, Guid mprId, UpdateMealPlanRecipeRequest request)
+    public async Task<PlannedMealResponse?> UpdatePlannedMealAsync(Guid planId, Guid plannedMealId, UpdatePlannedMealRequest request)
     {
-        var mpr = await db.MealPlanRecipes
+        var plannedMeal = await db.PlannedMeals
             .Include(m => m.Recipe)
-            .FirstOrDefaultAsync(m => m.Id == mprId && m.MealPlanId == planId);
+            .FirstOrDefaultAsync(m => m.Id == plannedMealId && m.MealPlanId == planId);
 
-        if (mpr is null) return null;
+        if (plannedMeal is null) return null;
 
-        mpr.ScheduledDate = request.ScheduledDate;
-        mpr.PortionSize   = request.PortionSize;
+        plannedMeal.ScheduledDate = request.ScheduledDate;
+        plannedMeal.BatchSize   = request.BatchSize;
 
         var plan = await db.MealPlans.FindAsync(planId);
         if (plan is not null) plan.UpdatedAt = DateTime.UtcNow;
 
         await db.SaveChangesAsync();
 
-        return mpr.ToResponse();
+        return plannedMeal.ToResponse();
     }
 
-    public async Task<bool> RemoveRecipeAsync(Guid planId, Guid mprId)
+    public async Task<bool> RemovePlannedMealAsync(Guid planId, Guid plannedMealId)
     {
-        var mpr = await db.MealPlanRecipes
-            .FirstOrDefaultAsync(m => m.Id == mprId && m.MealPlanId == planId);
+        var plannedMeal = await db.PlannedMeals
+            .FirstOrDefaultAsync(m => m.Id == plannedMealId && m.MealPlanId == planId);
 
-        if (mpr is null) return false;
+        if (plannedMeal is null) return false;
 
-        db.MealPlanRecipes.Remove(mpr);
+        db.PlannedMeals.Remove(plannedMeal);
 
         var plan = await db.MealPlans.FindAsync(planId);
         if (plan is not null) plan.UpdatedAt = DateTime.UtcNow;

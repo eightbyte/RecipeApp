@@ -4,7 +4,7 @@ import * as components from 'vuetify/components'
 import * as directives from 'vuetify/directives'
 import { createPinia, setActivePinia } from 'pinia'
 import MealPlanView from './MealPlanView.vue'
-import { makeMealPlanDetail, makeMealPlanRecipe } from '@/test/factories'
+import { makeMealPlanDetail, makePlannedMeal } from '@/test/factories'
 
 const pushMock = vi.fn()
 
@@ -67,14 +67,14 @@ describe('MealPlanView', () => {
 
   it('gives the overflow trigger an accessible name', async () => {
     const { wrapper, mealPlanStore } = await mountView()
-    mealPlanStore.activePlan = makeMealPlanDetail({ recipes: [makeMealPlanRecipe()] })
+    mealPlanStore.activePlan = makeMealPlanDetail({ plannedMeals: [makePlannedMeal()] })
     await wrapper.vm.$nextTick()
     expect(wrapper.html()).toContain('aria-label="Meal options"')
   })
 
   it('exposes a Plan options menu when a plan is active', async () => {
     const { wrapper, mealPlanStore } = await mountView()
-    mealPlanStore.activePlan = makeMealPlanDetail({ recipes: [makeMealPlanRecipe()] })
+    mealPlanStore.activePlan = makeMealPlanDetail({ plannedMeals: [makePlannedMeal()] })
     await wrapper.vm.$nextTick()
     expect(wrapper.html()).toContain('aria-label="Plan options"')
   })
@@ -85,13 +85,13 @@ describe('MealPlanView', () => {
     expect(pushMock).toHaveBeenCalledWith({ name: 'meal-plan-create' })
   })
 
-  it('Start cooking navigates to the cooking route carrying the meal portion', async () => {
+  it('Start cooking navigates to the cooking route carrying the Batch Size', async () => {
     const { wrapper } = await mountView()
-    wrapper.vm.startCooking({ recipeId: 'r9', portionSize: 'DOUBLE' })
+    wrapper.vm.startCooking({ recipeId: 'r9', batchSize: 'DOUBLE' })
     expect(pushMock).toHaveBeenCalledWith({
       name: 'recipe-cooking',
       params: { id: 'r9' },
-      query: { portion: 'DOUBLE' },
+      query: { batch: 'DOUBLE' },
     })
   })
 

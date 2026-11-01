@@ -4,11 +4,8 @@ using RecipeApp.API.Services.Seeding;
 namespace RecipeApp.API.Services.RecipePacks;
 
 /// <summary>
-/// The <c>import-recipes</c> CLI command (Phase 10 §4.4.3). Imports one recipe pack, then exits
-/// without starting Kestrel.
-///
-/// <para>Migrates and runs a non-force catalogue import first, as <c>seed-recipes --persist</c>
-/// does, so it works on an empty database. Does not use the first-run ledger.</para>
+/// The <c>import-recipes</c> CLI command: imports one recipe pack and exits without starting Kestrel, migrating and importing
+/// the catalogue first so it works on an empty database.
 /// </summary>
 public static class ImportRecipesCommand
 {
@@ -20,10 +17,7 @@ public static class ImportRecipesCommand
     private const int SuccessExitCode = 0;
     private const int FailureExitCode = 1;
 
-    /// <summary>
-    /// Index of the command token in the process argument vector, or -1 when the command was not
-    /// requested. Everything after it belongs to this command, not to host configuration.
-    /// </summary>
+    /// <summary>Index of the command token in the process arguments, or -1 when it was not requested.</summary>
     public static int IndexIn(string[] args) => Array.IndexOf(args, CommandName);
 
     /// <param name="PackPath">The pack file, as given on the command line.</param>
@@ -71,7 +65,7 @@ public static class ImportRecipesCommand
     private const string Usage = """
         Usage: dotnet run -- import-recipes <pack.json> [--create-missing] [--force]
 
-          <pack.json>         A recipe pack (Phase 10 §4.4). Image paths resolve against its folder.
+          <pack.json>         A recipe pack (see docs/recipe-packs.md). Image paths resolve against its folder.
           --create-missing    Create an OTHER-category ingredient for each name the catalogue lacks,
                               instead of rejecting the pack
           --force             Replace recipes whose sourceUrl already exists, instead of skipping
@@ -95,8 +89,7 @@ public static class ImportRecipesCommand
         {
             var pack = await RecipePackFileStore.LoadAsync(packPath, ct);
 
-            // Never forced: this command's --force is about recipes, and must not discard
-            // corrections made to the catalogue.
+            // Never forced, because this command's --force is about recipes and must not discard catalogue corrections.
             await CatalogueImport.RunAsync(services, logger, force: false, ct);
 
             using var scope    = services.CreateScope();

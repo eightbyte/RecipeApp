@@ -1,9 +1,7 @@
 import { setupServer } from 'msw/node'
 import { enableAutoUnmount } from '@vue/test-utils'
 
-// Unmount every wrapper after each test, so component timers stop with it. A mounted v-img polls
-// window.setTimeout forever in jsdom, and a poll that fires after the environment's teardown
-// fails the run with "window is not defined" (guarded by setup.spec.js).
+// Unmount every wrapper after each test, because a mounted v-img polls window.setTimeout forever in jsdom and can fire after teardown (guarded by setup.spec.js).
 enableAutoUnmount(afterEach)
 
 // Vuetify uses ResizeObserver internally; jsdom doesn't implement it
@@ -26,8 +24,7 @@ if (!global.visualViewport) {
   }
 }
 
-// Global MSW server — used by tests that need to intercept real HTTP requests.
-// Store and api tests typically use vi.mock instead.
+// Global MSW server for tests that intercept real HTTP requests, whereas store and api tests typically use vi.mock.
 export const server = setupServer()
 
 beforeAll(() => server.listen({ onUnhandledRequest: 'warn' }))

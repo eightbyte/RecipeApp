@@ -7,11 +7,7 @@ using RecipeApp.Tests.Infrastructure;
 
 namespace RecipeApp.Tests.Seeding;
 
-/// <summary>
-/// The shipped <c>seed-data/ingredient-catalogue.json</c> as an artefact (Phase 10 §4.7, §6): its
-/// format-2 shape, rules 1–4, the loader's version handling, and — only where the local MyPlate
-/// cache exists — rule 5. No database.
-/// </summary>
+/// <summary>The shipped <c>seed-data/ingredient-catalogue.json</c> as an artefact: its shape, rules 1–4, the loader's version handling and, only where the local MyPlate cache exists, reachability of every corpus name.</summary>
 public class ShippedCatalogueTests : IDisposable
 {
     private readonly string _scratch =
@@ -30,7 +26,7 @@ public class ShippedCatalogueTests : IDisposable
     private static Task<IngredientCatalogueFile> LoadShippedAsync() =>
         StoreFor(RepositoryPaths.ShippedCataloguePath, RepositoryPaths.ApiContentRoot).LoadAsync();
 
-    // ── Shape (D8) ────────────────────────────────────────────────────────────
+    // ── Shape ─────────────────────────────────────────────────────────────────
 
     [Fact]
     public async Task LoadsAsFormatTwoAndPassesRulesOneToFour()
@@ -124,11 +120,7 @@ public class ShippedCatalogueTests : IDisposable
 
     // ── Rule 5 (local only) ───────────────────────────────────────────────────
 
-    /// <summary>
-    /// Every ingredient row <c>--persist</c> would resolve still resolves (D9). Runs the same
-    /// preparation as the persister — headings removed, then row overrides — and looks each name up
-    /// by entry name, then alias. Skipped, not passed, where the gitignored cache is absent.
-    /// </summary>
+    /// <summary>Every ingredient row <c>--persist</c> would resolve still resolves, skipped rather than passed where the gitignored cache is absent.</summary>
     [Fact]
     public async Task Rule5_EveryLocalCorpusRowResolvesAgainstTheShippedCatalogue()
     {
@@ -167,7 +159,7 @@ public class ShippedCatalogueTests : IDisposable
         }
 
         slugs.Should().NotBeEmpty();
-        unresolved.Should().BeEmpty("every MyPlate row must still resolve (Phase 10 D9)");
+        unresolved.Should().BeEmpty("every MyPlate row must still resolve");
         staleListing.Should().BeEmpty("every row override must match a row in its recipe");
     }
 }

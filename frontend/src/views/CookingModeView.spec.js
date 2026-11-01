@@ -156,8 +156,7 @@ describe('CookingModeView', () => {
   })
 
   it('shows an unquantified ingredient chip as its name alone', async () => {
-    // `null * multiplier` is 0 in JavaScript, so scaling has to short-circuit rather than
-    // delegate — otherwise a chip reading "Salt" renders as "0 Salt" (Phase 9.1 §3.4).
+    // `null * multiplier` is 0 in JavaScript, so scaling has to short-circuit or "Salt" renders as "0 Salt".
     store.currentRecipe = threeStepRecipe({
       ingredients: [
         { id: 'ri-1', ingredientId: 'i1', ingredientName: 'salt', ingredientDisplayName: 'Salt', category: 'DRY_GOODS', amount: null, unit: null, notes: null, displayOrder: 0 },

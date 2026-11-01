@@ -3,11 +3,7 @@ using RecipeApp.API.Services.Seeding;
 
 namespace RecipeApp.Tests.Seeding;
 
-/// <summary>
-/// Stage 5's removal of group headings and leaked notes. The removal is trivial; re-pointing every
-/// step's <c>IngredientIndexes</c> afterwards is not — it is the exact corruption Phase 9 §24.4.2
-/// found in a hand-edited artefact, where steps above a deleted row each pointed one row off.
-/// </summary>
+/// <summary>Stage 5's removal of group headings and leaked notes, where the hard part is re-pointing every step's <c>IngredientIndexes</c> afterwards.</summary>
 public class SeedNonIngredientRowsTests
 {
     private const string ListedSlug = "citrus-salad";   // lists one line: "Dressing"
@@ -68,8 +64,7 @@ public class SeedNonIngredientRowsTests
     [Fact]
     public void Remove_AListedLineTheRecipeNoLongerHas_IsReportedAsStale()
     {
-        // A re-normalise that changes the published line would otherwise leave an inert entry that
-        // looks like it is still doing its job.
+        // A re-normalise that changes the published line would otherwise leave an inert entry that looks like it is still doing its job.
         var recipe = Recipe(ListedSlug, [Row("1 grapefruit")], [0]);
 
         var outcome = SeedNonIngredientRows.Remove(recipe);

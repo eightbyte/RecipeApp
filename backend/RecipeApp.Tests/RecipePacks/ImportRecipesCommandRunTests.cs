@@ -9,11 +9,7 @@ using static RecipeApp.Tests.RecipePacks.RecipePackFixtures;
 
 namespace RecipeApp.Tests.RecipePacks;
 
-/// <summary>
-/// <c>import-recipes</c> end to end (Phase 10 §4.4.3), against a database created empty for each
-/// test in the shared container, so the command's own migration and catalogue import are what make
-/// it usable. The catalogue is the shipped one.
-/// </summary>
+/// <summary><c>import-recipes</c> end to end against a database created empty for each test, so the command's own migration and catalogue import make it usable.</summary>
 [Collection("Database")]
 public class ImportRecipesCommandRunTests(DatabaseFixture db) : IAsyncLifetime
 {
@@ -108,8 +104,7 @@ public class ImportRecipesCommandRunTests(DatabaseFixture db) : IAsyncLifetime
     [Fact]
     public async Task ItsForceDoesNotForceImportTheCatalogue()
     {
-        // A non-force catalogue import fills nulls only, so a hand correction survives it. A forced
-        // one would put the artefact's display name back.
+        // A non-force catalogue import fills nulls only, so a hand correction survives it while a forced one would not.
         var path = await WriteAsync(_root, ValidPack());
         await RunAsync(path);
 

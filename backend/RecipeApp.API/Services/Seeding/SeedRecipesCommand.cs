@@ -2,15 +2,7 @@ using RecipeApp.API.Data;
 
 namespace RecipeApp.API.Services.Seeding;
 
-/// <summary>
-/// The <c>seed-recipes</c> CLI command (Phase 9 §15). Parses its own argument vector — everything
-/// after the <c>seed-recipes</c> token — and drives the harvest stages, then exits without
-/// starting Kestrel.
-///
-/// <para>Every stage is implemented. Each has its own flag, and no stage flag at all runs the full
-/// pipeline — every stage in order, each resuming from its cache, so a complete cache makes the
-/// earlier stages no-ops and the run costs only the database writes.</para>
-/// </summary>
+/// <summary>The <c>seed-recipes</c> CLI command: parses its own arguments after the command token and drives the stages, with no stage flag meaning the full pipeline.</summary>
 public static class SeedRecipesCommand
 {
     public const string CommandName = "seed-recipes";
@@ -18,10 +10,7 @@ public static class SeedRecipesCommand
     /// <summary>Exit code for a usage error or an aborted run.</summary>
     private const int FailureExitCode = 1;
 
-    /// <summary>
-    /// Index of the command token in the process argument vector, or -1 when the command was not
-    /// requested. Everything after it belongs to this command, not to host configuration.
-    /// </summary>
+    /// <summary>Index of the command token in the process arguments, or -1 when it was not requested.</summary>
     public static int IndexIn(string[] args) => Array.IndexOf(args, CommandName);
 
     public static bool IsRequestedIn(string[] args) => IndexIn(args) >= 0;
@@ -42,16 +31,10 @@ public static class SeedRecipesCommand
         /// <summary>Stage 4 — run parsed recipes through the LLM pass. Needs a model, not a database.</summary>
         public bool Normalise { get; init; }
 
-        /// <summary>
-        /// Stage 4.5 — derive the committed ingredient catalogue from <c>normalised/</c>.
-        /// Needs a model, not a database (Phase 9.3 §4.3).
-        /// </summary>
+        /// <summary>Stage 4.5: derive the reference ingredient catalogue from <c>normalised/</c>, which needs a model but not a database.</summary>
         public bool BuildCatalogue { get; init; }
 
-        /// <summary>
-        /// Stage 5 — persist normalised recipes to the database. No LLM; migrates and imports the
-        /// catalogue first so the catalogue → densities → recipes order cannot be skipped.
-        /// </summary>
+        /// <summary>Stage 5: persist normalised recipes to the database without an LLM, importing the catalogue first so the order cannot be skipped.</summary>
         public bool Persist { get; init; }
 
         /// <summary>Print the cached progress summary and do no work.</summary>
@@ -60,10 +43,7 @@ public static class SeedRecipesCommand
         /// <summary>Discard cached pages and images before harvesting.</summary>
         public bool RefreshCache { get; init; }
 
-        /// <summary>
-        /// Restrict the run to the pinned stratified subset (<see cref="SeedTrialSelection"/>). Alone it
-        /// runs the full pipeline over those recipes; with <c>--persist</c>, only Stage 5.
-        /// </summary>
+        /// <summary>Restrict the run to the pinned stratified subset (<see cref="SeedTrialSelection"/>), which with <c>--persist</c> means Stage 5 only.</summary>
         public bool Trial { get; init; }
 
         /// <summary>Redo work already done — re-parse cached recipes, re-import persisted ones.</summary>
@@ -72,23 +52,10 @@ public static class SeedRecipesCommand
         /// <summary>Cap on how many recipes this run processes.</summary>
         public int? Limit { get; init; }
 
-        /// <summary>
-        /// Restrict the run to these slugs. Empty means the whole manifest.
-        ///
-        /// <para>Exists for §13's prompt-iteration loop: re-running one named recipe is the
-        /// difference between a twenty-second experiment and a ten-minute one, and Stage 4's
-        /// failures cluster by ingredient-line shape rather than by manifest position.</para>
-        /// </summary>
+        /// <summary>Restrict the run to these slugs, empty meaning the whole manifest, so one recipe can be re-run in seconds.</summary>
         public IReadOnlyList<string> Slugs { get; init; } = [];
 
-        /// <summary>
-        /// With <c>--build-catalogue</c>: run the grouping pass on these batches only (1-based), log
-        /// what each one merged, and write nothing. Empty means a real build.
-        ///
-        /// <para><c>--slug</c>'s counterpart for Stage 4.5. A full build is 45 calls and most of an
-        /// hour, while the grouping prompt's failures cluster in a handful of family-dense batches —
-        /// the cereals batch collapsed 17 names to 2 on two different prompts.</para>
-        /// </summary>
+        /// <summary>With <c>--build-catalogue</c>: run the grouping pass on these 1-based batches only, log what each merged and write nothing.</summary>
         public IReadOnlyList<int> CatalogueBatches { get; init; } = [];
 
         /// <summary>Whether no single stage was named, so every stage runs in order.</summary>
@@ -158,8 +125,7 @@ public static class SeedRecipesCommand
             }
         }
 
-        // A batch number means nothing to any other stage, and silently ignoring it would run a
-        // full, hour-long build that the caller asked to preview.
+        // A batch number means nothing to any other stage, and ignoring it would run a full build the caller asked to preview.
         if (arguments.CatalogueBatches.Count > 0 && !arguments.BuildCatalogue)
         {
             logger.LogError("--batch only applies to --build-catalogue.");
@@ -247,8 +213,7 @@ public static class SeedRecipesCommand
         }
         catch (CatalogueValidationException ex)
         {
-            // Nothing was written. A catalogue that contradicts itself is worse than no catalogue,
-            // and every consumer downstream treats this file as authoritative (§4.7).
+            // Nothing was written, and a catalogue that contradicts itself is worse than none.
             logger.LogError("Catalogue build aborted: {Message}", ex.Message);
             return FailureExitCode;
         }
@@ -313,10 +278,7 @@ public static class SeedRecipesCommand
     {
         var seeder = services.GetRequiredService<IRecipeLibrarySeeder>();
 
-        // --force here means "re-derive", not "re-download": the cached pages are untouched, which
-        // is the whole point of caching between stages 2 and 3. Naming slugs scopes it to them —
-        // the seeder redoes a forced recipe whether or not its old output was deleted first, so
-        // wiping the other thousand would be pure collateral damage.
+        // --force means "re-derive", not "re-download", and naming slugs scopes it to them.
         if (arguments.Force && arguments.Slugs.Count == 0)
             await cache.ClearParsedContentAsync(ct);
 
@@ -340,10 +302,7 @@ public static class SeedRecipesCommand
         return 0;
     }
 
-    /// <summary>
-    /// The manifest narrowed to the requested slugs, or unchanged when none were named. A slug that
-    /// is not in the manifest is reported rather than silently yielding an empty run.
-    /// </summary>
+    /// <summary>The manifest narrowed to the requested slugs, reporting a slug that is not in it rather than yielding an empty run.</summary>
     internal static SeedManifest Restrict(
         SeedManifest manifest, IReadOnlyList<string> slugs, ILogger logger)
     {
@@ -368,10 +327,7 @@ public static class SeedRecipesCommand
     {
         var seeder = services.GetRequiredService<IRecipeLibrarySeeder>();
 
-        // --force here throws away a GPU pass, not a harvest: the cached pages and parsed recipes
-        // are untouched, which is what makes prompt iteration cheap (§13). Scoped to the named
-        // slugs when there are any — `--normalise --force --slug x` is the iteration loop itself,
-        // and it must not cost the other thousand recipes hours of inference.
+        // --force here discards a GPU pass but not the harvest, and naming slugs scopes it to them.
         if (arguments.Force && arguments.Slugs.Count == 0)
             await cache.ClearNormalisedContentAsync(ct);
 
@@ -403,13 +359,7 @@ public static class SeedRecipesCommand
         return result.Aborted ? FailureExitCode : 0;
     }
 
-    /// <summary>
-    /// Stage 4.5 (Phase 9.3). Derives a catalogue from the normalised corpus into the build file,
-    /// a reference for curating the shipped catalogue by hand (Phase 10 §4.7).
-    ///
-    /// <para><c>--slug</c> deliberately does not narrow it: a catalogue derived from part of the
-    /// corpus cannot resolve the rest of it.</para>
-    /// </summary>
+    /// <summary>Stage 4.5: derives a reference catalogue from the normalised corpus, never narrowed by <c>--slug</c> because a partial catalogue cannot resolve the rest.</summary>
     private static async Task<int> BuildCatalogueAsync(
         IServiceProvider services,
         IWaybackHarvester harvester,
@@ -467,10 +417,7 @@ public static class SeedRecipesCommand
         return 0;
     }
 
-    /// <summary>
-    /// The recipes this invocation runs on: the pinned trial subset, the named slugs, or the whole
-    /// manifest.
-    /// </summary>
+    /// <summary>The recipes this invocation runs on: the pinned trial subset, the named slugs, or the whole manifest.</summary>
     internal static SeedManifest SelectRecipes(
         SeedManifest manifest, SeedRecipesArguments arguments, ILogger logger) =>
         Restrict(manifest, arguments.Trial ? SeedTrialSelection.Slugs : arguments.Slugs, logger);
@@ -494,10 +441,7 @@ public static class SeedRecipesCommand
         SeedRecipesArguments arguments,
         CancellationToken ct)
     {
-        // Catalogue → densities → recipes (Phase 9.3 §4.5), enforced by running the first two here
-        // rather than trusting that import-catalogue was run. Idempotent: an imported catalogue only
-        // has nulls filled and newly committed aliases merged in, and --force never reaches it —
-        // re-importing recipes must not discard someone's catalogue corrections.
+        // Catalogue, then densities, then recipes: run the first two here rather than trust import-catalogue was run, and never force them.
         await CatalogueImport.RunAsync(services, logger, force: false, ct);
 
         var seeder = services.GetRequiredService<IRecipeLibrarySeeder>();
@@ -540,14 +484,7 @@ public static class SeedRecipesCommand
         return 0;
     }
 
-    /// <summary>
-    /// Every stage in order over the selected recipes. Each stage resumes from its own cache, so
-    /// against a complete cache the harvest makes no request, the normalise pass calls no model, and
-    /// the run is the database writes alone.
-    ///
-    /// <para><c>--limit</c> and <c>--force</c> reach Stage 5 only (§13): a re-import must cost no
-    /// GPU time, and discarding a parse or an LLM pass has its own stage flag.</para>
-    /// </summary>
+    /// <summary>Every stage in order over the selected recipes, each resuming from its own cache, with <c>--limit</c> and <c>--force</c> reaching Stage 5 only.</summary>
     private static async Task<int> RunFullPipelineAsync(
         IServiceProvider services,
         IWaybackHarvester harvester,
@@ -571,8 +508,7 @@ public static class SeedRecipesCommand
         logger.LogInformation("Stage 4: {Normalised} normalised, {Skipped} already current, {Failed} failed.",
             normalise.Normalised, normalise.Skipped, normalise.Failed);
 
-        // Persisting past an aborted Stage 4 would import the part that happened to finish and
-        // report the run as done.
+        // Persisting past an aborted Stage 4 would import the part that finished and report the run as done.
         if (normalise.Aborted)
         {
             logger.LogError("Stage 4 stopped early, so Stage 5 did not run. Fix the model and re-run.");

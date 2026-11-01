@@ -6,13 +6,7 @@ using RecipeApp.Tests.Infrastructure;
 
 namespace RecipeApp.Tests.Data;
 
-/// <summary>
-/// <c>Ingredient.Aliases</c> against a real Postgres (Phase 9.3 §4.6).
-///
-/// <para>A <c>text[]</c> column is the one shape in this schema where the provider, not EF, decides
-/// whether the round trip works — and the whole alias mechanism is silently useless if an empty
-/// array comes back null, so it is worth proving rather than assuming.</para>
-/// </summary>
+/// <summary><c>Ingredient.Aliases</c> against a real Postgres, since a <c>text[]</c> column is where the provider decides whether an empty array round-trips as empty rather than null.</summary>
 [Collection("Database")]
 public class IngredientAliasTests(DatabaseFixture db) : IAsyncLifetime
 {
@@ -46,8 +40,7 @@ public class IngredientAliasTests(DatabaseFixture db) : IAsyncLifetime
     [Fact]
     public async Task TheDefaultIsAnEmptyArrayAndNeverNull()
     {
-        // Every consumer enumerates Aliases without a null guard, so a null here would be a
-        // NullReferenceException in the middle of a thousand-recipe import.
+        // Every consumer enumerates Aliases without a null guard, so null here would be a NullReferenceException mid-import.
         await using (var write = db.CreateDbContext())
         {
             write.Ingredients.Add(Row("onion"));
@@ -85,8 +78,7 @@ public class IngredientAliasTests(DatabaseFixture db) : IAsyncLifetime
     [Fact]
     public async Task AnAliasIsQueryableServerSide()
     {
-        // ResolveOrCreateIngredientAsync resolves an alias with a Contains predicate, which has to
-        // translate to SQL rather than silently pulling the catalogue into memory.
+        // An alias lookup uses a Contains predicate, which has to translate to SQL rather than pull the catalogue into memory.
         await using (var write = db.CreateDbContext())
         {
             write.Ingredients.Add(Row("chickpeas", ["garbanzo beans"]));

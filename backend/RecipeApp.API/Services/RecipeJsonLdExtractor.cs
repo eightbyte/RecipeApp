@@ -7,12 +7,7 @@ using AngleSharp.Dom;
 
 namespace RecipeApp.API.Services;
 
-/// <summary>
-/// Looks for a schema.org "Recipe" object inside a page's JSON-LD (&lt;script type="application/ld+json"&gt;)
-/// blocks and, if found, renders it as a clean plain-text block for the LLM extraction prompt.
-/// Most recipe sites embed this markup for Google's "rich results" even when the visible page is
-/// otherwise a heavily scripted SPA shell, so this is checked before falling back to visible-text stripping.
-/// </summary>
+/// <summary>Looks for a schema.org "Recipe" object in a page's JSON-LD blocks and renders it as clean plain text for the LLM prompt, which is checked before visible-text stripping.</summary>
 public static class RecipeJsonLdExtractor
 {
     public static string? TryBuildRecipeText(IDocument document)
@@ -26,18 +21,11 @@ public static class RecipeJsonLdExtractor
         return null;
     }
 
-    /// <summary>
-    /// The first schema.org Recipe object in the page's JSON-LD, or null if there is none.
-    /// Exposed for callers that need a specific field off the node (the seed harvester reads
-    /// <c>image.url</c>) rather than the rendered prompt text.
-    /// </summary>
+    /// <summary>The first schema.org Recipe object in the page's JSON-LD, or null if there is none, exposed for callers that need a specific field off the node.</summary>
     public static JsonNode? TryFindRecipeNode(IDocument document) =>
         EnumerateRecipeNodes(document).FirstOrDefault();
 
-    /// <summary>
-    /// Every Recipe node across the page's JSON-LD blocks, in document order. Lazy, so callers
-    /// that reject the first candidate only pay to parse the next one.
-    /// </summary>
+    /// <summary>Every Recipe node across the page's JSON-LD blocks in document order, lazily so callers that reject the first candidate only pay to parse the next.</summary>
     private static IEnumerable<JsonNode> EnumerateRecipeNodes(IDocument document)
     {
         foreach (var script in document.QuerySelectorAll("script[type='application/ld+json']"))
@@ -52,12 +40,7 @@ public static class RecipeJsonLdExtractor
             }
             catch (JsonException)
             {
-                // Real-world JSON-LD is frequently malformed — the most common case seen in the
-                // wild is raw, unescaped line breaks inside string values (e.g. a recipe step's
-                // "text" wrapped across multiple source lines). Strict JSON forbids literal control
-                // characters inside strings, but collapsing them to spaces is harmless everywhere
-                // else in the document (JSON is whitespace-insensitive outside of strings) and
-                // recovers the otherwise-valid payload.
+                // Real-world JSON-LD often has raw line breaks inside string values, which strict JSON forbids, so collapsing control characters to spaces recovers the payload.
                 try
                 {
                     root = JsonNode.Parse(Regex.Replace(content, "[\r\n\t]+", " "));
@@ -201,8 +184,7 @@ public static class RecipeJsonLdExtractor
 
     // ── Text cleanup ─────────────────────────────────────────────────────────────
 
-    /// <summary>Reads a JSON-LD value as text, HTML-decodes it, strips any embedded tags, and collapses whitespace.
-    /// Handles values that are themselves arrays (e.g. recipeYield: ["8", "8 servings"]) by taking the first entry.</summary>
+    /// <summary>Reads a JSON-LD value as text, HTML-decoded, tag-stripped and whitespace-collapsed, taking the first entry of an array value.</summary>
     private static string? AsCleanString(JsonNode? node)
     {
         string? raw = node switch

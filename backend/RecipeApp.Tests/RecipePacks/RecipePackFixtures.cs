@@ -3,9 +3,7 @@ using RecipeApp.API.Services.RecipePacks;
 
 namespace RecipeApp.Tests.RecipePacks;
 
-/// <summary>
-/// Builds recipe packs and writes them to a temp directory, the way a pack author would.
-/// </summary>
+/// <summary>Builds recipe packs and writes them to a temp directory, the way a pack author would.</summary>
 internal static class RecipePackFixtures
 {
     private static readonly JsonSerializerOptions WriteOptions = new()

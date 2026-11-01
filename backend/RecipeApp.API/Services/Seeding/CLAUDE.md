@@ -1,16 +1,15 @@
-# Seeding — USDA MyPlate seed library (Phase 9)
+# Seeding — USDA MyPlate seed library
 
 This folder imports the archived MyPlate corpus (1,123 recipes) into the database. It is
 **complete**: every recipe is harvested, parsed, normalised and persisted, and a re-run is a no-op.
-Full design and results: `specs/phase-9-seed-recipe-library.md` (§21–25), plus
-`specs/phase-9.1-*` (unquantified ingredients) and `specs/phase-9.3-*` (catalogue).
 
-**The corpus is personal-use only.** Most recipes are credited to state universities, extension
-programs or private organisations, so they are not US federal works and not public domain
-(`specs/phase-10-first-run-seed.md` §1). Recipe text and photos are never committed, published
-or put in a Docker image. A fresh install gets the 12 sample recipes instead (`backend/CLAUDE.md`,
-First-run seeding). To add this library, run `--persist` **after** the app's first start, never
-before (clean-start path B).
+**The corpus is personal-use only.** Only about 216 recipes come from federal agencies, whose work
+is uncopyrighted. The rest are credited to state universities and extension programs (which can
+hold copyright) or to private organisations, so they are not public domain. Ingredient lists are
+facts, but instructions, descriptions, notes and photos can be protected. Recipe text and photos are
+never committed, published or put in a Docker image. A fresh install gets the 12 sample recipes
+instead (`backend/CLAUDE.md`, First-run seeding). To add this library, run `--persist` **after** the
+app's first start, never before (clean-start path B).
 
 ## Stages
 
@@ -89,14 +88,14 @@ instead.**
 
 ## Catalogue (`ingredient-catalogue.json`)
 
-- The shipped catalogue is curated by hand (Phase 10 §4.7). Nothing writes it. Raise
-  `contentVersion` on every edit. **Fold, never drop** (Phase 10 D9): every MyPlate name must stay
-  reachable as a name or an alias. `ShippedCatalogueTests` checks rule 5 where the local cache exists.
+- The shipped catalogue is curated by hand. Nothing writes it. Raise `contentVersion` on every
+  edit. **Fold, never drop**: every MyPlate name must stay reachable as a name or an alias.
+  `ShippedCatalogueTests` checks this where the local cache exists.
 - Stage 5 resolves names by dictionary lookup (`SeedCatalogueResolver`), and a name always
-  outranks an alias. Validation: `IngredientCatalogueValidator` (rules 1–4). There are no alias
-  collisions.
+  outranks an alias. `IngredientCatalogueValidator` enforces unique lowercase names, a valid
+  category, a canonical default unit and unambiguous aliases, so there are no alias collisions.
 - A row the normaliser named too generically (generic `cheese` for a cheddar line) is moved with
-  `SeedIngredientRowOverrides`, keyed on slug and exact source line, not with a fold (Phase 10 D12).
+  `SeedIngredientRowOverrides`, keyed on slug and exact source line, not with a fold.
 - The builder asks **one object per name** (never one per group) and batches by family with
   plurals folded. `CatalogueMergeVocabulary` is a closed list of words a merge may differ by.
   **Adding a word is a review decision.** `ground`, `dried`, `white` and `cooked` are absent on

@@ -193,9 +193,7 @@ public class ShoppingListService(AppDbContext db)
         // Step 1-3: Scale and group by IngredientId
         var byIngredient = new Dictionary<Guid, (Ingredient Ingredient, List<(decimal Amount, string Unit)> Rows)>();
 
-        // An unquantified ingredient (Phase 9.1 §3.1) is partitioned out before grouping so it can
-        // never be summed: adding a zero would silently claim the recipe needs none of it. It is
-        // tracked rather than dropped, because the shopper still has to buy the salt.
+        // An unquantified ingredient is partitioned out before grouping so it is never summed, but tracked because the shopper still has to buy it.
         var unquantifiedIngredients = new Dictionary<Guid, Ingredient>();
 
         foreach (var mpr in planRecipes)
@@ -226,10 +224,7 @@ public class ShoppingListService(AppDbContext db)
                 consolidated.Add((ing, amount, unit, needsReview));
         }
 
-        // An ingredient measured in one recipe and merely named in another keeps its total alone:
-        // "500 g flour and also some flour" is no more useful to a shopper than "500 g flour".
-        // Only an ingredient the plan never quantifies yields an amount-less row — the same shape
-        // a custom item already takes, which the shopping view already renders.
+        // An ingredient the plan only ever names yields one amount-less row, while one measured in any recipe keeps its total alone.
         foreach (var (ingredientId, ing) in unquantifiedIngredients)
         {
             if (byIngredient.ContainsKey(ingredientId)) continue;
@@ -265,19 +260,11 @@ public class ShoppingListService(AppDbContext db)
 
     // ── Consolidation ─────────────────────────────────────────────────────────
 
-    /// <summary>
-    /// Reduces one ingredient's scaled rows to the fewest shopping-list rows that are still
-    /// honest. Mass and volume each sum within themselves; when an ingredient is measured both
-    /// ways and carries a bulk density, the volume total converts to mass so the shopper sees a
-    /// single purchase quantity. What is left over — a count, an unrecognised unit, or a
-    /// mass/volume mix on an ingredient with no density — stays a row of its own, which is what
-    /// makes the item genuinely worth reviewing. See Phase 8.5.1 §7.
-    /// </summary>
+    /// <summary>Reduces one ingredient's scaled rows to the fewest honest shopping-list rows, summing mass and volume within themselves and converting volume to mass when a density exists.</summary>
     private static List<(decimal? Amount, string? Unit)> ConsolidateRows(
         List<(decimal Amount, string Unit)> rows, decimal? gramsPerMillilitre)
     {
-        // Group by dimension. A unit outside the storable set gets a bucket of its own, keyed by
-        // the exact string, so it is never silently summed with something incompatible.
+        // Group by dimension, giving a unit outside the storable set a bucket of its own so it is never summed with something incompatible.
         var byDimension = new Dictionary<string, List<(decimal Amount, string Unit)>>(StringComparer.Ordinal);
         foreach (var (amount, unit) in rows)
         {
@@ -294,9 +281,7 @@ public class ShoppingListService(AppDbContext db)
         var massKey   = UnitDimension.Mass.ToString();
         var volumeKey = UnitDimension.Volume.ToString();
 
-        // Cross-dimension resolution: a density makes mass and volume the same purchase. It
-        // applies to every volume unit here, unlike the import policy, because a shopping total is
-        // a quantity to buy rather than an instruction to follow.
+        // A density makes mass and volume the same purchase, applying to every volume unit unlike the import policy.
         if (gramsPerMillilitre is > 0m &&
             byDimension.TryGetValue(massKey, out var massRows) &&
             byDimension.Remove(volumeKey, out var volumeRows))
@@ -329,11 +314,7 @@ public class ShoppingListService(AppDbContext db)
         return resultRows;
     }
 
-    /// <summary>
-    /// Presents a summed mass or volume group. Rows that all share one non-base unit are presented
-    /// in that unit — 2 cup + 1 cup reads as 3 cup, because that is what the cook wrote and no
-    /// arithmetic improves on it. A mixture sums in the base unit, promoting to kg/L past 1000.
-    /// </summary>
+    /// <summary>Presents a summed group, keeping a shared non-base unit as the cook wrote it and otherwise summing in the base unit and promoting to kg or L past 1000.</summary>
     private static (decimal? Amount, string? Unit) Present(
         List<(decimal Amount, string Unit)> dimRows, string baseUnit, string largeUnit)
     {

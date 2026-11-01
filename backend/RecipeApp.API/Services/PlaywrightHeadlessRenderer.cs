@@ -3,12 +3,7 @@ using Microsoft.Playwright;
 
 namespace RecipeApp.API.Services;
 
-/// <summary>
-/// Owns a single lazily-launched Chromium instance (singleton) and hands out short-lived
-/// browser contexts for rendering. Launching a whole browser per request would be far too
-/// expensive, so the browser process itself is shared and only page/context creation is
-/// bounded by <see cref="RecipeScrapingOptions.HeadlessMaxConcurrency"/>.
-/// </summary>
+/// <summary>Owns a single lazily launched Chromium instance (singleton) and hands out short-lived browser contexts, with only page creation bounded by <see cref="RecipeScrapingOptions.HeadlessMaxConcurrency"/>.</summary>
 public sealed class PlaywrightHeadlessRenderer(
     IOptions<RecipeScrapingOptions> options,
     ILogger<PlaywrightHeadlessRenderer> logger) : IHeadlessRenderer, IAsyncDisposable

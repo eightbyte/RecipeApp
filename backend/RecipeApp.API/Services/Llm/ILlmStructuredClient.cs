@@ -4,11 +4,7 @@ namespace RecipeApp.API.Services.Llm;
 
 public interface ILlmStructuredClient
 {
-    /// <summary>
-    /// Runs a single structured completion and returns a JSON object conforming to
-    /// <paramref name="jsonSchema"/>. Implementations must guarantee schema validity
-    /// (e.g. grammar-constrained decoding) — callers may deserialize the result directly.
-    /// </summary>
+    /// <summary>Runs a single structured completion and returns a JSON object conforming to <paramref name="jsonSchema"/>, which implementations must guarantee, for example by grammar-constrained decoding.</summary>
     Task<JsonNode> CompleteStructuredAsync(
         string systemPrompt,
         string userContent,

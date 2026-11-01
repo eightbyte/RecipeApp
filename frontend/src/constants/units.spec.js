@@ -9,8 +9,7 @@ import {
 
 describe('MEASUREMENT_UNITS', () => {
   it('mirrors MeasurementUnit.All on the backend, in the same order', () => {
-    // Kept in lockstep with backend/RecipeApp.API/Enums/MeasurementUnit.cs. If this list
-    // drifts, the pickers offer units the API will reject (or hide ones it accepts).
+    // Kept in lockstep with the backend enum, or the pickers offer units the API will reject.
     expect(MEASUREMENT_UNITS).toEqual(['g', 'kg', 'ml', 'L', 'pcs', 'tsp', 'tbsp', 'cup'])
   })
 
@@ -36,15 +35,13 @@ describe('formatMeasurement', () => {
   })
 
   it('renders nothing for an ingredient with no stated quantity', () => {
-    // "salt" is stored with a null amount and a null unit (Phase 9.1 §3.1). Every call site
-    // guards on the return value, so the ingredient shows as its name alone, not "0 g Salt".
+    // "salt" is stored with a null amount and unit, so it shows as its name alone and not "0 g Salt".
     expect(formatMeasurement(null, null)).toBeNull()
     expect(formatMeasurement(undefined, undefined)).toBeNull()
   })
 
   it('still renders a zero amount, because zero is a quantity', () => {
-    // Zero is never how an absent quantity is stored, so it must not be silently hidden —
-    // seeing "0 g" is how a fabricated amount that got through becomes visible.
+    // Zero is never how an absent quantity is stored, so it must not be hidden, since seeing "0 g" is how a fabricated amount becomes visible.
     expect(formatMeasurement(0, 'g')).toBe('0 g')
   })
 })

@@ -6,21 +6,10 @@ using RecipeApp.API.Services.Llm;
 
 namespace RecipeApp.Tests.Services.Llm;
 
-/// <summary>
-/// The decoder settings applied to every local model call.
-///
-/// <para>These are asserted against LLamaSharp's own defaults rather than against numbers copied
-/// into the test, so the claim under test is the one that matters — that this application decodes
-/// more conservatively than a chat client — and it survives the library changing its mind.</para>
-/// </summary>
+/// <summary>The decoder settings applied to every local model call, asserted against LLamaSharp's own defaults so the test survives the library changing its mind.</summary>
 public class LlmSamplingOptionsTests
 {
-    /// <summary>
-    /// Asserts the measured outcome, not the intuitive one. Decoding conservatively for an
-    /// extraction task reads as obviously right and measured worse, because the quantity misreads it
-    /// was meant to fix are systematic and the retry that was compensating for them needs the
-    /// randomness. This test exists so that reasoning has to be redone rather than assumed.
-    /// </summary>
+    /// <summary>Asserts the measured outcome rather than the intuitive one: decoding conservatively for extraction measured worse, because the retry that compensates for systematic misreads needs the randomness.</summary>
     [Fact]
     public void Defaults_MatchTheLibrarysPipeline_BecauseDecodingColderMeasuredWorse()
     {
@@ -33,20 +22,14 @@ public class LlmSamplingOptionsTests
         ours.MinP.Should().Be(chatTuned.MinP);
     }
 
-    /// <summary>
-    /// Whatever the value, greedy decoding is not available to these pipelines: a rejected recipe is
-    /// retried, and at temperature zero the retry reproduces the answer that was just rejected.
-    /// </summary>
+    /// <summary>Greedy decoding is not available to these pipelines, because at temperature zero a retry reproduces the answer that was just rejected.</summary>
     [Fact]
     public void Defaults_KeepEnoughRandomnessThatARetryIsGenuinelyASecondAttempt()
     {
         new LlmSamplingOptions().Temperature.Should().BeGreaterThan(0f);
     }
 
-    /// <summary>
-    /// Binding through a real <see cref="ConfigurationBuilder"/>, because the thing that can silently
-    /// break is a key path, and a hand-built options object would never exercise one.
-    /// </summary>
+    /// <summary>Binding through a real <see cref="ConfigurationBuilder"/>, because the thing that can silently break is a key path.</summary>
     [Fact]
     public void Configuration_BindsEveryDecoderSettingFromTheLlmSection()
     {
@@ -69,11 +52,7 @@ public class LlmSamplingOptionsTests
         options.Local.Sampling.MinP.Should().Be(0.15f);
     }
 
-    /// <summary>
-    /// The holder reads its settings before it decides whether it has a model to load, so a machine
-    /// with no GGUF file still answers the question the client asks it. Without that ordering the
-    /// client would dereference an unset property on exactly the machines that run the test suite.
-    /// </summary>
+    /// <summary>The holder reads its settings before deciding whether it has a model to load, so a machine with no GGUF file still answers the client's question.</summary>
     [Fact]
     public void Holder_SurfacesTheConfiguredSampling_EvenWithNoModelConfigured()
     {

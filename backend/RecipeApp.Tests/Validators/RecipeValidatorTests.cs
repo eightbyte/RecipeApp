@@ -70,14 +70,13 @@ public class RecipeValidatorTests
     [InlineData("teaspoon")]
     public void Ingredient_NonCanonicalUnitSpelling_HasErrorOnUnit(string unit)
     {
-        // MeasurementUnit.IsValid is deliberately strict: stored units are always the canonical
-        // spelling, which is what lets shopping-list consolidation group by plain equality.
+        // MeasurementUnit.IsValid is deliberately strict, so stored units are canonical and consolidation can group by plain equality.
         var result = _ingredientValidator.TestValidate(
             new RecipeIngredientRequest(Guid.NewGuid(), 100m, unit, null, 0));
         result.ShouldHaveValidationErrorFor(x => x.Unit);
     }
 
-    // ── Unquantified ingredients (Phase 9.1 §3.1) ─────────────────────────────
+    // ── Unquantified ingredients ──────────────────────────────────────────────
 
     [Fact]
     public void Ingredient_NullAmountAndNullUnit_HasNoErrors()
@@ -108,8 +107,7 @@ public class RecipeValidatorTests
     [Fact]
     public void Ingredient_NullAmount_StillCarriesSourceProvenance()
     {
-        // Provenance is independent of the canonical measurement: an imported line can record
-        // what it said while stating no quantity of its own.
+        // Provenance is independent of the canonical measurement, so an imported line can record what it said while stating no quantity.
         var result = _ingredientValidator.TestValidate(
             new RecipeIngredientRequest(Guid.NewGuid(), null, null, null, 0,
                 SourceAmount: null, SourceUnit: null));

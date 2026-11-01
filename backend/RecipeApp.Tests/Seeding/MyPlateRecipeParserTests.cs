@@ -3,32 +3,16 @@ using RecipeApp.API.Services.Seeding;
 
 namespace RecipeApp.Tests.Seeding;
 
-/// <summary>
-/// Stage 3 of the seed import (Phase 9 §10). Pure parsing — no database, no network, no inference.
-///
-/// <para>The fixtures are archived MyPlate pages copied verbatim out of the harvest, including the
-/// Wayback toolbar the archive injects. That matters: a tidied excerpt would pass a scoping bug
-/// that a real page catches. Each one was chosen for a specific hazard, named on its constant.</para>
-/// </summary>
+/// <summary>Stage 3 as pure parsing, against archived MyPlate pages copied verbatim out of the harvest so a tidied excerpt cannot hide a scoping bug.</summary>
 public class MyPlateRecipeParserTests
 {
-    /// <summary>
-    /// Primary template. Carries a JSON-LD description truncated at ~150 characters (§10.3
-    /// hazard 1), a footnoted <c>*</c> aside after the step list (hazard 5), an adapted-source
-    /// credit (hazard 6), <c>&amp;nbsp;</c> inside a step, and parenthetical prep notes.
-    /// </summary>
+    /// <summary>Primary template, with a truncated JSON-LD description, a footnoted <c>*</c> aside after the step list, an adapted-source credit, <c>&amp;nbsp;</c> inside a step and parenthetical prep notes.</summary>
     private const string ChickenCreole = "20-minute-chicken-creole";
 
-    /// <summary>
-    /// Legacy template — ingredients under <c>field--name-field-ingredients</c>, which 65 of the
-    /// 1,089 harvested pages use and which §10.1 originally did not account for.
-    /// </summary>
+    /// <summary>Legacy template, with ingredients under <c>field--name-field-ingredients</c>, which 65 of the 1,089 harvested pages use.</summary>
     private const string AppleTunaSandwiches = "apple-tuna-sandwiches";
 
-    /// <summary>
-    /// Two step lists separated by a section label, plus emboldened ingredient group headings
-    /// ("For the Dressing:") that are not ingredients.
-    /// </summary>
+    /// <summary>Two step lists separated by a section label, plus emboldened ingredient group headings that are not ingredients.</summary>
     private const string CubanSalad = "cuban-salad";
 
     /// <summary>A step containing a nested sub-list, whose text must be counted once.</summary>
@@ -89,7 +73,7 @@ public class MyPlateRecipeParserTests
         recipe.Description!.Length.Should().BeGreaterThan(150);
     }
 
-    // ── Ingredients (§10.2) ───────────────────────────────────────────────────
+    // ── Ingredients ───────────────────────────────────────────────────────────
 
     [Fact]
     public void Parse_ReadsIngredientLinesVerbatimWithoutParsingQuantities()
@@ -148,10 +132,7 @@ public class MyPlateRecipeParserTests
     {
         var recipe = ParseFixture(CubanSalad);
 
-        // Two lists, split by "To make the salad:". Taking only the first would drop the rest of
-        // the recipe; emitting the label as its own step would put a contentless step in Cooking
-        // Mode. One step comes from the first list and two from the second, so the count is
-        // asserted exactly — a dropped list fails here rather than slipping past a lower bound.
+        // Two lists split by a label: taking only the first would drop the rest of the recipe, so the count is asserted exactly.
         recipe.Steps.Should().HaveCount(3);
         recipe.Steps[0].Should().StartWith("To make the dressing:");
         recipe.Steps[1].Should().StartWith("To make the salad:");
@@ -263,8 +244,7 @@ public class MyPlateRecipeParserTests
 
         var step = recipe.Steps.Single(s => s.Contains("internal temperature"));
 
-        // The page has "165 degrees F&nbsp;(3-5 minutes)" — the artefact §10.3 hazard 2 read as
-        // mojibake. It is an entity, and it becomes an ordinary space.
+        // The page has "165 degrees F&nbsp;(3-5 minutes)", an entity that becomes an ordinary space.
         step.Should().Contain("165 degrees F (3-5 minutes)");
         step.Should().NotContain("\u00A0");
         step.Should().NotContain("&nbsp;");
@@ -280,7 +260,7 @@ public class MyPlateRecipeParserTests
             text.Should().NotContainAny("<", ">");
     }
 
-    // ── Legacy template (§10.1) ───────────────────────────────────────────────
+    // ── Legacy template ───────────────────────────────────────────────────────
 
     [Fact]
     public void Parse_ReadsTheLegacyTemplateWhoseIngredientFieldUsesTheOlderClass()
@@ -339,7 +319,7 @@ public class MyPlateRecipeParserTests
         recipe.Servings.Should().Be(4);
     }
 
-    // ── Parse failure (§10.4) ─────────────────────────────────────────────────
+    // ── Parse failure ─────────────────────────────────────────────────────────
 
     [Fact]
     public void Parse_FailsWhenThePageHasNoRecipeContentRoot()
@@ -415,10 +395,7 @@ public class MyPlateRecipeParserTests
 
     // ── Minimal synthetic page ────────────────────────────────────────────────
 
-    /// <summary>
-    /// The smallest page shaped like a MyPlate one, for cases a real fixture cannot express —
-    /// a missing field, an unusual yield. Real markup covers everything else.
-    /// </summary>
+    /// <summary>The smallest page shaped like a MyPlate one, for cases a real fixture cannot express such as a missing field.</summary>
     private static string PageWith(
         string? name = "JSON-LD Name",
         string? recipeYield = "4 servings",

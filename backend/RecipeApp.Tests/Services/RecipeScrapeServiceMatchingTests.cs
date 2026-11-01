@@ -104,8 +104,7 @@ public class RecipeScrapeServiceMatchingTests(DatabaseFixture db) : IAsyncLifeti
     [Fact]
     public async Task NormaliseAsync_KnownAlias_ResolvesOnPassOneWithNoLlmCall()
     {
-        // Phase 9.3 §4.6. A synonym the catalogue already records is a dictionary hit, not a model
-        // call — which is why Aliases is a column rather than a detail of the seed artefact.
+        // A synonym the catalogue already records is a dictionary hit rather than a model call.
         await using var ctx = db.CreateDbContext();
         var chickpeas = TestDataBuilder.Ingredient("chickpeas", "Chickpeas", IngredientCategory.Canned);
         chickpeas.Aliases = ["garbanzo beans", "chick peas"];
@@ -124,8 +123,7 @@ public class RecipeScrapeServiceMatchingTests(DatabaseFixture db) : IAsyncLifeti
     [Fact]
     public async Task NormaliseAsync_ANameOutranksAnotherEntrysAlias()
     {
-        // The artefact's validation forbids this collision; this is what makes the outcome defined
-        // anyway if a hand-edited row ever introduces one.
+        // The artefact's validation forbids this collision, and this is what makes the outcome defined anyway if a hand-edited row introduces one.
         await using var ctx = db.CreateDbContext();
         var tomato = TestDataBuilder.Ingredient("tomato", "Tomato", IngredientCategory.Produce);
         tomato.Aliases = ["diced tomatoes"];
@@ -269,7 +267,7 @@ public class RecipeScrapeServiceMatchingTests(DatabaseFixture db) : IAsyncLifeti
         preview.Ingredients[0].IsNew.Should().BeTrue();
     }
 
-    // ── Source measurement and cup resolution (Phase 8.5.1 §5.5, §6) ──────────
+    // ── Source measurement and cup resolution ─────────────────────────────────
 
     [Fact]
     public async Task NormaliseAsync_RecordsTheSourceMeasurementVerbatim()
@@ -343,8 +341,7 @@ public class RecipeScrapeServiceMatchingTests(DatabaseFixture db) : IAsyncLifeti
     [Fact]
     public async Task NormaliseAsync_SemanticMatchWithDensity_ResolvesCupsToGrams()
     {
-        // Pass 2 resolves the IngredientId after the LLM call, so cup resolution has to run
-        // there too — not only inline with the pass-1 exact match.
+        // Pass 2 resolves the IngredientId after the LLM call, so cup resolution has to run there too and not only with the pass-1 exact match.
         await using var ctx = db.CreateDbContext();
         ctx.Ingredients.Add(TestDataBuilder.Ingredient(
             "plain flour", "Plain Flour", IngredientCategory.DryGoods, "g", gramsPerMillilitre: 0.5m));
@@ -381,8 +378,7 @@ public class RecipeScrapeServiceMatchingTests(DatabaseFixture db) : IAsyncLifeti
     [Fact]
     public async Task NormaliseAsync_DoesNotThrowOnAnUnrecognisedUnit()
     {
-        // The interactive preview lets a human fix "clove" before confirming; failing the whole
-        // scrape over one unit would be a regression (Phase 8.5.1 §5.5).
+        // The interactive preview lets a human fix "clove" before confirming, so failing the whole scrape over one unit would be a regression.
         await using var ctx = db.CreateDbContext();
         ctx.Ingredients.Add(TestDataBuilder.Ingredient("garlic", "Garlic", IngredientCategory.Produce));
         await ctx.SaveChangesAsync();

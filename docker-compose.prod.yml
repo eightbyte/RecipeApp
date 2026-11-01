@@ -1,6 +1,6 @@
-# ── RecipeApp — Production override (Phase 11 §4.2) ───────────────────────────
+# ── RecipeApp — Production override ───────────────────────────────────────────
 #
-# Layered over docker-compose.yml on the self-hosted PC:
+# Layered over docker-compose.yml on the self-hosted PC (see docs/deployment.md):
 #   docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d
 #
 # Values come from the git-ignored .env next to this file (template: .env.example).
@@ -8,7 +8,7 @@
 # - Postgres and the API are not published on the host.
 # - The frontend binds to 127.0.0.1 only, so it is off the LAN; `tailscale serve` proxies to it.
 # - The project has its own name and no fixed container names, so it can run on the development
-#   machine beside the dev stack without sharing its containers or volumes (D18, §4.10).
+#   machine beside the dev stack without sharing its containers or volumes.
 # `!reset` (drop a value) and `!override` (replace it instead of merging) need Docker Compose 2.24+.
 
 # Without this the project is named after the clone's folder: `recipeapp`, the same as the dev clone.

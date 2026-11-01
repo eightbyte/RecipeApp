@@ -8,10 +8,7 @@ RUN dotnet restore
 COPY . .
 RUN dotnet publish -c Release -o /app/publish --no-restore
 
-# Download the Chromium build used by RecipeScrapeService's headless-render fallback.
-# `PowerShell` ships as a plain dotnet global tool, so this needs no OS-level pwsh install.
-# Only the browser binary is fetched here — its OS-level shared-lib dependencies are
-# installed directly in the runtime stage below, since that's the image that runs it.
+# Download the Chromium build used by the headless-render fallback; its shared-library dependencies are installed in the runtime stage.
 ENV PLAYWRIGHT_BROWSERS_PATH=/ms-playwright
 RUN dotnet tool install --global PowerShell \
     && export PATH="$PATH:/root/.dotnet/tools" \
@@ -21,10 +18,7 @@ RUN dotnet tool install --global PowerShell \
 FROM mcr.microsoft.com/dotnet/aspnet:10.0 AS runtime
 WORKDIR /app
 
-# Chromium's runtime shared-library dependencies (headless recipe-scraping fallback).
-# This exact package list — including the Ubuntu 24.04 "t64" renames — is what
-# `playwright install-deps chromium` resolves to on this base image; verified directly
-# against mcr.microsoft.com/dotnet/aspnet:10.0 rather than hand-guessed.
+# Chromium's shared-library dependencies, as `playwright install-deps chromium` resolves them on this base image.
 RUN apt-get update && apt-get install -y --no-install-recommends \
     libasound2t64 libatk-bridge2.0-0t64 libatk1.0-0t64 libatspi2.0-0t64 \
     libcairo2 libcups2t64 libdbus-1-3 libdrm2 libgbm1 libglib2.0-0t64 \

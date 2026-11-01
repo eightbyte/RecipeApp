@@ -1,8 +1,5 @@
 <template>
-  <!--
-    v-app is required by Vuetify — it sets up the layout context,
-    theming, and portal targets for dialogs/snackbars.
-  -->
+  <!-- v-app is required by Vuetify to set up the layout context, theming and dialog/snackbar portal targets. -->
   <v-app>
 
     <!-- Top navigation bar — hidden on full-screen routes (e.g. Cooking Mode) -->

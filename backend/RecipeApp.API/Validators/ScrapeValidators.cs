@@ -46,8 +46,7 @@ public class ScrapeConfirmIngredientValidator : AbstractValidator<ScrapeConfirmI
             .WithMessage($"Category must be one of: {string.Join(", ", IngredientCategory.All)}")
             .When(x => !string.IsNullOrWhiteSpace(x.Category));
 
-        // Amount and Unit are null together or set together — see
-        // RecipeIngredientRequestValidator for why (Phase 9.1 §3.1).
+        // Amount and Unit are null together or set together, as in RecipeIngredientRequestValidator.
         RuleFor(x => x.Amount)
             .GreaterThan(0)
             .When(x => x.Amount.HasValue)

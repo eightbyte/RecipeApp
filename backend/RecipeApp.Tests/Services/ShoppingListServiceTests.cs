@@ -263,12 +263,9 @@ public class ShoppingListServiceTests(DatabaseFixture db) : IAsyncLifetime
         item.NeedsReview.Should().BeFalse();
     }
 
-    // ── Aggregation — dimensioned spoons and cups (Phase 8.5.1 §3.3, §7) ──────
+    // ── Aggregation — dimensioned spoons and cups ─────────────────────────────
 
-    /// <summary>
-    /// Builds an active plan whose recipes each contribute one row for the same ingredient,
-    /// then returns the generated shopping list.
-    /// </summary>
+    /// <summary>Builds an active plan whose recipes each contribute one row for the same ingredient, then returns the generated shopping list.</summary>
     private async Task<ShoppingListResponse> BuildListForAsync(
         decimal? gramsPerMillilitre,
         params (decimal? Amount, string? Unit)[] rows)
@@ -297,8 +294,7 @@ public class ShoppingListServiceTests(DatabaseFixture db) : IAsyncLifetime
     [Fact]
     public async Task Aggregation_ConsolidatesTablespoonsWithMillilitres()
     {
-        // Regression for the bug that shipped before Phase 8.5.1: tsp and tbsp had no dimension,
-        // so two physically identical measurements produced two rows and a spurious review flag.
+        // Regression: tsp and tbsp once had no dimension, so two physically identical measurements produced two rows and a spurious review flag.
         var list = await BuildListForAsync(null, (1m, "tbsp"), (15m, "ml"));
 
         var item = list.Items.Single();
@@ -310,8 +306,7 @@ public class ShoppingListServiceTests(DatabaseFixture db) : IAsyncLifetime
     [Fact]
     public async Task Aggregation_SumsTeaspoonsInTeaspoons()
     {
-        // Every contributing row uses the same unit, so there is nothing to convert and no
-        // arithmetic improves on what the cook wrote.
+        // Every contributing row uses the same unit, so there is nothing to convert.
         var list = await BuildListForAsync(null, (1m, "tbsp"), (2m, "tbsp"));
 
         var item = list.Items.Single();
@@ -335,8 +330,7 @@ public class ShoppingListServiceTests(DatabaseFixture db) : IAsyncLifetime
     [Fact]
     public async Task Aggregation_TeaspoonPlusGrams_WithDensity_ResolvesToOneMassRow()
     {
-        // Density applies to every volume unit here, unlike the import policy: a shopping total
-        // is a quantity to buy, and 1 tsp salt plus 10 g salt is one item.
+        // Density applies to every volume unit here, unlike the import policy, because a shopping total is a quantity to buy.
         var list = await BuildListForAsync(1.2167m, (1m, "tsp"), (10m, "g"));
 
         var item = list.Items.Single();
@@ -348,8 +342,7 @@ public class ShoppingListServiceTests(DatabaseFixture db) : IAsyncLifetime
     [Fact]
     public async Task Aggregation_CupsWithoutDensity_StayCups()
     {
-        // No fabricated mass and no misleading millilitres — 2 cups of spinach plus 1 cup is
-        // 3 cups, and any gram figure would be invented (Phase 8.5.1 §5.3).
+        // No fabricated mass for a cup with no density, so 2 cups plus 1 cup is 3 cups.
         var list = await BuildListForAsync(null, (2m, "cup"), (1m, "cup"));
 
         var item = list.Items.Single();
@@ -390,13 +383,12 @@ public class ShoppingListServiceTests(DatabaseFixture db) : IAsyncLifetime
         item.NeedsReview.Should().BeFalse();
     }
 
-    // ── Aggregation — unquantified ingredients (Phase 9.1 §3.5) ──────────────
+    // ── Aggregation — unquantified ingredients ────────────────────────────────
 
     [Fact]
     public async Task Aggregation_OnlyEverUnquantified_YieldsOneAmountLessRow()
     {
-        // The shopper still has to buy the salt, so the ingredient is not dropped — it becomes
-        // the amount-less row a custom item already takes, which ShoppingView already renders.
+        // The shopper still has to buy the salt, so it becomes an amount-less row rather than being dropped.
         var list = await BuildListForAsync(null, (null, null), (null, null));
 
         var item = list.Items.Single();
@@ -408,8 +400,7 @@ public class ShoppingListServiceTests(DatabaseFixture db) : IAsyncLifetime
     [Fact]
     public async Task Aggregation_QuantifiedAndUnquantified_KeepsTheQuantifiedTotalAlone()
     {
-        // "500 g flour and also some flour" is no more useful than "500 g flour". Crucially the
-        // unquantified row is not summed as a zero, which would claim the plan needs none of it.
+        // The unquantified row must not be summed as a zero, which would claim the plan needs none of it.
         var list = await BuildListForAsync(null, (200m, "g"), (null, null));
 
         var item = list.Items.Single();
@@ -421,8 +412,7 @@ public class ShoppingListServiceTests(DatabaseFixture db) : IAsyncLifetime
     [Fact]
     public async Task Aggregation_UnquantifiedRow_DoesNotFlagAnIncompatibleMixForReview()
     {
-        // An absent amount is not a third dimension to reconcile: the mass/count split is what
-        // needs review, and the unquantified row neither adds a row nor changes the flag.
+        // An absent amount is not a third dimension, so the unquantified row neither adds a row nor changes the review flag.
         var list = await BuildListForAsync(null, (150m, "g"), (2m, "pcs"), (null, null));
 
         list.Items.Should().HaveCount(2);
@@ -433,8 +423,7 @@ public class ShoppingListServiceTests(DatabaseFixture db) : IAsyncLifetime
     [Fact]
     public async Task Aggregation_UnquantifiedRow_IsNeverStoredAsZero()
     {
-        // The corpus check after Stage 4 asserts zero rows with Amount = 0; a zero anywhere means
-        // a fabricated quantity got through (Phase 9.1 §7).
+        // A zero anywhere would mean a fabricated quantity got through.
         var list = await BuildListForAsync(null, (null, null));
 
         list.Items.Should().NotContain(i => i.Amount == 0m);

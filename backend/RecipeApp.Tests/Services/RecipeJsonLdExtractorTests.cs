@@ -3,10 +3,7 @@ using RecipeApp.API.Services;
 
 namespace RecipeApp.Tests.Services;
 
-/// <summary>
-/// Unit tests for RecipeJsonLdExtractor — the schema.org Recipe JSON-LD detector that runs
-/// before visible-text stripping in RecipeScrapeService.
-/// </summary>
+/// <summary>Tests for the schema.org Recipe JSON-LD detector that runs before visible-text stripping.</summary>
 public class RecipeJsonLdExtractorTests
 {
     private static async Task<string?> ExtractAsync(string html)
@@ -324,10 +321,7 @@ public class RecipeJsonLdExtractorTests
     [Fact]
     public async Task UnescapedLineBreakInsideStringValue_IsRecovered()
     {
-        // Real-world bug found on andy-cooks.com: their JSON-LD wraps long "text" values across
-        // source lines without escaping the line break, which is invalid per strict JSON (raw
-        // control characters aren't allowed inside string literals). Confirmed via System.Text.Json
-        // throwing "'0x0A' is invalid within a JSON string" on the site's actual markup.
+        // A real site wraps long "text" values across source lines without escaping the line break, which strict JSON forbids.
         var html = "<html><body><script type=\"application/ld+json\">\n" +
                     "{\n" +
                     "\"@type\": \"Recipe\",\n" +

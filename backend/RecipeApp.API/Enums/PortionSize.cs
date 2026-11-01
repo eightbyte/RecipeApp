@@ -1,8 +1,6 @@
 namespace RecipeApp.API.Enums;
 
-/// <summary>
-/// Portion multipliers applied at display/query time. Base recipe amounts are never modified.
-/// </summary>
+/// <summary>Portion multipliers applied at display or query time, never modifying base recipe amounts.</summary>
 public static class PortionSize
 {
     public const string Half    = "HALF";

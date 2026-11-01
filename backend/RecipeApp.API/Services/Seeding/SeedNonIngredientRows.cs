@@ -1,26 +1,8 @@
 namespace RecipeApp.API.Services.Seeding;
 
 /// <summary>
-/// Ingredient rows in the normalised corpus that are not ingredients — group headings and leaked
-/// notes — and the one operation that removes them before Stage 5 persists a recipe.
-///
-/// <para><b>Why a reviewed list rather than a rule.</b> Stage 3 drops a heading only when it is
-/// bolded <i>and</i> ends in a colon (§10.2b), so colon-less headings reach Stage 4 as ingredient
-/// lines, and the count invariant (§11.3) means Stage 4 must return a row for each. No signal
-/// in the artefact separates them from real food: "unquantified and used by no step" finds
-/// <c>Cookie Crust</c> but also <c>salt (optional)</c> and <c>cooking spray</c>, and misses
-/// <c>Dressing</c>, which the model links to the steps that make it. Nor can the skip key on a
-/// failed catalogue lookup (§24.4.1): <c>Cookie Crust</c>, <c>Dressing</c> and <c>Salad</c> all
-/// <i>resolve</i>, and would enter the database as ingredients with no error at all.</para>
-///
-/// <para><b>Keyed on the verbatim source line, never on a position.</b> Positions shift whenever a
-/// recipe is re-normalised with a different row count; the published line does not. An entry that
-/// matches nothing in its recipe is reported by the persister, so a stale entry is visible rather
-/// than silently inert.</para>
-///
-/// <para>Drafted from every unquantified row whose line reads as a title or a note, then read in
-/// context against the surrounding ingredient list (2026-09-28). <c>Toppings of your choice</c>
-/// was considered and kept — it is something to buy.</para>
+/// Ingredient rows in the normalised corpus that are not ingredients (group headings and leaked notes), keyed on the verbatim
+/// source line because no signal in the artefact separates them from real food and positions shift on re-normalisation.
 /// </summary>
 public static class SeedNonIngredientRows
 {
@@ -49,28 +31,18 @@ public static class SeedNonIngredientRows
             ["vegetable-medley-salsa-dip"]      = ["Fresh Salsa"],
             ["vinaigrette-salad-dressing"]      = ["Basic Vinaigrette"],
 
-            // ── Notes that leaked into the ingredient list (§10.3 hazard 5) ───
+            // ── Notes that leaked into the ingredient list ────
             ["crispy-walleye-patties"]          = ["Note: \"Minced\" means cut up into tiny pieces."],
             ["zesty-pasta-primavera-salad"]     =
                 ["*Other types of whole grain pasta may be used in place of the whole grain rotini."],
         };
 
-    /// <param name="Recipe">The recipe without the listed rows, every step index re-pointed.</param>
-    /// <param name="Removed">Rows dropped.</param>
-    /// <param name="Unmatched">Listed lines this recipe did not contain — a stale entry.</param>
+    /// <param name="Unmatched">Listed lines this recipe did not contain, which marks a stale entry.</param>
     public record Outcome(NormalisedSeedRecipe Recipe, int Removed, IReadOnlyList<string> Unmatched);
 
     /// <summary>
-    /// Removes the listed rows and re-points every step's <c>IngredientIndexes</c>.
-    ///
-    /// <para><b>The re-pointing is the whole difficulty.</b> Indexes are positional, so deleting row
-    /// <i>n</i> silently shifts every index above it — exactly the corruption §24.4.2 found in a
-    /// hand-edited artefact, where steps 5–7 each pointed one row off and only the overrun past the
-    /// end was detectable. A reference to a dropped row is removed rather than re-pointed: a step
-    /// that "uses" <c>Dressing</c> uses the rows listed under it, which it already references.</para>
-    ///
-    /// <para>Run this only after the artefact has been checked against <c>parsed/</c>: the count
-    /// invariant holds for the rows as Stage 4 wrote them, not after they are removed.</para>
+    /// Removes the listed rows and re-points every step's <c>IngredientIndexes</c>, dropping references to a removed row; run it only
+    /// after the artefact has been checked against <c>parsed/</c>.
     /// </summary>
     public static Outcome Remove(NormalisedSeedRecipe recipe)
     {
@@ -85,9 +57,7 @@ public static class SeedNonIngredientRows
         {
             var row = recipe.Ingredients[index];
 
-            // Remove one occurrence per listed line, so a recipe with two "Dressing" headings would
-            // need listing twice — a heading that happens to match a later real line cannot take
-            // that line with it.
+            // Remove one occurrence per listed line, so a heading that matches a later real line cannot take that line with it.
             if (pending.Remove(row.SourceText)) continue;
 
             newIndex[index] = kept.Count;

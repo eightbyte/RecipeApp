@@ -1,5 +1,4 @@
-# Decisions behind deploy/update.ps1 (Phase 11 §4.5), kept free of docker calls so they can be
-# tested. Windows PowerShell 5.1 compatible: Task Scheduler runs the updater with powershell.exe.
+# Decisions behind deploy/update.ps1, kept free of docker calls so Pester can test them (Windows PowerShell 5.1).
 
 Set-StrictMode -Version Latest
 

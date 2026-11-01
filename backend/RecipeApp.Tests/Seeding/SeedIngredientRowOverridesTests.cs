@@ -3,10 +3,7 @@ using RecipeApp.API.Services.Seeding;
 
 namespace RecipeApp.Tests.Seeding;
 
-/// <summary>
-/// Stage 5's row-level reassignment (Phase 10 D12): a listed row resolves to another catalogue
-/// entry, and nothing else in the recipe changes.
-/// </summary>
+/// <summary>Stage 5's row-level reassignment, where a listed row resolves to another catalogue entry and nothing else in the recipe changes.</summary>
 public class SeedIngredientRowOverridesTests
 {
     // Lists one line: "1 teaspoon fresh ginger, minced" → "ginger root".

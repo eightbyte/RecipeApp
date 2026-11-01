@@ -4,24 +4,10 @@ using Microsoft.Extensions.Options;
 
 namespace RecipeApp.API.Services.Seeding;
 
-/// <summary>
-/// Reads <c>seed-data/ingredient-catalogue.json</c> — the shipped, curated catalogue
-/// (Phase 10 §4.7).
-///
-/// <para><b>Read-only.</b> The file is edited by hand and nothing in the app writes it.
-/// <c>--build-catalogue</c> writes its derived catalogue through
-/// <see cref="CatalogueBuildFileStore"/> instead, so a re-run cannot overwrite the curation.</para>
-///
-/// <para>Deliberately <i>outside</i> <see cref="SeedCacheStore"/>'s tree. The cache under
-/// <c>seed-data/myplate/</c> is scratch that <c>--refresh-cache</c> is allowed to delete; this file
-/// is reviewed source that must survive it.</para>
-/// </summary>
+/// <summary>Reads <c>seed-data/ingredient-catalogue.json</c>, the shipped catalogue, read-only and kept outside the cache tree so <c>--refresh-cache</c> cannot delete it.</summary>
 public class IngredientCatalogueFileStore
 {
-    /// <summary>
-    /// Indented camelCase, matching <see cref="SeedCacheStore"/>. Indentation is not cosmetic here:
-    /// the catalogue files are reviewed and diffed by a human, and a one-line file is neither.
-    /// </summary>
+    /// <summary>Indented camelCase matching <see cref="SeedCacheStore"/>, because the catalogue files are reviewed and diffed by a human.</summary>
     internal static readonly JsonSerializerOptions JsonOptions = new()
     {
         PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
@@ -41,10 +27,7 @@ public class IngredientCatalogueFileStore
 
     public bool Exists() => File.Exists(Path);
 
-    /// <summary>
-    /// Reads the catalogue. Any <see cref="IngredientCatalogueFile.ContentVersion"/> is accepted; an
-    /// unknown <see cref="IngredientCatalogueFile.FormatVersion"/> is not.
-    /// </summary>
+    /// <summary>Reads the catalogue, accepting any <see cref="IngredientCatalogueFile.ContentVersion"/> but not an unknown <see cref="IngredientCatalogueFile.FormatVersion"/>.</summary>
     /// <exception cref="FileNotFoundException">The catalogue is missing.</exception>
     /// <exception cref="CatalogueValidationException">The file is unreadable, malformed or in a format this build cannot read.</exception>
     public async Task<IngredientCatalogueFile> LoadAsync(CancellationToken ct = default)
@@ -52,8 +35,7 @@ public class IngredientCatalogueFileStore
         if (!File.Exists(Path))
             throw new FileNotFoundException($"No ingredient catalogue at {Path}.", Path);
 
-        // The format is checked before the full read, so a file in another shape is reported as
-        // that rather than as whichever required property it happens to lack.
+        // The format is checked before the full read, so a file in another shape is reported as that rather than as whichever property it lacks.
         int? formatVersion;
         IngredientCatalogueFile? file;
         try
@@ -70,9 +52,7 @@ public class IngredientCatalogueFileStore
         }
         catch (JsonException ex)
         {
-            // Unlike the derived caches, this one is never silently rebuilt. It is reviewed,
-            // committed source: a corrupt copy means someone's edit broke it, and rebuilding over
-            // the top would destroy the evidence along with the edit.
+            // Unlike the derived caches this is never silently rebuilt, because a corrupt copy means someone's edit broke it.
             throw new CatalogueValidationException([$"{Path} is not readable as JSON — {ex.Message}"]);
         }
 

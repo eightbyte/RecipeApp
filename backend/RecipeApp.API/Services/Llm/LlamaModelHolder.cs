@@ -4,10 +4,7 @@ using Microsoft.Extensions.Options;
 
 namespace RecipeApp.API.Services.Llm;
 
-/// <summary>
-/// Owns the single loaded model and a concurrency gate. Registered as a singleton.
-/// Weights are null when ModelPath is not configured.
-/// </summary>
+/// <summary>Owns the single loaded model and a concurrency gate, registered as a singleton, with null weights when ModelPath is not configured.</summary>
 public sealed class LlamaModelHolder : IDisposable
 {
     public LLamaWeights? Weights { get; }
@@ -15,10 +12,7 @@ public sealed class LlamaModelHolder : IDisposable
     public SemaphoreSlim Gate { get; } = new(1, 1);
     public string[] StopStrings { get; }
 
-    /// <summary>
-    /// Decoder settings for every call against these weights. Held here, beside the model they
-    /// configure, so the client stays a translation from schema to grammar and back.
-    /// </summary>
+    /// <summary>Decoder settings for every call against these weights, held beside the model they configure.</summary>
     public LlmSamplingOptions Sampling { get; }
 
     private readonly LocalLlmOptions _local;

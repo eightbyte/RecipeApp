@@ -59,11 +59,10 @@ dotnet run -- seed-recipes [flags]      # MyPlate pipeline — see Services/Seed
 dotnet run -- import-recipes <pack.json> [--create-missing] [--force]   # Import a recipe pack
 ```
 
-`seed-catalogue` was retired in Phase 9.3. It exits 1 and names its replacement.
+`seed-catalogue` is retired. It exits 1 and names its replacement.
 
-`import-recipes` imports a **recipe pack**, the JSON format in `specs/phase-10-first-run-seed.md`
-§4.4. It migrates and runs a non-force `import-catalogue` first, so it works on an empty
-database. A pack is all or nothing, and every error is reported. Unknown ingredients are rejected
+`import-recipes` imports a **recipe pack**, the JSON format in `docs/recipe-packs.md`. It migrates
+and runs a non-force `import-catalogue` first, so it works on an empty database. A pack is all or nothing, and every error is reported. Unknown ingredients are rejected
 unless `--create-missing` adds them as `OTHER`. A recipe whose `sourceUrl` already exists is
 skipped unless `--force` replaces it, and a recipe a meal plan uses is never replaced. Exit code
 0 on success, 1 on any validation failure. `--force` here never force-imports the catalogue.
@@ -124,7 +123,7 @@ defaults live in the committed `appsettings.json`. Nothing secret goes there.
   Set `Llm__Local__ModelPath=""` to start without the GPU.
 - **Creating a meal plan closes the active one.** Run end-to-end checks against a clone:
   `CREATE DATABASE x TEMPLATE recipeapp`, then point `ConnectionStrings__DefaultConnection` at it.
-- **Databases created before Phase 9.3 hold legacy ingredient rows.** Examples are `onions`,
-  `tomato` and `plain flour`. A name outranks an alias, so these rows capture names the catalogue
-  meant as aliases, which splits shopping-list lines and hides densities. A non-force
+- **Databases that predate the curated catalogue hold legacy ingredient rows.** Examples are
+  `onions`, `tomato` and `plain flour`. A name outranks an alias, so these rows capture names the
+  catalogue meant as aliases, which splits shopping-list lines and hides densities. A non-force
   `import-catalogue` leaves them in place. A fresh database does not have them.

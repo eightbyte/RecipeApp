@@ -4,42 +4,18 @@ using RecipeApp.API.Data;
 
 namespace RecipeApp.API.Services.Seeding;
 
-/// <summary>
-/// Drives the offline half of the seed import: the stages that run against the local cache rather
-/// than the archive.
-///
-/// <para>Stages 3 (parse), 4 (LLM normalise) and 5 (persist). All three walk the same manifest and
-/// share the same per-slug isolation and resume behaviour.</para>
-/// </summary>
+/// <summary>Drives the offline half of the seed import (Stages 3, 4 and 5), which runs against the local cache and shares one per-slug isolation and resume behaviour.</summary>
 public interface IRecipeLibrarySeeder
 {
-    /// <summary>
-    /// Stage 3. Turns every cached page into a <see cref="ParsedSeedRecipe"/> under
-    /// <c>parsed/</c>, skipping recipes already parsed.
-    /// </summary>
-    /// <param name="manifest">Entries to parse, in manifest order.</param>
-    /// <param name="limit">Maximum number of unparsed recipes to handle this run; null for all.</param>
-    /// <param name="force">Re-parse recipes whose output is already cached.</param>
+    /// <summary>Stage 3: turns every cached page into a <see cref="ParsedSeedRecipe"/> under <c>parsed/</c>, skipping recipes already parsed.</summary>
     Task<SeedParseResult> ParseAsync(
         SeedManifest manifest, int? limit = null, bool force = false, CancellationToken ct = default);
 
-    /// <summary>
-    /// Stage 4. Runs every parsed recipe through the LLM pass and the §11.3 validation gate,
-    /// writing the admitted result to <c>normalised/</c>.
-    /// </summary>
-    /// <param name="manifest">Entries to normalise, in manifest order.</param>
-    /// <param name="limit">Maximum number of recipes to normalise this run; null for all.</param>
-    /// <param name="force">Re-run the LLM pass for recipes whose output is already cached.</param>
+    /// <summary>Stage 4: runs every parsed recipe through the LLM pass and the validation gate, writing the admitted result to <c>normalised/</c>.</summary>
     Task<SeedNormaliseResult> NormaliseAsync(
         SeedManifest manifest, int? limit = null, bool force = false, CancellationToken ct = default);
 
-    /// <summary>
-    /// Stage 5. Persists every normalised recipe through <c>ConfirmAsync</c>, skipping recipes whose
-    /// <c>SourceUrl</c> is already in the database. No LLM, and the catalogue must already be loaded.
-    /// </summary>
-    /// <param name="manifest">Entries to persist, in manifest order.</param>
-    /// <param name="limit">Maximum number of recipes to persist this run; null for all.</param>
-    /// <param name="force">Replace recipes already in the database rather than skipping them.</param>
+    /// <summary>Stage 5: persists every normalised recipe through <c>ConfirmAsync</c>, skipping recipes already in the database, with no LLM and the catalogue already loaded.</summary>
     Task<SeedPersistResult> PersistAsync(
         SeedManifest manifest, int? limit = null, bool force = false, CancellationToken ct = default);
 }
@@ -62,10 +38,7 @@ public class RecipeLibrarySeeder(
     {
         cache.EnsureDirectories();
 
-        // Progress is held in memory and flushed once. The harvest flushes after every page because
-        // each one costs a couple of seconds of network and losing it means re-downloading; parsing
-        // the whole corpus takes seconds, and the resume guarantee comes from the parsed/ files
-        // themselves — state.json is derived bookkeeping either way (§5.2).
+        // Progress is held in memory and flushed once, because parsing is fast and the parsed/ files are the real resume record.
         var state = await cache.LoadStateAsync(ct);
 
         var parsed = 0;
@@ -87,8 +60,7 @@ public class RecipeLibrarySeeder(
 
                 if (!SeedCacheStore.IsValidSlug(entry.Slug))
                 {
-                    // Discovery rejects these, so reaching here means a hand-edited manifest.
-                    // Recording it beats letting ValidateSlug throw and take the run down.
+                    // Discovery rejects these, so reaching here means a hand-edited manifest, and recording it beats letting ValidateSlug throw.
                     failures[entry.Slug] = "UnusableSlug: not safe to use as a cache filename";
                     continue;
                 }
@@ -131,8 +103,7 @@ public class RecipeLibrarySeeder(
                 }
                 catch (Exception ex) when (ex is SeedParseException or IOException)
                 {
-                    // §10.4: a page that cannot be read is recorded and skipped. One bad page must
-                    // not abort a thousand-recipe run.
+                    // A page that cannot be read is recorded and skipped, so one bad page never aborts the run.
                     var reason = ex is SeedParseException parseFailure
                         ? parseFailure.StateReason
                         : $"ParseFailed: cached page unreadable — {ex.Message}";
@@ -148,8 +119,7 @@ public class RecipeLibrarySeeder(
         }
         finally
         {
-            // Cancellation still flushes: Ctrl+C part-way through must leave the run resumable
-            // rather than discarding what it managed to parse.
+            // Cancellation still flushes, so Ctrl+C part-way through leaves the run resumable.
             await cache.SaveStateAsync(CancellationToken.None);
         }
 
@@ -187,16 +157,8 @@ public class RecipeLibrarySeeder(
         var aborted    = false;
         var failures   = new Dictionary<string, string>(StringComparer.Ordinal);
 
-        // One bad recipe never aborts a run (§16) — but an unloaded model, an exhausted GPU or a
-        // broken grammar fails every recipe the same way, and grinding through a thousand of those
-        // helps nobody.
-        //
-        // Only a systemic failure counts (SeedNormaliseFailureExtensions.IsSystemic). Counting
-        // content rejections here wedged the corpus pass completely: cached successes are skipped
-        // before this counter is reached, so on a resumed run every recipe attempted below the
-        // high-water mark is one that already failed, and those failures reproduce. The guard fired
-        // on the first five of a thirty-recipe backlog and stopped at manifest position 77 with
-        // nothing normalised, never reaching the 744 recipes never tried — every re-run identically.
+        // Only systemic failures count towards aborting, because an unavailable model fails every recipe identically while counting
+        // content rejections wedged resumed runs (see SeedNormaliseFailureExtensions.IsSystemic).
         var consecutiveSystemicFailures = 0;
 
         var total = manifest.Recipes.Count;
@@ -236,9 +198,7 @@ public class RecipeLibrarySeeder(
                             continue;
                         }
 
-                        // The page was re-parsed since this was produced, so the LLM answered a
-                        // question that is no longer being asked. Redone rather than kept — silent
-                        // staleness is the failure mode a cache between stages invites.
+                        // The page was re-parsed since this was produced, so redo it rather than keep silently stale output.
                         stale++;
                         logger.LogInformation(
                             "[{Position}/{Total}] {Slug} → re-normalising: the parsed recipe " +
@@ -251,8 +211,7 @@ public class RecipeLibrarySeeder(
                 var parsed = await cache.TryLoadParsedAsync(entry.Slug, ct);
                 if (parsed is null)
                 {
-                    // The fingerprint proved a file exists, so this is a corrupt one. Stage 3 will
-                    // rewrite it for free; there is nothing for Stage 4 to spend a GPU pass on.
+                    // The fingerprint proved a file exists, so this is a corrupt one that Stage 3 will rewrite for free.
                     notParsed++;
                     continue;
                 }
@@ -280,19 +239,13 @@ public class RecipeLibrarySeeder(
                 }
                 catch (SeedNormaliseException ex)
                 {
-                    // §11.3: after the final retry the recipe is excluded. A wrong recipe is worse
-                    // than a missing one — an implausible quantity silently corrupts every shopping
-                    // list it appears in.
+                    // After the final retry the recipe is excluded, because a wrong recipe is worse than a missing one.
                     failures[entry.Slug] = ex.StateReason;
                     slugState.Stage     = SeedStage.Failed;
                     slugState.Attempts += ex.Attempts;
                     slugState.LastError = ex.StateReason;
 
-                    // A content rejection means the model answered, the grammar held and the gate
-                    // disagreed with the answer — evidence the pipeline works, never evidence it is
-                    // broken. It leaves the counter alone rather than resetting it, exactly as a
-                    // skip does, so an interleaved bad recipe cannot mask a model that is genuinely
-                    // unavailable.
+                    // A content rejection proves the pipeline works, so it leaves the counter alone rather than resetting it.
                     if (ex.Failure.IsSystemic()) consecutiveSystemicFailures++;
 
                     logger.LogWarning("[{Position}/{Total}] {Slug} → {Reason}",
@@ -346,16 +299,14 @@ public class RecipeLibrarySeeder(
 
         var state = await cache.LoadStateAsync(ct);
 
-        // Loaded once per run, not once per recipe: the catalogue does not change during Stage 5 —
-        // that is the point of Phase 9.3 — so every recipe resolves against the same dictionary.
+        // Load the catalogue once per run, since it does not change during Stage 5.
         SeedCatalogueResolver.CatalogueLookup lookup;
         HashSet<string> persistedUrls;
         using (var runScope = scopeFactory.CreateScope())
         {
             lookup = await runScope.ServiceProvider.GetRequiredService<SeedCatalogueResolver>().LoadAsync(ct);
 
-            // §13: SourceUrl is the natural key. Read up front so re-running an imported library is
-            // a pass over files, not a thousand queries.
+            // SourceUrl is the natural key, read up front so re-running an imported library is a pass over files rather than a thousand queries.
             var db = runScope.ServiceProvider.GetRequiredService<AppDbContext>();
             persistedUrls = (await db.Recipes
                     .Where(recipe => recipe.SourceUrl != null)
@@ -430,8 +381,7 @@ public class RecipeLibrarySeeder(
                         throw new SeedPersistException(SeedPersistFailure.StaleArtefact,
                             "no readable parsed recipe to check the artefact against; re-run --parse");
 
-                    // A fresh scope per recipe: a failed save leaves its DbContext unusable, and one
-                    // bad recipe must never take the rest of the run with it (§16).
+                    // A fresh scope per recipe, because a failed save leaves its DbContext unusable and one bad recipe must not take the rest of the run.
                     using var scope  = scopeFactory.CreateScope();
                     var persister    = scope.ServiceProvider.GetRequiredService<SeedRecipePersister>();
                     var prepared     = persister.Prepare(recipe, parsed, fingerprint, lookup);

@@ -1,9 +1,6 @@
 /**
- * Axios instance pre-configured for the RecipeApp API.
- *
- * Base URL is read from VITE_API_BASE_URL environment variable:
- *  - Development:  http://localhost:5000/api/v1  (direct to .NET API)
- *  - Production:   /api/v1                        (proxied via Nginx)
+ * Axios instance for the RecipeApp API, with its base URL read from VITE_API_BASE_URL
+ * (the .NET API directly in development, /api/v1 proxied via Nginx in production).
  */
 import axios from 'axios'
 

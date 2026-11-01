@@ -6,10 +6,7 @@ using RecipeApp.API.Models;
 
 namespace RecipeApp.API.DTOs;
 
-/// <summary>
-/// Static mapping helpers. Pure functions: entity in, DTO out.
-/// No reflection, no magic — straightforward and easy to trace.
-/// </summary>
+/// <summary>Static mapping helpers: pure functions from entity to DTO, with no reflection.</summary>
 public static class Mappings
 {
     // ── Ingredient ────────────────────────────────────────────────────────────

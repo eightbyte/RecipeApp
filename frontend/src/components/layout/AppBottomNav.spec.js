@@ -14,8 +14,7 @@ const routes = [
   { path: '/shopping', name: 'shopping', component: { template: '<div/>' } },
 ]
 
-// VBottomNavigation requires Vuetify's layout context (provided by VApp).
-// Wrap in a root VApp component so the layout provider is available.
+// VBottomNavigation requires Vuetify's layout context, so wrap it in a root VApp.
 async function mountNav() {
   const router = createRouter({ history: createWebHashHistory(), routes })
   await router.push('/')

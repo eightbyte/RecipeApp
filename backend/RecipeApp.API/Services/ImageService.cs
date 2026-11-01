@@ -34,11 +34,7 @@ public class ImageService(IConfiguration config, IWebHostEnvironment env)
         return (true, null);
     }
 
-    /// <summary>
-    /// Checks an image already on disk against the upload rules (extension and size) before
-    /// <see cref="ImportAsync"/> copies it. For importers that must report every problem up front
-    /// rather than fail halfway through copying.
-    /// </summary>
+    /// <summary>Checks an image already on disk against the upload rules before <see cref="ImportAsync"/> copies it, so importers can report every problem up front.</summary>
     /// <returns>Null when the file can be imported; otherwise why not.</returns>
     public string? ValidateImportSource(string sourcePath)
     {
@@ -69,13 +65,7 @@ public class ImageService(IConfiguration config, IWebHostEnvironment env)
         return PublicPathPrefix + fileName;
     }
 
-    /// <summary>
-    /// Copies an image already on disk into storage under a caller-chosen name, overwriting any file
-    /// of that name. For the Phase 9 seed import, whose photos are harvested files rather than
-    /// uploads and whose names must be deterministic so a re-import replaces its own photo, and for
-    /// recipe packs (Phase 10 §4.4.2).
-    /// </summary>
-    /// <param name="sourcePath">The image to copy.</param>
+    /// <summary>Copies an image already on disk into storage under a caller-chosen name, overwriting any file of that name, so re-imports replace their own photo.</summary>
     /// <param name="fileNameStem">Name without extension; the source's extension is kept.</param>
     /// <returns>The public URL, in the same form <see cref="SaveAsync"/> returns.</returns>
     public async Task<string> ImportAsync(string sourcePath, string fileNameStem, CancellationToken ct = default)
@@ -84,8 +74,7 @@ public class ImageService(IConfiguration config, IWebHostEnvironment env)
         if (!AllowedExtensions.Contains(ext))
             throw new InvalidOperationException($"Unsupported image type '{ext}' for {sourcePath}.");
 
-        // The stem is a validated slug with a fixed prefix, but a path separator in it would write
-        // outside storage, so it is refused here rather than trusted.
+        // The stem is a validated slug with a fixed prefix, but a path separator in it would write outside storage, so it is refused.
         if (fileNameStem.IndexOfAny(Path.GetInvalidFileNameChars()) >= 0)
             throw new ArgumentException($"'{fileNameStem}' is not a usable file name.", nameof(fileNameStem));
 

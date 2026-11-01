@@ -80,8 +80,7 @@ describe('RecipesView', () => {
   })
 
   it('renders a speed-dial FAB for creating a new recipe', async () => {
-    // The "Add manually" VBtn lives inside VSpeedDial's overlay (only rendered when open).
-    // We verify the dial itself is present and the activator FAB renders.
+    // The "Add manually" button is only rendered when VSpeedDial's overlay is open, so verify the dial and activator instead.
     const { wrapper } = await mountView()
     const dial = wrapper.findComponent({ name: 'VSpeedDial' })
     expect(dial.exists()).toBe(true)

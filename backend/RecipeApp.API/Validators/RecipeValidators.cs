@@ -10,10 +10,7 @@ public class RecipeIngredientRequestValidator : AbstractValidator<RecipeIngredie
     {
         RuleFor(x => x.IngredientId).NotEmpty();
 
-        // Amount and Unit are null together or set together. Null asserts "this ingredient has no
-        // stated quantity" (Phase 9.1 §3.1); a half-set pair is a half-written row, and a unit with
-        // no amount fabricates a measurement exactly as a mass derived from an unknown density
-        // would. Zero is still rejected — it is a quantity, and a wrong one.
+        // Amount and Unit are null together or set together: a half-set pair is a half-written row, and zero is still rejected as a wrong quantity.
         RuleFor(x => x.Amount)
             .GreaterThan(0)
             .When(x => x.Amount.HasValue)

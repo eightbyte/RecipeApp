@@ -6,15 +6,7 @@ using RecipeApp.API.Validators;
 
 namespace RecipeApp.API.Services.Seeding;
 
-/// <summary>
-/// Stage 5 for one recipe (Phase 9 §12): re-validates the normalised artefact, prepares it, and
-/// persists it through <c>ConfirmAsync</c> — the same code path a user-confirmed scrape takes, so
-/// there is no parallel persistence logic.
-///
-/// <para>Scoped, like the <c>AppDbContext</c> it shares with <c>RecipeScrapeService</c>: the runner
-/// opens a fresh scope per recipe, so one failed save cannot leave a poisoned change tracker behind
-/// for the next.</para>
-/// </summary>
+/// <summary>Stage 5 for one recipe: re-validates the normalised artefact, prepares it and persists it through <c>ConfirmAsync</c>, the same path a user-confirmed scrape takes.</summary>
 public class SeedRecipePersister(
     AppDbContext db,
     SeedCatalogueResolver resolver,
@@ -27,13 +19,6 @@ public class SeedRecipePersister(
     private readonly RecipeSeedingOptions _options = options.Value;
 
     /// <summary>A recipe ready to hand to <c>ConfirmAsync</c>, with what preparing it changed.</summary>
-    /// <param name="Request">The confirm request, ingredients resolved against the catalogue.</param>
-    /// <param name="NonIngredientRowsRemoved">Heading and note rows dropped.</param>
-    /// <param name="StaleSkipListLines">Skip-list lines the recipe did not contain.</param>
-    /// <param name="RowsReassigned">Rows <see cref="SeedIngredientRowOverrides"/> moved to another entry.</param>
-    /// <param name="StaleRowOverrideLines">Override lines the recipe did not contain.</param>
-    /// <param name="AmountsDropped">Rows whose unexplained amount was dropped.</param>
-    /// <param name="BelowQualityThreshold">Whether the §18 Q3 filter would exclude it.</param>
     public record PreparedSeedRecipe(
         ScrapeConfirmRequest Request,
         int NonIngredientRowsRemoved,
@@ -45,14 +30,7 @@ public class SeedRecipePersister(
 
     // ── Preparation (no database) ─────────────────────────────────────────────
 
-    /// <summary>
-    /// Everything Stage 5 decides about a recipe before touching the database, in the order it has
-    /// to happen.
-    /// </summary>
-    /// <param name="recipe">The normalised artefact.</param>
-    /// <param name="parsed">The parsed recipe it claims to be derived from.</param>
-    /// <param name="parsedFingerprint">The fingerprint of that parsed file as it is on disk now.</param>
-    /// <param name="lookup">The catalogue, loaded once per run.</param>
+    /// <summary>Everything Stage 5 decides about a recipe before touching the database, in the order it has to happen.</summary>
     /// <exception cref="SeedPersistException">The recipe must not be persisted.</exception>
     public PreparedSeedRecipe Prepare(
         NormalisedSeedRecipe recipe,
@@ -60,19 +38,16 @@ public class SeedRecipePersister(
         string parsedFingerprint,
         SeedCatalogueResolver.CatalogueLookup lookup)
     {
-        // 1. Re-assert the artefact against its source (§24.4.2). Nothing re-validates normalised/
-        //    between Stages 4 and 5, and a hand-edited file broke all three of these invariants
-        //    while looking half-right. Checked on the rows as Stage 4 wrote them — before step 2
-        //    removes any, because the pairing holds only for the full set.
+        // 1. Re-assert the artefact against its source on the rows as Stage 4 wrote them, because nothing else re-validates
+        //    normalised/ and a hand edit can look half-right.
         EnsureDerivedFrom(recipe, parsed, parsedFingerprint);
 
-        // 2. Group headings and leaked notes are not ingredients. Then rows the normaliser named
-        //    less specifically than their line are moved to the right entry (Phase 10 D12).
+        // 2. Drop group headings and leaked notes, then move rows the normaliser named less specifically than their line.
         var skipped    = SeedNonIngredientRows.Remove(recipe);
         var overridden = SeedIngredientRowOverrides.Apply(skipped.Recipe);
         var working    = overridden.Recipe;
 
-        // 3. Unexplained multi-number amounts (§24.3a) are stored unquantified, not persisted wrong.
+        // 3. Store unexplained multi-number amounts as unquantified rather than persist them wrong.
         var (ingredients, amountsDropped) = DropUnexplainedAmounts(working);
         working = working with { Ingredients = ingredients };
 
@@ -82,12 +57,11 @@ public class SeedRecipePersister(
                 $"{working.Ingredients.Count} ingredients and {working.Steps.Count} steps; the filter " +
                 $"requires {_options.QualityMinimumIngredients} and {_options.QualityMinimumSteps}.");
 
-        // 4. The page notes have no column of their own and §19 rules out a migration, so they join
-        //    the description rather than being lost.
+        // 4. The page notes have no column of their own, so they join the description rather than being lost.
         working = working with { Description = ComposeDescription(working) };
         EnsureWithinRecipeLimits(working);
 
-        // 5. Catalogue resolution — a dictionary lookup, zero LLM calls (§12.1).
+        // 5. Catalogue resolution is a dictionary lookup with zero LLM calls.
         ScrapeConfirmRequest request;
         try
         {
@@ -123,16 +97,7 @@ public class SeedRecipePersister(
                         $"step {step.StepNumber} points at ingredient {index} of {recipe.Ingredients.Count}");
     }
 
-    /// <summary>
-    /// Stores a row whose amount its own line cannot account for as unquantified.
-    ///
-    /// <para>The alternative choices were worse: persisting <c>13.333 cups</c> of vinaigrette puts it in
-    /// every shopping list the recipe reaches, and excluding the recipe loses the other rows over
-    /// one. <c>SourceAmount</c>/<c>SourceUnit</c> go with the amount, because they would record the
-    /// misread rather than the source. The published line is appended to <c>Notes</c> so the
-    /// quantity the cook needs is still on screen — <c>RecipeIngredient</c> has no column for the
-    /// line itself.</para>
-    /// </summary>
+    /// <summary>Stores a row whose amount its own line cannot account for as unquantified, appending the published line to <c>Notes</c> so the cook still sees the quantity.</summary>
     private (IReadOnlyList<NormalisedSeedIngredient> Ingredients, int Dropped) DropUnexplainedAmounts(
         NormalisedSeedRecipe recipe)
     {
@@ -167,10 +132,7 @@ public class SeedRecipePersister(
         recipe.Ingredients.Count < _options.QualityMinimumIngredients
         || recipe.Steps.Count < _options.QualityMinimumSteps;
 
-    /// <summary>
-    /// Description, page notes, adapted-source credit and the attribution note, as paragraphs.
-    /// Stage 3 kept them separate precisely so this could be decided here (§22.1).
-    /// </summary>
+    /// <summary>Description, page notes, adapted-source credit and the attribution note, as paragraphs.</summary>
     internal string? ComposeDescription(NormalisedSeedRecipe recipe)
     {
         var notes      = StripLinkList(recipe.Notes, _options.NotesLinkListMarker);
@@ -182,15 +144,7 @@ public class SeedRecipePersister(
         return paragraphs.Count == 0 ? null : string.Join("\n\n", paragraphs);
     }
 
-    /// <summary>
-    /// Removes MyPlate's related-foods link list (<c>Learn more about: Garlic Turnips Onions</c>) from
-    /// the page notes: navigation, not content. 969 of the 1,048 recipes with notes carry it, and for
-    /// 529 it is all there is.
-    ///
-    /// <para>Only the marker's own line goes. It usually ends the notes, but on 23 recipes real content
-    /// follows on a later line — a storage tip, a substitution, a footnote — and that is kept. Text
-    /// before the marker on the same line is kept too.</para>
-    /// </summary>
+    /// <summary>Removes MyPlate's related-foods link list from the page notes, dropping only the marker's own line because real content can follow it.</summary>
     /// <returns>The remaining notes, or null when the link list was all there was.</returns>
     internal static string? StripLinkList(string? notes, string? marker)
     {
@@ -207,10 +161,7 @@ public class SeedRecipePersister(
         return remaining.Length == 0 ? null : remaining;
     }
 
-    /// <summary>
-    /// <c>ConfirmAsync</c> validates nothing, so a recipe outside the edit form's limits would be
-    /// importable but never saveable again from the UI.
-    /// </summary>
+    /// <summary><c>ConfirmAsync</c> validates nothing, so this keeps a recipe within the edit form's limits or it could never be saved again from the UI.</summary>
     private static void EnsureWithinRecipeLimits(NormalisedSeedRecipe recipe)
     {
         var problems = new List<string>();
@@ -236,13 +187,8 @@ public class SeedRecipePersister(
 
     // ── Persistence ───────────────────────────────────────────────────────────
 
-    /// <summary>
-    /// Writes a prepared recipe, and its photo if one was harvested, in one transaction.
-    /// </summary>
-    /// <param name="slug">Cache key, used to find the photo.</param>
-    /// <param name="prepared">The output of <see cref="Prepare"/>.</param>
+    /// <summary>Writes a prepared recipe, and its photo if one was harvested, in one transaction.</summary>
     /// <param name="replaceExisting">Delete a recipe with the same <c>SourceUrl</c> first (<c>--force</c>).</param>
-    /// <returns>Whether an existing recipe was replaced, and whether a photo was attached.</returns>
     /// <exception cref="SeedPersistException">The existing recipe is in a meal plan.</exception>
     public async Task<(bool Replaced, bool HasImage)> PersistAsync(
         string slug, PreparedSeedRecipe prepared, bool replaceExisting, CancellationToken ct = default)
@@ -257,8 +203,7 @@ public class SeedRecipePersister(
 
         var created = await scrapeService.ConfirmAsync(prepared.Request, ct);
 
-        // ConfirmAsync has no image field — the scrape flow attaches photos by upload, afterwards.
-        // Same here, inside the same transaction, so a recipe is never committed half-imported.
+        // ConfirmAsync has no image field, so attach the photo here inside the same transaction and a recipe is never committed half-imported.
         var imagePath = cache.FindImage(slug);
         if (imagePath is not null)
         {
@@ -272,10 +217,7 @@ public class SeedRecipePersister(
         return (replaced, imagePath is not null);
     }
 
-    /// <summary>
-    /// Deletes the recipes carrying <paramref name="sourceUrl"/>; cascade removes their ingredients,
-    /// steps and step links. Refuses when a meal plan references one.
-    /// </summary>
+    /// <summary>Deletes the recipes carrying <paramref name="sourceUrl"/> with their dependents, refusing when a meal plan references one.</summary>
     private async Task<bool> DeleteExistingAsync(string sourceUrl, CancellationToken ct)
     {
         var existing = await db.Recipes.Where(recipe => recipe.SourceUrl == sourceUrl).ToListAsync(ct);

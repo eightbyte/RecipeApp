@@ -29,10 +29,7 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
             e.Property(i => i.GramsPerMillilitre).HasPrecision(8, 4);
             e.Property(i => i.CreatedAt).HasDefaultValueSql("NOW()");
 
-            // text[], defaulting to empty rather than null so every consumer can enumerate it
-            // without a guard. Deliberately unindexed: every caller already loads the whole
-            // catalogue to build an in-memory dictionary (Phase 9.3 §4.6), so the lookup is never
-            // a query, and at ~1,100 rows a GIN index would cost writes to serve nothing.
+            // text[] defaulting to empty so every consumer can enumerate it, and deliberately unindexed because callers load the whole catalogue into a dictionary.
             e.Property(i => i.Aliases).HasDefaultValueSql("'{}'::text[]");
         });
 
@@ -146,13 +143,12 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
                 .OnDelete(DeleteBehavior.Restrict);
         });
 
-        // ── SeedLedgerEntry (Phase 10 §4.1) ───────────────────────────────────
+        // ── SeedLedgerEntry ───────────────────────────────────────────────────
         modelBuilder.Entity<SeedLedgerEntry>(e =>
         {
             e.ToTable("SeedLedger");
 
-            // The natural key is the guard: a second insert for the same step fails, so two
-            // hosts racing on a fresh database cannot both record (and both run) a step.
+            // The natural key is the guard, so two hosts racing on a fresh database cannot both record a step.
             e.HasKey(l => l.Key);
             e.Property(l => l.Key).ValueGeneratedNever();
             e.Property(l => l.AppliedAt).HasDefaultValueSql("NOW()");

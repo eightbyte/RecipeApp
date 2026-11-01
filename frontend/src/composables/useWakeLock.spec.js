@@ -1,8 +1,7 @@
 import { mount, flushPromises } from '@vue/test-utils'
 import { useWakeLock } from './useWakeLock'
 
-// Mount a throwaway component so the composable runs inside a real setup()
-// (onMounted/onUnmounted hooks need a component instance).
+// Mount a throwaway component so the composable runs inside a real setup() with a component instance.
 function mountWith() {
   let api
   const Comp = {

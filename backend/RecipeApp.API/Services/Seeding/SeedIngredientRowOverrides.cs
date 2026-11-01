@@ -1,31 +1,12 @@
 namespace RecipeApp.API.Services.Seeding;
 
 /// <summary>
-/// MyPlate ingredient rows that resolve to a different catalogue entry than their normalised name
-/// says, and the one operation that reassigns them before Stage 5 resolves a recipe (Phase 10
-/// §4.7, D12).
-///
-/// <para><b>Why rows and not the catalogue.</b> Catalogue curation works on names: a fold moves
-/// every row carrying a name. But the Phase 9 normaliser sometimes gave a row a name less specific
-/// than its own line. <c>1/2 cup cheese, reduced-fat sharp cheddar, shredded</c> was filed as
-/// <c>cheese</c>, and <c>1 tablespoon ginger, minced</c> as the ground spice. No fold can move
-/// those rows without moving the generic ones with them. This table moves them one at a time.</para>
-///
-/// <para><b>Why not edit <c>normalised/</c>.</b> It is a gitignored cache that
-/// <c>--normalise --force</c> rewrites, so an edit there would be lost. This table is reviewed
-/// source, like <see cref="SeedNonIngredientRows"/>.</para>
-///
-/// <para><b>Keyed on the verbatim source line, never on a position</b>, for the same reason as
-/// <see cref="SeedNonIngredientRows"/>. An entry that matches nothing in its recipe is reported
-/// by the persister, so a stale entry is visible rather than silently inert. Every target must be
-/// an entry name in the shipped catalogue; a test enforces it.</para>
-///
-/// <para>Only MyPlate imports read this. The shipped catalogue and recipe packs are unaffected.</para>
+/// MyPlate ingredient rows that resolve to a different catalogue entry than their normalised name says, keyed on the verbatim
+/// source line because a catalogue fold cannot move one row without moving the generic ones with it.
 /// </summary>
 public static class SeedIngredientRowOverrides
 {
-    /// <param name="SourceText">The row's verbatim source line. Matched exactly, case-sensitively.</param>
-    /// <param name="CatalogueName">The catalogue entry name the row resolves to instead.</param>
+    /// <param name="SourceText">The row's verbatim source line, matched exactly and case-sensitively.</param>
     public record RowOverride(string SourceText, string CatalogueName);
 
     /// <summary>Rows to reassign, per slug.</summary>
@@ -100,18 +81,10 @@ public static class SeedIngredientRowOverrides
             ["turkey-burgers"] = [new("1/4 teaspoon parsley, dried (or fresh chopped)", "dried parsley")],
         };
 
-    /// <param name="Recipe">The recipe with the listed rows renamed to their catalogue entry.</param>
-    /// <param name="Reassigned">Rows renamed.</param>
-    /// <param name="Unmatched">Listed lines this recipe did not contain — a stale entry.</param>
+    /// <param name="Unmatched">Listed lines this recipe did not contain, which marks a stale entry.</param>
     public record Outcome(NormalisedSeedRecipe Recipe, int Reassigned, IReadOnlyList<string> Unmatched);
 
-    /// <summary>
-    /// Renames each listed row to its catalogue entry. Positions are unchanged, so step indexes
-    /// need no re-pointing.
-    ///
-    /// <para>Run after <see cref="SeedNonIngredientRows.Remove"/>, so a heading can never be
-    /// reassigned instead of removed.</para>
-    /// </summary>
+    /// <summary>Renames each listed row to its catalogue entry, run after <see cref="SeedNonIngredientRows.Remove"/> so a heading is never reassigned instead of removed.</summary>
     public static Outcome Apply(NormalisedSeedRecipe recipe)
     {
         if (!BySlug.TryGetValue(recipe.Slug, out var listed))
@@ -123,8 +96,7 @@ public static class SeedIngredientRowOverrides
 
         foreach (var row in recipe.Ingredients)
         {
-            // One override per occurrence, as in SeedNonIngredientRows: a line listed once
-            // reassigns one row, so a duplicate line elsewhere in the recipe keeps its own name.
+            // One override per occurrence, so a duplicate line elsewhere in the recipe keeps its own name.
             var match = pending.FindIndex(entry => entry.SourceText == row.SourceText);
             if (match < 0)
             {

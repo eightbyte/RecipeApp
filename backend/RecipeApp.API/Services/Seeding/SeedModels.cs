@@ -1,10 +1,6 @@
 namespace RecipeApp.API.Services.Seeding;
 
-/// <summary>
-/// Furthest pipeline stage a slug has reached. Ordered, so <see cref="SeedSlugState.HasReached"/>
-/// can answer "is this already done?" with a comparison — except <see cref="Failed"/>, which is
-/// terminal rather than advanced and is excluded from that comparison explicitly.
-/// </summary>
+/// <summary>Furthest pipeline stage a slug has reached, ordered so progress is a comparison, except <see cref="Failed"/>, which is terminal and excluded from it explicitly.</summary>
 public enum SeedStage
 {
     Discovered,
@@ -17,10 +13,7 @@ public enum SeedStage
 
 // ── manifest.json (Stage 1 output) ────────────────────────────────────────────
 
-/// <summary>
-/// The discovered corpus: one entry per recipe slug, each pinned to a specific archive snapshot.
-/// Committed to git, so a re-harvest on another machine reads the same captures.
-/// </summary>
+/// <summary>The discovered corpus: one entry per recipe slug, each pinned to an archive snapshot and committed so a re-harvest reads the same captures.</summary>
 public record SeedManifest
 {
     public const int CurrentVersion = 1;
@@ -31,18 +24,12 @@ public record SeedManifest
     public IReadOnlyList<SeedManifestEntry> Recipes { get; init; } = [];
 }
 
-/// <param name="Slug">Canonical recipe slug — also the cache filename key.</param>
 /// <param name="Timestamp">Wayback capture stamp, <c>yyyyMMddHHmmss</c>.</param>
-/// <param name="OriginalUrl">The URL as archived, used verbatim to build the snapshot URL.</param>
 public record SeedManifestEntry(string Slug, string Timestamp, string OriginalUrl);
 
 // ── state.json (per-slug progress) ────────────────────────────────────────────
 
-/// <summary>
-/// Per-slug stage progress, rewritten after every page so an interrupted run resumes instead of
-/// restarting. Treated as disposable: a corrupt file is discarded, and the cache directories
-/// themselves are the real record of what has been done.
-/// </summary>
+/// <summary>Per-slug stage progress, rewritten after every page so an interrupted run resumes; it is disposable because the cache directories are the real record.</summary>
 public class SeedState
 {
     public const int CurrentVersion = 1;
@@ -62,10 +49,7 @@ public class SeedState
         return slugState;
     }
 
-    /// <summary>
-    /// Rewinds every slug to <see cref="SeedStage.Discovered"/>, for <c>--refresh-cache</c>:
-    /// once the cached HTML is gone, no later stage can honestly claim to be complete.
-    /// </summary>
+    /// <summary>Rewinds every slug to <see cref="SeedStage.Discovered"/> for <c>--refresh-cache</c>, since no later stage can claim to be complete once the cached HTML is gone.</summary>
     public void RewindToDiscovered()
     {
         foreach (var slugState in Slugs.Values)
@@ -83,20 +67,13 @@ public class SeedSlugState
     public int Attempts { get; set; }
     public string? LastError { get; set; }
 
-    /// <summary>
-    /// Whether this slug has completed <paramref name="stage"/>. A failed slug has reached
-    /// nothing — it is excluded rather than compared, because <see cref="SeedStage.Failed"/>
-    /// sorts last without being the furthest progress.
-    /// </summary>
+    /// <summary>Whether this slug has completed <paramref name="stage"/>, excluding a failed slug because <see cref="SeedStage.Failed"/> sorts last without being the furthest progress.</summary>
     public bool HasReached(SeedStage stage) => Stage != SeedStage.Failed && Stage >= stage;
 }
 
 // ── Stage results ─────────────────────────────────────────────────────────────
 
-/// <param name="Manifest">The manifest written to the cache.</param>
-/// <param name="RawRowCount">CDX rows returned before filtering.</param>
-/// <param name="DroppedByReason">Rows discarded per filter rule — the diagnostic that says
-/// <i>why</i> a discovery run came back short.</param>
+/// <param name="DroppedByReason">Rows discarded per filter rule, which says why a discovery run came back short.</param>
 public record SeedDiscoveryResult(
     SeedManifest Manifest,
     int RawRowCount,
@@ -127,9 +104,6 @@ public record SeedHarvestResult
 
 // ── Failures ──────────────────────────────────────────────────────────────────
 
-/// <summary>
-/// Raised only for conditions that must abort the whole run — an unreachable CDX index or a
-/// manifest short enough to indicate drifted filter rules. A single bad recipe never throws.
-/// </summary>
+/// <summary>Raised only for conditions that must abort the whole run, such as an unreachable CDX index or a manifest short enough to indicate drifted filter rules.</summary>
 public class SeedHarvestException(string message, Exception? innerException = null)
     : Exception(message, innerException);

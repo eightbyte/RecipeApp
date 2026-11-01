@@ -3,9 +3,7 @@ using RecipeApp.API.Services.RecipePacks;
 
 namespace RecipeApp.Tests.RecipePacks;
 
-/// <summary>
-/// Reading a recipe pack (Phase 10 §4.4.1). No database.
-/// </summary>
+/// <summary>Reading a recipe pack, with no database.</summary>
 public class RecipePackFileStoreTests : IDisposable
 {
     private readonly string _root =

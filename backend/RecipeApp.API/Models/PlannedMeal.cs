@@ -6,7 +6,7 @@ public class PlannedMeal
     public Guid MealPlanId { get; set; }
     public Guid RecipeId { get; set; }
 
-    /// <summary>Nullable calendar date — undated meals are allowed.</summary>
+    /// <summary>Nullable calendar date, because a Planned Meal may be Unscheduled.</summary>
     public DateOnly? ScheduledDate { get; set; }
 
     public string BatchSize { get; set; } = Enums.BatchSize.Regular;

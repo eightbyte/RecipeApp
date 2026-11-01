@@ -36,7 +36,7 @@ file static class MealPlanTestHelpers
         RecipeId      = recipe.Id,
         Recipe        = recipe,
         ScheduledDate = scheduledDate,
-        BatchSize   = BatchSize.Regular,
+        BatchSize     = BatchSize.Regular,
         DisplayOrder  = displayOrder,
     };
 }

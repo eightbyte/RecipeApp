@@ -157,7 +157,7 @@ public class MealPlanService(AppDbContext db)
             MealPlanId    = planId,
             RecipeId      = request.RecipeId,
             ScheduledDate = request.ScheduledDate,
-            BatchSize   = request.BatchSize ?? BatchSize.Regular,
+            BatchSize     = request.BatchSize ?? BatchSize.Regular,
             DisplayOrder  = maxOrder + 1,
         };
         db.PlannedMeals.Add(plannedMeal);
@@ -184,7 +184,7 @@ public class MealPlanService(AppDbContext db)
         if (plannedMeal is null) return null;
 
         plannedMeal.ScheduledDate = request.ScheduledDate;
-        plannedMeal.BatchSize   = request.BatchSize;
+        plannedMeal.BatchSize     = request.BatchSize;
 
         var plan = await db.MealPlans.FindAsync(planId);
         if (plan is not null) plan.UpdatedAt = DateTime.UtcNow;

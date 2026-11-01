@@ -70,12 +70,12 @@ public class PlannedMealMigrationTests : IAsyncLifetime
         await using var db = CreateDbContext();
         await db.Database.MigrateAsync();
 
-        var namesOfTable = await db.Database.SqlQuery<string>($@"
+        var constraintAndIndexNames = await db.Database.SqlQuery<string>($@"
             SELECT conname::text AS ""Value"" FROM pg_constraint WHERE conrelid = '""PlannedMeals""'::regclass
             UNION
             SELECT indexname::text FROM pg_indexes WHERE tablename = 'PlannedMeals'").ToListAsync();
 
-        namesOfTable.Should().BeEquivalentTo(
+        constraintAndIndexNames.Should().BeEquivalentTo(
             "PK_PlannedMeals",
             "FK_PlannedMeals_MealPlans_MealPlanId",
             "FK_PlannedMeals_Recipes_RecipeId",

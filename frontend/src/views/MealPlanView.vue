@@ -278,7 +278,7 @@ async function saveDateChange() {
   if (!planId) return
   await mealPlanStore.updatePlannedMeal(planId, plannedMealId, {
     scheduledDate: date || null,
-    batchSize: mealPlanStore.activePlan.plannedMeals.find(r => r.id === plannedMealId)?.batchSize ?? DEFAULT_BATCH_SIZE,
+    batchSize: mealPlanStore.activePlan.plannedMeals.find(candidate => candidate.id === plannedMealId)?.batchSize ?? DEFAULT_BATCH_SIZE,
   })
 }
 
@@ -291,7 +291,7 @@ async function saveBatchSizeChange() {
   batchSizePicker.value.open = false
   const planId = mealPlanStore.activePlan?.id
   if (!planId) return
-  const meal = mealPlanStore.activePlan.plannedMeals.find(r => r.id === plannedMealId)
+  const meal = mealPlanStore.activePlan.plannedMeals.find(candidate => candidate.id === plannedMealId)
   await mealPlanStore.updatePlannedMeal(planId, plannedMealId, {
     scheduledDate: meal?.scheduledDate ?? null,
     batchSize,

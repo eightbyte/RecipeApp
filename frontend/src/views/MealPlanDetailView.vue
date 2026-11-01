@@ -31,7 +31,7 @@
         </div>
       </div>
 
-      <!-- Recipe list (pre-sorted: dated ascending first, then undated) -->
+      <!-- Recipe list (pre-sorted: dated ascending first, then Unscheduled) -->
       <v-card
         v-for="meal in mealPlanStore.currentPlan.plannedMeals"
         :key="meal.id"

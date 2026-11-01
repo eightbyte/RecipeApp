@@ -82,8 +82,8 @@ public static class Mappings
         p.Name,
         p.IsActive,
         p.PlannedMeals.Count,
-        p.PlannedMeals.Where(r => r.ScheduledDate.HasValue).Min(r => (DateOnly?)r.ScheduledDate),
-        p.PlannedMeals.Where(r => r.ScheduledDate.HasValue).Max(r => (DateOnly?)r.ScheduledDate),
+        p.PlannedMeals.Where(meal => meal.ScheduledDate.HasValue).Min(meal => (DateOnly?)meal.ScheduledDate),
+        p.PlannedMeals.Where(meal => meal.ScheduledDate.HasValue).Max(meal => (DateOnly?)meal.ScheduledDate),
         p.CreatedAt,
         p.ClosedAt
     );

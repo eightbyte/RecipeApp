@@ -94,7 +94,7 @@ public static class TestDataBuilder
         MealPlanId    = mealPlanId,
         RecipeId      = recipeId,
         ScheduledDate = scheduledDate,
-        BatchSize   = batchSize,
+        BatchSize     = batchSize,
         DisplayOrder  = displayOrder,
     };
 

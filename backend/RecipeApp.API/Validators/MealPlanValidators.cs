@@ -26,7 +26,7 @@ public class AddPlannedMealRequestValidator : AbstractValidator<AddPlannedMealRe
     {
         RuleFor(x => x.RecipeId).NotEmpty();
         RuleFor(x => x.BatchSize)
-            .Must(p => p != null && BatchSize.IsValid(p))
+            .Must(batchSize => batchSize != null && BatchSize.IsValid(batchSize))
             .WithMessage($"BatchSize must be one of: {string.Join(", ", BatchSize.All)}")
             .When(x => x.BatchSize is not null);
     }

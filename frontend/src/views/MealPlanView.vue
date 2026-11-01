@@ -210,6 +210,7 @@ import { useMealPlanStore } from '@/stores/mealPlans'
 import { useRecipeStore } from '@/stores/recipes'
 import { useUiStore } from '@/stores/ui'
 import { BATCH_SIZES, DEFAULT_BATCH_SIZE, batchSizeColor, formatBatchSize } from '@/constants/batchSizes'
+import { cookingRoute } from '@/router/cookingRoute'
 import RecipeBrowser from '@/components/RecipeBrowser.vue'
 import EmptyState from '@/components/EmptyState.vue'
 import ErrorState from '@/components/ErrorState.vue'
@@ -235,11 +236,7 @@ function startNewPlan() {
 }
 
 function startCooking(meal) {
-  router.push({
-    name: 'recipe-cooking',
-    params: { id: meal.recipeId },
-    query: { batch: meal.batchSize },
-  })
+  router.push(cookingRoute(meal.recipeId, meal.batchSize))
 }
 
 async function markMealCooked(meal) {

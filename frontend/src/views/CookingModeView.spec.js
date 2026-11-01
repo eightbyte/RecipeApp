@@ -7,6 +7,7 @@ import { useRecipeStore } from '@/stores/recipes'
 import { useUiStore } from '@/stores/ui'
 import CookingModeView from './CookingModeView.vue'
 import { makeRecipeDetail } from '@/test/factories'
+import { cookingRoute } from '@/router/cookingRoute'
 
 const backMock = vi.fn()
 const replaceMock = vi.fn()
@@ -147,21 +148,21 @@ describe('CookingModeView', () => {
     expect(fetchSpy).toHaveBeenCalledWith('r1')
   })
 
-  it('shows amounts unscaled at 1× without a ?batch query', async () => {
+  it('shows amounts unscaled at 1× without a Batch Size in the query', async () => {
     const w = await mountView()
     expect(w.find('header').text()).toContain('1×')
     expect(w.text()).toContain('200 g')
   })
 
-  it('scales ingredient amounts from the ?batch query and shows the Batch Size', async () => {
-    routeQuery = { batch: 'DOUBLE' }
+  it('scales ingredient amounts from the Batch Size in the query and shows the Batch Size', async () => {
+    routeQuery = cookingRoute('r1', 'DOUBLE').query
     const w = await mountView()
     expect(w.find('header').text()).toContain('2×')
     expect(w.text()).toContain('400 g')
   })
 
-  it('treats an unknown ?batch value as 1×', async () => {
-    routeQuery = { batch: 'TRIPLE' }
+  it('treats an unknown Batch Size in the query as 1×', async () => {
+    routeQuery = cookingRoute('r1', 'TRIPLE').query
     const w = await mountView()
     expect(w.find('header').text()).toContain('1×')
     expect(w.text()).toContain('200 g')

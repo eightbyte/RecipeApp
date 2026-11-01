@@ -1,6 +1,6 @@
 import { setActivePinia, createPinia } from 'pinia'
 import { useMealPlanStore } from './mealPlans'
-import { makeMealPlanDetail, makeMealPlanListItem, makeSuggestion } from '@/test/factories'
+import { makeMealPlanDetail, makeMealPlanListItem, makePlannedMeal, makeSuggestion } from '@/test/factories'
 
 vi.mock('@/services/api', () => ({
   default: {
@@ -104,17 +104,52 @@ describe('addPlannedMeal', () => {
 // ── updatePlannedMeal ─────────────────────────────────────────────────────────
 
 describe('updatePlannedMeal', () => {
-  it('calls PUT /meal-plans/:id/planned-meals/:plannedMealId', async () => {
-    const plan = makeMealPlanDetail({ id: 'plan-1' })
+  const plannedMealPath = '/meal-plans/plan-1/planned-meals/planned-meal-1'
+
+  function storeWithPlan() {
     api.put.mockResolvedValue({ data: {} })
-    api.get.mockResolvedValue({ data: plan })
-
+    api.get.mockResolvedValue({ data: makeMealPlanDetail({ id: 'plan-1' }) })
     const store = useMealPlanStore()
-    store.currentPlan = plan
-    await store.updatePlannedMeal('plan-1', 'planned-meal-1', { batchSize: 'DOUBLE' })
+    store.currentPlan = makeMealPlanDetail({ id: 'plan-1' })
+    return store
+  }
 
-    expect(api.put).toHaveBeenCalledWith('/meal-plans/plan-1/planned-meals/planned-meal-1', { batchSize: 'DOUBLE' })
+  it('keeps the scheduled date when only the Batch Size changes', async () => {
+    const store = storeWithPlan()
+    const plannedMeal = makePlannedMeal({ scheduledDate: '2026-06-03', batchSize: 'REGULAR' })
+
+    await store.updatePlannedMeal('plan-1', plannedMeal, { batchSize: 'DOUBLE' })
+
+    expect(api.put).toHaveBeenCalledWith(plannedMealPath, { scheduledDate: '2026-06-03', batchSize: 'DOUBLE' })
   })
+
+  it('keeps the Batch Size when only the scheduled date changes', async () => {
+    const store = storeWithPlan()
+    const plannedMeal = makePlannedMeal({ scheduledDate: null, batchSize: 'HALF' })
+
+    await store.updatePlannedMeal('plan-1', plannedMeal, { scheduledDate: '2026-06-04' })
+
+    expect(api.put).toHaveBeenCalledWith(plannedMealPath, { scheduledDate: '2026-06-04', batchSize: 'HALF' })
+  })
+
+  it('sends a cleared scheduled date as null so the Planned Meal becomes Unscheduled', async () => {
+    const store = storeWithPlan()
+    const plannedMeal = makePlannedMeal({ scheduledDate: '2026-06-03', batchSize: 'DOUBLE' })
+
+    await store.updatePlannedMeal('plan-1', plannedMeal, { scheduledDate: '' })
+
+    expect(api.put).toHaveBeenCalledWith(plannedMealPath, { scheduledDate: null, batchSize: 'DOUBLE' })
+  })
+
+  it('sends a missing scheduled date as null', async () => {
+    const store = storeWithPlan()
+    const { scheduledDate, ...plannedMealWithoutDate } = makePlannedMeal({ batchSize: 'HALF' })
+
+    await store.updatePlannedMeal('plan-1', plannedMealWithoutDate, { batchSize: 'DOUBLE' })
+
+    expect(api.put).toHaveBeenCalledWith(plannedMealPath, { scheduledDate: null, batchSize: 'DOUBLE' })
+  })
+
 })
 
 // ── removePlannedMeal ─────────────────────────────────────────────────────────

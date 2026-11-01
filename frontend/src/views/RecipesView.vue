@@ -16,11 +16,12 @@
         <template #activator="{ props: menuProps }">
           <v-btn
             v-bind="menuProps"
-            prepend-icon="mdi-plus"
-            text="New recipe"
+            icon="mdi-plus"
+            aria-label="New recipe"
             color="primary"
             variant="flat"
-            class="h-auto"
+            rounded="lg"
+            class="h-auto new-recipe-button"
           />
         </template>
         <v-list>
@@ -176,4 +177,5 @@ function formatRelative(dateStr) {
 
 <style scoped>
 .grayscale { filter: grayscale(100%); }
+.new-recipe-button { aspect-ratio: 1; }
 </style>

@@ -84,7 +84,7 @@ describe('RecipesView', () => {
 
     const newRecipeButton = wrapper
       .findAll('button')
-      .find((button) => button.text().includes('New recipe'))
+      .find((button) => button.attributes('aria-label') === 'New recipe')
     expect(newRecipeButton).toBeDefined()
 
     const searchField = wrapper.findComponent({ name: 'VTextField' })

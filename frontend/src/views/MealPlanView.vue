@@ -212,8 +212,8 @@ const recipesStore  = useRecipeStore()
 const ui            = useUiStore()
 
 const browserOpen     = ref(false)
-const datePicker      = ref({ open: false, plannedMealId: null, date: null })
-const batchSizePicker = ref({ open: false, plannedMealId: null, batchSize: DEFAULT_BATCH_SIZE })
+const datePicker      = ref({ open: false, plannedMeal: null, date: null })
+const batchSizePicker = ref({ open: false, plannedMeal: null, batchSize: DEFAULT_BATCH_SIZE })
 
 onMounted(() => mealPlanStore.fetchActivePlan())
 
@@ -256,31 +256,27 @@ async function onAddRecipe(recipe) {
 }
 
 function openDatePicker(meal) {
-  datePicker.value = { open: true, plannedMealId: meal.id, date: meal.scheduledDate ?? null }
+  datePicker.value = { open: true, plannedMeal: meal, date: meal.scheduledDate ?? null }
 }
 
 async function saveDateChange() {
-  const { plannedMealId, date } = datePicker.value
+  const { plannedMeal, date } = datePicker.value
   datePicker.value.open = false
   const planId = mealPlanStore.activePlan?.id
   if (!planId) return
-  const meal = mealPlanStore.activePlan.plannedMeals.find(candidate => candidate.id === plannedMealId)
-  if (!meal) return
-  await mealPlanStore.updatePlannedMeal(planId, meal, { scheduledDate: date })
+  await mealPlanStore.updatePlannedMeal(planId, plannedMeal, { scheduledDate: date })
 }
 
 function openBatchSizePicker(meal) {
-  batchSizePicker.value = { open: true, plannedMealId: meal.id, batchSize: meal.batchSize }
+  batchSizePicker.value = { open: true, plannedMeal: meal, batchSize: meal.batchSize }
 }
 
 async function saveBatchSizeChange() {
-  const { plannedMealId, batchSize } = batchSizePicker.value
+  const { plannedMeal, batchSize } = batchSizePicker.value
   batchSizePicker.value.open = false
   const planId = mealPlanStore.activePlan?.id
   if (!planId) return
-  const meal = mealPlanStore.activePlan.plannedMeals.find(candidate => candidate.id === plannedMealId)
-  if (!meal) return
-  await mealPlanStore.updatePlannedMeal(planId, meal, { batchSize })
+  await mealPlanStore.updatePlannedMeal(planId, plannedMeal, { batchSize })
 }
 
 async function removePlannedMeal(plannedMealId) {

@@ -76,14 +76,14 @@
                 hide-details
                 clearable
                 style="min-width: 160px; flex: 1"
-                @update:model-value="(v) => updateDate(meal, v)"
+                @update:model-value="(scheduledDate) => updatePlannedMeal(meal, { scheduledDate })"
               />
               <BatchSizeToggle
                 :model-value="meal.batchSize"
                 button-size="small"
                 density="compact"
                 style="height: 40px"
-                @update:model-value="(v) => updateBatchSize(meal, v)"
+                @update:model-value="(batchSize) => updatePlannedMeal(meal, { batchSize })"
               />
             </div>
           </div>
@@ -169,16 +169,10 @@ async function removePlannedMeal(plannedMealId) {
   await mealPlanStore.removePlannedMeal(planId, plannedMealId)
 }
 
-async function updateDate(meal, newDate) {
+async function updatePlannedMeal(meal, changes) {
   const planId = mealPlanStore.currentPlan?.id
   if (!planId) return
-  await mealPlanStore.updatePlannedMeal(planId, meal, { scheduledDate: newDate })
-}
-
-async function updateBatchSize(meal, batchSize) {
-  const planId = mealPlanStore.currentPlan?.id
-  if (!planId) return
-  await mealPlanStore.updatePlannedMeal(planId, meal, { batchSize })
+  await mealPlanStore.updatePlannedMeal(planId, meal, changes)
 }
 
 function done() {

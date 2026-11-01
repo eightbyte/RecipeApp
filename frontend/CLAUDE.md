@@ -15,6 +15,7 @@ amount formatting, Batch Size scaling, unit pickers or category lists.
 | `composables/` | `useWakeLock.js` |
 | `styles/` | `settings.scss` — Vuetify Sass settings |
 | `router/index.js` | All routes |
+| `router/cookingRoute.js` | Builds and reads the Cooking Mode link, kept apart so importing it doesn't load the router |
 | `test/` | Vitest `setup.js` and `factories.js` |
 
 Tests sit beside their subject as `*.spec.js` (Vitest + Vue Test Utils). Run with `npm test`.

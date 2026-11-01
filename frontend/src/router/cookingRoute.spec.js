@@ -1,9 +1,10 @@
 import { describe, it, expect } from 'vitest'
 import { cookingRoute, batchSizeFromCookingQuery } from './cookingRoute'
+import { BATCH_SIZES } from '@/constants/batchSizes'
 
 describe('cookingRoute', () => {
   it('reads a link it built back as the same Batch Size', () => {
-    for (const batchSize of ['HALF', 'REGULAR', 'DOUBLE']) {
+    for (const { value: batchSize } of BATCH_SIZES) {
       expect(batchSizeFromCookingQuery(cookingRoute('r1', batchSize).query)).toBe(batchSize)
     }
   })

@@ -6,6 +6,7 @@ import { createPinia, setActivePinia } from 'pinia'
 import MealPlanView from './MealPlanView.vue'
 import { makeMealPlanDetail, makePlannedMeal } from '@/test/factories'
 import { batchSizeFromCookingQuery } from '@/router/cookingRoute'
+import api from '@/services/api'
 
 const pushMock = vi.fn()
 
@@ -20,6 +21,13 @@ vi.mock('vue-router', async (importActual) => {
 })
 
 const vuetify = createVuetify({ components, directives })
+
+// Renders an open dialog inline, avoiding teleport DOM isolation.
+const stubDialog = {
+  props: ['modelValue'],
+  template: '<div v-if="modelValue"><slot /></div>',
+  emits: ['update:modelValue'],
+}
 
 let pinia
 
@@ -42,6 +50,7 @@ async function mountView() {
         'router-link': { template: '<a><slot/></a>' },
         teleport: true,
         RecipeBrowser: true,
+        VDialog: stubDialog,
       },
     },
   })
@@ -109,5 +118,48 @@ describe('MealPlanView', () => {
     expect(refreshSpy).toHaveBeenCalled()
     expect(ui.snackbar.show).toBe(true)
     expect(ui.snackbar.color).toBe('success')
+  })
+
+  describe('editing a Planned Meal', () => {
+    const plannedMealPath = '/meal-plans/plan-1/planned-meals/planned-meal-1'
+
+    async function mountWithPlannedMeal() {
+      const mounted = await mountView()
+      const plannedMeal = makePlannedMeal({ scheduledDate: '2026-06-03', batchSize: 'HALF' })
+      const plan = makeMealPlanDetail({ id: 'plan-1', plannedMeals: [plannedMeal] })
+      api.put.mockResolvedValue({ data: {} })
+      api.get.mockResolvedValue({ data: plan })
+      mounted.mealPlanStore.activePlan = plan
+      await mounted.wrapper.vm.$nextTick()
+      return { ...mounted, plannedMeal }
+    }
+
+    function clickButton(wrapper, label) {
+      return wrapper.findAll('button').find(button => button.text() === label).trigger('click')
+    }
+
+    it('keeps the Batch Size when the date changes', async () => {
+      const { wrapper, plannedMeal } = await mountWithPlannedMeal()
+
+      wrapper.vm.openDatePicker(plannedMeal)
+      await flushPromises()
+      await wrapper.find('input[type="date"]').setValue('2026-06-05')
+      await clickButton(wrapper, 'Save')
+      await flushPromises()
+
+      expect(api.put).toHaveBeenCalledWith(plannedMealPath, { scheduledDate: '2026-06-05', batchSize: 'HALF' })
+    })
+
+    it('keeps the date when the Batch Size changes', async () => {
+      const { wrapper, plannedMeal } = await mountWithPlannedMeal()
+
+      wrapper.vm.openBatchSizePicker(plannedMeal)
+      await flushPromises()
+      await clickButton(wrapper, '2×')
+      await clickButton(wrapper, 'Save')
+      await flushPromises()
+
+      expect(api.put).toHaveBeenCalledWith(plannedMealPath, { scheduledDate: '2026-06-03', batchSize: 'DOUBLE' })
+    })
   })
 })

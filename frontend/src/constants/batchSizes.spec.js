@@ -9,9 +9,11 @@ import {
 } from './batchSizes'
 
 describe('BATCH_SIZES', () => {
+  const batchSizeValues = BATCH_SIZES.map(batchSize => batchSize.value)
+
   it('mirrors BatchSize.All on the backend, in the same order', () => {
     // Kept in lockstep with the backend enum, or the toggles offer values the API will reject.
-    expect(BATCH_SIZES.map(batchSize => batchSize.value)).toEqual(['HALF', 'REGULAR', 'DOUBLE'])
+    expect(batchSizeValues).toEqual(['HALF', 'REGULAR', 'DOUBLE'])
   })
 
   it('gives every Batch Size a distinct colour', () => {
@@ -20,7 +22,7 @@ describe('BATCH_SIZES', () => {
   })
 
   it('offers a default that is itself a Batch Size', () => {
-    expect(BATCH_SIZES.map(batchSize => batchSize.value)).toContain(DEFAULT_BATCH_SIZE)
+    expect(batchSizeValues).toContain(DEFAULT_BATCH_SIZE)
   })
 })
 

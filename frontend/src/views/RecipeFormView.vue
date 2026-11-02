@@ -309,13 +309,13 @@
 </template>
 
 <script setup>
-import { ref, reactive, computed, onMounted, watch } from 'vue'
+import { ref, reactive, computed, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useRecipeStore }     from '@/stores/recipes'
 import { useIngredientStore } from '@/stores/ingredients'
 import { MEASUREMENT_UNITS, DEFAULT_UNIT, toPayloadMeasurement } from '@/constants/units'
 
-const props = defineProps({ id: String })
+const props = defineProps({ id: { type: String, default: null } })
 const route  = useRoute()
 const router = useRouter()
 

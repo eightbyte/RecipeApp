@@ -170,7 +170,7 @@ import BatchSizeChip from '@/components/BatchSizeChip.vue'
 import EmptyState from '@/components/EmptyState.vue'
 import ErrorState from '@/components/ErrorState.vue'
 
-const props  = defineProps({ id: String })
+const props  = defineProps({ id: { type: String, required: true } })
 const route  = useRoute()
 const router = useRouter()
 const store  = useRecipeStore()

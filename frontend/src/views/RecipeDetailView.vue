@@ -186,7 +186,7 @@
 
 <script setup>
 import { ref, computed, onMounted } from 'vue'
-import { useRoute, useRouter } from 'vue-router'
+import { useRoute } from 'vue-router'
 import { useRecipeStore } from '@/stores/recipes'
 import { formatMeasurement, formatSourceMeasurement } from '@/constants/units'
 import { DEFAULT_BATCH_SIZE, batchSizeMultiplier } from '@/constants/batchSizes'
@@ -196,9 +196,8 @@ import BatchSizeToggle from '@/components/BatchSizeToggle.vue'
 import EmptyState from '@/components/EmptyState.vue'
 import ErrorState from '@/components/ErrorState.vue'
 
-const props = defineProps({ id: String })
+const props = defineProps({ id: { type: String, required: true } })
 const route  = useRoute()
-const router = useRouter()
 const store  = useRecipeStore()
 const ui     = useUiStore()
 

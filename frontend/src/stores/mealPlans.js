@@ -80,7 +80,7 @@ export const useMealPlanStore = defineStore('mealPlans', () => {
     try {
       const { data } = await api.get(`/meal-plans/${planId}/suggestions`)
       suggestions.value = data.map(normalizeSuggestion)
-    } catch (e) {
+    } catch {
       suggestions.value = []
     }
   }

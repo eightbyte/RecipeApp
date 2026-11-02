@@ -48,7 +48,7 @@
 import { ref } from 'vue'
 import RecentlyCookedDialog from '@/components/RecentlyCookedDialog.vue'
 
-const props = defineProps({
+defineProps({
   suggestions: { type: Array, default: () => [] },
 })
 

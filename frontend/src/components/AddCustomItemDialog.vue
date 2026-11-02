@@ -56,10 +56,10 @@
 </template>
 
 <script setup>
-import { ref, reactive, watch } from 'vue'
+import { reactive, watch } from 'vue'
 import { INGREDIENT_CATEGORIES, DEFAULT_CATEGORY } from '@/constants/categories'
 
-const model = defineModel({ default: false })
+const model = defineModel({ type: Boolean, default: false })
 
 const categoryItems = INGREDIENT_CATEGORIES.map(({ title, value }) => ({ title, value }))
 

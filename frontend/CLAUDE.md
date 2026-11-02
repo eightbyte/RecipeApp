@@ -3,6 +3,8 @@
 Measurement and category rules live in `.claude/rules/` (repo root). Read them before touching
 amount formatting, Batch Size scaling, unit pickers or category lists.
 
+Read `CODING_STANDARDS.md` (repo root) before writing or reviewing code: comments, naming, prop types, hard-coded values, Vuetify.
+
 ## Layout (`src/`)
 
 | Folder | Holds |
@@ -28,10 +30,6 @@ each test or in `beforeEach`; a wrapper mounted in `beforeAll` is gone after the
 - **`<script setup>` only.** No Options API.
 - **HTTP:** import `api` from `@/services/api.js`. Never use raw `fetch` or `axios`.
 - **Pinia:** `use<Domain>Store()`. Every API call goes through a store action.
-- **Vuetify first.** Prefer a Vuetify component over raw HTML wherever one exists.
-- **Vuetify is the only styling framework** ([ADR 0001](../docs/adr/0001-vuetify-is-the-only-styling-framework.md)).
-  Don't add Bootstrap or another CSS framework. Spacing classes follow Vuetify's 4px-per-step
-  scale (`mb-4` is 16px, `mb-6` is 24px).
 - **Typeface:** the system font stack, set once as `$body-font-family` in `src/styles/settings.scss`.
   Vuetify compiles it into `html` and every typography class (`text-h6`, `text-caption`, …).
 - **Never hard-code a unit, category, Batch Size or recipe sort list.** Consume `constants/units.js`,

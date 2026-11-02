@@ -56,7 +56,7 @@
 
       <!-- Meal list (pre-sorted by API: dated first ascending, then undated by order) -->
       <v-card
-        v-for="meal in mealPlanStore.activePlan.recipes"
+        v-for="meal in mealPlanStore.activePlan.plannedMeals"
         :key="meal.id"
         class="mb-4"
       >
@@ -86,9 +86,7 @@
 
           <div class="flex-grow-1 ml-2">
             <div class="text-body-1 font-weight-medium">{{ meal.recipeName }}</div>
-            <v-chip size="x-small" :color="portionColor(meal.portionSize)" class="mt-1">
-              {{ portionLabel(meal.portionSize) }}
-            </v-chip>
+            <BatchSizeChip :batch-size="meal.batchSize" size="x-small" class="mt-1" />
           </div>
 
           <!-- Per-meal overflow menu -->
@@ -107,8 +105,8 @@
               <v-list-item prepend-icon="mdi-chef-hat" title="Mark as cooked" @click="markMealCooked(meal)" />
               <v-divider />
               <v-list-item prepend-icon="mdi-calendar" title="Change date" @click="openDatePicker(meal)" />
-              <v-list-item prepend-icon="mdi-silverware" title="Change portion" @click="openPortionPicker(meal)" />
-              <v-list-item prepend-icon="mdi-delete" title="Remove" @click="removeRecipe(meal.id)" />
+              <v-list-item prepend-icon="mdi-silverware" title="Change batch" @click="openBatchSizePicker(meal)" />
+              <v-list-item prepend-icon="mdi-delete" title="Remove" @click="removePlannedMeal(meal.id)" />
             </v-list>
           </v-menu>
         </div>
@@ -177,20 +175,16 @@
       </v-card>
     </v-dialog>
 
-    <!-- ── Change portion dialog ───────────────────────────────────────── -->
-    <v-dialog v-model="portionPicker.open" max-width="360">
+    <!-- ── Change batch dialog ─────────────────────────────────────────── -->
+    <v-dialog v-model="batchSizePicker.open" max-width="360">
       <v-card class="pa-4">
-        <v-card-title>Change portion size</v-card-title>
+        <v-card-title>Batch</v-card-title>
         <v-card-text>
-          <v-btn-toggle v-model="portionPicker.portion" mandatory color="primary" class="d-flex">
-            <v-btn value="HALF" class="flex-grow-1">½ Portion</v-btn>
-            <v-btn value="REGULAR" class="flex-grow-1">Regular</v-btn>
-            <v-btn value="DOUBLE" class="flex-grow-1">Double</v-btn>
-          </v-btn-toggle>
+          <BatchSizeToggle v-model="batchSizePicker.batchSize" stretch />
         </v-card-text>
         <v-card-actions>
-          <v-btn variant="text" @click="portionPicker.open = false">Cancel</v-btn>
-          <v-btn color="primary" @click="savePortionChange">Save</v-btn>
+          <v-btn variant="text" @click="batchSizePicker.open = false">Cancel</v-btn>
+          <v-btn color="primary" @click="saveBatchSizeChange">Save</v-btn>
         </v-card-actions>
       </v-card>
     </v-dialog>
@@ -204,6 +198,10 @@ import { useRouter } from 'vue-router'
 import { useMealPlanStore } from '@/stores/mealPlans'
 import { useRecipeStore } from '@/stores/recipes'
 import { useUiStore } from '@/stores/ui'
+import { DEFAULT_BATCH_SIZE } from '@/constants/batchSizes'
+import { cookingRoute } from '@/router/cookingRoute'
+import BatchSizeToggle from '@/components/BatchSizeToggle.vue'
+import BatchSizeChip from '@/components/BatchSizeChip.vue'
 import RecipeBrowser from '@/components/RecipeBrowser.vue'
 import EmptyState from '@/components/EmptyState.vue'
 import ErrorState from '@/components/ErrorState.vue'
@@ -213,9 +211,9 @@ const mealPlanStore = useMealPlanStore()
 const recipesStore  = useRecipeStore()
 const ui            = useUiStore()
 
-const browserOpen = ref(false)
-const datePicker  = ref({ open: false, mprId: null, date: null })
-const portionPicker = ref({ open: false, mprId: null, portion: 'REGULAR' })
+const browserOpen     = ref(false)
+const datePicker      = ref({ open: false, plannedMeal: null, date: null })
+const batchSizePicker = ref({ open: false, plannedMeal: null, batchSize: DEFAULT_BATCH_SIZE })
 
 onMounted(() => mealPlanStore.fetchActivePlan())
 
@@ -229,11 +227,7 @@ function startNewPlan() {
 }
 
 function startCooking(meal) {
-  router.push({
-    name: 'recipe-cooking',
-    params: { id: meal.recipeId },
-    query: { portion: meal.portionSize },
-  })
+  router.push(cookingRoute(meal.recipeId, meal.batchSize))
 }
 
 async function markMealCooked(meal) {
@@ -250,10 +244,10 @@ async function onAddRecipe(recipe) {
   if (!mealPlanStore.activePlan) return
   browserOpen.value = false
   try {
-    await mealPlanStore.addRecipe(mealPlanStore.activePlan.id, {
+    await mealPlanStore.addPlannedMeal(mealPlanStore.activePlan.id, {
       recipeId: recipe.id,
       scheduledDate: null,
-      portionSize: 'REGULAR',
+      batchSize: DEFAULT_BATCH_SIZE,
     })
     ui.notify({ message: `Added “${recipe.name}” to your plan`, color: 'success' })
   } catch (e) {
@@ -262,47 +256,34 @@ async function onAddRecipe(recipe) {
 }
 
 function openDatePicker(meal) {
-  datePicker.value = { open: true, mprId: meal.id, date: meal.scheduledDate ?? null }
+  datePicker.value = { open: true, plannedMeal: meal, date: meal.scheduledDate ?? null }
 }
 
 async function saveDateChange() {
-  const { mprId, date } = datePicker.value
+  const { plannedMeal, date } = datePicker.value
   datePicker.value.open = false
   const planId = mealPlanStore.activePlan?.id
   if (!planId) return
-  await mealPlanStore.updatePlanRecipe(planId, mprId, {
-    scheduledDate: date || null,
-    portionSize: mealPlanStore.activePlan.recipes.find(r => r.id === mprId)?.portionSize ?? 'REGULAR',
-  })
+  await mealPlanStore.updatePlannedMeal(planId, plannedMeal, { scheduledDate: date })
 }
 
-function openPortionPicker(meal) {
-  portionPicker.value = { open: true, mprId: meal.id, portion: meal.portionSize }
+function openBatchSizePicker(meal) {
+  batchSizePicker.value = { open: true, plannedMeal: meal, batchSize: meal.batchSize }
 }
 
-async function savePortionChange() {
-  const { mprId, portion } = portionPicker.value
-  portionPicker.value.open = false
+async function saveBatchSizeChange() {
+  const { plannedMeal, batchSize } = batchSizePicker.value
+  batchSizePicker.value.open = false
   const planId = mealPlanStore.activePlan?.id
   if (!planId) return
-  const meal = mealPlanStore.activePlan.recipes.find(r => r.id === mprId)
-  await mealPlanStore.updatePlanRecipe(planId, mprId, {
-    scheduledDate: meal?.scheduledDate ?? null,
-    portionSize: portion,
-  })
+  await mealPlanStore.updatePlannedMeal(planId, plannedMeal, { batchSize })
 }
 
-async function removeRecipe(mprId) {
+async function removePlannedMeal(plannedMealId) {
   const planId = mealPlanStore.activePlan?.id
   if (!planId) return
-  await mealPlanStore.removePlanRecipe(planId, mprId)
+  await mealPlanStore.removePlannedMeal(planId, plannedMealId)
 }
-
-const portionLabel = (size) =>
-  ({ HALF: '½ portion', REGULAR: 'Regular', DOUBLE: 'Double' })[size] ?? size
-
-const portionColor = (size) =>
-  ({ HALF: 'info', REGULAR: 'success', DOUBLE: 'warning' })[size] ?? 'default'
 
 const formatDay   = (d) => new Date(d).toLocaleDateString('en-AU', { day: 'numeric' })
 const formatMonth = (d) => new Date(d).toLocaleDateString('en-AU', { month: 'short' })

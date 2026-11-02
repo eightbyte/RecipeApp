@@ -22,7 +22,7 @@
       </div>
 
       <v-card
-        v-for="meal in mealPlanStore.activePlan.recipes"
+        v-for="meal in mealPlanStore.activePlan.plannedMeals"
         :key="meal.id"
         class="mb-4"
       >
@@ -43,7 +43,7 @@
             <div class="text-caption text-medium-emphasis">
               {{ meal.scheduledDate ? formatDate(meal.scheduledDate) : 'Unscheduled' }}
               &nbsp;·&nbsp;
-              {{ portionLabel(meal.portionSize) }}
+              {{ formatBatchSize(meal.batchSize) }}
             </div>
           </div>
 
@@ -92,6 +92,7 @@ import { onMounted } from 'vue'
 import { useMealPlanStore } from '@/stores/mealPlans'
 import { useRecipeStore } from '@/stores/recipes'
 import { useUiStore } from '@/stores/ui'
+import { formatBatchSize } from '@/constants/batchSizes'
 
 const mealPlanStore = useMealPlanStore()
 const recipesStore  = useRecipeStore()
@@ -117,9 +118,5 @@ function formatDate(dateStr) {
   return new Date(dateStr).toLocaleDateString('en-AU', {
     weekday: 'short', month: 'short', day: 'numeric',
   })
-}
-
-function portionLabel(size) {
-  return { HALF: '½ portion', REGULAR: 'Regular', DOUBLE: 'Double' }[size] ?? size
 }
 </script>

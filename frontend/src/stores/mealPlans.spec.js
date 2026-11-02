@@ -1,6 +1,6 @@
 import { setActivePinia, createPinia } from 'pinia'
 import { useMealPlanStore } from './mealPlans'
-import { makeMealPlanDetail, makeMealPlanListItem, makeSuggestion } from '@/test/factories'
+import { makeMealPlanDetail, makeMealPlanListItem, makePlannedMeal, makeSuggestion } from '@/test/factories'
 
 vi.mock('@/services/api', () => ({
   default: {
@@ -42,17 +42,17 @@ describe('fetchActivePlan', () => {
     expect(store.error).toBeNull()
   })
 
-  it('normalises recipeImageUrl on plan recipes', async () => {
+  it('normalises recipeImageUrl on Planned Meals', async () => {
     assetUrl.mockImplementation((p) => p ? `http://localhost:5000${p}` : '')
     const plan = makeMealPlanDetail({
-      recipes: [{ id: 'mpr-1', recipeId: 'r1', recipeName: 'A', recipeImageUrl: '/uploads/a.jpg', recipeLastCookedAt: null, scheduledDate: null, portionSize: 'REGULAR', displayOrder: 1 }],
+      plannedMeals: [{ id: 'planned-meal-1', recipeId: 'r1', recipeName: 'A', recipeImageUrl: '/uploads/a.jpg', recipeLastCookedAt: null, scheduledDate: null, batchSize: 'REGULAR', displayOrder: 1 }],
     })
     api.get.mockResolvedValue({ data: plan })
 
     const store = useMealPlanStore()
     await store.fetchActivePlan()
 
-    expect(store.activePlan.recipes[0].recipeImageUrl).toBe('http://localhost:5000/uploads/a.jpg')
+    expect(store.activePlan.plannedMeals[0].recipeImageUrl).toBe('http://localhost:5000/uploads/a.jpg')
   })
 })
 
@@ -84,52 +84,87 @@ describe('createPlan', () => {
   })
 })
 
-// ── addRecipe ─────────────────────────────────────────────────────────────────
+// ── addPlannedMeal ────────────────────────────────────────────────────────────
 
-describe('addRecipe', () => {
-  it('calls POST /meal-plans/:id/recipes and refreshes plan', async () => {
+describe('addPlannedMeal', () => {
+  it('calls POST /meal-plans/:id/planned-meals and refreshes plan', async () => {
     const plan = makeMealPlanDetail({ id: 'plan-1' })
     api.post.mockResolvedValue({ data: {} })
     api.get.mockResolvedValue({ data: plan })
 
     const store = useMealPlanStore()
     store.currentPlan = plan
-    await store.addRecipe('plan-1', { recipeId: 'r1', scheduledDate: null, portionSize: 'REGULAR' })
+    await store.addPlannedMeal('plan-1', { recipeId: 'r1', scheduledDate: null, batchSize: 'REGULAR' })
 
-    expect(api.post).toHaveBeenCalledWith('/meal-plans/plan-1/recipes', expect.any(Object))
+    expect(api.post).toHaveBeenCalledWith('/meal-plans/plan-1/planned-meals', expect.any(Object))
     expect(api.get).toHaveBeenCalledWith('/meal-plans/plan-1')
   })
 })
 
-// ── updatePlanRecipe ──────────────────────────────────────────────────────────
+// ── updatePlannedMeal ─────────────────────────────────────────────────────────
 
-describe('updatePlanRecipe', () => {
-  it('calls PUT /meal-plans/:id/recipes/:mprId', async () => {
-    const plan = makeMealPlanDetail({ id: 'plan-1' })
+describe('updatePlannedMeal', () => {
+  const plannedMealPath = '/meal-plans/plan-1/planned-meals/planned-meal-1'
+
+  function storeWithPlan() {
     api.put.mockResolvedValue({ data: {} })
-    api.get.mockResolvedValue({ data: plan })
-
+    api.get.mockResolvedValue({ data: makeMealPlanDetail({ id: 'plan-1' }) })
     const store = useMealPlanStore()
-    store.currentPlan = plan
-    await store.updatePlanRecipe('plan-1', 'mpr-1', { portionSize: 'DOUBLE' })
+    store.currentPlan = makeMealPlanDetail({ id: 'plan-1' })
+    return store
+  }
 
-    expect(api.put).toHaveBeenCalledWith('/meal-plans/plan-1/recipes/mpr-1', { portionSize: 'DOUBLE' })
+  it('keeps the scheduled date when only the Batch Size changes', async () => {
+    const store = storeWithPlan()
+    const plannedMeal = makePlannedMeal({ scheduledDate: '2026-06-03', batchSize: 'REGULAR' })
+
+    await store.updatePlannedMeal('plan-1', plannedMeal, { batchSize: 'DOUBLE' })
+
+    expect(api.put).toHaveBeenCalledWith(plannedMealPath, { scheduledDate: '2026-06-03', batchSize: 'DOUBLE' })
   })
+
+  it('keeps the Batch Size when only the scheduled date changes', async () => {
+    const store = storeWithPlan()
+    const plannedMeal = makePlannedMeal({ scheduledDate: null, batchSize: 'HALF' })
+
+    await store.updatePlannedMeal('plan-1', plannedMeal, { scheduledDate: '2026-06-04' })
+
+    expect(api.put).toHaveBeenCalledWith(plannedMealPath, { scheduledDate: '2026-06-04', batchSize: 'HALF' })
+  })
+
+  it('sends a cleared scheduled date as null so the Planned Meal becomes Unscheduled', async () => {
+    const store = storeWithPlan()
+    const plannedMeal = makePlannedMeal({ scheduledDate: '2026-06-03', batchSize: 'DOUBLE' })
+
+    await store.updatePlannedMeal('plan-1', plannedMeal, { scheduledDate: '' })
+
+    expect(api.put).toHaveBeenCalledWith(plannedMealPath, { scheduledDate: null, batchSize: 'DOUBLE' })
+  })
+
+  it('sends a missing scheduled date as null', async () => {
+    const store = storeWithPlan()
+    const { scheduledDate, ...plannedMealWithoutDate } = makePlannedMeal({ batchSize: 'HALF' })
+
+    await store.updatePlannedMeal('plan-1', plannedMealWithoutDate, { batchSize: 'DOUBLE' })
+
+    expect(api.put).toHaveBeenCalledWith(plannedMealPath, { scheduledDate: null, batchSize: 'DOUBLE' })
+  })
+
 })
 
-// ── removePlanRecipe ──────────────────────────────────────────────────────────
+// ── removePlannedMeal ─────────────────────────────────────────────────────────
 
-describe('removePlanRecipe', () => {
-  it('calls DELETE /meal-plans/:id/recipes/:mprId', async () => {
+describe('removePlannedMeal', () => {
+  it('calls DELETE /meal-plans/:id/planned-meals/:plannedMealId', async () => {
     const plan = makeMealPlanDetail({ id: 'plan-1' })
     api.delete.mockResolvedValue({})
     api.get.mockResolvedValue({ data: plan })
 
     const store = useMealPlanStore()
     store.currentPlan = plan
-    await store.removePlanRecipe('plan-1', 'mpr-1')
+    await store.removePlannedMeal('plan-1', 'planned-meal-1')
 
-    expect(api.delete).toHaveBeenCalledWith('/meal-plans/plan-1/recipes/mpr-1')
+    expect(api.delete).toHaveBeenCalledWith('/meal-plans/plan-1/planned-meals/planned-meal-1')
   })
 })
 

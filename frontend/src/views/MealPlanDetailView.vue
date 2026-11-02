@@ -31,9 +31,9 @@
         </div>
       </div>
 
-      <!-- Recipe list (pre-sorted: dated ascending first, then undated) -->
+      <!-- Recipe list (pre-sorted: dated ascending first, then Unscheduled) -->
       <v-card
-        v-for="meal in mealPlanStore.currentPlan.recipes"
+        v-for="meal in mealPlanStore.currentPlan.plannedMeals"
         :key="meal.id"
         class="mb-4"
         variant="outlined"
@@ -56,14 +56,12 @@
 
           <div class="flex-grow-1 ml-1">
             <div class="text-body-2 font-weight-medium">{{ meal.recipeName }}</div>
-            <v-chip size="x-small" :color="portionColor(meal.portionSize)" class="mt-1">
-              {{ portionLabel(meal.portionSize) }}
-            </v-chip>
+            <BatchSizeChip :batch-size="meal.batchSize" size="x-small" class="mt-1" />
           </div>
         </div>
       </v-card>
 
-      <div v-if="mealPlanStore.currentPlan.recipes.length === 0" class="text-center py-6 text-medium-emphasis">
+      <div v-if="mealPlanStore.currentPlan.plannedMeals.length === 0" class="text-center py-6 text-medium-emphasis">
         No recipes in this plan
       </div>
     </div>
@@ -83,6 +81,7 @@
 <script setup>
 import { onMounted } from 'vue'
 import { useMealPlanStore } from '@/stores/mealPlans'
+import BatchSizeChip from '@/components/BatchSizeChip.vue'
 import EmptyState from '@/components/EmptyState.vue'
 import ErrorState from '@/components/ErrorState.vue'
 
@@ -95,12 +94,6 @@ function reload() {
 }
 
 onMounted(reload)
-
-const portionLabel = (size) =>
-  ({ HALF: '½ portion', REGULAR: 'Regular', DOUBLE: 'Double' })[size] ?? size
-
-const portionColor = (size) =>
-  ({ HALF: 'info', REGULAR: 'success', DOUBLE: 'warning' })[size] ?? 'default'
 
 const formatDate  = (d) => new Date(d).toLocaleDateString('en-AU', { year: 'numeric', month: 'short', day: 'numeric' })
 const formatDay   = (d) => new Date(d).toLocaleDateString('en-AU', { day: 'numeric' })

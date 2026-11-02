@@ -182,9 +182,9 @@ public class ShoppingListService(AppDbContext db)
 
     private async Task<List<ShoppingListItem>> BuildRecipeItemsAsync(Guid planId)
     {
-        var planRecipes = await db.MealPlanRecipes
-            .Where(mpr => mpr.MealPlanId == planId)
-            .Include(mpr => mpr.Recipe)
+        var plannedMeals = await db.PlannedMeals
+            .Where(plannedMeal => plannedMeal.MealPlanId == planId)
+            .Include(plannedMeal => plannedMeal.Recipe)
                 .ThenInclude(r => r.Ingredients)
                     .ThenInclude(ri => ri.Ingredient)
             .AsNoTracking()
@@ -196,10 +196,10 @@ public class ShoppingListService(AppDbContext db)
         // An unquantified ingredient is partitioned out before grouping so it is never summed, but tracked because the shopper still has to buy it.
         var unquantifiedIngredients = new Dictionary<Guid, Ingredient>();
 
-        foreach (var mpr in planRecipes)
+        foreach (var plannedMeal in plannedMeals)
         {
-            var multiplier = PortionSize.Multiplier(mpr.PortionSize);
-            foreach (var ri in mpr.Recipe.Ingredients)
+            var multiplier = BatchSize.Multiplier(plannedMeal.BatchSize);
+            foreach (var ri in plannedMeal.Recipe.Ingredients)
             {
                 if (ri.Amount is not { } baseAmount || ri.Unit is not { } unit)
                 {

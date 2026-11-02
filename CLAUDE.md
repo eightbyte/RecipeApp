@@ -19,7 +19,7 @@ recipes can be imported on top.
 | MyPlate seed-import pipeline and licensing (personal use) | `backend/RecipeApp.API/Services/Seeding/CLAUDE.md` |
 | Local LLM layer | `backend/RecipeApp.API/Services/Llm/CLAUDE.md` |
 | Self-hosted deployment, CI, updater, rollback | `docs/deployment.md` |
-| Units, amounts, density, portion scaling | `.claude/rules/measurements.md` |
+| Units, amounts, density, Batch Size scaling | `.claude/rules/measurements.md` |
 | Ingredient categories / aisle order | `.claude/rules/ingredient-categories.md` |
 | Architecture decisions | `docs/adr/` |
 | Past per-phase implementation notes | `docs/history/phase-notes.md` (archive; read only when history matters) |

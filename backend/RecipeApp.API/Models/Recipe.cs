@@ -1,6 +1,6 @@
 namespace RecipeApp.API.Models;
 
-/// <summary>A stored recipe with its ingredients and steps, with base quantities always stored at the regular (1×) portion and scaling applied at display time only.</summary>
+/// <summary>A stored recipe with its ingredients and steps, with base quantities always stored at the Regular (1×) Batch Size and scaling applied at display time only.</summary>
 public class Recipe
 {
     public Guid Id { get; set; }

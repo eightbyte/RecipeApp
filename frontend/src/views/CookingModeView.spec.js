@@ -7,9 +7,11 @@ import { useRecipeStore } from '@/stores/recipes'
 import { useUiStore } from '@/stores/ui'
 import CookingModeView from './CookingModeView.vue'
 import { makeRecipeDetail } from '@/test/factories'
+import { cookingRoute } from '@/router/cookingRoute'
 
 const backMock = vi.fn()
 const replaceMock = vi.fn()
+let routeQuery = {}
 
 vi.mock('@/services/api', () => ({
   default: { get: vi.fn(), post: vi.fn(), put: vi.fn(), delete: vi.fn() },
@@ -20,7 +22,7 @@ vi.mock('vue-router', async (importActual) => {
   const actual = await importActual()
   return {
     ...actual,
-    useRoute: () => ({ params: { id: 'r1' }, query: {} }),
+    useRoute: () => ({ params: { id: 'r1' }, query: routeQuery }),
     useRouter: () => ({ back: backMock, replace: replaceMock, push: vi.fn() }),
   }
 })
@@ -51,6 +53,7 @@ beforeEach(() => {
   setActivePinia(pinia)
   store = useRecipeStore()
   vi.clearAllMocks()
+  routeQuery = {}
 })
 
 async function mountView() {
@@ -145,13 +148,23 @@ describe('CookingModeView', () => {
     expect(fetchSpy).toHaveBeenCalledWith('r1')
   })
 
-  it('scales ingredient amounts from the ?portion query', async () => {
-    // Override the route mock for this test to carry DOUBLE.
-    store.currentRecipe = threeStepRecipe()
-    store.loading = false
-    vi.spyOn(store, 'fetchRecipe').mockResolvedValue(store.currentRecipe)
+  it('shows amounts unscaled at 1× without a Batch Size in the query', async () => {
     const w = await mountView()
-    // Default REGULAR → 200 g flour shown unscaled on the current (first) step.
+    expect(w.find('header').text()).toContain('1×')
+    expect(w.text()).toContain('200 g')
+  })
+
+  it('scales ingredient amounts from the Batch Size in the query and shows the Batch Size', async () => {
+    routeQuery = cookingRoute('r1', 'DOUBLE').query
+    const w = await mountView()
+    expect(w.find('header').text()).toContain('2×')
+    expect(w.text()).toContain('400 g')
+  })
+
+  it('treats an unknown Batch Size in the query as 1×', async () => {
+    routeQuery = cookingRoute('r1', 'TRIPLE').query
+    const w = await mountView()
+    expect(w.find('header').text()).toContain('1×')
     expect(w.text()).toContain('200 g')
   })
 
@@ -176,6 +189,6 @@ describe('CookingModeView', () => {
     await flushPromises()
 
     expect(w.vm.formatAmount(null, null)).toBeNull()
-    expect(w.get('.v-chip').text().trim()).toBe('Salt')
+    expect(w.get('.cooking-step .v-chip').text().trim()).toBe('Salt')
   })
 })

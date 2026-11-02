@@ -342,7 +342,7 @@ public class RecipePackImporter(
                 recipe.Id,
                 SourceUrl = recipe.SourceUrl!,
                 recipe.ImageUrl,
-                InMealPlan = db.MealPlanRecipes.Any(entry => entry.RecipeId == recipe.Id),
+                InMealPlan = db.PlannedMeals.Any(entry => entry.RecipeId == recipe.Id),
             })
             .ToListAsync(ct);
 

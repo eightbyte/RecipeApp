@@ -42,7 +42,7 @@ public class ShoppingListEndpointsTests(DatabaseFixture db) : IAsyncLifetime
 
     private async Task AddRecipeToPlanAsync(Guid planId, Guid recipeId)
     {
-        var response = await Client.PostAsJsonAsync($"/api/v1/meal-plans/{planId}/recipes", new { recipeId });
+        var response = await Client.PostAsJsonAsync($"/api/v1/meal-plans/{planId}/planned-meals", new { recipeId });
         response.EnsureSuccessStatusCode();
     }
 

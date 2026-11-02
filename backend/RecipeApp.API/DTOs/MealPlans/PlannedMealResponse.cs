@@ -1,12 +1,12 @@
 namespace RecipeApp.API.DTOs.MealPlans;
 
-public record MealPlanRecipeResponse(
+public record PlannedMealResponse(
     Guid Id,
     Guid RecipeId,
     string RecipeName,
     string? RecipeImageUrl,
     DateTime? RecipeLastCookedAt,
     DateOnly? ScheduledDate,
-    string PortionSize,
+    string BatchSize,
     int DisplayOrder
 );

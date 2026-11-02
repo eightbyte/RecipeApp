@@ -28,7 +28,7 @@ describe('formatMeasurement', () => {
     expect(formatMeasurement(2, 'cup')).toBe('2 cup')
   })
 
-  it('trims float noise from portion scaling', () => {
+  it('trims float noise from Batch Size scaling', () => {
     expect(formatMeasurement(0.30000000000000004, 'tsp')).toBe('0.3 tsp')
     expect(formatMeasurement(0.1 + 0.2, 'tsp')).toBe('0.3 tsp')
     expect(formatMeasurement(16.0835, 'g')).toBe('16.08 g')
@@ -74,7 +74,7 @@ describe('formatSourceMeasurement', () => {
     expect(formatSourceMeasurement(2, 'cups', 'g')).toBe('(2 cups)')
   })
 
-  it('scales the source by the portion multiplier, like the canonical amount', () => {
+  it('scales the source by the Batch Size multiplier, like the canonical amount', () => {
     expect(formatSourceMeasurement(2, 'cups', 'g', 2)).toBe('(4 cups)')
     expect(formatSourceMeasurement(2, 'cups', 'g', 0.5)).toBe('(1 cups)')
   })

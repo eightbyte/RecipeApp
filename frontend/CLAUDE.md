@@ -1,7 +1,7 @@
 # Frontend — Vue 3 SPA
 
 Measurement and category rules live in `.claude/rules/` (repo root). Read them before touching
-amount formatting, portion scaling, unit pickers or category lists.
+amount formatting, Batch Size scaling, unit pickers or category lists.
 
 ## Layout (`src/`)
 
@@ -11,10 +11,11 @@ amount formatting, portion scaling, unit pickers or category lists.
 | `components/` | Shared components; `layout/` has `AppTopBar`, `AppBottomNav` |
 | `stores/` | Pinia, one file per domain (`recipes`, `ingredients`, `mealPlans`, `shoppingList`, `ui`) |
 | `services/api.js` | The pre-configured Axios instance |
-| `constants/` | `units.js`, `categories.js` — mirrors of the backend enums |
+| `constants/` | `units.js`, `categories.js`, `batchSizes.js` — mirrors of the backend enums |
 | `composables/` | `useWakeLock.js` |
 | `styles/` | `settings.scss` — Vuetify Sass settings |
 | `router/index.js` | All routes |
+| `router/cookingRoute.js` | Builds and reads the Cooking Mode link, kept apart so importing it doesn't load the router |
 | `test/` | Vitest `setup.js` and `factories.js` |
 
 Tests sit beside their subject as `*.spec.js` (Vitest + Vue Test Utils). Run with `npm test`.
@@ -32,11 +33,12 @@ each test or in `beforeEach`; a wrapper mounted in `beforeAll` is gone after the
   scale (`mb-4` is 16px, `mb-6` is 24px).
 - **Typeface:** the system font stack, set once as `$body-font-family` in `src/styles/settings.scss`.
   Vuetify compiles it into `html` and every typography class (`text-h6`, `text-caption`, …).
-- **Never hard-code a unit or category list.** Consume `constants/units.js` / `constants/categories.js`.
+- **Never hard-code a unit, category or Batch Size list.** Consume `constants/units.js`,
+  `constants/categories.js` / `constants/batchSizes.js`.
 - **Grayscale rule:** add class `grayscale` to a recipe image when `lastCookedAt` is within 7 days.
 - **Routes:** use the names defined in `router/index.js` (`home`, `recipes`, `recipe-detail`,
   `recipe-cooking`, `meal-plan`, `shopping`, …). A route with `meta.fullscreen` hides the top and
-  bottom bars (Cooking Mode).
+  bottom bars (Cooking Mode). Link to and read Cooking Mode only through `router/cookingRoute.js`.
 - **Loading/empty/error states:** use `EmptyState`, `ErrorState`, and the global snackbar
   (`stores/ui.js` + `AppSnackbar`). Store fetches treat a 404 as "not found" (empty state), not
   as an error.

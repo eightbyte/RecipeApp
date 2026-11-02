@@ -1,7 +1,7 @@
 namespace RecipeApp.API.Enums;
 
-/// <summary>Portion multipliers applied at display or query time, never modifying base recipe amounts.</summary>
-public static class PortionSize
+/// <summary>How many times the whole recipe is made, applied at display or query time and never modifying base recipe amounts.</summary>
+public static class BatchSize
 {
     public const string Half    = "HALF";
     public const string Regular = "REGULAR";
@@ -11,7 +11,7 @@ public static class PortionSize
 
     public static bool IsValid(string value) => All.Contains(value);
 
-    /// <summary>Numeric multiplier for a portion size. Defaults to 1.0 for unknown values.</summary>
+    /// <summary>Numeric multiplier for a Batch Size. Defaults to 1.0 for unknown values.</summary>
     public static decimal Multiplier(string value) => value switch
     {
         Half   => 0.5m,

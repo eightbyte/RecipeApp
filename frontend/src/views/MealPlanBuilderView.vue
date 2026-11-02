@@ -49,9 +49,9 @@
       </div>
 
       <!-- Added recipes -->
-      <div v-if="mealPlanStore.currentPlan.recipes.length > 0" class="mb-6">
+      <div v-if="mealPlanStore.currentPlan.plannedMeals.length > 0" class="mb-6">
         <v-card
-          v-for="meal in mealPlanStore.currentPlan.recipes"
+          v-for="meal in mealPlanStore.currentPlan.plannedMeals"
           :key="meal.id"
           class="mb-2"
           variant="outlined"
@@ -63,7 +63,7 @@
                 <v-icon v-else color="grey" size="16">mdi-food</v-icon>
               </v-avatar>
               <div class="flex-grow-1 text-body-2 font-weight-medium">{{ meal.recipeName }}</div>
-              <v-btn icon="mdi-delete" variant="text" size="x-small" color="error" @click="removeRecipe(meal.id)" />
+              <v-btn icon="mdi-delete" variant="text" size="x-small" color="error" @click="removePlannedMeal(meal.id)" />
             </div>
 
             <div class="d-flex ga-2 flex-wrap">
@@ -76,20 +76,15 @@
                 hide-details
                 clearable
                 style="min-width: 160px; flex: 1"
-                @update:model-value="(v) => updateDate(meal, v || null)"
+                @update:model-value="(scheduledDate) => updatePlannedMeal(meal, { scheduledDate })"
               />
-              <v-btn-toggle
-                :model-value="meal.portionSize"
-                mandatory
-                color="primary"
+              <BatchSizeToggle
+                :model-value="meal.batchSize"
+                button-size="small"
                 density="compact"
                 style="height: 40px"
-                @update:model-value="(v) => updatePortion(meal, v)"
-              >
-                <v-btn value="HALF" size="small">½</v-btn>
-                <v-btn value="REGULAR" size="small">Regular</v-btn>
-                <v-btn value="DOUBLE" size="small">Double</v-btn>
-              </v-btn-toggle>
+                @update:model-value="(batchSize) => updatePlannedMeal(meal, { batchSize })"
+              />
             </div>
           </div>
         </v-card>
@@ -116,6 +111,8 @@
 import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useMealPlanStore } from '@/stores/mealPlans'
+import { DEFAULT_BATCH_SIZE } from '@/constants/batchSizes'
+import BatchSizeToggle from '@/components/BatchSizeToggle.vue'
 import RecipeBrowser from '@/components/RecipeBrowser.vue'
 import SuggestionsPanel from '@/components/SuggestionsPanel.vue'
 
@@ -149,45 +146,33 @@ async function createPlan() {
 async function addRecipe(recipe) {
   const planId = mealPlanStore.currentPlan?.id
   if (!planId) return
-  await mealPlanStore.addRecipe(planId, {
+  await mealPlanStore.addPlannedMeal(planId, {
     recipeId: recipe.id,
     scheduledDate: null,
-    portionSize: 'REGULAR',
+    batchSize: DEFAULT_BATCH_SIZE,
   })
 }
 
 async function addSuggestion(suggestion) {
   const planId = mealPlanStore.currentPlan?.id
   if (!planId) return
-  await mealPlanStore.addRecipe(planId, {
+  await mealPlanStore.addPlannedMeal(planId, {
     recipeId: suggestion.recipeId,
     scheduledDate: null,
-    portionSize: 'REGULAR',
+    batchSize: DEFAULT_BATCH_SIZE,
   })
 }
 
-async function removeRecipe(mprId) {
+async function removePlannedMeal(plannedMealId) {
   const planId = mealPlanStore.currentPlan?.id
   if (!planId) return
-  await mealPlanStore.removePlanRecipe(planId, mprId)
+  await mealPlanStore.removePlannedMeal(planId, plannedMealId)
 }
 
-async function updateDate(meal, newDate) {
+async function updatePlannedMeal(meal, changes) {
   const planId = mealPlanStore.currentPlan?.id
   if (!planId) return
-  await mealPlanStore.updatePlanRecipe(planId, meal.id, {
-    scheduledDate: newDate,
-    portionSize: meal.portionSize,
-  })
-}
-
-async function updatePortion(meal, newPortion) {
-  const planId = mealPlanStore.currentPlan?.id
-  if (!planId) return
-  await mealPlanStore.updatePlanRecipe(planId, meal.id, {
-    scheduledDate: meal.scheduledDate ?? null,
-    portionSize: newPortion,
-  })
+  await mealPlanStore.updatePlannedMeal(planId, meal, changes)
 }
 
 function done() {

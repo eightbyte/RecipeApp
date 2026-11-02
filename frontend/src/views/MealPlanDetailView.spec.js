@@ -4,7 +4,7 @@ import * as components from 'vuetify/components'
 import * as directives from 'vuetify/directives'
 import { createPinia, setActivePinia } from 'pinia'
 import MealPlanDetailView from './MealPlanDetailView.vue'
-import { makeMealPlanDetail, makeMealPlanRecipe } from '@/test/factories'
+import { makeMealPlanDetail, makePlannedMeal } from '@/test/factories'
 
 vi.mock('@/services/api', () => ({
   default: { get: vi.fn(), post: vi.fn() },
@@ -49,7 +49,7 @@ describe('MealPlanDetailView', () => {
     const { wrapper, store } = await mountView()
     store.currentPlan = makeMealPlanDetail({
       name: 'June Week',
-      recipes: [makeMealPlanRecipe({ recipeName: 'Risotto' })],
+      plannedMeals: [makePlannedMeal({ recipeName: 'Risotto' })],
     })
     await wrapper.vm.$nextTick()
     expect(wrapper.text()).toContain('June Week')

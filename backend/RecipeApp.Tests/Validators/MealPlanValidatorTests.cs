@@ -41,66 +41,66 @@ public class MealPlanValidatorTests
         result.ShouldHaveValidationErrorFor(x => x.Name);
     }
 
-    // ── AddMealPlanRecipeRequestValidator ─────────────────────────────────────
+    // ── AddPlannedMealRequestValidator ─────────────────────────────────────
 
     [Fact]
-    public void AddMealPlanRecipe_EmptyRecipeId_Fails()
+    public void AddPlannedMeal_EmptyRecipeId_Fails()
     {
-        var validator = new AddMealPlanRecipeRequestValidator();
-        var result = validator.TestValidate(new AddMealPlanRecipeRequest(Guid.Empty, null, null));
+        var validator = new AddPlannedMealRequestValidator();
+        var result = validator.TestValidate(new AddPlannedMealRequest(Guid.Empty, null, null));
         result.ShouldHaveValidationErrorFor(x => x.RecipeId);
     }
 
     [Fact]
-    public void AddMealPlanRecipe_InvalidPortionSize_Fails()
+    public void AddPlannedMeal_InvalidBatchSize_Fails()
     {
-        var validator = new AddMealPlanRecipeRequestValidator();
-        var result = validator.TestValidate(new AddMealPlanRecipeRequest(Guid.NewGuid(), null, "INVALID"));
-        result.ShouldHaveValidationErrorFor(x => x.PortionSize);
+        var validator = new AddPlannedMealRequestValidator();
+        var result = validator.TestValidate(new AddPlannedMealRequest(Guid.NewGuid(), null, "INVALID"));
+        result.ShouldHaveValidationErrorFor(x => x.BatchSize);
     }
 
     [Fact]
-    public void AddMealPlanRecipe_NullPortionSize_Passes()
+    public void AddPlannedMeal_NullBatchSize_Passes()
     {
-        var validator = new AddMealPlanRecipeRequestValidator();
-        var result = validator.TestValidate(new AddMealPlanRecipeRequest(Guid.NewGuid(), null, null));
+        var validator = new AddPlannedMealRequestValidator();
+        var result = validator.TestValidate(new AddPlannedMealRequest(Guid.NewGuid(), null, null));
         result.ShouldNotHaveAnyValidationErrors();
     }
 
     [Fact]
-    public void AddMealPlanRecipe_ValidPortionSizes_Pass()
+    public void AddPlannedMeal_ValidBatchSizes_Pass()
     {
-        var validator = new AddMealPlanRecipeRequestValidator();
-        foreach (var portion in API.Enums.PortionSize.All)
+        var validator = new AddPlannedMealRequestValidator();
+        foreach (var batchSize in API.Enums.BatchSize.All)
         {
-            var result = validator.TestValidate(new AddMealPlanRecipeRequest(Guid.NewGuid(), null, portion));
+            var result = validator.TestValidate(new AddPlannedMealRequest(Guid.NewGuid(), null, batchSize));
             result.ShouldNotHaveAnyValidationErrors();
         }
     }
 
-    // ── UpdateMealPlanRecipeRequestValidator ──────────────────────────────────
+    // ── UpdatePlannedMealRequestValidator ──────────────────────────────────
 
     [Fact]
-    public void UpdateMealPlanRecipe_EmptyPortionSize_Fails()
+    public void UpdatePlannedMeal_EmptyBatchSize_Fails()
     {
-        var validator = new UpdateMealPlanRecipeRequestValidator();
-        var result = validator.TestValidate(new UpdateMealPlanRecipeRequest(null, ""));
-        result.ShouldHaveValidationErrorFor(x => x.PortionSize);
+        var validator = new UpdatePlannedMealRequestValidator();
+        var result = validator.TestValidate(new UpdatePlannedMealRequest(null, ""));
+        result.ShouldHaveValidationErrorFor(x => x.BatchSize);
     }
 
     [Fact]
-    public void UpdateMealPlanRecipe_InvalidPortionSize_Fails()
+    public void UpdatePlannedMeal_InvalidBatchSize_Fails()
     {
-        var validator = new UpdateMealPlanRecipeRequestValidator();
-        var result = validator.TestValidate(new UpdateMealPlanRecipeRequest(null, "HUGE"));
-        result.ShouldHaveValidationErrorFor(x => x.PortionSize);
+        var validator = new UpdatePlannedMealRequestValidator();
+        var result = validator.TestValidate(new UpdatePlannedMealRequest(null, "HUGE"));
+        result.ShouldHaveValidationErrorFor(x => x.BatchSize);
     }
 
     [Fact]
-    public void UpdateMealPlanRecipe_ValidRequest_Passes()
+    public void UpdatePlannedMeal_ValidRequest_Passes()
     {
-        var validator = new UpdateMealPlanRecipeRequestValidator();
-        var result = validator.TestValidate(new UpdateMealPlanRecipeRequest(new DateOnly(2026, 6, 5), "REGULAR"));
+        var validator = new UpdatePlannedMealRequestValidator();
+        var result = validator.TestValidate(new UpdatePlannedMealRequest(new DateOnly(2026, 6, 5), "REGULAR"));
         result.ShouldNotHaveAnyValidationErrors();
     }
 }

@@ -81,9 +81,9 @@ public static class Mappings
         p.Id,
         p.Name,
         p.IsActive,
-        p.Recipes.Count,
-        p.Recipes.Where(r => r.ScheduledDate.HasValue).Min(r => (DateOnly?)r.ScheduledDate),
-        p.Recipes.Where(r => r.ScheduledDate.HasValue).Max(r => (DateOnly?)r.ScheduledDate),
+        p.PlannedMeals.Count,
+        p.PlannedMeals.Where(meal => meal.ScheduledDate.HasValue).Min(meal => (DateOnly?)meal.ScheduledDate),
+        p.PlannedMeals.Where(meal => meal.ScheduledDate.HasValue).Max(meal => (DateOnly?)meal.ScheduledDate),
         p.CreatedAt,
         p.ClosedAt
     );
@@ -94,7 +94,7 @@ public static class Mappings
         p.IsActive,
         p.CreatedAt,
         p.ClosedAt,
-        p.Recipes
+        p.PlannedMeals
             .OrderBy(r => r.ScheduledDate.HasValue ? 0 : 1)
             .ThenBy(r => r.ScheduledDate)
             .ThenBy(r => r.DisplayOrder)
@@ -102,15 +102,15 @@ public static class Mappings
             .ToList()
     );
 
-    public static MealPlanRecipeResponse ToResponse(this MealPlanRecipe mpr) => new(
-        mpr.Id,
-        mpr.RecipeId,
-        mpr.Recipe.Name,
-        mpr.Recipe.ImageUrl,
-        mpr.Recipe.LastCookedAt,
-        mpr.ScheduledDate,
-        mpr.PortionSize,
-        mpr.DisplayOrder
+    public static PlannedMealResponse ToResponse(this PlannedMeal plannedMeal) => new(
+        plannedMeal.Id,
+        plannedMeal.RecipeId,
+        plannedMeal.Recipe.Name,
+        plannedMeal.Recipe.ImageUrl,
+        plannedMeal.Recipe.LastCookedAt,
+        plannedMeal.ScheduledDate,
+        plannedMeal.BatchSize,
+        plannedMeal.DisplayOrder
     );
 
     // ── ShoppingList ──────────────────────────────────────────────────────────

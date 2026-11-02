@@ -12,7 +12,7 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
     public DbSet<RecipeStep> RecipeSteps => Set<RecipeStep>();
     public DbSet<RecipeStepIngredient> RecipeStepIngredients => Set<RecipeStepIngredient>();
     public DbSet<MealPlan> MealPlans => Set<MealPlan>();
-    public DbSet<MealPlanRecipe> MealPlanRecipes => Set<MealPlanRecipe>();
+    public DbSet<PlannedMeal> PlannedMeals => Set<PlannedMeal>();
     public DbSet<ShoppingList> ShoppingLists => Set<ShoppingList>();
     public DbSet<ShoppingListItem> ShoppingListItems => Set<ShoppingListItem>();
     public DbSet<SeedLedgerEntry> SeedLedger => Set<SeedLedgerEntry>();
@@ -96,19 +96,19 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
                 .HasFilter("\"IsActive\" = true");
         });
 
-        // ── MealPlanRecipe ────────────────────────────────────────────────────
-        modelBuilder.Entity<MealPlanRecipe>(e =>
+        // ── PlannedMeal ───────────────────────────────────────────────────────
+        modelBuilder.Entity<PlannedMeal>(e =>
         {
-            e.Property(mpr => mpr.PortionSize).HasDefaultValue(PortionSize.Regular);
+            e.Property(plannedMeal => plannedMeal.BatchSize).HasDefaultValue(BatchSize.Regular);
 
-            e.HasOne(mpr => mpr.MealPlan)
-                .WithMany(p => p.Recipes)
-                .HasForeignKey(mpr => mpr.MealPlanId)
+            e.HasOne(plannedMeal => plannedMeal.MealPlan)
+                .WithMany(p => p.PlannedMeals)
+                .HasForeignKey(plannedMeal => plannedMeal.MealPlanId)
                 .OnDelete(DeleteBehavior.Cascade);
 
-            e.HasOne(mpr => mpr.Recipe)
+            e.HasOne(plannedMeal => plannedMeal.Recipe)
                 .WithMany()
-                .HasForeignKey(mpr => mpr.RecipeId)
+                .HasForeignKey(plannedMeal => plannedMeal.RecipeId)
                 .OnDelete(DeleteBehavior.Restrict);
         });
 

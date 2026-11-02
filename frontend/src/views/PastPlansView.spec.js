@@ -61,7 +61,7 @@ describe('PastPlansView', () => {
 
   it('shows recipe count for each plan', async () => {
     const { wrapper, store } = await mountView()
-    store.plans = [makeMealPlanListItem({ isActive: false, recipeCount: 4 })]
+    store.plans = [makeMealPlanListItem({ isActive: false, plannedMealCount: 4 })]
     await wrapper.vm.$nextTick()
     expect(wrapper.text()).toContain('4 recipes')
   })

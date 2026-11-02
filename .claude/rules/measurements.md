@@ -1,7 +1,7 @@
 ---
 paths:
   - "backend/RecipeApp.API/Enums/MeasurementUnit.cs"
-  - "backend/RecipeApp.API/Enums/PortionSize.cs"
+  - "backend/RecipeApp.API/Enums/BatchSize.cs"
   - "backend/RecipeApp.API/Services/MeasurementConverter.cs"
   - "backend/RecipeApp.API/Services/MeasurementOptions.cs"
   - "backend/RecipeApp.API/Services/ShoppingListService.cs"
@@ -14,6 +14,7 @@ paths:
   - "backend/RecipeApp.API/DTOs/**/*.cs"
   - "backend/RecipeApp.API/Validators/**/*.cs"
   - "frontend/src/constants/units.js"
+  - "frontend/src/constants/batchSizes.js"
   - "frontend/src/views/RecipeDetailView.vue"
   - "frontend/src/views/RecipeFormView.vue"
   - "frontend/src/views/CookingModeView.vue"
@@ -67,10 +68,13 @@ paths:
 - When an amount is repaired on import, the source fields record the repaired measurement, not the
   discarded misread.
 
-## Portions and consolidation
+## Batch Size and consolidation
 
-- Portion sizes are `HALF` (×0.5), `REGULAR` (×1.0) and `DOUBLE` (×2.0), applied at display or
-  query time only. **Never modify a stored `Amount`.** `SourceAmount` scales the same way.
+- A Batch Size multiplies the whole recipe, never one serving. The values are `HALF` (×0.5),
+  `REGULAR` (×1.0) and `DOUBLE` (×2.0), shown as ½×, 1× and 2×. They live only in
+  `Enums/BatchSize.cs`, mirrored by `frontend/src/constants/batchSizes.js`, and are applied at
+  display or query time only. **Never modify a stored `Amount`.** `SourceAmount` scales the same
+  way.
 - Shopping-list consolidation groups by dimension via `MeasurementUnit.Table`, so `1 tbsp` +
   `15 ml` makes one row. It resolves mass/volume mixes through density, and it presents a
   single-unit group in that unit (`2 cup + 1 cup = 3 cup`).

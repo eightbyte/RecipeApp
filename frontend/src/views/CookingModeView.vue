@@ -62,6 +62,7 @@
               Step {{ displayIndex }} / {{ totalSteps }}
             </div>
           </div>
+          <BatchSizeChip :batch-size="batchSize" size="small" />
         </div>
         <v-progress-linear
           :model-value="completionPercent"
@@ -161,8 +162,11 @@ import { ref, computed, onMounted, nextTick } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useRecipeStore } from '@/stores/recipes'
 import { formatMeasurement, formatSourceMeasurement } from '@/constants/units'
+import { batchSizeMultiplier } from '@/constants/batchSizes'
+import { batchSizeFromCookingQuery } from '@/router/cookingRoute'
 import { useUiStore } from '@/stores/ui'
 import { useWakeLock } from '@/composables/useWakeLock'
+import BatchSizeChip from '@/components/BatchSizeChip.vue'
 import EmptyState from '@/components/EmptyState.vue'
 import ErrorState from '@/components/ErrorState.vue'
 
@@ -177,14 +181,9 @@ useWakeLock()
 
 const recipeId = props.id ?? route.params.id
 
-const PORTION_MULTIPLIERS = { HALF: 0.5, REGULAR: 1, DOUBLE: 2 }
-
-// Portion carried from a meal plan via ?portion=…; defaults to REGULAR.
-const portionSize = computed(() => {
-  const q = route.query.portion
-  return q in PORTION_MULTIPLIERS ? q : 'REGULAR'
-})
-const portionMultiplier = computed(() => PORTION_MULTIPLIERS[portionSize.value] ?? 1)
+// Carried in the query from a Planned Meal or the recipe detail view, so a reload keeps it.
+const batchSize = computed(() => batchSizeFromCookingQuery(route.query))
+const batchMultiplier = computed(() => batchSizeMultiplier(batchSize.value))
 
 const recipe   = computed(() => store.currentRecipe)
 const headerEl = ref(null)
@@ -224,13 +223,13 @@ function stepIngredients(step) {
 /** Short-circuits on a null amount, because `null * 2` is `0` in JavaScript and would render an ingredient with no stated quantity as `0`. */
 function formatAmount(baseAmount, unit) {
   if (baseAmount == null) return null
-  return formatMeasurement(baseAmount * portionMultiplier.value, unit)
+  return formatMeasurement(baseAmount * batchMultiplier.value, unit)
 }
 
 /** The measurement as the source recipe stated it; null when there is nothing to add. */
 function formatSource(ing) {
   return formatSourceMeasurement(
-    ing.sourceAmount, ing.sourceUnit, ing.unit, portionMultiplier.value)
+    ing.sourceAmount, ing.sourceUnit, ing.unit, batchMultiplier.value)
 }
 
 function toggleStep(step) {

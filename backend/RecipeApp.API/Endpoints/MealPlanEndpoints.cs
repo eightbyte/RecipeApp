@@ -23,7 +23,7 @@ public static class MealPlanEndpoints
             var plan = await svc.GetActiveAsync();
             return plan is null ? Results.NotFound() : Results.Ok(plan);
         })
-        .WithSummary("Get the current active meal plan with its recipes");
+        .WithSummary("Get the current active meal plan with its Planned Meals");
 
         // GET /meal-plans/{id}
         group.MapGet("/{id:guid}", async (Guid id, MealPlanService svc) =>
@@ -72,45 +72,45 @@ public static class MealPlanEndpoints
             var deleted = await svc.DeleteAsync(id);
             return deleted ? Results.NoContent() : Results.NotFound();
         })
-        .WithSummary("Delete a meal plan and its recipes");
+        .WithSummary("Delete a meal plan and its Planned Meals");
 
-        // POST /meal-plans/{id}/recipes
-        group.MapPost("/{id:guid}/recipes", async (
+        // POST /meal-plans/{id}/planned-meals
+        group.MapPost("/{id:guid}/planned-meals", async (
             Guid id,
-            AddMealPlanRecipeRequest request,
+            AddPlannedMealRequest request,
             MealPlanService svc) =>
         {
-            var added = await svc.AddRecipeAsync(id, request);
+            var added = await svc.AddPlannedMealAsync(id, request);
             return added is null
                 ? Results.NotFound()
-                : Results.Created($"/api/v1/meal-plans/{id}/recipes/{added.Id}", added);
+                : Results.Created($"/api/v1/meal-plans/{id}/planned-meals/{added.Id}", added);
         })
-        .WithValidation<AddMealPlanRecipeRequest>()
-        .WithSummary("Add a recipe to a meal plan");
+        .WithValidation<AddPlannedMealRequest>()
+        .WithSummary("Add a Planned Meal to a meal plan");
 
-        // PUT /meal-plans/{id}/recipes/{mprId}
-        group.MapPut("/{id:guid}/recipes/{mprId:guid}", async (
+        // PUT /meal-plans/{id}/planned-meals/{plannedMealId}
+        group.MapPut("/{id:guid}/planned-meals/{plannedMealId:guid}", async (
             Guid id,
-            Guid mprId,
-            UpdateMealPlanRecipeRequest request,
+            Guid plannedMealId,
+            UpdatePlannedMealRequest request,
             MealPlanService svc) =>
         {
-            var updated = await svc.UpdateRecipeAsync(id, mprId, request);
+            var updated = await svc.UpdatePlannedMealAsync(id, plannedMealId, request);
             return updated is null ? Results.NotFound() : Results.Ok(updated);
         })
-        .WithValidation<UpdateMealPlanRecipeRequest>()
-        .WithSummary("Update the scheduled date or portion size of a plan recipe");
+        .WithValidation<UpdatePlannedMealRequest>()
+        .WithSummary("Update the scheduled date or Batch Size of a Planned Meal");
 
-        // DELETE /meal-plans/{id}/recipes/{mprId}
-        group.MapDelete("/{id:guid}/recipes/{mprId:guid}", async (
+        // DELETE /meal-plans/{id}/planned-meals/{plannedMealId}
+        group.MapDelete("/{id:guid}/planned-meals/{plannedMealId:guid}", async (
             Guid id,
-            Guid mprId,
+            Guid plannedMealId,
             MealPlanService svc) =>
         {
-            var removed = await svc.RemoveRecipeAsync(id, mprId);
+            var removed = await svc.RemovePlannedMealAsync(id, plannedMealId);
             return removed ? Results.NoContent() : Results.NotFound();
         })
-        .WithSummary("Remove a recipe from a meal plan");
+        .WithSummary("Remove a Planned Meal from a meal plan");
 
         return routes;
     }

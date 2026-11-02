@@ -1,7 +1,7 @@
 {
   "formatVersion": 2,
-  "contentVersion": 2,
-  "updatedAt": "2026-10-12T19:57:50.000Z",
+  "contentVersion": 3,
+  "updatedAt": "2026-11-02T00:00:00.000Z",
   "provenance": "curated",
   "entries": [
     {
@@ -526,7 +526,8 @@
         "freshly ground pepper",
         "ground black pepper",
         "pepper"
-      ]
+      ],
+      "isStaple": true
     },
     {
       "name": "black peppercorn",
@@ -4515,7 +4516,8 @@
       "defaultUnit": "tsp",
       "aliases": [
         "table salt"
-      ]
+      ],
+      "isStaple": true
     },
     {
       "name": "salt & pepper",
@@ -5379,7 +5381,8 @@
         "ice water",
         "lukewarm water",
         "warm water"
-      ]
+      ],
+      "isStaple": true
     },
     {
       "name": "water chestnut",

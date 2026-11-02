@@ -110,6 +110,20 @@ public class FirstRunSeederTests(DatabaseFixture db) : IAsyncLifetime
     }
 
     [Fact]
+    public async Task OnlySaltBlackPepperAndWaterAreStaples()
+    {
+        await RunAsync();
+
+        await using var context = db.CreateDbContext();
+        var stapleNames = await context.Ingredients.AsNoTracking()
+            .Where(row => row.IsStaple)
+            .Select(row => row.Name)
+            .ToListAsync();
+
+        stapleNames.Should().BeEquivalentTo("salt", "black pepper", "water");
+    }
+
+    [Fact]
     public async Task ASecondRunIsANoOp()
     {
         await RunAsync();

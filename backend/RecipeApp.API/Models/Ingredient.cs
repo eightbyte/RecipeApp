@@ -23,6 +23,9 @@ public class Ingredient
     /// <summary>Bulk density in grams per millilitre used to convert volume to mass, where null means no reliable density is known and volume measurements are kept as stated.</summary>
     public decimal? GramsPerMillilitre { get; set; }
 
+    /// <summary>Whether this is a Staple, an ingredient the user always has on hand, such as salt or water.</summary>
+    public bool IsStaple { get; set; }
+
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 
     // Navigation

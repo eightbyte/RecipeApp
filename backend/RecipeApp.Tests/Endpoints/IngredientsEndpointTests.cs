@@ -146,6 +146,24 @@ public class IngredientsEndpointTests(DatabaseFixture db) : IAsyncLifetime
     }
 
     [Fact]
+    public async Task Update_SetsAndClearsTheStapleFlag()
+    {
+        var seeded = await SeedIngredient("salt", "Salt", IngredientCategory.BakingSpices);
+        seeded.IsStaple.Should().BeFalse();
+
+        var makeStaple = new UpdateIngredientRequest("Salt", IngredientCategory.BakingSpices, null, IsStaple: true);
+        var madeStaple = await Client.PutAsJsonAsync($"/api/v1/ingredients/{seeded.Id}", makeStaple);
+        (await madeStaple.Content.ReadFromJsonAsync<IngredientResponse>())!.IsStaple.Should().BeTrue();
+
+        var fetched = await Client.GetFromJsonAsync<IngredientResponse>($"/api/v1/ingredients/{seeded.Id}");
+        fetched!.IsStaple.Should().BeTrue();
+
+        var clearStaple = new UpdateIngredientRequest("Salt", IngredientCategory.BakingSpices, null, IsStaple: false);
+        var clearedStaple = await Client.PutAsJsonAsync($"/api/v1/ingredients/{seeded.Id}", clearStaple);
+        (await clearedStaple.Content.ReadFromJsonAsync<IngredientResponse>())!.IsStaple.Should().BeFalse();
+    }
+
+    [Fact]
     public async Task Update_NotFound_Returns404()
     {
         var request = new UpdateIngredientRequest("Anything", IngredientCategory.Other, null);

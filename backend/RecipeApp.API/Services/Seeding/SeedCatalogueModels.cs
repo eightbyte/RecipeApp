@@ -37,12 +37,14 @@ public static class CatalogueProvenance
 
 /// <summary>One catalogue entry: a canonical ingredient plus every other name that resolves to it.</summary>
 /// <param name="Aliases">Normalised lowercase names this entry absorbs, never equal to any entry's name and never shared with another entry.</param>
+/// <param name="IsStaple">Whether the entry is a Staple; optional in the file, where only Staples carry it.</param>
 public record IngredientCatalogueEntry(
     string Name,
     string DisplayName,
     string Category,
     string? DefaultUnit,
-    IReadOnlyList<string> Aliases);
+    IReadOnlyList<string> Aliases,
+    bool IsStaple = false);
 
 // ── seed-data/myplate/catalogue-build.json (Stage 4.5 output) ─────────────────
 

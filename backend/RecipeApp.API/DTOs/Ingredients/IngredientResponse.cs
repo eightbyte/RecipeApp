@@ -7,5 +7,6 @@ public record IngredientResponse(
     string Category,
     string? DefaultUnit,
     decimal? GramsPerMillilitre,
+    bool IsStaple,
     DateTime CreatedAt
 );

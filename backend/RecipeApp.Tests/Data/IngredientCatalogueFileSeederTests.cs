@@ -30,8 +30,9 @@ public class IngredientCatalogueFileSeederTests(DatabaseFixture db) : IAsyncLife
         string? displayName = null,
         string category = IngredientCategory.Produce,
         string? defaultUnit = MeasurementUnit.Piece,
-        string[]? aliases = null) =>
-        new(name, displayName ?? name, category, defaultUnit, aliases ?? []);
+        string[]? aliases = null,
+        bool isStaple = false) =>
+        new(name, displayName ?? name, category, defaultUnit, aliases ?? [], isStaple);
 
     private async Task<Ingredient> SeedRowAsync(Ingredient row)
     {
@@ -66,6 +67,19 @@ public class IngredientCatalogueFileSeederTests(DatabaseFixture db) : IAsyncLife
         onion.Category.Should().Be(IngredientCategory.Produce);
         onion.DefaultUnit.Should().Be(MeasurementUnit.Piece);
         onion.Aliases.Should().Equal("onions");
+    }
+
+    [Fact]
+    public async Task InsertsTheStapleFlagFromTheArtefact()
+    {
+        await using var context = db.CreateDbContext();
+
+        await IngredientCatalogueFileSeeder.SeedAsync(context, Catalogue(
+            Entry("salt", isStaple: true),
+            Entry("onion")));
+
+        (await ReadAsync("salt")).IsStaple.Should().BeTrue();
+        (await ReadAsync("onion")).IsStaple.Should().BeFalse();
     }
 
     [Fact]
@@ -148,6 +162,22 @@ public class IngredientCatalogueFileSeederTests(DatabaseFixture db) : IAsyncLife
     }
 
     [Fact]
+    public async Task NeverRestoresAStapleFlagTheUserCleared()
+    {
+        await SeedRowAsync(new Ingredient
+        {
+            Id = Guid.NewGuid(), Name = "salt", DisplayName = "Salt",
+            Category = IngredientCategory.BakingSpices, IsStaple = false,
+        });
+
+        await using var context = db.CreateDbContext();
+        await IngredientCatalogueFileSeeder.SeedAsync(context, Catalogue(
+            Entry("salt", "Salt", IngredientCategory.BakingSpices, isStaple: true)));
+
+        (await ReadAsync("salt")).IsStaple.Should().BeFalse();
+    }
+
+    [Fact]
     public async Task MergesAliasesRatherThanReplacingThem()
     {
         // A row created at runtime by a scrape is exactly the case this protects, since taking its aliases away would break lookups that already work.
@@ -191,6 +221,30 @@ public class IngredientCatalogueFileSeederTests(DatabaseFixture db) : IAsyncLife
         row.Category.Should().Be(IngredientCategory.Produce);
         row.DefaultUnit.Should().Be(MeasurementUnit.Piece);
         row.Aliases.Should().Equal("onions");
+    }
+
+    [Fact]
+    public async Task ForceReAppliesTheStapleFlag()
+    {
+        await SeedRowAsync(new Ingredient
+        {
+            Id = Guid.NewGuid(), Name = "salt", DisplayName = "Salt",
+            Category = IngredientCategory.BakingSpices, IsStaple = false,
+        });
+        await SeedRowAsync(new Ingredient
+        {
+            Id = Guid.NewGuid(), Name = "onion", DisplayName = "Onion",
+            Category = IngredientCategory.Produce, IsStaple = true,
+        });
+
+        await using var context = db.CreateDbContext();
+        await IngredientCatalogueFileSeeder.SeedAsync(context, Catalogue(
+            Entry("salt", "Salt", IngredientCategory.BakingSpices, isStaple: true),
+            Entry("onion", "Onion", IngredientCategory.Produce)),
+            force: true);
+
+        (await ReadAsync("salt")).IsStaple.Should().BeTrue();
+        (await ReadAsync("onion")).IsStaple.Should().BeFalse();
     }
 
     [Fact]

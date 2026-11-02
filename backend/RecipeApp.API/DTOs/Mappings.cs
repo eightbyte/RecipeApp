@@ -18,6 +18,7 @@ public static class Mappings
         i.Category,
         i.DefaultUnit,
         i.GramsPerMillilitre,
+        i.IsStaple,
         i.CreatedAt
     );
 

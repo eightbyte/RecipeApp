@@ -412,4 +412,31 @@ public class RecipeValidatorTests
         var result = _listQueryValidator.TestValidate(TestDataBuilder.RecipeListQuery(direction: direction));
         result.ShouldHaveValidationErrorFor(x => x.Direction);
     }
+
+    [Theory]
+    [InlineData(1, 1)]
+    [InlineData(50, 100)]
+    public void ListQuery_PageAndPageSizeInRange_HasNoErrors(int page, int pageSize)
+    {
+        var result = _listQueryValidator.TestValidate(TestDataBuilder.RecipeListQuery(page: page, pageSize: pageSize));
+        result.ShouldNotHaveAnyValidationErrors();
+    }
+
+    [Theory]
+    [InlineData(0)]
+    [InlineData(-1)]
+    public void ListQuery_PageBelowOne_HasErrorOnPage(int page)
+    {
+        var result = _listQueryValidator.TestValidate(TestDataBuilder.RecipeListQuery(page: page));
+        result.ShouldHaveValidationErrorFor(x => x.Page);
+    }
+
+    [Theory]
+    [InlineData(0)]
+    [InlineData(101)]
+    public void ListQuery_PageSizeOutOfRange_HasErrorOnPageSize(int pageSize)
+    {
+        var result = _listQueryValidator.TestValidate(TestDataBuilder.RecipeListQuery(pageSize: pageSize));
+        result.ShouldHaveValidationErrorFor(x => x.PageSize);
+    }
 }

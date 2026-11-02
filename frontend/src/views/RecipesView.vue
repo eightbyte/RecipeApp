@@ -9,7 +9,7 @@
         placeholder="Search recipes or ingredients…"
         clearable
         hide-details
-        @update:model-value="onSearch"
+        @update:model-value="reloadAfterTyping"
       />
 
       <v-menu>
@@ -69,8 +69,8 @@
       </v-btn>
     </div>
 
-    <!-- ── Loading skeleton ─────────────────────────────────────────────── -->
-    <div v-if="store.loading">
+    <!-- ── Loading skeleton (page 1) ────────────────────────────────────── -->
+    <div v-if="loading">
       <v-skeleton-loader
         v-for="n in 3"
         :key="n"
@@ -79,17 +79,23 @@
       />
     </div>
 
-    <!-- ── Fetch error (only when there's nothing to show) ──────────────── -->
+    <!-- ── Page 1 fetch error ───────────────────────────────────────────── -->
     <ErrorState
-      v-else-if="store.error && !store.recipes.length"
-      :message="store.error"
+      v-else-if="error"
+      :message="error"
       @retry="reload"
     />
 
     <!-- ── Recipe list ──────────────────────────────────────────────────── -->
-    <div v-else-if="store.recipes.length">
+    <RecipeInfiniteScroll
+      v-else-if="items.length"
+      :load-more="loadMore"
+      :is-complete="isComplete"
+      :page-count="pageCount"
+      :total-count="totalCount"
+    >
       <v-card
-        v-for="recipe in store.recipes"
+        v-for="recipe in items"
         :key="recipe.id"
         class="mb-4"
         :to="{ name: 'recipe-detail', params: { id: recipe.id } }"
@@ -154,7 +160,7 @@
           </div>
         </div>
       </v-card>
-    </div>
+    </RecipeInfiniteScroll>
 
     <!-- ── Empty state ──────────────────────────────────────────────────── -->
     <EmptyState
@@ -173,7 +179,9 @@
 <script setup>
 import { ref, computed, onMounted } from 'vue'
 import { useRecipeStore } from '@/stores/recipes'
+import { useRecipePages } from '@/composables/useRecipePages'
 import RecipeUrlBottomSheet from '@/components/RecipeUrlBottomSheet.vue'
+import RecipeInfiniteScroll from '@/components/RecipeInfiniteScroll.vue'
 import EmptyState from '@/components/EmptyState.vue'
 import ErrorState from '@/components/ErrorState.vue'
 import {
@@ -186,45 +194,35 @@ import {
 } from '@/constants/recipeSorts'
 import { readStoredJson, writeStoredJson } from '@/utils/storage'
 
-const SEARCH_DEBOUNCE_MS = 300
-
 const store  = useRecipeStore()
 const search = ref('')
 const showImportSheet = ref(false)
 const listSort = ref(toRecipeListSort(readStoredJson(RECIPE_LIST_SORT_STORAGE_KEY, null)))
+
+const {
+  items, totalCount, pageCount, isComplete, loading, error, loadedParams, reload, reloadAfterTyping, loadMore,
+} = useRecipePages(() => ({
+  ...(search.value ? { search: search.value } : {}),
+  sort: listSort.value.sort,
+  direction: listSort.value.direction,
+}))
+
 // The search the shown recipes were loaded for, null before the first load, so a reload or a pending search does not flip the empty state.
-const loadedSearch = ref(null)
-let searchTimer = null
+const loadedSearch = computed(() => loadedParams.value === null ? null : (loadedParams.value.search ?? ''))
 
 const directionLabel = computed(() => sortDirectionLabel(listSort.value.sort, listSort.value.direction))
 const directionIcon  = computed(() => sortDirectionIcon(listSort.value.direction))
 
 // True exactly when "No recipes yet" shows, so a search with no results keeps the sort row.
 const hasNoRecipes = computed(() =>
-  loadedSearch.value === '' && !store.error && !store.recipes.length
+  loadedSearch.value === '' && !error.value && !items.value.length
 )
 
 onMounted(() => reload())
 
-async function reload() {
-  const searchText = search.value ?? ''
-  await store.fetchRecipes({
-    ...(searchText ? { search: searchText } : {}),
-    sort: listSort.value.sort,
-    direction: listSort.value.direction,
-  })
-  loadedSearch.value = searchText
-}
-
-function onSearch() {
-  clearTimeout(searchTimer)
-  searchTimer = setTimeout(reload, SEARCH_DEBOUNCE_MS)
-}
-
 function applySort(recipeListSort) {
   listSort.value = recipeListSort
   writeStoredJson(RECIPE_LIST_SORT_STORAGE_KEY, recipeListSort)
-  clearTimeout(searchTimer)
   reload()
 }
 

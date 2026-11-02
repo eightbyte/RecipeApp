@@ -108,5 +108,8 @@ public class RecipeListQueryValidator : AbstractValidator<RecipeListQuery>
             .Must(direction => direction != null && SortDirection.IsValid(direction))
             .WithMessage($"Direction must be one of: {string.Join(", ", SortDirection.All)}")
             .When(x => x.Direction is not null);
+
+        RuleFor(x => x.Page).GreaterThanOrEqualTo(1);
+        RuleFor(x => x.PageSize).InclusiveBetween(1, RecipeListPaging.MaxPageSize);
     }
 }

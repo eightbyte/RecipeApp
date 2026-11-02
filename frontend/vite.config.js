@@ -36,8 +36,19 @@ export default defineConfig({
           navigateFallback: '/index.html',
           runtimeCaching: [
             {
-              // Recipe API reads — viewed recipes & the list become available offline.
-              urlPattern: ({ url }) => url.pathname.includes('/api/v1/recipes'),
+              // Recipe list pages: network first so the pages joined on scroll come from one version of the list, cached for offline.
+              urlPattern: ({ url }) => url.pathname === '/api/v1/recipes',
+              handler: 'NetworkFirst',
+              options: {
+                cacheName: 'recipe-list',
+                networkTimeoutSeconds: 5,
+                expiration: { maxEntries: 50, maxAgeSeconds: 60 * 60 * 24 * 7 },
+                cacheableResponse: { statuses: [0, 200] },
+              },
+            },
+            {
+              // Single recipe reads (GET /api/v1/recipes/{id}), so viewed recipes open offline.
+              urlPattern: ({ url }) => /^\/api\/v1\/recipes\/[^/]+$/.test(url.pathname),
               handler: 'StaleWhileRevalidate',
               options: {
                 cacheName: 'recipe-api',

@@ -11,7 +11,7 @@
         clearable
         hide-details
         class="flex-grow-1"
-        @update:model-value="onSearchChange"
+        @update:model-value="reloadAfterTyping"
       />
     </div>
 
@@ -22,49 +22,57 @@
         density="compact"
         hide-details
         color="primary"
-        @update:model-value="onSearchChange"
+        @update:model-value="reload"
       />
     </div>
 
     <!-- Recipe list -->
-    <div v-if="recipesStore.loading" class="d-flex justify-center py-6">
+    <div v-if="loading" class="d-flex justify-center py-6">
       <v-progress-circular indeterminate color="primary" />
     </div>
 
-    <div v-else-if="recipesStore.recipes.length === 0" class="text-center py-6 text-medium-emphasis">
+    <div v-else-if="items.length === 0" class="text-center py-6 text-medium-emphasis">
       No recipes found
     </div>
 
-    <v-list v-else lines="two">
-      <v-list-item
-        v-for="recipe in recipesStore.recipes"
-        :key="recipe.id"
-        :ripple="true"
-        class="rounded mb-1"
-        @click="handleRecipeClick(recipe)"
-      >
-        <template #prepend>
-          <v-avatar size="48" rounded="lg" color="grey-lighten-3" class="mr-3">
-            <v-img
-              v-if="recipe.imageUrl"
-              :src="recipe.imageUrl"
-              cover
-              :class="{ grayscale: recipesStore.isRecentlyCooked(recipe) }"
-            />
-            <v-icon v-else color="grey">mdi-food</v-icon>
-          </v-avatar>
-        </template>
+    <RecipeInfiniteScroll
+      v-else
+      :load-more="loadMore"
+      :is-complete="isComplete"
+      :page-count="pageCount"
+      :total-count="totalCount"
+    >
+      <v-list lines="two">
+        <v-list-item
+          v-for="recipe in items"
+          :key="recipe.id"
+          :ripple="true"
+          class="rounded mb-1"
+          @click="handleRecipeClick(recipe)"
+        >
+          <template #prepend>
+            <v-avatar size="48" rounded="lg" color="grey-lighten-3" class="mr-3">
+              <v-img
+                v-if="recipe.imageUrl"
+                :src="recipe.imageUrl"
+                cover
+                :class="{ grayscale: recipesStore.isRecentlyCooked(recipe) }"
+              />
+              <v-icon v-else color="grey">mdi-food</v-icon>
+            </v-avatar>
+          </template>
 
-        <v-list-item-title class="font-weight-medium">{{ recipe.name }}</v-list-item-title>
-        <v-list-item-subtitle v-if="recipesStore.isRecentlyCooked(recipe)" class="text-warning">
-          Cooked recently
-        </v-list-item-subtitle>
+          <v-list-item-title class="font-weight-medium">{{ recipe.name }}</v-list-item-title>
+          <v-list-item-subtitle v-if="recipesStore.isRecentlyCooked(recipe)" class="text-warning">
+            Cooked recently
+          </v-list-item-subtitle>
 
-        <template #append>
-          <v-btn icon="mdi-plus" variant="tonal" size="small" color="primary" @click.stop="handleRecipeClick(recipe)" />
-        </template>
-      </v-list-item>
-    </v-list>
+          <template #append>
+            <v-btn icon="mdi-plus" variant="tonal" size="small" color="primary" @click.stop="handleRecipeClick(recipe)" />
+          </template>
+        </v-list-item>
+      </v-list>
+    </RecipeInfiniteScroll>
 
     <!-- Recently-cooked confirmation dialog -->
     <RecentlyCookedDialog
@@ -79,7 +87,9 @@
 <script setup>
 import { ref, onMounted } from 'vue'
 import { useRecipeStore } from '@/stores/recipes'
+import { useRecipePages } from '@/composables/useRecipePages'
 import RecentlyCookedDialog from '@/components/RecentlyCookedDialog.vue'
+import RecipeInfiniteScroll from '@/components/RecipeInfiniteScroll.vue'
 
 const emit = defineEmits(['add'])
 
@@ -90,18 +100,16 @@ const hideRecentlyCooked    = ref(false)
 const recentlyCoookedDialogOpen = ref(false)
 const pendingRecipe         = ref(null)
 
-onMounted(() => loadRecipes())
-
-function onSearchChange() {
-  loadRecipes()
-}
-
-async function loadRecipes() {
+const {
+  items, totalCount, pageCount, isComplete, loading, reload, reloadAfterTyping, loadMore,
+} = useRecipePages(() => {
   const params = {}
   if (searchQuery.value) params.search = searchQuery.value
   if (hideRecentlyCooked.value) params.excludeRecentDays = 7
-  await recipesStore.fetchRecipes(params)
-}
+  return params
+})
+
+onMounted(() => reload())
 
 function handleRecipeClick(recipe) {
   if (recipesStore.isRecentlyCooked(recipe)) {

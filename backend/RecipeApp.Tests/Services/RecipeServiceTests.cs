@@ -26,9 +26,9 @@ public class RecipeServiceTests(DatabaseFixture db) : IAsyncLifetime
         await ctx.SaveChangesAsync();
 
         var svc = new RecipeService(ctx);
-        var list = await svc.GetListAsync(TestDataBuilder.RecipeListQuery());
+        var page = await svc.GetListAsync(TestDataBuilder.RecipeListQuery());
 
-        list.Should().HaveCount(3);
+        page.Items.Should().HaveCount(3);
     }
 
     [Fact]
@@ -40,10 +40,10 @@ public class RecipeServiceTests(DatabaseFixture db) : IAsyncLifetime
         await ctx.SaveChangesAsync();
 
         var svc = new RecipeService(ctx);
-        var list = await svc.GetListAsync(TestDataBuilder.RecipeListQuery(search: "spag"));
+        var page = await svc.GetListAsync(TestDataBuilder.RecipeListQuery(search: "spag"));
 
-        list.Should().HaveCount(1);
-        list[0].Name.Should().Be("Spaghetti Bolognese");
+        page.Items.Should().HaveCount(1);
+        page.Items[0].Name.Should().Be("Spaghetti Bolognese");
     }
 
     [Fact]
@@ -54,9 +54,9 @@ public class RecipeServiceTests(DatabaseFixture db) : IAsyncLifetime
         await ctx.SaveChangesAsync();
 
         var svc = new RecipeService(ctx);
-        var list = await svc.GetListAsync(TestDataBuilder.RecipeListQuery(search: "xyz-no-match"));
+        var page = await svc.GetListAsync(TestDataBuilder.RecipeListQuery(search: "xyz-no-match"));
 
-        list.Should().BeEmpty();
+        page.Items.Should().BeEmpty();
     }
 
     [Fact]
@@ -68,9 +68,9 @@ public class RecipeServiceTests(DatabaseFixture db) : IAsyncLifetime
         await ctx.SaveChangesAsync();
 
         var svc = new RecipeService(ctx);
-        var list = await svc.GetListAsync(TestDataBuilder.RecipeListQuery(excludeRecentDays: 7));
+        var page = await svc.GetListAsync(TestDataBuilder.RecipeListQuery(excludeRecentDays: 7));
 
-        list.Should().BeEmpty();
+        page.Items.Should().BeEmpty();
     }
 
     [Fact]
@@ -81,9 +81,9 @@ public class RecipeServiceTests(DatabaseFixture db) : IAsyncLifetime
         await ctx.SaveChangesAsync();
 
         var svc = new RecipeService(ctx);
-        var list = await svc.GetListAsync(TestDataBuilder.RecipeListQuery(excludeRecentDays: 7));
+        var page = await svc.GetListAsync(TestDataBuilder.RecipeListQuery(excludeRecentDays: 7));
 
-        list.Should().HaveCount(1);
+        page.Items.Should().HaveCount(1);
     }
 
     [Fact]
@@ -94,10 +94,10 @@ public class RecipeServiceTests(DatabaseFixture db) : IAsyncLifetime
         await ctx.SaveChangesAsync();
 
         var svc = new RecipeService(ctx);
-        var list = await svc.GetListAsync(TestDataBuilder.RecipeListQuery(
+        var page = await svc.GetListAsync(TestDataBuilder.RecipeListQuery(
             lastCookedBefore: new DateTime(2026, 6, 1, 0, 0, 0, DateTimeKind.Utc)));
 
-        list.Should().HaveCount(1);
+        page.Items.Should().HaveCount(1);
     }
 
     [Fact]
@@ -108,9 +108,9 @@ public class RecipeServiceTests(DatabaseFixture db) : IAsyncLifetime
         await ctx.SaveChangesAsync();
 
         var svc = new RecipeService(ctx);
-        var list = await svc.GetListAsync(TestDataBuilder.RecipeListQuery(excludeRecentDays: 7));
+        var page = await svc.GetListAsync(TestDataBuilder.RecipeListQuery(excludeRecentDays: 7));
 
-        list.Should().HaveCount(1);
+        page.Items.Should().HaveCount(1);
     }
 
     // ── GetByIdAsync ──────────────────────────────────────────────────────────

@@ -14,12 +14,12 @@ Read `CODING_STANDARDS.md` (repo root) before writing or reviewing code: comment
 | `stores/` | Pinia, one file per domain (`recipes`, `ingredients`, `mealPlans`, `shoppingList`, `ui`) |
 | `services/api.js` | The pre-configured Axios instance |
 | `constants/` | `units.js`, `categories.js`, `batchSizes.js`, `recipeSorts.js` — mirrors of the backend enums |
-| `composables/` | `useWakeLock.js` |
+| `composables/` | `useWakeLock.js`; `useRecipePages.js` pages a recipe list and holds the shared `SEARCH_DEBOUNCE_MS` |
 | `utils/` | `dateOnly.js` formats date-only values; `storage.js` wraps `localStorage` for device-local preferences |
 | `styles/` | `settings.scss` — Vuetify Sass settings |
 | `router/index.js` | All routes |
 | `router/cookingRoute.js` | Builds and reads the Cooking Mode link, kept apart so importing it doesn't load the router |
-| `test/` | Vitest `setup.js`, `factories.js` and `timeZone.js` (run a describe block in a given timezone) |
+| `test/` | Vitest `setup.js`, `factories.js`, `timeZone.js` (run a describe block in a given timezone) and `infiniteScrollStub.js` (stands in for `VInfiniteScroll`, which never loads under jsdom) |
 
 Tests sit beside their subject as `*.spec.js` (Vitest + Vue Test Utils). Run with `npm test`.
 `src/test/setup.js` unmounts every wrapper after each test (`enableAutoUnmount`), so mount inside
@@ -47,8 +47,14 @@ each test or in `beforeEach`; a wrapper mounted in `beforeAll` is gone after the
 - **Loading/empty/error states:** use `EmptyState`, `ErrorState`, and the global snackbar
   (`stores/ui.js` + `AppSnackbar`). Store fetches treat a 404 as "not found" (empty state), not
   as an error.
-- **PWA:** `vite-plugin-pwa` runtime-caches `/api/v1/recipes` and `/uploads/images/`. Change the
+- **PWA:** `vite-plugin-pwa` runtime-caches the recipe list (`/api/v1/recipes`, NetworkFirst in
+  `recipe-list`, so the pages joined on scroll come from one version of the list), single recipes
+  (`/api/v1/recipes/{id}`, StaleWhileRevalidate in `recipe-api`) and `/uploads/images/`. Change the
   caching rules with that in mind.
+- **Recipe lists** (Recipes tab, `RecipeBrowser`) load a page at a time through
+  `composables/useRecipePages.js`, one instance per list, and render through
+  `components/RecipeInfiniteScroll.vue`. A recipe mutation does not patch any list, because each
+  list refetches page 1 when it mounts.
 
 ## Environment (`.env.development`)
 

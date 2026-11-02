@@ -4,6 +4,7 @@ using RecipeApp.API.DTOs.Recipes;
 using RecipeApp.API.Enums;
 using RecipeApp.API.Filters;
 using RecipeApp.API.Services;
+using RecipeApp.API.Validators;
 
 namespace RecipeApp.API.Endpoints;
 
@@ -22,7 +23,9 @@ public static class RecipesEndpoints
         .WithDescription(
             "Supports optional filters: search (name), ingredient, excludeRecentDays, lastCookedBefore. " +
             $"Orders by sort ({string.Join(", ", RecipeSort.All)}; default {RecipeSort.Default}) " +
-            $"and direction ({string.Join(", ", SortDirection.All)}; default {SortDirection.Default}).");
+            $"and direction ({string.Join(", ", SortDirection.All)}; default {SortDirection.Default}). " +
+            $"Returns one page: page counts from 1 (default 1), and pageSize defaults to {RecipeListPaging.DefaultPageSize} " +
+            $"and is at most {RecipeListPaging.MaxPageSize}. totalCount counts every recipe that matches the filters.");
 
         // GET /recipes/{id}
         group.MapGet("/{id:guid}", async (Guid id, RecipeService svc) =>

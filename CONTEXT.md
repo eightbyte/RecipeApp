@@ -12,6 +12,11 @@ An entry in the Ingredient Catalogue: a single foodstuff such as "onion", with i
 alternate names. It has no amount.
 _Avoid_: Catalogue item, food
 
+**Staple**:
+An Ingredient the user always has on hand. Staples are left out of recipe suggestions and kept
+apart on the shopping list.
+_Avoid_: Pantry item, common item
+
 **Recipe Ingredient**:
 One line in a recipe's ingredient list: an amount and unit (or none), a note such as "finely
 chopped", and the one Ingredient it refers to.

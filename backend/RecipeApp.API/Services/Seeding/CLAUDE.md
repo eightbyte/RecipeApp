@@ -103,6 +103,9 @@ instead.**
 - After any full build, grep the log for `were still unanswered after`: a whole batch can fail by
   sampling. Review merges with the `merged:` / `kept apart:` log lines and hand-labelled
   `--batch` previews. A count is not a review.
+- `isStaple` is optional and appears only on Staples. A non-force import never changes an existing
+  row's Staple flag, because a bool cannot tell "never set" from "the user cleared it". Making an
+  existing install's ingredient a Staple takes a migration data step or `--force`.
 - Corrections are hand-edited in the shipped file and re-imported with `import-catalogue --force`.
   The build output is a reference to curate from, never a replacement.
 

@@ -43,6 +43,7 @@ public static class IngredientCatalogueFileSeeder
                     Category    = entry.Category,
                     DefaultUnit = entry.DefaultUnit,
                     Aliases     = [.. entry.Aliases],
+                    IsStaple    = entry.IsStaple,
                     CreatedAt   = DateTime.UtcNow,
                 });
                 inserted++;
@@ -63,7 +64,7 @@ public static class IngredientCatalogueFileSeeder
         return new SeedCatalogueOutcome(inserted, updated, unchanged, force);
     }
 
-    /// <summary>Brings one existing row up to date and returns whether anything changed, only filling nulls and merging aliases unless <paramref name="force"/> is set.</summary>
+    /// <summary>Brings one existing row up to date and returns whether anything changed, only filling nulls and merging aliases, and leaving the Staple flag alone, unless <paramref name="force"/> is set.</summary>
     private static bool Apply(Ingredient row, IngredientCatalogueEntry entry, bool force)
     {
         var changed = false;
@@ -83,6 +84,9 @@ public static class IngredientCatalogueFileSeeder
         {
             if (row.DefaultUnit != entry.DefaultUnit) { row.DefaultUnit = entry.DefaultUnit; changed = true; }
         }
+
+        // A flag cannot record that it was never set, so only a forced run may overrule the row.
+        if (force && row.IsStaple != entry.IsStaple) { row.IsStaple = entry.IsStaple; changed = true; }
 
         var aliases = force
             ? entry.Aliases

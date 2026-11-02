@@ -4,5 +4,6 @@ public record UpdateIngredientRequest(
     string DisplayName,
     string Category,
     string? DefaultUnit,
-    decimal? GramsPerMillilitre = null
+    decimal? GramsPerMillilitre = null,
+    bool IsStaple = false
 );

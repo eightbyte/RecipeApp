@@ -8,6 +8,8 @@
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
     <IsPackable>false</IsPackable>
+    <!-- A filter that matches no tests otherwise reports success, so an empty run exits 9 instead. -->
+    <TestingPlatformCommandLineArguments>--minimum-expected-tests 1</TestingPlatformCommandLineArguments>
   </PropertyGroup>
 
   <ItemGroup>

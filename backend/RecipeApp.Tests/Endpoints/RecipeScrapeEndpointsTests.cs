@@ -38,7 +38,7 @@ public class RecipeScrapeEndpointsTests(DatabaseFixture db) : IAsyncLifetime
         SourceUrl:   "https://example.com/bolognese",
         Ingredients:
         [
-            new ScrapePreviewIngredient(
+            new ScrapePreviewIngredientResponse(
                 IngredientId:      null,
                 Name:              "beef mince",
                 DisplayName:       "Beef Mince",
@@ -53,7 +53,7 @@ public class RecipeScrapeEndpointsTests(DatabaseFixture db) : IAsyncLifetime
         ],
         Steps:
         [
-            new ScrapePreviewStep(1, "Brown the mince in a pan.", [0])
+            new ScrapePreviewStepResponse(1, "Brown the mince in a pan.", [0])
         ]
     );
 
@@ -184,7 +184,7 @@ public class RecipeScrapeEndpointsTests(DatabaseFixture db) : IAsyncLifetime
             Description: null,
             SourceUrl:   "https://example.com",
             Servings:    4,
-            Ingredients: [new ScrapeConfirmIngredient(
+            Ingredients: [new ScrapeConfirmIngredientRequest(
                 IngredientId:             null,
                 NewIngredientName:        "flour",
                 NewIngredientDisplayName: "Flour",
@@ -193,7 +193,7 @@ public class RecipeScrapeEndpointsTests(DatabaseFixture db) : IAsyncLifetime
                 Unit:                     "g",
                 Notes:                    null,
                 DisplayOrder:             0)],
-            Steps: [new ScrapeConfirmStep(1, "Mix", [])]
+            Steps: [new ScrapeConfirmStepRequest(1, "Mix", [])]
         );
 
         var response = await client.PostAsJsonAsync("/api/v1/recipes/scrape/confirm", request);
@@ -213,7 +213,7 @@ public class RecipeScrapeEndpointsTests(DatabaseFixture db) : IAsyncLifetime
             Description: null,
             SourceUrl:   "https://example.com/bolognese",
             Servings:    4,
-            Ingredients: [new ScrapeConfirmIngredient(
+            Ingredients: [new ScrapeConfirmIngredientRequest(
                 IngredientId:             ingredientId,
                 NewIngredientName:        ingredientId == null ? newName : null,
                 NewIngredientDisplayName: ingredientId == null ? newDisplayName : null,
@@ -222,7 +222,7 @@ public class RecipeScrapeEndpointsTests(DatabaseFixture db) : IAsyncLifetime
                 Unit:                     "g",
                 Notes:                    null,
                 DisplayOrder:             0)],
-            Steps: [new ScrapeConfirmStep(1, "Brown the mince.", [0])]
+            Steps: [new ScrapeConfirmStepRequest(1, "Brown the mince.", [0])]
         );
 }
 

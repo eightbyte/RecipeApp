@@ -50,7 +50,7 @@ public class SeedCatalogueResolver(
         CatalogueLookup lookup,
         bool allowUnknownIngredients = false)
     {
-        var ingredients = new List<ScrapeConfirmIngredient>(recipe.Ingredients.Count);
+        var ingredients = new List<ScrapeConfirmIngredientRequest>(recipe.Ingredients.Count);
         var unresolved  = new List<string>();
 
         for (var index = 0; index < recipe.Ingredients.Count; index++)
@@ -63,7 +63,7 @@ public class SeedCatalogueResolver(
                 lookup.DensityById.TryGetValue(ingredientId, out var density);
                 var (amount, unit) = ResolveMeasurement(row, density);
 
-                ingredients.Add(new ScrapeConfirmIngredient(
+                ingredients.Add(new ScrapeConfirmIngredientRequest(
                     IngredientId:             ingredientId,
                     NewIngredientName:        null,
                     NewIngredientDisplayName: null,
@@ -84,7 +84,7 @@ public class SeedCatalogueResolver(
             }
 
             // An unmatched name has no density, so its measurement is kept exactly as Stage 4 stated it.
-            ingredients.Add(new ScrapeConfirmIngredient(
+            ingredients.Add(new ScrapeConfirmIngredientRequest(
                 IngredientId:             null,
                 NewIngredientName:        name,
                 NewIngredientDisplayName: row.DisplayName,
@@ -102,7 +102,7 @@ public class SeedCatalogueResolver(
 
         var steps = recipe.Steps
             .OrderBy(step => step.StepNumber)
-            .Select(step => new ScrapeConfirmStep(
+            .Select(step => new ScrapeConfirmStepRequest(
                 step.StepNumber, step.Instruction, [.. step.IngredientIndexes]))
             .ToList();
 

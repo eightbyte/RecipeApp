@@ -449,7 +449,7 @@ public class RecipeScrapeService(
             .ToDictionary(i => i.Id, i => i.GramsPerMillilitre);
 
         // Stage B: resolve an import-resolvable unit against the matched ingredient's density, leaving an unmatched or unquantified row as stated.
-        ScrapePreviewIngredient ResolveAgainstCatalogue(ScrapePreviewIngredient row, Guid ingredientId)
+        ScrapePreviewIngredientResponse ResolveAgainstCatalogue(ScrapePreviewIngredientResponse row, Guid ingredientId)
         {
             if (row.Amount is not { } statedAmount || row.Unit is not { } statedUnit) return row;
 
@@ -460,7 +460,7 @@ public class RecipeScrapeService(
         }
 
         // Pass 1: exact match
-        var previewIngredients = new List<ScrapePreviewIngredient>();
+        var previewIngredients = new List<ScrapePreviewIngredientResponse>();
         var unmatchedIndexes   = new List<int>();
 
         for (int i = 0; i < extracted.Ingredients.Count; i++)
@@ -481,7 +481,7 @@ public class RecipeScrapeService(
                 sourceUnit     = ing.Unit?.Trim();
             }
 
-            var row = new ScrapePreviewIngredient(
+            var row = new ScrapePreviewIngredientResponse(
                 IngredientId:      null,
                 Name:              normalisedName,
                 DisplayName:       ing.DisplayName,
@@ -595,7 +595,7 @@ public class RecipeScrapeService(
 
         var previewSteps = extracted.Steps
             .OrderBy(s => s.StepNumber)
-            .Select(s => new ScrapePreviewStep(s.StepNumber, s.Instruction, s.IngredientIndexes))
+            .Select(s => new ScrapePreviewStepResponse(s.StepNumber, s.Instruction, s.IngredientIndexes))
             .ToList();
 
         return new ScrapePreviewResponse(

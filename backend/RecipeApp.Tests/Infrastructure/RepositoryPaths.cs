@@ -9,6 +9,9 @@ public static class RepositoryPaths
     /// <summary>The API project directory, which is the app's content root.</summary>
     public static string ApiContentRoot { get; } = FindApiContentRoot();
 
+    /// <summary>The repository root, holding <c>backend/</c> and <c>frontend/</c>.</summary>
+    public static string RepositoryRoot => Path.GetFullPath(Path.Combine(ApiContentRoot, "..", ".."));
+
     /// <summary>The shipped catalogue in the source tree.</summary>
     public static string ShippedCataloguePath =>
         Path.Combine(ApiContentRoot, "seed-data", "ingredient-catalogue.json");

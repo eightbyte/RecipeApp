@@ -9,7 +9,7 @@ namespace RecipeApp.Tests.Validators;
 public class ScrapeValidatorTests
 {
     private readonly ScrapeRecipeRequestValidator _urlValidator = new();
-    private readonly ScrapeConfirmIngredientValidator _ingredientValidator = new();
+    private readonly ScrapeConfirmIngredientRequestValidator _ingredientValidator = new();
     private readonly ScrapeConfirmRequestValidator _confirmValidator = new();
 
     // ── ScrapeRecipeRequestValidator ──────────────────────────────────────────
@@ -53,7 +53,7 @@ public class ScrapeValidatorTests
         result.ShouldHaveValidationErrorFor(x => x.Url);
     }
 
-    // ── ScrapeConfirmIngredientValidator: the new-ingredient branch ────────────
+    // ── ScrapeConfirmIngredientRequestValidator: the new-ingredient branch ────────────
 
     [Fact]
     public void Ingredient_ExistingId_NeedsNoNewIngredientFields()
@@ -108,7 +108,7 @@ public class ScrapeValidatorTests
     public static IEnumerable<object[]> AllCategories =>
         IngredientCategory.All.Select(c => new object[] { c });
 
-    // ── ScrapeConfirmIngredientValidator: the measurement whitelist ────────────
+    // ── ScrapeConfirmIngredientRequestValidator: the measurement whitelist ────────────
 
     [Theory]
     [MemberData(nameof(AllUnits))]
@@ -175,7 +175,7 @@ public class ScrapeValidatorTests
         result.ShouldHaveValidationErrorFor(x => x.Unit);
     }
 
-    // ── ScrapeConfirmIngredientValidator: provenance bounds ───────────────────
+    // ── ScrapeConfirmIngredientRequestValidator: provenance bounds ───────────────────
 
     [Fact]
     public void Ingredient_NoSourceMeasurement_HasNoErrors()
@@ -282,7 +282,7 @@ public class ScrapeValidatorTests
     {
         // One ingredient means index 0 is the only valid reference; 1 points past the end.
         var result = _confirmValidator.TestValidate(
-            ConfirmRequest() with { Steps = [new ScrapeConfirmStep(1, "Combine everything.", [1])] });
+            ConfirmRequest() with { Steps = [new ScrapeConfirmStepRequest(1, "Combine everything.", [1])] });
 
         result.ShouldHaveValidationErrorFor("Steps[0].IngredientIndexes");
     }
@@ -291,7 +291,7 @@ public class ScrapeValidatorTests
     public void Confirm_NegativeStepIngredientIndex_HasErrorOnThatStep()
     {
         var result = _confirmValidator.TestValidate(
-            ConfirmRequest() with { Steps = [new ScrapeConfirmStep(1, "Combine everything.", [-1])] });
+            ConfirmRequest() with { Steps = [new ScrapeConfirmStepRequest(1, "Combine everything.", [-1])] });
 
         result.ShouldHaveValidationErrorFor("Steps[0].IngredientIndexes");
     }
@@ -301,7 +301,7 @@ public class ScrapeValidatorTests
     {
         // A step need not reference any ingredient ("Preheat the oven").
         var result = _confirmValidator.TestValidate(
-            ConfirmRequest() with { Steps = [new ScrapeConfirmStep(1, "Preheat the oven.", [])] });
+            ConfirmRequest() with { Steps = [new ScrapeConfirmStepRequest(1, "Preheat the oven.", [])] });
 
         result.ShouldNotHaveAnyValidationErrors();
     }
@@ -312,7 +312,7 @@ public class ScrapeValidatorTests
     public void Confirm_StepNumberBelowOne_HasErrorOnThatStep(int stepNumber)
     {
         var result = _confirmValidator.TestValidate(
-            ConfirmRequest() with { Steps = [new ScrapeConfirmStep(stepNumber, "Combine everything.", [0])] });
+            ConfirmRequest() with { Steps = [new ScrapeConfirmStepRequest(stepNumber, "Combine everything.", [0])] });
 
         result.ShouldHaveValidationErrorFor("Steps[0].StepNumber");
     }
@@ -323,7 +323,7 @@ public class ScrapeValidatorTests
     public void Confirm_EmptyStepInstruction_HasErrorOnThatStep(string instruction)
     {
         var result = _confirmValidator.TestValidate(
-            ConfirmRequest() with { Steps = [new ScrapeConfirmStep(1, instruction, [0])] });
+            ConfirmRequest() with { Steps = [new ScrapeConfirmStepRequest(1, instruction, [0])] });
 
         result.ShouldHaveValidationErrorFor("Steps[0].Instruction");
     }
@@ -336,8 +336,8 @@ public class ScrapeValidatorTests
         {
             Steps =
             [
-                new ScrapeConfirmStep(1, "Combine everything.", [0]),
-                new ScrapeConfirmStep(2, "", [0]),
+                new ScrapeConfirmStepRequest(1, "Combine everything.", [0]),
+                new ScrapeConfirmStepRequest(2, "", [0]),
             ],
         });
 
@@ -348,7 +348,7 @@ public class ScrapeValidatorTests
     // ── Builders ──────────────────────────────────────────────────────────────
 
     /// <summary>A valid new-ingredient row: no IngredientId, so the create branch applies.</summary>
-    private static ScrapeConfirmIngredient Ingredient() =>
+    private static ScrapeConfirmIngredientRequest Ingredient() =>
         new(
             IngredientId: null,
             NewIngredientName: "plain flour",
@@ -366,5 +366,5 @@ public class ScrapeValidatorTests
             SourceUrl: "https://example.com/recipe",
             Servings: 4,
             Ingredients: [Ingredient()],
-            Steps: [new ScrapeConfirmStep(1, "Combine everything.", [0])]);
+            Steps: [new ScrapeConfirmStepRequest(1, "Combine everything.", [0])]);
 }

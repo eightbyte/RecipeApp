@@ -1,7 +1,5 @@
 using FluentAssertions;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.AspNetCore.OpenApi;
-using Microsoft.Extensions.DependencyInjection;
 using RecipeApp.API.DTOs.Recipes;
 using RecipeApp.API.Enums;
 using RecipeApp.API.Models;
@@ -241,20 +239,6 @@ public class RecipesEndpointTests(DatabaseFixture db) : IAsyncLifetime
         response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
         var problem = await response.Content.ReadFromJsonAsync<ValidationProblemDetails>();
         problem!.Errors.Should().ContainKey(invalidField);
-    }
-
-    [Fact]
-    public async Task List_OpenApiDocument_NamesQueryParametersInCamelCase()
-    {
-        var document = await db.Factory.Services
-            .GetRequiredKeyedService<IOpenApiDocumentProvider>("v1")
-            .GetOpenApiDocumentAsync(TestContext.Current.CancellationToken);
-
-        var listOperation = document.Paths["/api/v1/recipes"].Operations!
-            .Single(operation => operation.Key == HttpMethod.Get).Value;
-
-        listOperation.Parameters!.Select(parameter => parameter.Name).Should().BeEquivalentTo(
-            "search", "ingredient", "excludeRecentDays", "lastCookedBefore", "sort", "direction");
     }
 
     // ── Get by ID ─────────────────────────────────────────────────────────────

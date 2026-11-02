@@ -46,6 +46,11 @@ units, amounts, shopping-list consolidation or ingredient categories.
 - Integration tests use Testcontainers (Docker must be running) through `Infrastructure/RecipeAppFactory`
   and `DatabaseFixture`. The suite needs no GPU and no network. Use `StubLlmStructuredClient`,
   `StubHttpClientFactory` and `TestHostEnvironment` instead of the real ones.
+- One class or method: `dotnet test --project RecipeApp.Tests/RecipeApp.Tests.csproj -- --filter-class "*RecipesEndpointTests"`
+  (or `--filter-method "*List_Sort*"`). A filter that matches nothing exits 9 (`--minimum-expected-tests 1`
+  in the csproj), so read the exit code, not just `failed: 0`.
+- `Conventions/` holds source-tree guards: the DTO suffix rule and the no-citation comment rule.
+  A failure there names the rule it enforces.
 - Coverage: `dotnet test RecipeApp.Tests/RecipeApp.Tests.csproj --coverage --coverage-output-format cobertura`.
 
 ## CLI commands

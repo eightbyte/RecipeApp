@@ -196,7 +196,7 @@ import BatchSizeToggle from '@/components/BatchSizeToggle.vue'
 import EmptyState from '@/components/EmptyState.vue'
 import ErrorState from '@/components/ErrorState.vue'
 
-const props = defineProps({ id: String })
+const props = defineProps({ id: { type: String, required: true } })
 const route  = useRoute()
 const store  = useRecipeStore()
 const ui     = useUiStore()

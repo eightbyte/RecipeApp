@@ -15,6 +15,7 @@ export default [
       // A rest sibling is how a test drops one property from a factory object.
       'no-unused-vars': ['error', { ignoreRestSiblings: true }],
       'vue/require-prop-types': 'error',
+      'vue/require-default-prop': 'error',
     },
   },
   {

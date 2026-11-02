@@ -1,6 +1,6 @@
 import { setActivePinia, createPinia } from 'pinia'
 import { useMealPlanStore } from './mealPlans'
-import { makeMealPlanDetail, makeMealPlanListItem, makePlannedMeal, makeSuggestion } from '@/test/factories'
+import { makeMealPlanDetail, makePlannedMeal, makeSuggestion } from '@/test/factories'
 
 vi.mock('@/services/api', () => ({
   default: {

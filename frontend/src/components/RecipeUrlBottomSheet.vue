@@ -53,7 +53,7 @@ import { ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { useRecipeStore } from '@/stores/recipes'
 
-const model = defineModel({ default: false })
+const model = defineModel({ type: Boolean, default: false })
 
 const router = useRouter()
 const store  = useRecipeStore()

@@ -21,42 +21,13 @@
         </v-btn>
       </div>
 
-      <v-card
+      <PlannedMealCard
         v-for="meal in mealPlanStore.activePlan.plannedMeals"
         :key="meal.id"
+        :planned-meal="meal"
+        :plan-id="mealPlanStore.activePlan.id"
         class="mb-4"
-      >
-        <div class="d-flex align-center pa-3 ga-4">
-          <v-avatar size="56" rounded="lg" color="grey-lighten-3">
-            <v-img
-              v-if="meal.recipeImageUrl"
-              :src="meal.recipeImageUrl"
-              :alt="meal.recipeName"
-              cover
-              :class="{ grayscale: isRecentlyCookedMeal(meal) }"
-            />
-            <v-icon v-else color="grey">mdi-food</v-icon>
-          </v-avatar>
-
-          <div class="flex-grow-1">
-            <div class="text-body-1 font-weight-medium">{{ meal.recipeName }}</div>
-            <div class="text-caption text-medium-emphasis">
-              {{ meal.scheduledDate ? formatDate(meal.scheduledDate) : 'Unscheduled' }}
-              &nbsp;·&nbsp;
-              {{ formatBatchSize(meal.batchSize) }}
-            </div>
-          </div>
-
-          <v-btn
-            icon="mdi-chef-hat"
-            variant="tonal"
-            color="primary"
-            size="small"
-            :aria-label="`Mark ${meal.recipeName} as cooked`"
-            @click="cookRecipe(meal)"
-          />
-        </div>
-      </v-card>
+      />
     </section>
 
     <!-- ── No active plan ──────────────────────────────────────────────── -->
@@ -90,33 +61,9 @@
 <script setup>
 import { onMounted } from 'vue'
 import { useMealPlanStore } from '@/stores/mealPlans'
-import { useRecipeStore } from '@/stores/recipes'
-import { useUiStore } from '@/stores/ui'
-import { formatBatchSize } from '@/constants/batchSizes'
+import PlannedMealCard from '@/components/PlannedMealCard.vue'
 
 const mealPlanStore = useMealPlanStore()
-const recipesStore  = useRecipeStore()
-const ui            = useUiStore()
 
 onMounted(() => mealPlanStore.fetchActivePlan())
-
-function isRecentlyCookedMeal(meal) {
-  return recipesStore.isRecentlyCooked({ lastCookedAt: meal.recipeLastCookedAt })
-}
-
-async function cookRecipe(meal) {
-  try {
-    await recipesStore.markCooked(meal.recipeId)
-    await mealPlanStore.fetchActivePlan()
-    ui.notify({ message: `Marked “${meal.recipeName}” as cooked`, color: 'success' })
-  } catch (e) {
-    ui.notify({ message: e?.message ?? 'Could not mark as cooked.', color: 'error' })
-  }
-}
-
-function formatDate(dateStr) {
-  return new Date(dateStr).toLocaleDateString('en-AU', {
-    weekday: 'short', month: 'short', day: 'numeric',
-  })
-}
 </script>

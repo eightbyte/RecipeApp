@@ -5,6 +5,7 @@ import * as directives from 'vuetify/directives'
 import { createPinia, setActivePinia } from 'pinia'
 import PastPlansView from './PastPlansView.vue'
 import { makeMealPlanListItem } from '@/test/factories'
+import { runInTimeZone, WEST_OF_UTC } from '@/test/timeZone'
 
 vi.mock('@/services/api', () => ({
   default: { get: vi.fn().mockResolvedValue({ data: [] }) },
@@ -64,6 +65,18 @@ describe('PastPlansView', () => {
     store.plans = [makeMealPlanListItem({ isActive: false, plannedMealCount: 4 })]
     await wrapper.vm.$nextTick()
     expect(wrapper.text()).toContain('4 recipes')
+  })
+
+  describe('west of UTC', () => {
+    runInTimeZone(WEST_OF_UTC)
+
+    it('shows the scheduled date range as stored', async () => {
+      const { wrapper, store } = await mountView()
+      store.plans = [makeMealPlanListItem({ firstScheduledDate: '2026-06-02', lastScheduledDate: '2026-06-05' })]
+      await wrapper.vm.$nextTick()
+
+      expect(wrapper.text()).toMatch(/2 June 2026\s*– 5 June 2026/)
+    })
   })
 
   it('shows a loading skeleton while loading', async () => {

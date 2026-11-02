@@ -81,6 +81,7 @@
 <script setup>
 import { onMounted } from 'vue'
 import { useMealPlanStore } from '@/stores/mealPlans'
+import { formatDateOnly } from '@/utils/dateOnly'
 import BatchSizeChip from '@/components/BatchSizeChip.vue'
 import EmptyState from '@/components/EmptyState.vue'
 import ErrorState from '@/components/ErrorState.vue'
@@ -96,6 +97,6 @@ function reload() {
 onMounted(reload)
 
 const formatDate  = (d) => new Date(d).toLocaleDateString('en-AU', { year: 'numeric', month: 'short', day: 'numeric' })
-const formatDay   = (d) => new Date(d).toLocaleDateString('en-AU', { day: 'numeric' })
-const formatMonth = (d) => new Date(d).toLocaleDateString('en-AU', { month: 'short' })
+const formatDay   = (d) => formatDateOnly(d, { day: 'numeric' })
+const formatMonth = (d) => formatDateOnly(d, { month: 'short' })
 </script>

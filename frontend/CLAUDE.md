@@ -11,9 +11,9 @@ amount formatting, Batch Size scaling, unit pickers or category lists.
 | `components/` | Shared components; `layout/` has `AppTopBar`, `AppBottomNav` |
 | `stores/` | Pinia, one file per domain (`recipes`, `ingredients`, `mealPlans`, `shoppingList`, `ui`) |
 | `services/api.js` | The pre-configured Axios instance |
-| `constants/` | `units.js`, `categories.js`, `batchSizes.js` — mirrors of the backend enums |
+| `constants/` | `units.js`, `categories.js`, `batchSizes.js`, `recipeSorts.js` — mirrors of the backend enums |
 | `composables/` | `useWakeLock.js` |
-| `utils/` | `dateOnly.js` — formats date-only values |
+| `utils/` | `dateOnly.js` formats date-only values; `storage.js` wraps `localStorage` for device-local preferences |
 | `styles/` | `settings.scss` — Vuetify Sass settings |
 | `router/index.js` | All routes |
 | `router/cookingRoute.js` | Builds and reads the Cooking Mode link, kept apart so importing it doesn't load the router |
@@ -34,8 +34,10 @@ each test or in `beforeEach`; a wrapper mounted in `beforeAll` is gone after the
   scale (`mb-4` is 16px, `mb-6` is 24px).
 - **Typeface:** the system font stack, set once as `$body-font-family` in `src/styles/settings.scss`.
   Vuetify compiles it into `html` and every typography class (`text-h6`, `text-caption`, …).
-- **Never hard-code a unit, category or Batch Size list.** Consume `constants/units.js`,
-  `constants/categories.js` / `constants/batchSizes.js`.
+- **Never hard-code a unit, category, Batch Size or recipe sort list.** Consume `constants/units.js`,
+  `constants/categories.js`, `constants/batchSizes.js` / `constants/recipeSorts.js`.
+- **Device-local preferences** (such as the Recipes tab sort) go through `utils/storage.js`, never
+  `localStorage` directly, because storage can throw. Each key is named once beside its constants.
 - **Grayscale rule:** add class `grayscale` to a recipe image when `lastCookedAt` is within 7 days.
 - **Planned Meals** on Home and Meal Plan render through `components/PlannedMealCard.vue`.
 - **Date-only values** (`scheduledDate`, `firstScheduledDate`, …) display through `formatDateOnly` from

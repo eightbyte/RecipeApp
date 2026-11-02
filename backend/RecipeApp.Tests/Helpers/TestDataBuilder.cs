@@ -26,13 +26,15 @@ public static class TestDataBuilder
     public static Recipe Recipe(
         string name = "Test Recipe",
         int servings = 4,
-        DateTime? lastCookedAt = null) => new()
+        DateTime? lastCookedAt = null,
+        DateTime? createdAt = null,
+        Guid? id = null) => new()
     {
-        Id = Guid.NewGuid(),
+        Id = id ?? Guid.NewGuid(),
         Name = name,
         Servings = servings,
         LastCookedAt = lastCookedAt,
-        CreatedAt = DateTime.UtcNow,
+        CreatedAt = createdAt ?? DateTime.UtcNow,
         UpdatedAt = DateTime.UtcNow,
     };
 

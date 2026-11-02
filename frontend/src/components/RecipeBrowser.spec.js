@@ -5,6 +5,7 @@ import * as directives from 'vuetify/directives'
 import { createPinia, setActivePinia } from 'pinia'
 import RecipeBrowser from './RecipeBrowser.vue'
 import { makeRecipe } from '@/test/factories'
+import { RECIPE_LIST_SORT_STORAGE_KEY } from '@/constants/recipeSorts'
 
 vi.mock('@/services/api', () => ({
   default: { get: vi.fn(), post: vi.fn() },
@@ -60,6 +61,24 @@ describe('RecipeBrowser', () => {
     await input.trigger('update:modelValue')
 
     expect(store.fetchRecipes).toHaveBeenCalledWith(expect.objectContaining({ search: 'pasta' }))
+  })
+
+  it('sends no sort params, keeping the default order even when the Recipes tab has a stored sort', async () => {
+    window.localStorage.setItem(RECIPE_LIST_SORT_STORAGE_KEY, JSON.stringify({ sort: 'NAME', direction: 'ASC' }))
+    try {
+      const { wrapper, store } = await mountBrowser()
+      const input = wrapper.find('input')
+      await input.setValue('pasta')
+      await input.trigger('update:modelValue')
+
+      expect(store.fetchRecipes).toHaveBeenCalled()
+      for (const [params] of store.fetchRecipes.mock.calls) {
+        expect(params).not.toHaveProperty('sort')
+        expect(params).not.toHaveProperty('direction')
+      }
+    } finally {
+      window.localStorage.clear()
+    }
   })
 
   it('emits add for a recipe not recently cooked', async () => {

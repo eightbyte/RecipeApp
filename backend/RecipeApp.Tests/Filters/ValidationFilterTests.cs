@@ -139,8 +139,8 @@ public class ValidationFilterTests(DatabaseFixture db) : IAsyncLifetime
         // Asserted against the document Scalar renders, because every validated endpoint must document the 400 and nothing else may.
         var expected = DiscoverValidatedOperations();
 
-        expected.Should().HaveCount(12,
-            "the twelve mutating endpoints each take a request type with a registered validator");
+        expected.Should().HaveCount(13,
+            "the twelve mutating endpoints and the recipe list query each take a request type with a registered validator");
 
         var document = await db.Factory.Services
             .GetRequiredKeyedService<IOpenApiDocumentProvider>(OpenApiDocumentName)

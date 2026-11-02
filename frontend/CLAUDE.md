@@ -37,7 +37,7 @@ each test or in `beforeEach`; a wrapper mounted in `beforeAll` is gone after the
 - **Never hard-code a unit, category or Batch Size list.** Consume `constants/units.js`,
   `constants/categories.js` / `constants/batchSizes.js`.
 - **Grayscale rule:** add class `grayscale` to a recipe image when `lastCookedAt` is within 7 days.
-- **Planned Meals** render through `components/PlannedMealCard.vue` on every screen that edits them.
+- **Planned Meals** on Home and Meal Plan render through `components/PlannedMealCard.vue`.
 - **Date-only values** (`scheduledDate`, `firstScheduledDate`, …) display through `formatDateOnly` from
   `utils/dateOnly.js`, so they show the stored day in every timezone. Timestamps such as `createdAt`
   keep local-time formatting.

@@ -117,7 +117,7 @@ export const useMealPlanStore = defineStore('mealPlans', () => {
 
   async function addPlannedMeal(planId, payload) {
     await api.post(`/meal-plans/${planId}/planned-meals`, payload)
-    await refreshPlan(planId)
+    await _refreshPlan(planId)
     await fetchSuggestions(planId)
   }
 
@@ -125,16 +125,16 @@ export const useMealPlanStore = defineStore('mealPlans', () => {
   async function updatePlannedMeal(planId, plannedMeal, changes) {
     const body = { scheduledDate: plannedMeal.scheduledDate, batchSize: plannedMeal.batchSize, ...changes }
     await api.put(`/meal-plans/${planId}/planned-meals/${plannedMeal.id}`, { ...body, scheduledDate: body.scheduledDate || null })
-    await refreshPlan(planId)
+    await _refreshPlan(planId)
   }
 
   async function removePlannedMeal(planId, plannedMealId) {
     await api.delete(`/meal-plans/${planId}/planned-meals/${plannedMealId}`)
-    await refreshPlan(planId)
+    await _refreshPlan(planId)
     await fetchSuggestions(planId)
   }
 
-  async function refreshPlan(planId) {
+  async function _refreshPlan(planId) {
     const { data } = await api.get(`/meal-plans/${planId}`)
     const plan = normalizePlanDetail(data)
     if (activePlan.value?.id === planId) activePlan.value = plan
@@ -145,6 +145,6 @@ export const useMealPlanStore = defineStore('mealPlans', () => {
     plans, activePlan, currentPlan, suggestions, loading, error,
     fetchPlans, fetchActivePlan, fetchPlan, fetchSuggestions,
     createPlan, renamePlan, deletePlan,
-    addPlannedMeal, updatePlannedMeal, removePlannedMeal, refreshPlan,
+    addPlannedMeal, updatePlannedMeal, removePlannedMeal,
   }
 })

@@ -6,6 +6,7 @@ import { createPinia, setActivePinia } from 'pinia'
 import PlannedMealCard from './PlannedMealCard.vue'
 import { makeMealPlanDetail, makePlannedMeal } from '@/test/factories'
 import { batchSizeFromCookingQuery } from '@/router/cookingRoute'
+import { useMealPlanStore } from '@/stores/mealPlans'
 import { useUiStore } from '@/stores/ui'
 import { runInTimeZone, WEST_OF_UTC } from '@/test/timeZone'
 import api from '@/services/api'
@@ -110,8 +111,19 @@ describe('PlannedMealCard', () => {
       await chooseMealOption(wrapper, 'Mark as cooked')
 
       expect(api.post).toHaveBeenCalledWith('/recipes/r9/cook')
-      expect(api.get).toHaveBeenCalledWith('/meal-plans/plan-1')
+      expect(api.get).toHaveBeenCalledWith('/meal-plans/active')
       expect(useUiStore().snackbar).toMatchObject({ show: true, color: 'success', message: 'Marked “Stew” as cooked' })
+    })
+
+    it('Mark as cooked still confirms when only the plan refresh fails', async () => {
+      api.post.mockResolvedValue({ data: { id: 'r9', lastCookedAt: new Date().toISOString() } })
+      api.get.mockRejectedValue(new Error('Server unavailable'))
+      const wrapper = mountCard({ recipeId: 'r9', recipeName: 'Stew' })
+
+      await chooseMealOption(wrapper, 'Mark as cooked')
+
+      expect(useUiStore().snackbar).toMatchObject({ show: true, color: 'success', message: 'Marked “Stew” as cooked' })
+      expect(useMealPlanStore().error).toBe('Server unavailable')
     })
 
     it('Mark as cooked reports a failure', async () => {

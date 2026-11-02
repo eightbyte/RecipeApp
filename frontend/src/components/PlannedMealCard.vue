@@ -43,7 +43,7 @@
           <v-divider />
           <v-list-item prepend-icon="mdi-calendar" title="Change date" @click="openDatePicker" />
           <v-list-item prepend-icon="mdi-silverware" title="Change batch" @click="openBatchSizePicker" />
-          <v-list-item prepend-icon="mdi-delete" title="Remove" @click="remove" />
+          <v-list-item prepend-icon="mdi-delete" title="Remove" @click="removePlannedMeal" />
         </v-list>
       </v-menu>
     </div>
@@ -117,7 +117,7 @@ function startCooking() {
 async function markCooked() {
   try {
     await recipesStore.markCooked(props.plannedMeal.recipeId)
-    await mealPlanStore.refreshPlan(props.planId)   // the plan carries the last-cooked date that greys the image
+    await mealPlanStore.fetchActivePlan()   // the plan carries the last-cooked date that greys the image
     ui.notify({ message: `Marked “${props.plannedMeal.recipeName}” as cooked`, color: 'success' })
   } catch (e) {
     ui.notify({ message: e?.message ?? 'Could not mark as cooked.', color: 'error' })
@@ -142,7 +142,7 @@ async function saveBatchSizeChange() {
   await mealPlanStore.updatePlannedMeal(props.planId, props.plannedMeal, { batchSize: batchSizePicker.value.batchSize })
 }
 
-async function remove() {
+async function removePlannedMeal() {
   await mealPlanStore.removePlannedMeal(props.planId, props.plannedMeal.id)
 }
 </script>

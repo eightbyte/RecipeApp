@@ -189,14 +189,39 @@ describe('RecipesView sorting', () => {
     expect(sortRow(wrapper).exists()).toBe(false)
   })
 
+  it('keeps the sort row hidden while a recipe-less list reloads', async () => {
+    const { wrapper, store } = await mountView()
+    store.recipes = []
+    store.loading = true
+    await wrapper.vm.$nextTick()
+
+    expect(sortRow(wrapper).exists()).toBe(false)
+  })
+
   it('keeps the sort row for a search with no results', async () => {
     const { wrapper, store } = await mountView()
+    vi.useFakeTimers()
 
     await wrapper.find('input[placeholder="Search recipes or ingredients…"]').setValue('zzz')
     store.recipes = []
-    await wrapper.vm.$nextTick()
+    vi.runAllTimers()
+    await flushPromises()
 
     expect(wrapper.text()).toContain('No recipes match your search')
+    expect(sortRow(wrapper).exists()).toBe(true)
+  })
+
+  it('keeps the sort row while a cleared search with no results waits to refetch', async () => {
+    const { wrapper, store } = await mountView()
+    vi.useFakeTimers()
+    const searchInput = wrapper.find('input[placeholder="Search recipes or ingredients…"]')
+    await searchInput.setValue('zzz')
+    store.recipes = []
+    vi.runAllTimers()
+    await flushPromises()
+
+    await searchInput.setValue('')
+
     expect(sortRow(wrapper).exists()).toBe(true)
   })
 })

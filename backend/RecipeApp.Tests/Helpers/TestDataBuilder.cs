@@ -38,6 +38,15 @@ public static class TestDataBuilder
         UpdatedAt = DateTime.UtcNow,
     };
 
+    public static RecipeListQuery RecipeListQuery(
+        string? search = null,
+        string? ingredient = null,
+        int? excludeRecentDays = null,
+        DateTime? lastCookedBefore = null,
+        string? sort = null,
+        string? direction = null) =>
+        new(search, ingredient, excludeRecentDays, lastCookedBefore, sort, direction);
+
     public static CreateRecipeRequest CreateRecipeRequest(
         Guid ingredientId,
         string name = "Test Recipe",

@@ -2,6 +2,7 @@ using FluentAssertions;
 using FluentValidation.TestHelper;
 using RecipeApp.API.DTOs.Recipes;
 using RecipeApp.API.Validators;
+using RecipeApp.Tests.Helpers;
 
 namespace RecipeApp.Tests.Validators;
 
@@ -375,13 +376,10 @@ public class RecipeValidatorTests
 
     // ── RecipeListQueryValidator ──────────────────────────────────────────────
 
-    private static RecipeListQuery ListQuery(string? sort = null, string? direction = null) =>
-        new(Search: null, Ingredient: null, ExcludeRecentDays: null, LastCookedBefore: null, sort, direction);
-
     [Fact]
     public void ListQuery_SortAndDirectionOmitted_HasNoErrors()
     {
-        var result = _listQueryValidator.TestValidate(ListQuery());
+        var result = _listQueryValidator.TestValidate(TestDataBuilder.RecipeListQuery());
         result.ShouldNotHaveAnyValidationErrors();
     }
 
@@ -391,7 +389,7 @@ public class RecipeValidatorTests
     [InlineData("LAST_COOKED", "ASC")]
     public void ListQuery_KnownSortAndDirection_HasNoErrors(string sort, string direction)
     {
-        var result = _listQueryValidator.TestValidate(ListQuery(sort, direction));
+        var result = _listQueryValidator.TestValidate(TestDataBuilder.RecipeListQuery(sort, direction));
         result.ShouldNotHaveAnyValidationErrors();
     }
 
@@ -401,7 +399,7 @@ public class RecipeValidatorTests
     [InlineData("")]
     public void ListQuery_UnknownSort_HasErrorOnSort(string sort)
     {
-        var result = _listQueryValidator.TestValidate(ListQuery(sort: sort));
+        var result = _listQueryValidator.TestValidate(TestDataBuilder.RecipeListQuery(sort: sort));
         result.ShouldHaveValidationErrorFor(x => x.Sort);
     }
 
@@ -411,7 +409,7 @@ public class RecipeValidatorTests
     [InlineData("")]
     public void ListQuery_UnknownDirection_HasErrorOnDirection(string direction)
     {
-        var result = _listQueryValidator.TestValidate(ListQuery(direction: direction));
+        var result = _listQueryValidator.TestValidate(TestDataBuilder.RecipeListQuery(direction: direction));
         result.ShouldHaveValidationErrorFor(x => x.Direction);
     }
 }

@@ -14,8 +14,8 @@ public static class RecipesEndpoints
         var group = routes.MapGroup("/recipes").WithTags("Recipes");
 
         // GET /recipes
-        group.MapGet("/", async ([AsParameters] RecipeListQuery query, RecipeService svc) =>
-            Results.Ok(await svc.GetListAsync(query))
+        group.MapGet("/", async ([AsParameters] RecipeListQuery listQuery, RecipeService svc) =>
+            Results.Ok(await svc.GetListAsync(listQuery))
         )
         .WithValidation<RecipeListQuery>()
         .WithSummary("List recipes")

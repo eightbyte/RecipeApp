@@ -2,7 +2,7 @@
   <v-container class="pa-4" max-width="600">
 
     <!-- ── Search bar and New recipe menu ───────────────────────────────── -->
-    <div class="d-flex align-stretch ga-2" :class="isLibraryEmpty ? 'mb-6' : 'mb-2'">
+    <div class="d-flex align-stretch ga-2" :class="hasNoRecipes ? 'mb-6' : 'mb-2'">
       <v-text-field
         v-model="search"
         prepend-inner-icon="mdi-magnify"
@@ -41,7 +41,7 @@
 
     <!-- ── Sort ─────────────────────────────────────────────────────────── -->
     <div
-      v-if="!isLibraryEmpty"
+      v-if="!hasNoRecipes"
       role="group"
       aria-label="Sort recipes"
       class="d-flex align-center justify-end ga-1 mb-4"
@@ -159,9 +159,9 @@
     <!-- ── Empty state ──────────────────────────────────────────────────── -->
     <EmptyState
       v-else
-      :icon="search ? 'mdi-magnify' : 'mdi-chef-hat'"
-      :title="search ? 'No recipes match your search' : 'No recipes yet'"
-      :text="search ? 'Try a different search term' : 'Add your first recipe using the button above'"
+      :icon="loadedSearch ? 'mdi-magnify' : 'mdi-chef-hat'"
+      :title="loadedSearch ? 'No recipes match your search' : 'No recipes yet'"
+      :text="loadedSearch ? 'Try a different search term' : 'Add your first recipe using the button above'"
     />
 
     <!-- ── Import from URL sheet ───────────────────────────────────────── -->
@@ -192,24 +192,28 @@ const store  = useRecipeStore()
 const search = ref('')
 const showImportSheet = ref(false)
 const listSort = ref(toRecipeListSort(readStoredJson(RECIPE_LIST_SORT_STORAGE_KEY, null)))
+// The search the shown recipes were loaded for, null before the first load, so a reload or a pending search does not flip the empty state.
+const loadedSearch = ref(null)
 let searchTimer = null
 
 const directionLabel = computed(() => sortDirectionLabel(listSort.value.sort, listSort.value.direction))
 const directionIcon  = computed(() => sortDirectionIcon(listSort.value.direction))
 
-// Matches the "No recipes yet" empty state, so a search with no results keeps the sort row.
-const isLibraryEmpty = computed(() =>
-  !store.loading && !store.error && !store.recipes.length && !search.value
+// True exactly when "No recipes yet" shows, so a search with no results keeps the sort row.
+const hasNoRecipes = computed(() =>
+  loadedSearch.value === '' && !store.error && !store.recipes.length
 )
 
 onMounted(() => reload())
 
-function reload() {
-  store.fetchRecipes({
-    ...(search.value ? { search: search.value } : {}),
+async function reload() {
+  const searchText = search.value ?? ''
+  await store.fetchRecipes({
+    ...(searchText ? { search: searchText } : {}),
     sort: listSort.value.sort,
     direction: listSort.value.direction,
   })
+  loadedSearch.value = searchText
 }
 
 function onSearch() {

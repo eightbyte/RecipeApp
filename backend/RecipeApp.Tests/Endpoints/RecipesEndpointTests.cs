@@ -119,11 +119,27 @@ public class RecipesEndpointTests(DatabaseFixture db) : IAsyncLifetime
     }
 
     [Theory]
+    [InlineData("?sort=NAME", new[] { "Charlie", "Bravo", "Alpha" })]
+    [InlineData("?direction=ASC", new[] { "Bravo", "Charlie", "Alpha" })]
+    public async Task List_OneSortParamOmitted_UsesItsDefault(string queryString, string[] expected)
+    {
+        // Sort alone runs descending; direction alone sorts by Date added.
+        await SeedRecipesAsync(
+            TestDataBuilder.Recipe("Bravo", createdAt: DaysAfterBase(0)),
+            TestDataBuilder.Recipe("Charlie", createdAt: DaysAfterBase(1)),
+            TestDataBuilder.Recipe("Alpha", createdAt: DaysAfterBase(2)));
+
+        var names = await ListNamesAsync(queryString);
+
+        names.Should().Equal(expected);
+    }
+
+    [Theory]
     [InlineData("ASC", new[] { "apple", "Banana", "cherry" })]
     [InlineData("DESC", new[] { "cherry", "Banana", "apple" })]
     public async Task List_SortByName_ComparesCaseInsensitively(string direction, string[] expected)
     {
-        // Byte-order collation would put "Banana" before "apple".
+        // Mixed case catches a byte-order collation; the tie-on-name test catches a case-aware one.
         await SeedRecipesAsync(
             TestDataBuilder.Recipe("Banana", createdAt: DaysAfterBase(0)),
             TestDataBuilder.Recipe("cherry", createdAt: DaysAfterBase(1)),

@@ -31,7 +31,8 @@ units, amounts, shopping-list consolidation or ingredient categories.
 - **Service-level writes bypass validation.** `RecipeScrapeService.ConfirmAsync` validates nothing. Any
   caller that is not an endpoint must check against `RecipeLimits`, or it can persist a recipe the
   UI then cannot save.
-- **DTOs:** suffix `Request` / `Response`. **Mapping is manual:** static `ToResponse()` /
+- **DTOs:** suffix `Request` / `Response`, or `Query` for a query string bound with `[AsParameters]`
+  (`RecipeListQuery`). **Mapping is manual:** static `ToResponse()` /
   `ToDetail()` / `ToListItem()` extensions in `DTOs/Mappings.cs`. No AutoMapper.
 - **Migrations:** `dotnet ef migrations add <Name> --output-dir Data/Migrations`.
 - **Timestamps:** `DateTime.UtcNow` and `TIMESTAMPTZ` only. Never local time.

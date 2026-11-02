@@ -4,6 +4,7 @@ import * as components from 'vuetify/components'
 import * as directives from 'vuetify/directives'
 import { createPinia, setActivePinia } from 'pinia'
 import HomeView from './HomeView.vue'
+import PlannedMealCard from '@/components/PlannedMealCard.vue'
 import { makeMealPlanDetail, makePlannedMeal } from '@/test/factories'
 
 vi.mock('@/services/api', () => ({
@@ -97,25 +98,13 @@ describe('HomeView', () => {
     expect(wrapper.find('.v-skeleton-loader').exists()).toBe(true)
   })
 
-  it('notifies after marking a meal recipe as cooked', async () => {
+  it('renders each Planned Meal as a shared card of the active plan', async () => {
     const { wrapper, store } = await mountView()
-    store.activePlan = makeMealPlanDetail({
-      plannedMeals: [makePlannedMeal({ recipeId: 'r5', recipeName: 'Stew' })],
-    })
+    const plannedMeals = [makePlannedMeal({ id: 'planned-meal-1' }), makePlannedMeal({ id: 'planned-meal-2' })]
+    store.activePlan = makeMealPlanDetail({ id: 'plan-7', plannedMeals })
     await wrapper.vm.$nextTick()
 
-    const { useRecipeStore } = await import('@/stores/recipes')
-    const { useUiStore } = await import('@/stores/ui')
-    const recipesStore = useRecipeStore()
-    const ui = useUiStore()
-    vi.spyOn(recipesStore, 'markCooked').mockResolvedValue({})
-
-    const cookBtn = wrapper.findAll('button')
-      .find(b => (b.attributes('aria-label') || '').includes('Mark Stew as cooked'))
-    await cookBtn.trigger('click')
-    await flushPromises()
-
-    expect(recipesStore.markCooked).toHaveBeenCalledWith('r5')
-    expect(ui.snackbar.show).toBe(true)
+    const cards = wrapper.findAllComponents(PlannedMealCard)
+    expect(cards.map(card => card.props())).toEqual(plannedMeals.map(plannedMeal => ({ plannedMeal, planId: 'plan-7' })))
   })
 })

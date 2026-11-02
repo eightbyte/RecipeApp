@@ -13,10 +13,11 @@ amount formatting, Batch Size scaling, unit pickers or category lists.
 | `services/api.js` | The pre-configured Axios instance |
 | `constants/` | `units.js`, `categories.js`, `batchSizes.js` — mirrors of the backend enums |
 | `composables/` | `useWakeLock.js` |
+| `utils/` | `dateOnly.js` — formats date-only values |
 | `styles/` | `settings.scss` — Vuetify Sass settings |
 | `router/index.js` | All routes |
 | `router/cookingRoute.js` | Builds and reads the Cooking Mode link, kept apart so importing it doesn't load the router |
-| `test/` | Vitest `setup.js` and `factories.js` |
+| `test/` | Vitest `setup.js`, `factories.js` and `timeZone.js` (run a describe block in a given timezone) |
 
 Tests sit beside their subject as `*.spec.js` (Vitest + Vue Test Utils). Run with `npm test`.
 `src/test/setup.js` unmounts every wrapper after each test (`enableAutoUnmount`), so mount inside
@@ -36,6 +37,10 @@ each test or in `beforeEach`; a wrapper mounted in `beforeAll` is gone after the
 - **Never hard-code a unit, category or Batch Size list.** Consume `constants/units.js`,
   `constants/categories.js` / `constants/batchSizes.js`.
 - **Grayscale rule:** add class `grayscale` to a recipe image when `lastCookedAt` is within 7 days.
+- **Planned Meals** render through `components/PlannedMealCard.vue` on every screen that edits them.
+- **Date-only values** (`scheduledDate`, `firstScheduledDate`, …) display through `formatDateOnly` from
+  `utils/dateOnly.js`, so they show the stored day in every timezone. Timestamps such as `createdAt`
+  keep local-time formatting.
 - **Routes:** use the names defined in `router/index.js` (`home`, `recipes`, `recipe-detail`,
   `recipe-cooking`, `meal-plan`, `shopping`, …). A route with `meta.fullscreen` hides the top and
   bottom bars (Cooking Mode). Link to and read Cooking Mode only through `router/cookingRoute.js`.

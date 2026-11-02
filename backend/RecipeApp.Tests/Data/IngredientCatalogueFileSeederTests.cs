@@ -162,9 +162,8 @@ public class IngredientCatalogueFileSeederTests(DatabaseFixture db) : IAsyncLife
     }
 
     [Fact]
-    public async Task LeavesAStapleTheUserClearedCleared()
+    public async Task NeverRestoresAStapleFlagTheUserCleared()
     {
-        // A flag cannot record that it was never set, so the row's value always counts as a judgement.
         await SeedRowAsync(new Ingredient
         {
             Id = Guid.NewGuid(), Name = "salt", DisplayName = "Salt",

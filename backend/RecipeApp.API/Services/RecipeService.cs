@@ -4,6 +4,7 @@ using RecipeApp.API.DTOs;
 using RecipeApp.API.DTOs.Recipes;
 using RecipeApp.API.Enums;
 using RecipeApp.API.Models;
+using RecipeApp.API.Validators;
 
 namespace RecipeApp.API.Services;
 
@@ -11,7 +12,7 @@ public class RecipeService(AppDbContext db)
 {
     // ── Queries ───────────────────────────────────────────────────────────────
 
-    public async Task<List<RecipeListItemResponse>> GetListAsync(RecipeListQuery listQuery)
+    public async Task<RecipeListPageResponse> GetListAsync(RecipeListQuery listQuery)
     {
         var recipes = db.Recipes
             .Include(r => r.Ingredients)
@@ -34,12 +35,18 @@ public class RecipeService(AppDbContext db)
         if (listQuery.LastCookedBefore.HasValue)
             recipes = recipes.Where(r => r.LastCookedAt == null || r.LastCookedAt < listQuery.LastCookedBefore);
 
-        var orderedRecipes = await OrderForList(
+        var totalCount = await recipes.CountAsync();
+
+        var page     = listQuery.Page ?? 1;
+        var pageSize = listQuery.PageSize ?? RecipeListPaging.DefaultPageSize;
+        var pageOfRecipes = await OrderForList(
                 recipes,
                 listQuery.Sort ?? RecipeSort.Default,
                 listQuery.Direction ?? SortDirection.Default)
+            .Skip((page - 1) * pageSize)
+            .Take(pageSize)
             .ToListAsync();
-        return orderedRecipes.Select(r => r.ToListItem()).ToList();
+        return new RecipeListPageResponse(pageOfRecipes.Select(r => r.ToListItem()).ToList(), totalCount);
     }
 
     /// <summary>Orders by the chosen field, then by tie-breakers that never flip with direction so the order is stable across pages.</summary>

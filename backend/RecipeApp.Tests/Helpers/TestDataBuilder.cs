@@ -44,8 +44,10 @@ public static class TestDataBuilder
         int? excludeRecentDays = null,
         DateTime? lastCookedBefore = null,
         string? sort = null,
-        string? direction = null) =>
-        new(search, ingredient, excludeRecentDays, lastCookedBefore, sort, direction);
+        string? direction = null,
+        int? page = null,
+        int? pageSize = null) =>
+        new(search, ingredient, excludeRecentDays, lastCookedBefore, sort, direction, page, pageSize);
 
     public static CreateRecipeRequest CreateRecipeRequest(
         Guid ingredientId,

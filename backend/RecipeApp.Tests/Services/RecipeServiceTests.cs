@@ -28,7 +28,7 @@ public class RecipeServiceTests(DatabaseFixture db) : IAsyncLifetime
         var svc = new RecipeService(ctx);
         var list = await svc.GetListAsync(TestDataBuilder.RecipeListQuery());
 
-        list.Should().HaveCount(3);
+        list.Items.Should().HaveCount(3);
     }
 
     [Fact]
@@ -42,8 +42,8 @@ public class RecipeServiceTests(DatabaseFixture db) : IAsyncLifetime
         var svc = new RecipeService(ctx);
         var list = await svc.GetListAsync(TestDataBuilder.RecipeListQuery(search: "spag"));
 
-        list.Should().HaveCount(1);
-        list[0].Name.Should().Be("Spaghetti Bolognese");
+        list.Items.Should().HaveCount(1);
+        list.Items[0].Name.Should().Be("Spaghetti Bolognese");
     }
 
     [Fact]
@@ -56,7 +56,7 @@ public class RecipeServiceTests(DatabaseFixture db) : IAsyncLifetime
         var svc = new RecipeService(ctx);
         var list = await svc.GetListAsync(TestDataBuilder.RecipeListQuery(search: "xyz-no-match"));
 
-        list.Should().BeEmpty();
+        list.Items.Should().BeEmpty();
     }
 
     [Fact]
@@ -70,7 +70,7 @@ public class RecipeServiceTests(DatabaseFixture db) : IAsyncLifetime
         var svc = new RecipeService(ctx);
         var list = await svc.GetListAsync(TestDataBuilder.RecipeListQuery(excludeRecentDays: 7));
 
-        list.Should().BeEmpty();
+        list.Items.Should().BeEmpty();
     }
 
     [Fact]
@@ -83,7 +83,7 @@ public class RecipeServiceTests(DatabaseFixture db) : IAsyncLifetime
         var svc = new RecipeService(ctx);
         var list = await svc.GetListAsync(TestDataBuilder.RecipeListQuery(excludeRecentDays: 7));
 
-        list.Should().HaveCount(1);
+        list.Items.Should().HaveCount(1);
     }
 
     [Fact]
@@ -97,7 +97,7 @@ public class RecipeServiceTests(DatabaseFixture db) : IAsyncLifetime
         var list = await svc.GetListAsync(TestDataBuilder.RecipeListQuery(
             lastCookedBefore: new DateTime(2026, 6, 1, 0, 0, 0, DateTimeKind.Utc)));
 
-        list.Should().HaveCount(1);
+        list.Items.Should().HaveCount(1);
     }
 
     [Fact]
@@ -110,7 +110,7 @@ public class RecipeServiceTests(DatabaseFixture db) : IAsyncLifetime
         var svc = new RecipeService(ctx);
         var list = await svc.GetListAsync(TestDataBuilder.RecipeListQuery(excludeRecentDays: 7));
 
-        list.Should().HaveCount(1);
+        list.Items.Should().HaveCount(1);
     }
 
     // ── GetByIdAsync ──────────────────────────────────────────────────────────

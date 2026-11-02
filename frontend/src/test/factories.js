@@ -10,6 +10,12 @@ export const makeRecipe = (overrides = {}) => ({
   ...overrides,
 })
 
+export const makeRecipePage = (items = [makeRecipe()], overrides = {}) => ({
+  items,
+  totalCount: items.length,
+  ...overrides,
+})
+
 export const makeIngredient = (overrides = {}) => ({
   id: 'test-ingredient-1',
   name: 'flour',

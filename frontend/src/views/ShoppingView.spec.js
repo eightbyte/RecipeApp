@@ -111,16 +111,45 @@ describe('ShoppingView', () => {
     expect(wrapper.html()).toContain('mdi-alert-outline')
   })
 
-  it('calls toggleItem when item is clicked', async () => {
+  it('does not toggle Purchased when the row is clicked', async () => {
     const { wrapper, store } = await mountView()
     vi.spyOn(store, 'toggleItem').mockResolvedValue(undefined)
-    const item = makeShoppingListItem({ id: 'item-1', isChecked: false })
-    store.list = makeShoppingList({ items: [item] })
+    store.list = makeShoppingList({
+      items: [makeShoppingListItem({ id: 'item-1', isChecked: false })],
+    })
     await wrapper.vm.$nextTick()
 
-    const listItem = wrapper.find('.v-list-item')
-    await listItem.trigger('click')
+    await wrapper.find('.v-list-item').trigger('click')
+    expect(store.toggleItem).not.toHaveBeenCalled()
+  })
+
+  it('marks an item purchased when its checkbox is clicked', async () => {
+    const { wrapper, store } = await mountView()
+    vi.spyOn(store, 'toggleItem').mockResolvedValue(undefined)
+    store.list = makeShoppingList({
+      items: [makeShoppingListItem({ id: 'item-1', displayName: 'Carrot', isChecked: false })],
+    })
+    await wrapper.vm.$nextTick()
+
+    await wrapper.find('input[aria-label="Mark Carrot purchased"]').trigger('click')
+    expect(store.toggleItem).toHaveBeenCalledOnce()
     expect(store.toggleItem).toHaveBeenCalledWith('item-1', true)
+  })
+
+  it('unmarks a purchased item when its checkbox is clicked', async () => {
+    const { wrapper, store } = await mountView()
+    vi.spyOn(store, 'toggleItem').mockResolvedValue(undefined)
+    store.list = makeShoppingList({
+      items: [makeShoppingListItem({ id: 'item-1', displayName: 'Carrot', isChecked: true })],
+    })
+    await wrapper.vm.$nextTick()
+
+    const showPurchased = wrapper.findAll('button').find(b => b.text().includes('Show purchased'))
+    await showPurchased.trigger('click')
+
+    await wrapper.find('input[aria-label="Mark Carrot purchased"]').trigger('click')
+    expect(store.toggleItem).toHaveBeenCalledOnce()
+    expect(store.toggleItem).toHaveBeenCalledWith('item-1', false)
   })
 
   it('shows delete button only on custom items', async () => {

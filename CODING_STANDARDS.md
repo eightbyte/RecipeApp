@@ -20,6 +20,21 @@ the file and folder it lands in. Where a neighbour breaks a rule in this file, t
 
 - Name domain concepts with the terms in `CONTEXT.md`, never the aliases it lists under _Avoid_.
 
+## Types
+
+- Backend: nullable reference types are on. Handle a value that can be null rather than silencing
+  the warning. `!` asserts a guarantee the compiler cannot see, such as an EF Core required
+  navigation (`= null!`) or a field a validator already required.
+- Frontend: declare every prop and `defineModel` with a `type`, plus `required: true` or a
+  `default`. **Enforced** by `npm run lint` (`vue/require-prop-types`, `vue/require-default-prop`).
+
+## Values with one home
+
+- Settings that differ by environment live in `appsettings*.json` (backend) or `.env*` (frontend).
+- Lists of options (units, categories, Batch Sizes, recipe sorts) come from the backend `Enums/`
+  and their mirrors in `frontend/src/constants/`.
+- Recipe length and range limits come from `Validators/RecipeLimits.cs`.
+
 ## DTOs and mapping (backend)
 
 - A DTO ends in `Request` or `Response`, or `Query` for a query string bound with `[AsParameters]`

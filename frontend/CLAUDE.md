@@ -3,7 +3,7 @@
 Measurement and category rules live in `.claude/rules/` (repo root). Read them before touching
 amount formatting, Batch Size scaling, unit pickers or category lists.
 
-Read `CODING_STANDARDS.md` (repo root) before writing or reviewing code: comments, naming, Vuetify.
+Read `CODING_STANDARDS.md` (repo root) before writing or reviewing code: comments, naming, prop types, hard-coded values, Vuetify.
 
 ## Layout (`src/`)
 

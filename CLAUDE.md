@@ -12,7 +12,7 @@ recipes can be imported on top.
 | Need | Read |
 |---|---|
 | Domain vocabulary (use these terms) | `CONTEXT.md` |
-| Coding standards for writing or reviewing code: comments, naming, idiom, Vuetify, DTOs | `CODING_STANDARDS.md` |
+| Coding standards for writing or reviewing code: comments, naming, idiom, types, hard-coded values, Vuetify, DTOs | `CODING_STANDARDS.md` |
 | Backend conventions, CLI, config | `backend/CLAUDE.md` |
 | Frontend conventions | `frontend/CLAUDE.md` |
 | First-run seeding, `import-recipes`, clean-start paths | `backend/CLAUDE.md` |
@@ -84,8 +84,6 @@ from `frontend/.nvmrc`. Keep `.nvmrc` in step with the `node:` base image in `fr
 
 ## Project rules
 
-- Use descriptive, clear names. Always ensure type safety. Avoid hard-coded values.
-- Test your changes.
 - Never assume. Ask for clarity.
 
 ## Agent skills

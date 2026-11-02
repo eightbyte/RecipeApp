@@ -3,7 +3,7 @@
 Measurement and category rules live in `.claude/rules/` (repo root). Read them before touching
 units, amounts, shopping-list consolidation or ingredient categories.
 
-Read `CODING_STANDARDS.md` (repo root) before writing or reviewing code: comments, naming, DTOs and mapping.
+Read `CODING_STANDARDS.md` (repo root) before writing or reviewing code: comments, naming, nullability, hard-coded values, DTOs and mapping.
 
 ## Layout (`RecipeApp.API/`)
 

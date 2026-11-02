@@ -65,14 +65,13 @@
           <v-card>
             <v-list density="compact">
               <template v-for="(item, idx) in group.items" :key="item.id">
-                <v-list-item
-                  :class="{ 'opacity-50': item.isChecked }"
-                  @click="store.toggleItem(item.id, !item.isChecked)"
-                >
+                <v-list-item :class="{ 'opacity-50': item.isChecked }">
                   <template #prepend>
                     <v-checkbox-btn
+                      class="purchased-checkbox"
                       :model-value="item.isChecked"
                       color="primary"
+                      :aria-label="`Mark ${item.displayName} purchased`"
                       @click.stop="store.toggleItem(item.id, !item.isChecked)"
                     />
                   </template>
@@ -244,3 +243,10 @@ function formatAmount(amount, unit) {
   return `${amount} ${unit}`
 }
 </script>
+
+<style scoped>
+/* The checkbox is the only control for Purchased, so it gets the 48px minimum touch target. */
+.purchased-checkbox {
+  --v-selection-control-size: 48px;
+}
+</style>

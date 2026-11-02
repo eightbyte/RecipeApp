@@ -12,6 +12,7 @@ recipes can be imported on top.
 | Need | Read |
 |---|---|
 | Domain vocabulary (use these terms) | `CONTEXT.md` |
+| Coding standards for writing or reviewing code: comments, naming, idiom, Vuetify, DTOs | `CODING_STANDARDS.md` |
 | Backend conventions, CLI, config | `backend/CLAUDE.md` |
 | Frontend conventions | `frontend/CLAUDE.md` |
 | First-run seeding, `import-recipes`, clean-start paths | `backend/CLAUDE.md` |
@@ -68,7 +69,7 @@ limits.
 
 ```bash
 cd backend && dotnet test RecipeApp.Tests/RecipeApp.Tests.csproj   # needs Docker running
-cd frontend && npm test
+cd frontend && npm test && npm run lint
 powershell -NoProfile -Command "Invoke-Pester deploy\tests"        # updater decisions; Pester 3.4 syntax
 ```
 
@@ -84,8 +85,6 @@ from `frontend/.nvmrc`. Keep `.nvmrc` in step with the `node:` base image in `fr
 ## Project rules
 
 - Use descriptive, clear names. Always ensure type safety. Avoid hard-coded values.
-- Comments are at most one sentence and say why, not what. Clean code describes itself, and extra
-  comments cost context. Never cite a phase, spec section or decision number.
 - Test your changes.
 - Never assume. Ask for clarity.
 

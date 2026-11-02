@@ -3,6 +3,8 @@
 Measurement and category rules live in `.claude/rules/` (repo root). Read them before touching
 units, amounts, shopping-list consolidation or ingredient categories.
 
+Read `CODING_STANDARDS.md` (repo root) before writing or reviewing code: comments, naming, DTOs and mapping.
+
 ## Layout (`RecipeApp.API/`)
 
 | Folder | Holds |
@@ -31,9 +33,6 @@ units, amounts, shopping-list consolidation or ingredient categories.
 - **Service-level writes bypass validation.** `RecipeScrapeService.ConfirmAsync` validates nothing. Any
   caller that is not an endpoint must check against `RecipeLimits`, or it can persist a recipe the
   UI then cannot save.
-- **DTOs:** suffix `Request` / `Response`, or `Query` for a query string bound with `[AsParameters]`
-  (`RecipeListQuery`). **Mapping is manual:** static `ToResponse()` /
-  `ToDetail()` / `ToListItem()` extensions in `DTOs/Mappings.cs`. No AutoMapper.
 - **Migrations:** `dotnet ef migrations add <Name> --output-dir Data/Migrations`.
 - **Timestamps:** `DateTime.UtcNow` and `TIMESTAMPTZ` only. Never local time.
 - Hard deletes. No soft deletes in v1.
@@ -125,10 +124,8 @@ defaults live in the committed `appsettings.json`. Nothing secret goes there.
 ## Running against a real database
 
 - **Starting the web host migrates and seeds** a fresh database (see First-run seeding).
-- **Starting the web host loads the LLM** because `Program.cs` resolves `LlamaModelHolder` eagerly.
-  Set `Llm__Local__ModelPath=""` to start without the GPU.
-- **Creating a meal plan closes the active one.** Run end-to-end checks against a clone:
-  `CREATE DATABASE x TEMPLATE recipeapp`, then point `ConnectionStrings__DefaultConnection` at it.
+- **To see a change in the running app, use the `run-dev` skill.** It starts the API on a clone of
+  the dev database without loading the LLM onto the GPU.
 - **Databases that predate the curated catalogue hold legacy ingredient rows.** Examples are
   `onions`, `tomato` and `plain flour`. A name outranks an alias, so these rows capture names the
   catalogue meant as aliases, which splits shopping-list lines and hides densities. A non-force

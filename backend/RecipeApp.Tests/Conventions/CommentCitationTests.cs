@@ -3,7 +3,7 @@ using System.Text.RegularExpressions;
 
 namespace RecipeApp.Tests.Conventions;
 
-/// <summary>Enforces the root CLAUDE.md rule that comments never cite a phase, spec section or decision number, across backend and frontend source.</summary>
+/// <summary>Enforces the CODING_STANDARDS.md rule that comments never cite a phase, spec section or decision number, across backend and frontend source.</summary>
 public partial class CommentCitationTests
 {
     private static readonly string[] SourceExtensions = [".cs", ".js", ".vue"];

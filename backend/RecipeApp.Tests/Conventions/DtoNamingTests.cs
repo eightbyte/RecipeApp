@@ -2,7 +2,7 @@ using System.Runtime.CompilerServices;
 
 namespace RecipeApp.Tests.Conventions;
 
-/// <summary>Enforces the backend/CLAUDE.md DTO suffix rule, so a new DTO cannot drift from it unnoticed.</summary>
+/// <summary>Enforces the CODING_STANDARDS.md DTO suffix rule, so a new DTO cannot drift from it unnoticed.</summary>
 public class DtoNamingTests
 {
     private const string DtoNamespace = "RecipeApp.API.DTOs";

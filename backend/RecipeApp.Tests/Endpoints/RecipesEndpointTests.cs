@@ -284,6 +284,17 @@ public class RecipesEndpointTests(DatabaseFixture db) : IAsyncLifetime
         page.TotalCount.Should().Be(5);
     }
 
+    [Fact]
+    public async Task List_PageSoFarPastTheEndItsOffsetOverflows_Returns200WithNoItems()
+    {
+        await SeedSoupsAndSaladsAsync();
+
+        var page = await ListPageAsync($"?page={int.MaxValue}&pageSize={RecipeListPaging.MaxPageSize}");
+
+        page.Items.Should().BeEmpty();
+        page.TotalCount.Should().Be(8);
+    }
+
     [Theory]
     [InlineData("NAME", "ASC")]
     [InlineData("NAME", "DESC")]

@@ -11,7 +11,7 @@
         clearable
         hide-details
         class="flex-grow-1"
-        @update:model-value="onSearch"
+        @update:model-value="reloadAfterTyping"
       />
     </div>
 
@@ -22,7 +22,7 @@
         density="compact"
         hide-details
         color="primary"
-        @update:model-value="reloadNow"
+        @update:model-value="reload"
       />
     </div>
 
@@ -87,7 +87,7 @@
 <script setup>
 import { ref, onMounted } from 'vue'
 import { useRecipeStore } from '@/stores/recipes'
-import { useRecipePages, SEARCH_DEBOUNCE_MS } from '@/composables/useRecipePages'
+import { useRecipePages } from '@/composables/useRecipePages'
 import RecentlyCookedDialog from '@/components/RecentlyCookedDialog.vue'
 import RecipeInfiniteScroll from '@/components/RecipeInfiniteScroll.vue'
 
@@ -99,9 +99,10 @@ const searchQuery           = ref('')
 const hideRecentlyCooked    = ref(false)
 const recentlyCoookedDialogOpen = ref(false)
 const pendingRecipe         = ref(null)
-let searchTimer = null
 
-const { items, totalCount, pageCount, isComplete, loading, reload, loadMore } = useRecipePages(() => {
+const {
+  items, totalCount, pageCount, isComplete, loading, reload, reloadAfterTyping, loadMore,
+} = useRecipePages(() => {
   const params = {}
   if (searchQuery.value) params.search = searchQuery.value
   if (hideRecentlyCooked.value) params.excludeRecentDays = 7
@@ -109,16 +110,6 @@ const { items, totalCount, pageCount, isComplete, loading, reload, loadMore } = 
 })
 
 onMounted(() => reload())
-
-function onSearch() {
-  clearTimeout(searchTimer)
-  searchTimer = setTimeout(reload, SEARCH_DEBOUNCE_MS)
-}
-
-function reloadNow() {
-  clearTimeout(searchTimer)
-  reload()
-}
 
 function handleRecipeClick(recipe) {
   if (recipesStore.isRecentlyCooked(recipe)) {

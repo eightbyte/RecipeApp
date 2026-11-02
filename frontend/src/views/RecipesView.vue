@@ -9,7 +9,7 @@
         placeholder="Search recipes or ingredients…"
         clearable
         hide-details
-        @update:model-value="onSearch"
+        @update:model-value="reloadAfterTyping"
       />
 
       <v-menu>
@@ -179,7 +179,7 @@
 <script setup>
 import { ref, computed, onMounted } from 'vue'
 import { useRecipeStore } from '@/stores/recipes'
-import { useRecipePages, SEARCH_DEBOUNCE_MS } from '@/composables/useRecipePages'
+import { useRecipePages } from '@/composables/useRecipePages'
 import RecipeUrlBottomSheet from '@/components/RecipeUrlBottomSheet.vue'
 import RecipeInfiniteScroll from '@/components/RecipeInfiniteScroll.vue'
 import EmptyState from '@/components/EmptyState.vue'
@@ -198,18 +198,17 @@ const store  = useRecipeStore()
 const search = ref('')
 const showImportSheet = ref(false)
 const listSort = ref(toRecipeListSort(readStoredJson(RECIPE_LIST_SORT_STORAGE_KEY, null)))
-// The search the shown recipes were loaded for, null before the first load, so a reload or a pending search does not flip the empty state.
-const loadedSearch = ref(null)
-let searchTimer = null
 
-const searchText = () => search.value ?? ''
 const {
-  items, totalCount, pageCount, isComplete, loading, error, reload: reloadPages, loadMore,
+  items, totalCount, pageCount, isComplete, loading, error, loadedParams, reload, reloadAfterTyping, loadMore,
 } = useRecipePages(() => ({
-  ...(searchText() ? { search: searchText() } : {}),
+  ...(search.value ? { search: search.value } : {}),
   sort: listSort.value.sort,
   direction: listSort.value.direction,
 }))
+
+// The search the shown recipes were loaded for, null before the first load, so a reload or a pending search does not flip the empty state.
+const loadedSearch = computed(() => loadedParams.value === null ? null : (loadedParams.value.search ?? ''))
 
 const directionLabel = computed(() => sortDirectionLabel(listSort.value.sort, listSort.value.direction))
 const directionIcon  = computed(() => sortDirectionIcon(listSort.value.direction))
@@ -221,20 +220,9 @@ const hasNoRecipes = computed(() =>
 
 onMounted(() => reload())
 
-async function reload() {
-  const reloadedSearch = searchText()
-  if (await reloadPages()) loadedSearch.value = reloadedSearch
-}
-
-function onSearch() {
-  clearTimeout(searchTimer)
-  searchTimer = setTimeout(reload, SEARCH_DEBOUNCE_MS)
-}
-
 function applySort(recipeListSort) {
   listSort.value = recipeListSort
   writeStoredJson(RECIPE_LIST_SORT_STORAGE_KEY, recipeListSort)
-  clearTimeout(searchTimer)
   reload()
 }
 

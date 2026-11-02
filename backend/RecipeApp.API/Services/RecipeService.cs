@@ -37,13 +37,14 @@ public class RecipeService(AppDbContext db)
 
         var totalCount = await recipes.CountAsync();
 
-        var page     = listQuery.Page ?? 1;
         var pageSize = listQuery.PageSize ?? RecipeListPaging.DefaultPageSize;
+        // Clamped because a huge page number overflows int, and skipping int.MaxValue rows is already past the end.
+        var skip = (int)Math.Min(((long)(listQuery.Page ?? 1) - 1) * pageSize, int.MaxValue);
         var pageOfRecipes = await OrderForList(
                 recipes,
                 listQuery.Sort ?? RecipeSort.Default,
                 listQuery.Direction ?? SortDirection.Default)
-            .Skip((page - 1) * pageSize)
+            .Skip(skip)
             .Take(pageSize)
             .ToListAsync();
         return new RecipeListPageResponse(pageOfRecipes.Select(r => r.ToListItem()).ToList(), totalCount);

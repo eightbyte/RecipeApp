@@ -1,10 +1,6 @@
 import { defineComponent, h, shallowRef } from 'vue'
 
-/**
- * Stands in for Vuetify's VInfiniteScroll, which never loads under jsdom because jsdom has no IntersectionObserver.
- * `vm.scrollToEnd()` emits `load` as reaching the end of the list would, and the end of the list renders the slot for
- * the status passed to `done`, as Vuetify's does in intersect mode.
- */
+/** Stands in for VInfiniteScroll, which never loads under jsdom for want of IntersectionObserver, so `vm.scrollToEnd()` plays the user reaching the end. */
 export const InfiniteScrollStub = defineComponent({
   name: 'VInfiniteScroll',
   emits: ['load'],
@@ -21,6 +17,7 @@ export const InfiniteScrollStub = defineComponent({
 
     return { status, scrollToEnd }
   },
+  // Renders the end slot for the status passed to done, as Vuetify's does in intersect mode.
   render() {
     const slotProps = { side: 'end', props: { onClick: this.scrollToEnd } }
     const endSlot = { error: 'error', empty: 'empty' }[this.status] ?? 'loading'

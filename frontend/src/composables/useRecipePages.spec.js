@@ -1,5 +1,6 @@
+import { effectScope } from 'vue'
 import { setActivePinia, createPinia } from 'pinia'
-import { useRecipePages } from './useRecipePages'
+import { useRecipePages, SEARCH_DEBOUNCE_MS } from './useRecipePages'
 import { makeRecipe, makeRecipePage } from '@/test/factories'
 
 vi.mock('@/services/api', () => ({
@@ -198,27 +199,90 @@ describe('useRecipePages', () => {
     expect(loadedIds(pages)).toEqual(['b1', 'b2', 'b3', 'b4'])
   })
 
-  it('ignores a page 1 that a newer reload replaced, resolving false for it', async () => {
+  it('ignores a page 1 that a newer reload replaced', async () => {
     const stalePageOne = deferred()
     const newPageOne   = deferred()
     api.get
       .mockReturnValueOnce(stalePageOne.promise)
       .mockReturnValueOnce(newPageOne.promise)
-    const pages = useRecipePages(() => ({}))
+    let search = 'stale'
+    const pages = useRecipePages(() => ({ search }))
 
     const staleReload = pages.reload()
-    const newReload   = pages.reload()
+    search = 'fresh'
+    const newReload = pages.reload()
     stalePageOne.resolve(pageResponse(recipes('stale'), 1))
+    await staleReload
 
-    expect(await staleReload).toBe(false)
     expect(pages.items.value).toEqual([])
+    expect(pages.loadedParams.value).toBeNull()
     expect(pages.loading.value).toBe(true)
 
     newPageOne.resolve(pageResponse(recipes('fresh'), 1))
+    await newReload
 
-    expect(await newReload).toBe(true)
     expect(loadedIds(pages)).toEqual(['fresh'])
+    expect(pages.loadedParams.value).toEqual({ search: 'fresh' })
     expect(pages.loading.value).toBe(false)
     expect(api.get.mock.calls[0][1].signal.aborted).toBe(true)
+  })
+
+  it('records the params of the shown page 1 even when it fails', async () => {
+    api.get.mockRejectedValueOnce({ message: 'Network error' })
+    const pages = useRecipePages(() => ({ search: 'soup' }))
+
+    await pages.reload()
+
+    expect(pages.loadedParams.value).toEqual({ search: 'soup' })
+  })
+
+  describe('reloadAfterTyping', () => {
+    beforeEach(() => {
+      vi.useFakeTimers()
+      api.get.mockResolvedValue(pageResponse([], 0))
+    })
+    afterEach(() => vi.useRealTimers())
+
+    it('reloads once typing pauses for the shared debounce', () => {
+      const pages = useRecipePages(() => ({}))
+
+      pages.reloadAfterTyping()
+      vi.advanceTimersByTime(SEARCH_DEBOUNCE_MS - 1)
+      pages.reloadAfterTyping()
+      vi.advanceTimersByTime(SEARCH_DEBOUNCE_MS - 1)
+      expect(api.get).not.toHaveBeenCalled()
+
+      vi.advanceTimersByTime(1)
+      expect(api.get).toHaveBeenCalledTimes(1)
+    })
+
+    it('is cancelled by a reload that applies straight away', () => {
+      const pages = useRecipePages(() => ({}))
+
+      pages.reloadAfterTyping()
+      pages.reload()
+      vi.runAllTimers()
+
+      expect(api.get).toHaveBeenCalledTimes(1)
+    })
+  })
+
+  it('aborts the page in flight and drops a pending reload when its owner goes away', () => {
+    vi.useFakeTimers()
+    try {
+      api.get.mockReturnValue(new Promise(() => {}))
+      const scope = effectScope()
+      const pages = scope.run(() => useRecipePages(() => ({})))
+      pages.reload()
+      pages.reloadAfterTyping()
+
+      scope.stop()
+      vi.runAllTimers()
+
+      expect(api.get).toHaveBeenCalledTimes(1)
+      expect(api.get.mock.calls[0][1].signal.aborted).toBe(true)
+    } finally {
+      vi.useRealTimers()
+    }
   })
 })

@@ -6,6 +6,7 @@ import { createPinia, setActivePinia } from 'pinia'
 import { useRecipeStore } from '@/stores/recipes'
 import RecipesView from './RecipesView.vue'
 import { makeRecipe } from '@/test/factories'
+import { RECIPE_LIST_SORT_STORAGE_KEY } from '@/constants/recipeSorts'
 
 vi.mock('@/services/api', () => ({
   default: { get: vi.fn().mockResolvedValue({ data: [] }), post: vi.fn(), put: vi.fn(), delete: vi.fn() },
@@ -19,6 +20,11 @@ let pinia
 beforeEach(() => {
   pinia = createPinia()
   setActivePinia(pinia)
+  window.localStorage.clear()
+})
+
+afterEach(() => {
+  vi.useRealTimers()
 })
 
 async function mountView() {
@@ -92,5 +98,105 @@ describe('RecipesView', () => {
 
     expect(wrapper.findComponent({ name: 'VSpeedDial' }).exists()).toBe(false)
     expect(wrapper.findComponent({ name: 'VFab' }).exists()).toBe(false)
+  })
+})
+
+describe('RecipesView sorting', () => {
+  const sortRow = (wrapper) => wrapper.find('[aria-label="Sort recipes"]')
+  const sortField = (wrapper) => wrapper.findComponent({ name: 'VSelect' })
+  const directionButton = (wrapper) => sortRow(wrapper).find('button')
+  const lastFetchParams = (store) => store.fetchRecipes.mock.lastCall[0]
+
+  async function mountWithRecipes() {
+    const mounted = await mountView()
+    mounted.store.recipes = [makeRecipe({ id: 'r1' })]
+    await mounted.wrapper.vm.$nextTick()
+    return mounted
+  }
+
+  it('sends newest added first on mount when nothing is stored', async () => {
+    const { store } = await mountView()
+
+    expect(store.fetchRecipes).toHaveBeenCalledTimes(1)
+    expect(lastFetchParams(store)).toEqual({ sort: 'DATE_ADDED', direction: 'DESC' })
+  })
+
+  it('restores the stored choice on mount', async () => {
+    window.localStorage.setItem(RECIPE_LIST_SORT_STORAGE_KEY, JSON.stringify({ sort: 'NAME', direction: 'ASC' }))
+
+    const { wrapper, store } = await mountWithRecipes()
+
+    expect(lastFetchParams(store)).toEqual({ sort: 'NAME', direction: 'ASC' })
+    expect(sortField(wrapper).props('modelValue')).toBe('NAME')
+    expect(directionButton(wrapper).attributes('aria-label')).toBe('A to Z')
+  })
+
+  it.each([
+    ['an unknown field', JSON.stringify({ sort: 'RATING', direction: 'ASC' })],
+    ['text that is not JSON', '{not json'],
+  ])('falls back to the default when the stored value is %s', async (_description, storedText) => {
+    window.localStorage.setItem(RECIPE_LIST_SORT_STORAGE_KEY, storedText)
+
+    const { store } = await mountView()
+
+    expect(lastFetchParams(store)).toEqual({ sort: 'DATE_ADDED', direction: 'DESC' })
+  })
+
+  it('refetches straight away when the field changes, keeping the direction, and saves the choice', async () => {
+    const { wrapper, store } = await mountWithRecipes()
+
+    await sortField(wrapper).vm.$emit('update:modelValue', 'NAME')
+
+    expect(lastFetchParams(store)).toEqual({ sort: 'NAME', direction: 'DESC' })
+    expect(JSON.parse(window.localStorage.getItem(RECIPE_LIST_SORT_STORAGE_KEY)))
+      .toEqual({ sort: 'NAME', direction: 'DESC' })
+  })
+
+  it('flips the direction from the toggle, relabelling it for the field, and saves the choice', async () => {
+    const { wrapper, store } = await mountWithRecipes()
+    expect(directionButton(wrapper).attributes('aria-label')).toBe('Newest first')
+
+    await directionButton(wrapper).trigger('click')
+
+    expect(lastFetchParams(store)).toEqual({ sort: 'DATE_ADDED', direction: 'ASC' })
+    expect(directionButton(wrapper).attributes('aria-label')).toBe('Oldest first')
+    expect(sortRow(wrapper).findComponent({ name: 'VTooltip' }).props('text')).toBe('Oldest first')
+    expect(JSON.parse(window.localStorage.getItem(RECIPE_LIST_SORT_STORAGE_KEY)))
+      .toEqual({ sort: 'DATE_ADDED', direction: 'ASC' })
+  })
+
+  it('keeps the sort when searching and the search text when sorting', async () => {
+    const { wrapper, store } = await mountWithRecipes()
+    await sortField(wrapper).vm.$emit('update:modelValue', 'LAST_COOKED')
+    vi.useFakeTimers()
+
+    await wrapper.find('input[placeholder="Search recipes or ingredients…"]').setValue('soup')
+    vi.runAllTimers()
+
+    expect(lastFetchParams(store)).toEqual({ search: 'soup', sort: 'LAST_COOKED', direction: 'DESC' })
+
+    await directionButton(wrapper).trigger('click')
+
+    expect(lastFetchParams(store)).toEqual({ search: 'soup', sort: 'LAST_COOKED', direction: 'ASC' })
+  })
+
+  it('hides the sort row when the library has no recipes', async () => {
+    const { wrapper, store } = await mountView()
+    store.recipes = []
+    await wrapper.vm.$nextTick()
+
+    expect(wrapper.text()).toContain('No recipes yet')
+    expect(sortRow(wrapper).exists()).toBe(false)
+  })
+
+  it('keeps the sort row for a search with no results', async () => {
+    const { wrapper, store } = await mountView()
+
+    await wrapper.find('input[placeholder="Search recipes or ingredients…"]').setValue('zzz')
+    store.recipes = []
+    await wrapper.vm.$nextTick()
+
+    expect(wrapper.text()).toContain('No recipes match your search')
+    expect(sortRow(wrapper).exists()).toBe(true)
   })
 })

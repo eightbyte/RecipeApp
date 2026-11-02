@@ -94,3 +94,19 @@ public class UpdateRecipeValidator : AbstractValidator<UpdateRecipeRequest>
         });
     }
 }
+
+public class RecipeListQueryValidator : AbstractValidator<RecipeListQuery>
+{
+    public RecipeListQueryValidator()
+    {
+        RuleFor(x => x.Sort)
+            .Must(sort => sort != null && RecipeSort.IsValid(sort))
+            .WithMessage($"Sort must be one of: {string.Join(", ", RecipeSort.All)}")
+            .When(x => x.Sort is not null);
+
+        RuleFor(x => x.Direction)
+            .Must(direction => direction != null && SortDirection.IsValid(direction))
+            .WithMessage($"Direction must be one of: {string.Join(", ", SortDirection.All)}")
+            .When(x => x.Direction is not null);
+    }
+}

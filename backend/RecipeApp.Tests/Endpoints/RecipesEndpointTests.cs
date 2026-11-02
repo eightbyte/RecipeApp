@@ -1,6 +1,10 @@
 using FluentAssertions;
+using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.OpenApi;
+using Microsoft.Extensions.DependencyInjection;
 using RecipeApp.API.DTOs.Recipes;
 using RecipeApp.API.Enums;
+using RecipeApp.API.Models;
 using RecipeApp.Tests.Helpers;
 using RecipeApp.Tests.Infrastructure;
 using System.Net;
@@ -76,6 +80,165 @@ public class RecipesEndpointTests(DatabaseFixture db) : IAsyncLifetime
         var list = await response.Content.ReadFromJsonAsync<List<RecipeListItemResponse>>();
 
         list.Should().BeEmpty();
+    }
+
+    // ── List sorting ──────────────────────────────────────────────────────────
+
+    private static readonly DateTime SortBaseTime = new(2026, 3, 1, 12, 0, 0, DateTimeKind.Utc);
+
+    private static DateTime DaysAfterBase(int days) => SortBaseTime.AddDays(days);
+
+    private async Task SeedRecipesAsync(params Recipe[] recipes)
+    {
+        await using var ctx = db.CreateDbContext();
+        ctx.Recipes.AddRange(recipes);
+        await ctx.SaveChangesAsync();
+    }
+
+    private async Task<List<RecipeListItemResponse>> ListAsync(string queryString)
+    {
+        var response = await Client.GetAsync($"/api/v1/recipes{queryString}");
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        return (await response.Content.ReadFromJsonAsync<List<RecipeListItemResponse>>())!;
+    }
+
+    private async Task<List<string>> ListNamesAsync(string queryString) =>
+        (await ListAsync(queryString)).Select(recipe => recipe.Name).ToList();
+
+    [Fact]
+    public async Task List_SortOmitted_OrdersNewestAddedFirst()
+    {
+        await SeedRecipesAsync(
+            TestDataBuilder.Recipe("Middle", createdAt: DaysAfterBase(1)),
+            TestDataBuilder.Recipe("Oldest", createdAt: DaysAfterBase(0)),
+            TestDataBuilder.Recipe("Newest", createdAt: DaysAfterBase(2)));
+
+        var names = await ListNamesAsync("");
+
+        names.Should().Equal("Newest", "Middle", "Oldest");
+    }
+
+    [Theory]
+    [InlineData("ASC", new[] { "apple", "Banana", "cherry" })]
+    [InlineData("DESC", new[] { "cherry", "Banana", "apple" })]
+    public async Task List_SortByName_ComparesCaseInsensitively(string direction, string[] expected)
+    {
+        // Byte-order collation would put "Banana" before "apple".
+        await SeedRecipesAsync(
+            TestDataBuilder.Recipe("Banana", createdAt: DaysAfterBase(0)),
+            TestDataBuilder.Recipe("cherry", createdAt: DaysAfterBase(1)),
+            TestDataBuilder.Recipe("apple", createdAt: DaysAfterBase(2)));
+
+        var names = await ListNamesAsync($"?sort=NAME&direction={direction}");
+
+        names.Should().Equal(expected);
+    }
+
+    [Theory]
+    [InlineData("ASC", new[] { "Oldest", "Middle", "Newest" })]
+    [InlineData("DESC", new[] { "Newest", "Middle", "Oldest" })]
+    public async Task List_SortByDateAdded_OrdersByCreation(string direction, string[] expected)
+    {
+        await SeedRecipesAsync(
+            TestDataBuilder.Recipe("Middle", createdAt: DaysAfterBase(1)),
+            TestDataBuilder.Recipe("Newest", createdAt: DaysAfterBase(2)),
+            TestDataBuilder.Recipe("Oldest", createdAt: DaysAfterBase(0)));
+
+        var names = await ListNamesAsync($"?sort=DATE_ADDED&direction={direction}");
+
+        names.Should().Equal(expected);
+    }
+
+    [Theory]
+    [InlineData("ASC", new[] { "Never cooked", "Cooked long ago", "Cooked lately" })]
+    [InlineData("DESC", new[] { "Cooked lately", "Cooked long ago", "Never cooked" })]
+    public async Task List_SortByLastCooked_TreatsNeverCookedAsLeastRecent(string direction, string[] expected)
+    {
+        await SeedRecipesAsync(
+            TestDataBuilder.Recipe("Cooked lately", lastCookedAt: DaysAfterBase(20), createdAt: DaysAfterBase(0)),
+            TestDataBuilder.Recipe("Never cooked", lastCookedAt: null, createdAt: DaysAfterBase(1)),
+            TestDataBuilder.Recipe("Cooked long ago", lastCookedAt: DaysAfterBase(10), createdAt: DaysAfterBase(2)));
+
+        var names = await ListNamesAsync($"?sort=LAST_COOKED&direction={direction}");
+
+        names.Should().Equal(expected);
+    }
+
+    [Theory]
+    [InlineData("DATE_ADDED", "ASC")]
+    [InlineData("DATE_ADDED", "DESC")]
+    [InlineData("LAST_COOKED", "ASC")]
+    [InlineData("LAST_COOKED", "DESC")]
+    public async Task List_TieOnSortField_BreaksByNameAscendingInEitherDirection(string sort, string direction)
+    {
+        await SeedRecipesAsync(
+            TestDataBuilder.Recipe("Bravo", createdAt: SortBaseTime),
+            TestDataBuilder.Recipe("alpha", createdAt: SortBaseTime));
+
+        var names = await ListNamesAsync($"?sort={sort}&direction={direction}");
+
+        names.Should().Equal("alpha", "Bravo");
+    }
+
+    [Theory]
+    [InlineData("ASC")]
+    [InlineData("DESC")]
+    public async Task List_TieOnName_BreaksByNewestAddedInEitherDirection(string direction)
+    {
+        await SeedRecipesAsync(
+            TestDataBuilder.Recipe("apple", createdAt: DaysAfterBase(0)),
+            TestDataBuilder.Recipe("Apple", createdAt: DaysAfterBase(1)));
+
+        var names = await ListNamesAsync($"?sort=NAME&direction={direction}");
+
+        names.Should().Equal("Apple", "apple");
+    }
+
+    [Theory]
+    [InlineData("NAME", "ASC")]
+    [InlineData("NAME", "DESC")]
+    [InlineData("DATE_ADDED", "ASC")]
+    [InlineData("DATE_ADDED", "DESC")]
+    [InlineData("LAST_COOKED", "ASC")]
+    [InlineData("LAST_COOKED", "DESC")]
+    public async Task List_FullTie_BreaksByIdAscendingInEitherDirection(string sort, string direction)
+    {
+        var lowerId  = Guid.Parse("00000000-0000-0000-0000-000000000001");
+        var higherId = Guid.Parse("00000000-0000-0000-0000-000000000002");
+        await SeedRecipesAsync(
+            TestDataBuilder.Recipe("Twin", createdAt: SortBaseTime, id: higherId),
+            TestDataBuilder.Recipe("Twin", createdAt: SortBaseTime, id: lowerId));
+
+        var list = await ListAsync($"?sort={sort}&direction={direction}");
+
+        list.Select(recipe => recipe.Id).Should().Equal(lowerId, higherId);
+    }
+
+    [Theory]
+    [InlineData("?sort=RATING", nameof(RecipeListQuery.Sort))]
+    [InlineData("?sort=name", nameof(RecipeListQuery.Sort))]
+    [InlineData("?direction=UP", nameof(RecipeListQuery.Direction))]
+    public async Task List_UnknownSortOrDirection_Returns400Problem(string queryString, string invalidField)
+    {
+        var response = await Client.GetAsync($"/api/v1/recipes{queryString}");
+
+        response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+        var problem = await response.Content.ReadFromJsonAsync<ValidationProblemDetails>();
+        problem!.Errors.Should().ContainKey(invalidField);
+    }
+
+    [Fact]
+    public async Task List_OpenApiDocument_NamesQueryParametersInCamelCase()
+    {
+        var document = await db.Factory.Services
+            .GetRequiredKeyedService<IOpenApiDocumentProvider>("v1")
+            .GetOpenApiDocumentAsync(TestContext.Current.CancellationToken);
+
+        var listOperation = document.Paths["/api/v1/recipes"].Operations!
+            .Single(operation => operation.Key == HttpMethod.Get).Value;
+
+        listOperation.Parameters!.Select(parameter => parameter.Name).Should().BeEquivalentTo(
+            "search", "ingredient", "excludeRecentDays", "lastCookedBefore", "sort", "direction");
     }
 
     // ── Get by ID ─────────────────────────────────────────────────────────────

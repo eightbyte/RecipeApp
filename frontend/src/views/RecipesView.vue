@@ -2,7 +2,7 @@
   <v-container class="pa-4" max-width="600">
 
     <!-- ── Search bar and New recipe menu ───────────────────────────────── -->
-    <div class="d-flex align-stretch ga-2 mb-6">
+    <div class="d-flex align-stretch ga-2" :class="isLibraryEmpty ? 'mb-6' : 'mb-2'">
       <v-text-field
         v-model="search"
         prepend-inner-icon="mdi-magnify"
@@ -37,6 +37,36 @@
           />
         </v-list>
       </v-menu>
+    </div>
+
+    <!-- ── Sort ─────────────────────────────────────────────────────────── -->
+    <div
+      v-if="!isLibraryEmpty"
+      role="group"
+      aria-label="Sort recipes"
+      class="d-flex align-center justify-end ga-1 mb-4"
+    >
+      <v-select
+        :model-value="listSort.sort"
+        :items="RECIPE_SORTS"
+        aria-label="Sort by"
+        prefix="Sort:"
+        variant="plain"
+        density="compact"
+        hide-details
+        class="flex-grow-0 recipe-sort-field"
+        @update:model-value="changeSortField"
+      />
+      <v-btn
+        icon
+        :aria-label="directionLabel"
+        variant="text"
+        size="small"
+        @click="reverseDirection"
+      >
+        <v-icon :icon="directionIcon" />
+        <v-tooltip activator="parent" location="bottom" :text="directionLabel" />
+      </v-btn>
     </div>
 
     <!-- ── Loading skeleton ─────────────────────────────────────────────── -->
@@ -141,28 +171,65 @@
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { useRecipeStore } from '@/stores/recipes'
 import RecipeUrlBottomSheet from '@/components/RecipeUrlBottomSheet.vue'
 import EmptyState from '@/components/EmptyState.vue'
 import ErrorState from '@/components/ErrorState.vue'
+import {
+  RECIPE_SORTS,
+  RECIPE_LIST_SORT_STORAGE_KEY,
+  toRecipeListSort,
+  reverseSortDirection,
+  sortDirectionLabel,
+  sortDirectionIcon,
+} from '@/constants/recipeSorts'
+import { readStoredJson, writeStoredJson } from '@/utils/storage'
+
+const SEARCH_DEBOUNCE_MS = 300
 
 const store  = useRecipeStore()
 const search = ref('')
 const showImportSheet = ref(false)
+const listSort = ref(toRecipeListSort(readStoredJson(RECIPE_LIST_SORT_STORAGE_KEY, null)))
 let searchTimer = null
 
-onMounted(() => store.fetchRecipes())
+const directionLabel = computed(() => sortDirectionLabel(listSort.value.sort, listSort.value.direction))
+const directionIcon  = computed(() => sortDirectionIcon(listSort.value.direction))
+
+// Matches the "No recipes yet" empty state, so a search with no results keeps the sort row.
+const isLibraryEmpty = computed(() =>
+  !store.loading && !store.error && !store.recipes.length && !search.value
+)
+
+onMounted(() => reload())
 
 function reload() {
-  store.fetchRecipes(search.value ? { search: search.value } : {})
+  store.fetchRecipes({
+    ...(search.value ? { search: search.value } : {}),
+    sort: listSort.value.sort,
+    direction: listSort.value.direction,
+  })
 }
 
-function onSearch(val) {
+function onSearch() {
   clearTimeout(searchTimer)
-  searchTimer = setTimeout(() => {
-    store.fetchRecipes(val ? { search: val } : {})
-  }, 300)
+  searchTimer = setTimeout(reload, SEARCH_DEBOUNCE_MS)
+}
+
+function applySort(recipeListSort) {
+  listSort.value = recipeListSort
+  writeStoredJson(RECIPE_LIST_SORT_STORAGE_KEY, recipeListSort)
+  clearTimeout(searchTimer)
+  reload()
+}
+
+function changeSortField(sort) {
+  applySort({ ...listSort.value, sort })
+}
+
+function reverseDirection() {
+  applySort({ ...listSort.value, direction: reverseSortDirection(listSort.value.direction) })
 }
 
 function formatRelative(dateStr) {
@@ -178,4 +245,5 @@ function formatRelative(dateStr) {
 <style scoped>
 .grayscale { filter: grayscale(100%); }
 .new-recipe-button { aspect-ratio: 1; }
+.recipe-sort-field { min-width: 11rem; }
 </style>

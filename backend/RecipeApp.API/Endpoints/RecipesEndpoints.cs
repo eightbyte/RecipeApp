@@ -1,6 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using RecipeApp.API.Data;
 using RecipeApp.API.DTOs.Recipes;
+using RecipeApp.API.Enums;
 using RecipeApp.API.Filters;
 using RecipeApp.API.Services;
 
@@ -13,16 +14,15 @@ public static class RecipesEndpoints
         var group = routes.MapGroup("/recipes").WithTags("Recipes");
 
         // GET /recipes
-        group.MapGet("/", async (
-            string? search,
-            string? ingredient,
-            int? excludeRecentDays,
-            DateTime? lastCookedBefore,
-            RecipeService svc) =>
-            Results.Ok(await svc.GetListAsync(search, ingredient, excludeRecentDays, lastCookedBefore))
+        group.MapGet("/", async ([AsParameters] RecipeListQuery query, RecipeService svc) =>
+            Results.Ok(await svc.GetListAsync(query))
         )
+        .WithValidation<RecipeListQuery>()
         .WithSummary("List recipes")
-        .WithDescription("Supports optional filters: search (name), ingredient, excludeRecentDays, lastCookedBefore.");
+        .WithDescription(
+            "Supports optional filters: search (name), ingredient, excludeRecentDays, lastCookedBefore. " +
+            $"Orders by sort ({string.Join(", ", RecipeSort.All)}; default {RecipeSort.Default}) " +
+            $"and direction ({string.Join(", ", SortDirection.All)}; default {SortDirection.Default}).");
 
         // GET /recipes/{id}
         group.MapGet("/{id:guid}", async (Guid id, RecipeService svc) =>

@@ -14,6 +14,13 @@ public class RecipeServiceTests(DatabaseFixture db) : IAsyncLifetime
 
     // ── GetListAsync ──────────────────────────────────────────────────────────
 
+    private static RecipeListQuery ListQuery(
+        string? search = null,
+        string? ingredient = null,
+        int? excludeRecentDays = null,
+        DateTime? lastCookedBefore = null) =>
+        new(search, ingredient, excludeRecentDays, lastCookedBefore, Sort: null, Direction: null);
+
     [Fact]
     public async Task GetListAsync_ReturnsAllRecipes()
     {
@@ -26,7 +33,7 @@ public class RecipeServiceTests(DatabaseFixture db) : IAsyncLifetime
         await ctx.SaveChangesAsync();
 
         var svc = new RecipeService(ctx);
-        var list = await svc.GetListAsync(null, null, null, null);
+        var list = await svc.GetListAsync(ListQuery(null, null, null, null));
 
         list.Should().HaveCount(3);
     }
@@ -40,7 +47,7 @@ public class RecipeServiceTests(DatabaseFixture db) : IAsyncLifetime
         await ctx.SaveChangesAsync();
 
         var svc = new RecipeService(ctx);
-        var list = await svc.GetListAsync("spag", null, null, null);
+        var list = await svc.GetListAsync(ListQuery("spag", null, null, null));
 
         list.Should().HaveCount(1);
         list[0].Name.Should().Be("Spaghetti Bolognese");
@@ -54,7 +61,7 @@ public class RecipeServiceTests(DatabaseFixture db) : IAsyncLifetime
         await ctx.SaveChangesAsync();
 
         var svc = new RecipeService(ctx);
-        var list = await svc.GetListAsync("xyz-no-match", null, null, null);
+        var list = await svc.GetListAsync(ListQuery("xyz-no-match", null, null, null));
 
         list.Should().BeEmpty();
     }
@@ -68,7 +75,7 @@ public class RecipeServiceTests(DatabaseFixture db) : IAsyncLifetime
         await ctx.SaveChangesAsync();
 
         var svc = new RecipeService(ctx);
-        var list = await svc.GetListAsync(null, null, 7, null);
+        var list = await svc.GetListAsync(ListQuery(null, null, 7, null));
 
         list.Should().BeEmpty();
     }
@@ -81,7 +88,7 @@ public class RecipeServiceTests(DatabaseFixture db) : IAsyncLifetime
         await ctx.SaveChangesAsync();
 
         var svc = new RecipeService(ctx);
-        var list = await svc.GetListAsync(null, null, 7, null);
+        var list = await svc.GetListAsync(ListQuery(null, null, 7, null));
 
         list.Should().HaveCount(1);
     }
@@ -94,8 +101,8 @@ public class RecipeServiceTests(DatabaseFixture db) : IAsyncLifetime
         await ctx.SaveChangesAsync();
 
         var svc = new RecipeService(ctx);
-        var list = await svc.GetListAsync(null, null, null,
-            lastCookedBefore: new DateTime(2026, 6, 1, 0, 0, 0, DateTimeKind.Utc));
+        var list = await svc.GetListAsync(ListQuery(null, null, null,
+            lastCookedBefore: new DateTime(2026, 6, 1, 0, 0, 0, DateTimeKind.Utc)));
 
         list.Should().HaveCount(1);
     }
@@ -108,7 +115,7 @@ public class RecipeServiceTests(DatabaseFixture db) : IAsyncLifetime
         await ctx.SaveChangesAsync();
 
         var svc = new RecipeService(ctx);
-        var list = await svc.GetListAsync(null, null, 7, null);
+        var list = await svc.GetListAsync(ListQuery(null, null, 7, null));
 
         list.Should().HaveCount(1);
     }

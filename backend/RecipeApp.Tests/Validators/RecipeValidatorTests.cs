@@ -11,6 +11,7 @@ public class RecipeValidatorTests
     private readonly RecipeStepRequestValidator _stepValidator = new();
     private readonly CreateRecipeValidator _createValidator = new();
     private readonly UpdateRecipeValidator _updateValidator = new();
+    private readonly RecipeListQueryValidator _listQueryValidator = new();
 
     // ── RecipeIngredientRequestValidator ──────────────────────────────────────
 
@@ -370,5 +371,47 @@ public class RecipeValidatorTests
         var result = _updateValidator.TestValidate(req);
         result.IsValid.Should().BeFalse();
         result.Errors.Should().Contain(e => e.PropertyName.Contains("IngredientIndexes"));
+    }
+
+    // ── RecipeListQueryValidator ──────────────────────────────────────────────
+
+    private static RecipeListQuery ListQuery(string? sort = null, string? direction = null) =>
+        new(Search: null, Ingredient: null, ExcludeRecentDays: null, LastCookedBefore: null, sort, direction);
+
+    [Fact]
+    public void ListQuery_SortAndDirectionOmitted_HasNoErrors()
+    {
+        var result = _listQueryValidator.TestValidate(ListQuery());
+        result.ShouldNotHaveAnyValidationErrors();
+    }
+
+    [Theory]
+    [InlineData("NAME", "ASC")]
+    [InlineData("DATE_ADDED", "DESC")]
+    [InlineData("LAST_COOKED", "ASC")]
+    public void ListQuery_KnownSortAndDirection_HasNoErrors(string sort, string direction)
+    {
+        var result = _listQueryValidator.TestValidate(ListQuery(sort, direction));
+        result.ShouldNotHaveAnyValidationErrors();
+    }
+
+    [Theory]
+    [InlineData("RATING")]
+    [InlineData("name")]
+    [InlineData("")]
+    public void ListQuery_UnknownSort_HasErrorOnSort(string sort)
+    {
+        var result = _listQueryValidator.TestValidate(ListQuery(sort: sort));
+        result.ShouldHaveValidationErrorFor(x => x.Sort);
+    }
+
+    [Theory]
+    [InlineData("UP")]
+    [InlineData("asc")]
+    [InlineData("")]
+    public void ListQuery_UnknownDirection_HasErrorOnDirection(string direction)
+    {
+        var result = _listQueryValidator.TestValidate(ListQuery(direction: direction));
+        result.ShouldHaveValidationErrorFor(x => x.Direction);
     }
 }

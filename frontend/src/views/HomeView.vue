@@ -28,6 +28,17 @@
         :plan-id="mealPlanStore.activePlan.id"
         class="mb-4"
       />
+
+      <v-btn
+        block
+        variant="outlined"
+        color="primary"
+        prepend-icon="mdi-calendar-plus"
+        class="mt-2"
+        :to="{ name: 'meal-plan-create' }"
+      >
+        Start new meal plan
+      </v-btn>
     </section>
 
     <!-- ── No active plan ──────────────────────────────────────────────── -->

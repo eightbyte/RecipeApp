@@ -2,7 +2,6 @@ import { mount, flushPromises } from '@vue/test-utils'
 import { createVuetify } from 'vuetify'
 import * as components from 'vuetify/components'
 import * as directives from 'vuetify/directives'
-import { VBtn } from 'vuetify/components'
 import { createPinia, setActivePinia } from 'pinia'
 import HomeView from './HomeView.vue'
 import PlannedMealCard from '@/components/PlannedMealCard.vue'
@@ -114,16 +113,17 @@ describe('HomeView', () => {
     store.activePlan = makeMealPlanDetail()
     await wrapper.vm.$nextTick()
 
-    const startButton = wrapper.findAllComponents(VBtn).find(btn => btn.text() === 'Start new meal plan')
-    expect(startButton?.props('to')).toEqual({ name: 'meal-plan-create' })
+    const startButton = wrapper.findAllComponents({ name: 'VBtn' }).find(btn => btn.text() === 'Start new meal plan')
+    expect(startButton).toBeTruthy()
+    expect(startButton.props('to')).toEqual({ name: 'meal-plan-create' })
   })
 
-  it('offers only "New meal plan" when there is no active plan', async () => {
+  it('offers "New meal plan", not "Start new meal plan", when there is no active plan', async () => {
     const { wrapper, store } = await mountView()
     store.activePlan = null
     await wrapper.vm.$nextTick()
 
-    const labels = wrapper.findAllComponents(VBtn).map(btn => btn.text())
+    const labels = wrapper.findAllComponents({ name: 'VBtn' }).map(btn => btn.text())
     expect(labels).not.toContain('Start new meal plan')
     expect(labels).toContain('New meal plan')
   })

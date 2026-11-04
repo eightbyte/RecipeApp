@@ -7,7 +7,7 @@ import { useRecipeStore } from '@/stores/recipes'
 import { useUiStore } from '@/stores/ui'
 import CookingModeView from './CookingModeView.vue'
 import { makeRecipeDetail } from '@/test/factories'
-import { cookingRoute, cookingRouteAtServings } from '@/router/cookingRoute'
+import { cookingRoute, cookingRouteAtServings, servingsFromQuery } from '@/router/recipeRoutes'
 
 const backMock = vi.fn()
 const replaceMock = vi.fn()
@@ -128,7 +128,18 @@ describe('CookingModeView', () => {
 
     expect(store.markCooked).toHaveBeenCalledWith('r1')
     expect(ui.snackbar.show).toBe(true)
-    expect(replaceMock).toHaveBeenCalledWith({ name: 'recipe-detail', params: { id: 'r1' } })
+    expect(replaceMock).toHaveBeenCalledWith(expect.objectContaining({ name: 'recipe-detail', params: { id: 'r1' } }))
+  })
+
+  it('returns to the recipe view at the servings Cooking Mode was opened at', async () => {
+    routeQuery = cookingRoute('r1', 'DOUBLE').query
+    const w = await mountView()
+    vi.spyOn(store, 'markCooked').mockResolvedValue(threeStepRecipe())
+
+    await w.findAll('button').find(b => b.text().includes('Mark as cooked')).trigger('click')
+    await flushPromises()
+
+    expect(servingsFromQuery(replaceMock.mock.lastCall[0].query, 4)).toBe(8)
   })
 
   it('shows an ErrorState with retry when the fetch fails', async () => {

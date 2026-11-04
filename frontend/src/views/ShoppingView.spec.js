@@ -4,7 +4,9 @@ import * as components from 'vuetify/components'
 import * as directives from 'vuetify/directives'
 import { createPinia, setActivePinia } from 'pinia'
 import ShoppingView from './ShoppingView.vue'
-import { makeShoppingList, makeShoppingListItem } from '@/test/factories'
+import BatchSizeChip from '@/components/BatchSizeChip.vue'
+import { makeItemSource, makeShoppingList, makeShoppingListItem } from '@/test/factories'
+import { servingsFromQuery } from '@/router/recipeRoutes'
 import { useUiStore } from '@/stores/ui'
 import api from '@/services/api'
 
@@ -192,6 +194,139 @@ describe('ShoppingView', () => {
     })
     await wrapper.vm.$nextTick()
     expect(wrapper.text()).toContain('0 items remaining')
+  })
+
+  describe('Item Sources', () => {
+    const row        = (wrapper, name) => wrapper.findAll('.shopping-row').find(r => r.text().includes(name))
+    const sourceRows = wrapper => wrapper.findAllComponents({ name: 'VListItem' }).filter(i => i.classes('item-source'))
+
+    async function mountWith(items, { showPurchased = false } = {}) {
+      const mounted = await mountView()
+      mounted.store.list = makeShoppingList({ items })
+      await mounted.wrapper.vm.$nextTick()
+      if (showPurchased) {
+        await mounted.wrapper.findAll('button').find(b => b.text().includes('Show purchased')).trigger('click')
+      }
+      return mounted
+    }
+
+    const flour = (overrides = {}) => makeShoppingListItem({
+      id: 'flour',
+      displayName: 'Flour',
+      amount: 270,
+      unit: 'ml',
+      sources: [
+        makeItemSource({ recipeId: 'pancakes', recipeName: 'Pancakes', amount: 2, unit: 'tbsp', shareAmount: 30, shareUnit: 'ml', scheduledDate: '2026-06-03', batchSize: 'DOUBLE' }),
+        makeItemSource({ recipeId: 'waffles', recipeName: 'Waffles', amount: 1, unit: 'cup', shareAmount: 240, shareUnit: 'ml' }),
+      ],
+      ...overrides,
+    })
+
+    it('shows a chevron on a row with sources and keeps them collapsed', async () => {
+      const { wrapper } = await mountWith([flour()])
+      expect(row(wrapper, 'Flour').html()).toContain('mdi-chevron-down')
+      expect(wrapper.text()).not.toContain('Pancakes')
+    })
+
+    it('expands a row’s sources on tap and collapses them on a second tap', async () => {
+      const { wrapper } = await mountWith([flour()])
+
+      await row(wrapper, 'Flour').trigger('click')
+      expect(sourceRows(wrapper).map(s => s.text())).toEqual([
+        expect.stringContaining('Pancakes · 2 tbsp (30 ml)'),
+        expect.stringContaining('Waffles · 1 cup (240 ml)'),
+      ])
+
+      await row(wrapper, 'Flour').trigger('click')
+      await flushPromises()
+      expect(sourceRows(wrapper)).toHaveLength(0)
+    })
+
+    it('shows each source’s Batch Size and its date when it has one', async () => {
+      const { wrapper } = await mountWith([flour()])
+      await row(wrapper, 'Flour').trigger('click')
+
+      const [pancakes, waffles] = sourceRows(wrapper)
+      expect(pancakes.findComponent(BatchSizeChip).props('batchSize')).toBe('DOUBLE')
+      expect(pancakes.text()).toContain('3 Jun')
+      expect(waffles.findComponent(BatchSizeChip).props('batchSize')).toBe('REGULAR')
+      expect(waffles.find('.v-list-item-subtitle').exists()).toBe(false)
+    })
+
+    it('shows an Unquantified source without an amount', async () => {
+      const { wrapper } = await mountWith([makeShoppingListItem({
+        id: 'salt', displayName: 'Salt', amount: null, unit: null,
+        sources: [makeItemSource({ recipeName: 'Soup', amount: null, unit: null })],
+      })])
+      await row(wrapper, 'Salt').trigger('click')
+      expect(sourceRows(wrapper)[0].find('.v-list-item-title').text()).toBe('Soup')
+    })
+
+    it('shows the recipe’s own amount alone when it is already in the row’s unit', async () => {
+      const { wrapper } = await mountWith([makeShoppingListItem({
+        id: 'oats', displayName: 'Oats', sources: [makeItemSource({ recipeName: 'Porridge', amount: 200, unit: 'g' })],
+      })])
+      await row(wrapper, 'Oats').trigger('click')
+      expect(sourceRows(wrapper)[0].find('.v-list-item-title').text()).toBe('Porridge · 200 g')
+    })
+
+    it('keeps several rows open at once', async () => {
+      const { wrapper } = await mountWith([
+        flour(),
+        makeShoppingListItem({ id: 'oats', displayName: 'Oats', sources: [makeItemSource({ recipeName: 'Porridge' })] }),
+      ])
+      await row(wrapper, 'Flour').trigger('click')
+      await row(wrapper, 'Oats').trigger('click')
+      expect(sourceRows(wrapper)).toHaveLength(3)
+    })
+
+    it('expands a Purchased row', async () => {
+      const { wrapper } = await mountWith([flour({ isChecked: true })], { showPurchased: true })
+      await row(wrapper, 'Flour').trigger('click')
+      expect(sourceRows(wrapper)).toHaveLength(2)
+    })
+
+    it('marks purchased from the checkbox without expanding the row', async () => {
+      const { wrapper, store } = await mountWith([flour()])
+      vi.spyOn(store, 'toggleItem').mockResolvedValue(undefined)
+
+      await row(wrapper, 'Flour').find('.purchased-checkbox input').trigger('click')
+
+      expect(store.toggleItem).toHaveBeenCalledWith('flour', true)
+      expect(sourceRows(wrapper)).toHaveLength(0)
+    })
+
+    it('opens a source’s recipe at its Planned Meal’s Batch Size', async () => {
+      const { wrapper } = await mountWith([flour()])
+      await row(wrapper, 'Flour').trigger('click')
+
+      const location = sourceRows(wrapper)[0].props('to')
+      expect(location).toMatchObject({ name: 'recipe-detail', params: { id: 'pancakes' } })
+      expect(servingsFromQuery(location.query, 4)).toBe(8)
+    })
+
+    it('does not link a source whose recipe has been deleted', async () => {
+      const { wrapper } = await mountWith([makeShoppingListItem({
+        id: 'oats', displayName: 'Oats', sources: [makeItemSource({ recipeId: null, recipeName: 'Old porridge' })],
+      })])
+      await row(wrapper, 'Oats').trigger('click')
+      expect(sourceRows(wrapper)[0].props('to')).toBeUndefined()
+    })
+
+    it('does not expand a Custom Item', async () => {
+      const { wrapper } = await mountWith([makeShoppingListItem({ id: 'bread', displayName: 'Bread', isCustom: true })])
+
+      expect(row(wrapper, 'Bread').html()).not.toContain('mdi-chevron')
+      await row(wrapper, 'Bread').trigger('click')
+      expect(row(wrapper, 'Bread').attributes('aria-expanded')).toBeUndefined()
+      expect(sourceRows(wrapper)).toHaveLength(0)
+    })
+
+    it('does not expand a Generated Item from before sources were recorded', async () => {
+      const { wrapper } = await mountWith([makeShoppingListItem({ id: 'old', displayName: 'Rice', sources: [] })])
+      expect(row(wrapper, 'Rice').html()).not.toContain('mdi-chevron')
+      expect(row(wrapper, 'Rice').attributes('aria-expanded')).toBeUndefined()
+    })
   })
 
   describe('Aisle Order', () => {

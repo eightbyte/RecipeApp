@@ -29,4 +29,5 @@ public class ShoppingListItem
 
     public ShoppingList ShoppingList { get; set; } = null!;
     public Ingredient? Ingredient { get; set; }
+    public ICollection<ShoppingListItemSource> Sources { get; set; } = [];
 }

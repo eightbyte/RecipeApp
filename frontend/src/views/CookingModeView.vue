@@ -166,7 +166,7 @@ import { useRoute, useRouter } from 'vue-router'
 import { useRecipeStore } from '@/stores/recipes'
 import { formatMeasurement, formatSourceMeasurement } from '@/constants/units'
 import { formatServings } from '@/constants/servings'
-import { servingsFromCookingQuery } from '@/router/cookingRoute'
+import { recipeRouteAtServings, servingsFromQuery } from '@/router/recipeRoutes'
 import { useUiStore } from '@/stores/ui'
 import { useWakeLock } from '@/composables/useWakeLock'
 import EmptyState from '@/components/EmptyState.vue'
@@ -188,7 +188,7 @@ const headerEl = ref(null)
 const finishing = ref(false)
 
 // Carried in the query from a Planned Meal or the recipe detail view, so a reload keeps it.
-const servings = computed(() => servingsFromCookingQuery(route.query, recipe.value.servings))
+const servings = computed(() => servingsFromQuery(route.query, recipe.value.servings))
 const batchMultiplier = computed(() => servings.value / recipe.value.servings)
 
 // Ephemeral, component-local "done" state that is not persisted.
@@ -277,7 +277,7 @@ async function finish() {
   try {
     await store.markCooked(recipeId)
     ui.notify({ message: `Marked “${recipe.value?.name}” as cooked`, color: 'success' })
-    router.replace({ name: 'recipe-detail', params: { id: recipeId } })
+    router.replace(recipeRouteAtServings(recipeId, servings.value))
   } catch (e) {
     ui.notify({ message: e?.message ?? 'Could not mark as cooked.', color: 'error' })
   } finally {

@@ -359,6 +359,55 @@ namespace RecipeApp.API.Data.Migrations
                     b.ToTable("ShoppingListItems");
                 });
 
+            modelBuilder.Entity("RecipeApp.API.Models.ShoppingListItemSource", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<decimal?>("Amount")
+                        .HasPrecision(10, 3)
+                        .HasColumnType("numeric(10,3)");
+
+                    b.Property<string>("BatchSize")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<int>("DisplayOrder")
+                        .HasColumnType("integer");
+
+                    b.Property<Guid?>("RecipeId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("RecipeName")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<DateOnly?>("ScheduledDate")
+                        .HasColumnType("date");
+
+                    b.Property<decimal?>("ShareAmount")
+                        .HasPrecision(10, 3)
+                        .HasColumnType("numeric(10,3)");
+
+                    b.Property<string>("ShareUnit")
+                        .HasColumnType("text");
+
+                    b.Property<Guid>("ShoppingListItemId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Unit")
+                        .HasColumnType("text");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("RecipeId");
+
+                    b.HasIndex("ShoppingListItemId");
+
+                    b.ToTable("ShoppingListItemSources");
+                });
+
             modelBuilder.Entity("RecipeApp.API.Models.PlannedMeal", b =>
                 {
                     b.HasOne("RecipeApp.API.Models.MealPlan", "MealPlan")
@@ -456,6 +505,24 @@ namespace RecipeApp.API.Data.Migrations
                     b.Navigation("ShoppingList");
                 });
 
+            modelBuilder.Entity("RecipeApp.API.Models.ShoppingListItemSource", b =>
+                {
+                    b.HasOne("RecipeApp.API.Models.Recipe", "Recipe")
+                        .WithMany()
+                        .HasForeignKey("RecipeId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
+                    b.HasOne("RecipeApp.API.Models.ShoppingListItem", "ShoppingListItem")
+                        .WithMany("Sources")
+                        .HasForeignKey("ShoppingListItemId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Recipe");
+
+                    b.Navigation("ShoppingListItem");
+                });
+
             modelBuilder.Entity("RecipeApp.API.Models.Ingredient", b =>
                 {
                     b.Navigation("RecipeIngredients");
@@ -486,6 +553,11 @@ namespace RecipeApp.API.Data.Migrations
             modelBuilder.Entity("RecipeApp.API.Models.ShoppingList", b =>
                 {
                     b.Navigation("Items");
+                });
+
+            modelBuilder.Entity("RecipeApp.API.Models.ShoppingListItem", b =>
+                {
+                    b.Navigation("Sources");
                 });
 #pragma warning restore 612, 618
         }

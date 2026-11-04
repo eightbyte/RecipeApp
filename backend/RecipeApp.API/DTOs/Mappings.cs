@@ -127,7 +127,22 @@ public static class Mappings
         i.IsChecked,
         i.IsCustom,
         i.NeedsReview,
-        i.DisplayOrder
+        i.DisplayOrder,
+        i.Sources
+            .OrderBy(s => s.DisplayOrder)
+            .Select(ToResponse)
+            .ToList()
+    );
+
+    public static ShoppingListItemSourceResponse ToResponse(this ShoppingListItemSource s) => new(
+        s.RecipeId,
+        s.RecipeName,
+        s.BatchSize,
+        s.ScheduledDate,
+        s.Amount,
+        s.Unit,
+        s.ShareAmount,
+        s.ShareUnit
     );
 
     public static ShoppingListResponse ToResponse(this ShoppingList s, bool isStale) => new(

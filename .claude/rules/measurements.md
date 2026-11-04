@@ -16,7 +16,7 @@ paths:
   - "frontend/src/constants/units.js"
   - "frontend/src/constants/batchSizes.js"
   - "frontend/src/constants/servings.js"
-  - "frontend/src/router/cookingRoute.js"
+  - "frontend/src/router/recipeRoutes.js"
   - "frontend/src/components/BatchSizeToggle.vue"
   - "frontend/src/views/RecipeDetailView.vue"
   - "frontend/src/views/RecipeFormView.vue"
@@ -81,6 +81,10 @@ paths:
 - The recipe view and cooking mode can also scale to a chosen number of servings: the multiplier
   is chosen servings ÷ the recipe's Servings, which can be fractional. It is display-only, never
   stored, and short-circuits on a null amount like every other scaling.
+- The recipe view reads its scale from the URL, the same `servings`-then-`batch` query as cooking
+  mode (`router/recipeRoutes.js`), and keeps a chosen number of servings there.
 - Shopping-list consolidation groups by dimension via `MeasurementUnit.Table`, so `1 tbsp` +
   `15 ml` makes one row. It resolves mass/volume mixes through density, and it presents a
   single-unit group in that unit (`2 cup + 1 cup = 3 cup`).
+- Item Sources record each contribution in the recipe's unit plus its share in the row's unit (the
+  base unit when the row is promoted to `kg`/`L`). They are never summed back into totals.

@@ -9,8 +9,8 @@ export const useIngredientStore = defineStore('ingredients', () => {
   const error       = ref(null)
 
   // Kept apart from `ingredients`, which the recipe form's search overwrites.
-  const catalogue       = ref([])
-  let   catalogueLoaded = false
+  const catalogue        = ref([])
+  let   catalogueRequest = null
 
   async function fetchIngredients(search = '') {
     loading.value = true
@@ -26,15 +26,12 @@ export const useIngredientStore = defineStore('ingredients', () => {
     }
   }
 
-  async function fetchCatalogue() {
-    if (catalogueLoaded) return
-    try {
-      const { data } = await api.get('/ingredients')
-      catalogue.value = data
-      catalogueLoaded = true
-    } catch {
-      // Suggestions are optional, so a failed load leaves the catalogue unloaded for the next call to retry.
-    }
+  function fetchCatalogue() {
+    catalogueRequest ??= api.get('/ingredients')
+      .then(({ data }) => { catalogue.value = data })
+      // Suggestions are optional, so a failed load is forgotten for the next call to retry.
+      .catch(() => { catalogueRequest = null })
+    return catalogueRequest
   }
 
   async function fetchCategories() {

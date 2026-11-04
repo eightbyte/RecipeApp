@@ -58,7 +58,7 @@ describe('fetchCatalogue', () => {
     api.get.mockResolvedValue({ data: [makeIngredient()] })
 
     const store = useIngredientStore()
-    await store.fetchCatalogue()
+    await Promise.all([store.fetchCatalogue(), store.fetchCatalogue()])
     await store.fetchCatalogue()
 
     expect(api.get).toHaveBeenCalledTimes(1)

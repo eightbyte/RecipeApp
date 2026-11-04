@@ -82,23 +82,30 @@ watch(model, open => {
   ingredientStore.fetchCatalogue()
 }, { immediate: true })
 
+const MatchTier = { EXACT: 0, STARTS_WITH: 1, CONTAINS: 2 }
+
+function matchTier(title, search) {
+  const text = title.toLowerCase()
+  if (text === search) return MatchTier.EXACT
+  if (text.startsWith(search)) return MatchTier.STARTS_WITH
+  return text.includes(search) ? MatchTier.CONTAINS : null
+}
+
 const suggestions = computed(() => {
   const search = form.name.trim().toLowerCase()
   if (search.length < MIN_SEARCH_LENGTH) return []
 
   const rows = []
-  const addIfMatches = (title, subtitle, isAlias, category) => {
-    const text = title.toLowerCase()
-    if (!text.includes(search)) return
-    const tier = text === search ? 0 : text.startsWith(search) ? 1 : 2
-    rows.push({ title, subtitle, category, tier, isAlias })
-  }
-
   for (const ingredient of ingredientStore.catalogue) {
-    const category = categoryTitle(ingredient.category)
-    addIfMatches(ingredient.displayName, category, false, ingredient.category)
-    for (const alias of ingredient.aliases) {
-      addIfMatches(alias, `${ingredient.displayName} · ${category}`, true, ingredient.category)
+    const categoryLabel = categoryTitle(ingredient.category)
+    const candidates = [
+      { title: ingredient.displayName, subtitle: categoryLabel, isAlias: false },
+      ...ingredient.aliases.map(alias =>
+        ({ title: alias, subtitle: `${ingredient.displayName} · ${categoryLabel}`, isAlias: true })),
+    ]
+    for (const candidate of candidates) {
+      const tier = matchTier(candidate.title, search)
+      if (tier !== null) rows.push({ ...candidate, category: ingredient.category, tier })
     }
   }
 

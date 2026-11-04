@@ -28,6 +28,11 @@ export const INGREDIENT_CATEGORY_VALUES = INGREDIENT_CATEGORIES.map(category => 
 
 const categoriesByValue = new Map(INGREDIENT_CATEGORIES.map(category => [category.value, category]))
 
+/** The label for a category, rendering an unrecognised value as itself rather than dropping it. */
+export function categoryTitle(value) {
+  return categoriesByValue.get(value)?.title ?? value
+}
+
 /** The heading a shopping list shows for a category, rendering an unrecognised value as itself rather than dropping it. */
 export function formatCategory(value) {
   const category = categoriesByValue.get(value)

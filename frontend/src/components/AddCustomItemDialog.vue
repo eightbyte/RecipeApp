@@ -4,8 +4,12 @@
       <v-card-title class="pt-6 px-6">Add item</v-card-title>
 
       <v-card-text class="px-6 pb-0">
-        <v-text-field
-          v-model="form.name"
+        <v-combobox
+          :model-value="form.name"
+          :items="suggestions"
+          :item-props="row => ({ subtitle: row.subtitle })"
+          no-filter
+          hide-no-data
           label="Item name"
           :rules="[v => !!v || 'Item name is required']"
           required
@@ -13,6 +17,7 @@
           density="compact"
           class="mb-2"
           autofocus
+          @update:model-value="updateName"
         />
 
         <div class="d-flex ga-4 mb-2">
@@ -56,10 +61,15 @@
 </template>
 
 <script setup>
-import { reactive, watch } from 'vue'
-import { INGREDIENT_CATEGORIES, DEFAULT_CATEGORY } from '@/constants/categories'
+import { computed, reactive, watch } from 'vue'
+import { INGREDIENT_CATEGORIES, DEFAULT_CATEGORY, categoryTitle } from '@/constants/categories'
+import { useIngredientStore } from '@/stores/ingredients'
+
+const MIN_SEARCH_LENGTH = 2
 
 const model = defineModel({ type: Boolean, default: false })
+
+const ingredientStore = useIngredientStore()
 
 const categoryItems = INGREDIENT_CATEGORIES.map(({ title, value }) => ({ title, value }))
 
@@ -67,8 +77,53 @@ const defaultForm = () => ({ name: '', amount: null, unit: '', category: DEFAULT
 const form = reactive(defaultForm())
 
 watch(model, open => {
-  if (open) Object.assign(form, defaultForm())
+  if (!open) return
+  Object.assign(form, defaultForm())
+  ingredientStore.fetchCatalogue()
+}, { immediate: true })
+
+const MatchTier = { EXACT: 0, STARTS_WITH: 1, CONTAINS: 2 }
+
+function matchTier(title, search) {
+  const text = title.toLowerCase()
+  if (text === search) return MatchTier.EXACT
+  if (text.startsWith(search)) return MatchTier.STARTS_WITH
+  return text.includes(search) ? MatchTier.CONTAINS : null
+}
+
+const suggestions = computed(() => {
+  const search = form.name.trim().toLowerCase()
+  if (search.length < MIN_SEARCH_LENGTH) return []
+
+  const rows = []
+  for (const ingredient of ingredientStore.catalogue) {
+    const categoryLabel = categoryTitle(ingredient.category)
+    const candidates = [
+      { title: ingredient.displayName, subtitle: categoryLabel, isAlias: false },
+      ...ingredient.aliases.map(alias =>
+        ({ title: alias, subtitle: `${ingredient.displayName} · ${categoryLabel}`, isAlias: true })),
+    ]
+    for (const candidate of candidates) {
+      const tier = matchTier(candidate.title, search)
+      if (tier !== null) rows.push({ ...candidate, category: ingredient.category, tier })
+    }
+  }
+
+  return rows.sort((a, b) =>
+    a.tier - b.tier ||
+    a.isAlias - b.isAlias ||
+    a.title.localeCompare(b.title, undefined, { sensitivity: 'base' }))
 })
+
+// Picking a suggestion yields its row, while typing yields plain text that leaves the Category alone.
+function updateName(value) {
+  if (value && typeof value === 'object') {
+    form.name     = value.title
+    form.category = value.category
+  } else {
+    form.name = value ?? ''
+  }
+}
 
 const emit = defineEmits(['confirm'])
 

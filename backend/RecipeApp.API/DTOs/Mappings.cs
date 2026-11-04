@@ -16,6 +16,7 @@ public static class Mappings
         i.Name,
         i.DisplayName,
         i.Category,
+        i.Aliases,
         i.DefaultUnit,
         i.GramsPerMillilitre,
         i.IsStaple,

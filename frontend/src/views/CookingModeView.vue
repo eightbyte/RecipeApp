@@ -62,7 +62,10 @@
               Step {{ displayIndex }} / {{ totalSteps }}
             </div>
           </div>
-          <BatchSizeChip :batch-size="batchSize" size="small" />
+          <v-chip size="small" color="primary" class="servings-chip">
+            <v-icon start>mdi-account-group</v-icon>
+            {{ formatServings(servings) }}
+          </v-chip>
         </div>
         <v-progress-linear
           :model-value="completionPercent"
@@ -162,11 +165,10 @@ import { ref, computed, onMounted, nextTick } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useRecipeStore } from '@/stores/recipes'
 import { formatMeasurement, formatSourceMeasurement } from '@/constants/units'
-import { batchSizeMultiplier } from '@/constants/batchSizes'
-import { batchSizeFromCookingQuery } from '@/router/cookingRoute'
+import { formatServings } from '@/constants/servings'
+import { servingsFromCookingQuery } from '@/router/cookingRoute'
 import { useUiStore } from '@/stores/ui'
 import { useWakeLock } from '@/composables/useWakeLock'
-import BatchSizeChip from '@/components/BatchSizeChip.vue'
 import EmptyState from '@/components/EmptyState.vue'
 import ErrorState from '@/components/ErrorState.vue'
 
@@ -181,13 +183,13 @@ useWakeLock()
 
 const recipeId = props.id ?? route.params.id
 
-// Carried in the query from a Planned Meal or the recipe detail view, so a reload keeps it.
-const batchSize = computed(() => batchSizeFromCookingQuery(route.query))
-const batchMultiplier = computed(() => batchSizeMultiplier(batchSize.value))
-
 const recipe   = computed(() => store.currentRecipe)
 const headerEl = ref(null)
 const finishing = ref(false)
+
+// Carried in the query from a Planned Meal or the recipe detail view, so a reload keeps it.
+const servings = computed(() => servingsFromCookingQuery(route.query, recipe.value.servings))
+const batchMultiplier = computed(() => servings.value / recipe.value.servings)
 
 // Ephemeral, component-local "done" state that is not persisted.
 const doneStepIds = ref(new Set())

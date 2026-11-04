@@ -30,6 +30,23 @@ describe('BatchSizeToggle', () => {
     expect(selected).toEqual(['½×'])
   })
 
+  it('keeps the current Batch Size selected when it is tapped again by default', async () => {
+    const wrapper = mountToggle({ modelValue: 'HALF' })
+    await wrapper.findAll('button')[0].trigger('click')
+    expect(wrapper.emitted('update:modelValue')).toBeUndefined()
+  })
+
+  it('clears the current Batch Size when it is tapped again and not mandatory', async () => {
+    const wrapper = mountToggle({ modelValue: 'HALF', mandatory: false })
+    await wrapper.findAll('button')[0].trigger('click')
+    expect(wrapper.emitted('update:modelValue')).toEqual([[undefined]])
+  })
+
+  it('shows no Batch Size as selected when it is not mandatory and has none', () => {
+    const selected = mountToggle({ modelValue: null, mandatory: false }).findAll('button.v-btn--active')
+    expect(selected).toHaveLength(0)
+  })
+
   it('is labelled Batch for screen readers', () => {
     expect(mountToggle().attributes('aria-label')).toBe('Batch')
   })

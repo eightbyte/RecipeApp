@@ -1,6 +1,7 @@
-import { toBatchSize } from '@/constants/batchSizes'
+import { batchSizeMultiplier, toBatchSize } from '@/constants/batchSizes'
 
 const BATCH_SIZE_QUERY_KEY = 'batch'
+const SERVINGS_QUERY_KEY   = 'servings'
 
 /** The route location that opens Cooking Mode for a recipe at the given Batch Size. */
 export function cookingRoute(recipeId, batchSize) {
@@ -11,7 +12,18 @@ export function cookingRoute(recipeId, batchSize) {
   }
 }
 
-/** The Batch Size a Cooking Mode query carries, falling back to the default when it is missing or unknown. */
-export function batchSizeFromCookingQuery(query) {
-  return toBatchSize(query[BATCH_SIZE_QUERY_KEY])
+/** The route location that opens Cooking Mode for a recipe scaled to the given number of servings. */
+export function cookingRouteAtServings(recipeId, servings) {
+  return {
+    name: 'recipe-cooking',
+    params: { id: recipeId },
+    query: { [SERVINGS_QUERY_KEY]: servings },
+  }
+}
+
+/** The servings a Cooking Mode query asks for, falling back to its Batch Size, then Regular, applied to the recipe's Servings. */
+export function servingsFromCookingQuery(query, recipeServings) {
+  const servings = Number(query[SERVINGS_QUERY_KEY])
+  if (Number.isFinite(servings) && servings > 0) return servings
+  return recipeServings * batchSizeMultiplier(toBatchSize(query[BATCH_SIZE_QUERY_KEY]))
 }

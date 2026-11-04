@@ -41,9 +41,10 @@ The number of people a recipe's stated amounts feed.
 _Avoid_: Yield, portions
 
 **Batch Size**:
-How many times the whole recipe is made: a multiple of the recipe, never of one serving. Its
-current values are Half, Regular and Double. Asking for a number of servings is a way of choosing
-a Batch Size, not a separate setting.
+How many times the whole recipe is made: a multiple of the recipe, never of one serving. A
+Planned Meal's Batch Size is Half, Regular or Double. The recipe view and cooking mode can show any
+Batch Size, chosen through Servings. Asking for a number of servings is a way of choosing a Batch
+Size, not a separate setting.
 _Avoid_: Portion, portion size, custom servings
 
 **Cooked**:

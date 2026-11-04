@@ -6,7 +6,7 @@ import { createPinia, setActivePinia } from 'pinia'
 import { useRecipeStore } from '@/stores/recipes'
 import RecipeDetailView from './RecipeDetailView.vue'
 import { makeRecipeDetail } from '@/test/factories'
-import { batchSizeFromCookingQuery } from '@/router/cookingRoute'
+import { servingsFromCookingQuery } from '@/router/cookingRoute'
 
 vi.mock('@/services/api', () => ({
   default: { get: vi.fn(), post: vi.fn(), put: vi.fn(), delete: vi.fn() },
@@ -55,23 +55,67 @@ async function mountView(recipeOverrides = {}) {
   return wrapper
 }
 
+function servingsChip(wrapper) {
+  return wrapper.get('.servings-chip')
+}
+
+function stepperValue(wrapper) {
+  return wrapper.get('.servings-stepper-value').text()
+}
+
+function highlightedShortcuts(wrapper) {
+  return wrapper.get('[aria-label="Batch"]').findAll('button.v-btn--active').map(button => button.text())
+}
+
+function findButton(wrapper, label) {
+  return wrapper.findAll('button').find(button =>
+    button.attributes('aria-label') === label || button.text() === label)
+}
+
+async function clickButton(wrapper, label) {
+  await findButton(wrapper, label).trigger('click')
+  await flushPromises()
+}
+
 describe('RecipeDetailView', () => {
   it('renders the recipe name', async () => {
     const wrapper = await mountView({ name: 'Chocolate Cake' })
     expect(wrapper.text()).toContain('Chocolate Cake')
   })
 
-  it('defaults the Batch selector to Regular', async () => {
+  it('starts at the recipe’s Servings with its amounts unscaled', async () => {
     const wrapper = await mountView()
-    expect(wrapper.vm.batchSize).toBe('REGULAR')
+    expect(servingsChip(wrapper).text()).toBe('4 servings')
+    expect(stepperValue(wrapper)).toBe('4')
+    expect(wrapper.get('#ingredient-ri-1').text()).toContain('200 g')
   })
 
-  it('doubles ingredient amounts when switching to Double', async () => {
+  it('scales the amounts and the servings chip by the chosen servings when stepped up', async () => {
     const wrapper = await mountView()
-    wrapper.vm.batchSize = 'DOUBLE'
-    await wrapper.vm.$nextTick()
-    expect(wrapper.vm.batchMultiplier).toBe(2)
-    expect(wrapper.vm.formatAmount(100, 'g')).toBe('200 g')
+    await clickButton(wrapper, 'More servings')
+    expect(stepperValue(wrapper)).toBe('5')
+    expect(servingsChip(wrapper).text()).toBe('5 servings')
+    expect(wrapper.get('#ingredient-ri-1').text()).toContain('250 g')
+  })
+
+  it('scales the amounts down when stepped down', async () => {
+    const wrapper = await mountView()
+    await clickButton(wrapper, 'Fewer servings')
+    expect(servingsChip(wrapper).text()).toBe('3 servings')
+    expect(wrapper.get('#ingredient-ri-1').text()).toContain('150 g')
+  })
+
+  it('keeps 2-decimal rounding on amounts scaled by an uneven number of servings', async () => {
+    const wrapper = await mountView({ servings: 3 })
+    await clickButton(wrapper, 'More servings')
+    // 200 g x 4/3 is 266.666…
+    expect(wrapper.get('#ingredient-ri-1').text()).toContain('266.67 g')
+  })
+
+  it('reads "1 serving" at exactly one serving', async () => {
+    const wrapper = await mountView({ servings: 2 })
+    await clickButton(wrapper, 'Fewer servings')
+    expect(servingsChip(wrapper).text()).toBe('1 serving')
   })
 
   it('shows the source measurement alongside the converted amount', async () => {
@@ -96,7 +140,7 @@ describe('RecipeDetailView', () => {
     expect(wrapper.text()).toContain('(2 cups)')
   })
 
-  it('scales the source measurement with the Batch Size', async () => {
+  it('scales the source measurement with the chosen servings', async () => {
     const wrapper = await mountView({
       ingredients: [{
         id: 'ri-1',
@@ -113,11 +157,89 @@ describe('RecipeDetailView', () => {
       }],
     })
 
-    wrapper.vm.batchSize = 'DOUBLE'
-    await wrapper.vm.$nextTick()
+    await clickButton(wrapper, '2×')
 
     expect(wrapper.text()).toContain('480 g')
     expect(wrapper.text()).toContain('(4 cups)')
+  })
+
+  it('sets the chosen servings exactly from a shortcut', async () => {
+    const wrapper = await mountView({ servings: 3 })
+    await clickButton(wrapper, '½×')
+    expect(stepperValue(wrapper)).toBe('1.5')
+    expect(servingsChip(wrapper).text()).toBe('1.5 servings')
+    expect(wrapper.get('#ingredient-ri-1').text()).toContain('100 g')
+  })
+
+  it('highlights 1× at the recipe’s own Servings', async () => {
+    const wrapper = await mountView()
+    expect(highlightedShortcuts(wrapper)).toEqual(['1×'])
+  })
+
+  it('highlights a shortcut when stepping lands on its preset', async () => {
+    const wrapper = await mountView({ servings: 2 })
+    await clickButton(wrapper, 'Fewer servings')
+    expect(highlightedShortcuts(wrapper)).toEqual(['½×'])
+  })
+
+  it('highlights no shortcut when the chosen servings match none of them', async () => {
+    const wrapper = await mountView()
+    await clickButton(wrapper, 'More servings')
+    expect(highlightedShortcuts(wrapper)).toEqual([])
+  })
+
+  it('keeps the chosen servings when the highlighted shortcut is tapped again', async () => {
+    const wrapper = await mountView()
+    await clickButton(wrapper, '2×')
+    await clickButton(wrapper, '2×')
+    expect(servingsChip(wrapper).text()).toBe('8 servings')
+    expect(highlightedShortcuts(wrapper)).toEqual(['2×'])
+  })
+
+  it('steps a fractional number of servings to the next whole number', async () => {
+    const wrapper = await mountView({ servings: 3 })
+    await clickButton(wrapper, '½×')
+    await clickButton(wrapper, 'More servings')
+    expect(stepperValue(wrapper)).toBe('2')
+
+    await clickButton(wrapper, '½×')
+    await clickButton(wrapper, 'Fewer servings')
+    expect(stepperValue(wrapper)).toBe('1')
+  })
+
+  it('cannot step below 1 serving', async () => {
+    const wrapper = await mountView({ servings: 2 })
+    expect(findButton(wrapper, 'Fewer servings').attributes('disabled')).toBeUndefined()
+    await clickButton(wrapper, 'Fewer servings')
+    expect(findButton(wrapper, 'Fewer servings').attributes('disabled')).toBeDefined()
+  })
+
+  it('cannot step above 100 servings', async () => {
+    const wrapper = await mountView({ servings: 99 })
+    expect(findButton(wrapper, 'More servings').attributes('disabled')).toBeUndefined()
+    await clickButton(wrapper, 'More servings')
+    expect(stepperValue(wrapper)).toBe('100')
+    expect(findButton(wrapper, 'More servings').attributes('disabled')).toBeDefined()
+  })
+
+  it('lets a shortcut go below 1 serving, then steps back up to a whole number', async () => {
+    const wrapper = await mountView({ servings: 1 })
+    await clickButton(wrapper, '½×')
+    expect(servingsChip(wrapper).text()).toBe('0.5 servings')
+    expect(findButton(wrapper, 'Fewer servings').attributes('disabled')).toBeDefined()
+
+    await clickButton(wrapper, 'More servings')
+    expect(stepperValue(wrapper)).toBe('1')
+  })
+
+  it('lets a shortcut go above 100 servings, then steps back down to a whole number', async () => {
+    const wrapper = await mountView({ servings: 80 })
+    await clickButton(wrapper, '2×')
+    expect(servingsChip(wrapper).text()).toBe('160 servings')
+    expect(findButton(wrapper, 'More servings').attributes('disabled')).toBeDefined()
+
+    await clickButton(wrapper, 'Fewer servings')
+    expect(stepperValue(wrapper)).toBe('159')
   })
 
   it('renders an unquantified ingredient as its name alone', async () => {
@@ -143,8 +265,8 @@ describe('RecipeDetailView', () => {
     expect(wrapper.vm.formatAmount(null, null)).toBeNull()
   })
 
-  it('leaves an unquantified ingredient unscaled at a Double Batch Size', async () => {
-    // There is nothing to multiply, and 2 x nothing must not become a number.
+  it('leaves an unquantified ingredient blank at a chosen number of servings', async () => {
+    // There is nothing to multiply, and 5/4 x nothing must not become a number.
     const wrapper = await mountView({
       ingredients: [{
         id: 'ri-1',
@@ -161,10 +283,9 @@ describe('RecipeDetailView', () => {
       }],
     })
 
-    wrapper.vm.batchSize = 'DOUBLE'
-    await wrapper.vm.$nextTick()
+    await clickButton(wrapper, 'More servings')
 
-    expect(wrapper.vm.formatAmount(null, null)).toBeNull()
+    expect(servingsChip(wrapper).text()).toBe('5 servings')
     expect(wrapper.get('#ingredient-ri-1').text().trim()).toBe('Salt')
   })
 
@@ -245,13 +366,20 @@ describe('RecipeDetailView — cooking, loading and error states', () => {
     })
   })
 
-  it('starts cooking at the chosen Batch Size', async () => {
+  it('starts cooking at the chosen servings', async () => {
     const wrapper = await mountView()
-    wrapper.vm.batchSize = 'DOUBLE'
-    await wrapper.vm.$nextTick()
+    await clickButton(wrapper, 'More servings')
     const startBtn = wrapper.findAllComponents({ name: 'VBtn' })
       .find(b => b.text().includes('Start cooking'))
-    expect(batchSizeFromCookingQuery(startBtn.props('to').query)).toBe('DOUBLE')
+    expect(servingsFromCookingQuery(startBtn.props('to').query, 4)).toBe(5)
+  })
+
+  it('starts cooking at the recipe’s own Servings when none were chosen', async () => {
+    const wrapper = await mountView()
+    const startBtn = wrapper.findAllComponents({ name: 'VBtn' })
+      .find(b => b.text().includes('Start cooking'))
+    // A Batch Size link would also read back as 4, so check the link names servings itself.
+    expect(startBtn.props('to').query).toEqual({ servings: 4 })
   })
 
   it('shows a "Recipe not found" empty state when missing and there is no error', async () => {

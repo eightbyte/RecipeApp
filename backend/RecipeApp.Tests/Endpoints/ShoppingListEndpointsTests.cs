@@ -218,6 +218,145 @@ public class ShoppingListEndpointsTests(DatabaseFixture db) : IAsyncLifetime
         response.StatusCode.Should().Be(HttpStatusCode.NotFound);
     }
 
+    // ── PUT /shopping-lists/{id}/custom-items/{itemId} ────────────────────────
+
+    private async Task<(ShoppingListResponse List, ShoppingListItemResponse Custom)> SeedListWithCustomItemAsync(
+        string category = "OTHER")
+    {
+        var ingId    = await SeedIngredientAsync();
+        var recipeId = await SeedRecipeAsync(ingId);
+        var plan     = await CreatePlanViaApi();
+        await AddRecipeToPlanAsync(plan.Id, recipeId);
+
+        var listResponse = await Client.GetAsync("/api/v1/shopping-lists/active");
+        var list = await listResponse.Content.ReadFromJsonAsync<ShoppingListResponse>();
+
+        var addResponse = await Client.PostAsJsonAsync($"/api/v1/shopping-lists/{list!.Id}/items",
+            new { name = "Eggs", amount = 6m, unit = "pcs", category });
+        var custom = await addResponse.Content.ReadFromJsonAsync<ShoppingListItemResponse>();
+        return (list, custom!);
+    }
+
+    private Task<HttpResponseMessage> EditCustomItemAsync(Guid listId, Guid itemId, object body) =>
+        Client.PutAsJsonAsync($"/api/v1/shopping-lists/{listId}/custom-items/{itemId}", body);
+
+    [Fact]
+    public async Task EditCustomItem_AllFields_Returns200WithUpdatedItem()
+    {
+        var (list, custom) = await SeedListWithCustomItemAsync();
+
+        var response = await EditCustomItemAsync(list.Id, custom.Id,
+            new { name = "Duck eggs", amount = 12m, unit = "each", category = "DAIRY" });
+
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        var updated = await response.Content.ReadFromJsonAsync<ShoppingListItemResponse>();
+        updated!.Id.Should().Be(custom.Id);
+        updated.DisplayName.Should().Be("Duck eggs");
+        updated.Amount.Should().Be(12m);
+        updated.Unit.Should().Be("each");
+        updated.Category.Should().Be("DAIRY");
+        updated.IsCustom.Should().BeTrue();
+    }
+
+    [Fact]
+    public async Task EditCustomItem_NullAmountAndUnit_ClearsThem()
+    {
+        var (list, custom) = await SeedListWithCustomItemAsync();
+
+        var response = await EditCustomItemAsync(list.Id, custom.Id,
+            new { name = "Eggs", amount = (decimal?)null, unit = (string?)null, category = "OTHER" });
+
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        var updated = await response.Content.ReadFromJsonAsync<ShoppingListItemResponse>();
+        updated!.Amount.Should().BeNull();
+        updated.Unit.Should().BeNull();
+    }
+
+    [Fact]
+    public async Task EditCustomItem_CategoryChange_PlacesItemLastInNewCategory()
+    {
+        var (list, custom) = await SeedListWithCustomItemAsync(category: "OTHER");
+        await Client.PostAsJsonAsync($"/api/v1/shopping-lists/{list.Id}/items",
+            new { name = "Milk", amount = (decimal?)null, unit = (string?)null, category = "DAIRY" });
+        await Client.PostAsJsonAsync($"/api/v1/shopping-lists/{list.Id}/items",
+            new { name = "Cheese", amount = (decimal?)null, unit = (string?)null, category = "DAIRY" });
+
+        var response = await EditCustomItemAsync(list.Id, custom.Id,
+            new { name = "Eggs", amount = 6m, unit = "pcs", category = "DAIRY" });
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+
+        var reloaded = await Client.GetFromJsonAsync<ShoppingListResponse>("/api/v1/shopping-lists/active");
+        reloaded!.Items.Where(i => i.Category == "DAIRY").Select(i => i.DisplayName)
+            .Should().Equal("Milk", "Cheese", "Eggs");
+    }
+
+    [Fact]
+    public async Task EditCustomItem_SameCategory_KeepsDisplayOrder()
+    {
+        var (list, custom) = await SeedListWithCustomItemAsync(category: "DAIRY");
+        await Client.PostAsJsonAsync($"/api/v1/shopping-lists/{list.Id}/items",
+            new { name = "Milk", amount = (decimal?)null, unit = (string?)null, category = "DAIRY" });
+
+        var response = await EditCustomItemAsync(list.Id, custom.Id,
+            new { name = "Duck eggs", amount = 6m, unit = "pcs", category = "DAIRY" });
+
+        var updated = await response.Content.ReadFromJsonAsync<ShoppingListItemResponse>();
+        updated!.DisplayOrder.Should().Be(custom.DisplayOrder);
+    }
+
+    [Fact]
+    public async Task EditCustomItem_GeneratedItem_Returns409()
+    {
+        var (list, _) = await SeedListWithCustomItemAsync();
+        var generated = list.Items.First(i => !i.IsCustom);
+
+        var response = await EditCustomItemAsync(list.Id, generated.Id,
+            new { name = "Renamed", amount = 1m, unit = "g", category = "OTHER" });
+
+        response.StatusCode.Should().Be(HttpStatusCode.Conflict);
+    }
+
+    [Fact]
+    public async Task EditCustomItem_UnknownItem_Returns404()
+    {
+        var (list, _) = await SeedListWithCustomItemAsync();
+
+        var response = await EditCustomItemAsync(list.Id, Guid.NewGuid(),
+            new { name = "Eggs", amount = 6m, unit = "pcs", category = "OTHER" });
+
+        response.StatusCode.Should().Be(HttpStatusCode.NotFound);
+    }
+
+    [Fact]
+    public async Task EditCustomItem_UnknownList_Returns404()
+    {
+        var (_, custom) = await SeedListWithCustomItemAsync();
+
+        var response = await EditCustomItemAsync(Guid.NewGuid(), custom.Id,
+            new { name = "Eggs", amount = 6m, unit = "pcs", category = "OTHER" });
+
+        response.StatusCode.Should().Be(HttpStatusCode.NotFound);
+    }
+
+    public static TheoryData<string, object> InvalidEdits => new()
+    {
+        { "empty name",       new { name = "", amount = 6m, unit = "pcs", category = "OTHER" } },
+        { "zero amount",      new { name = "Eggs", amount = 0m, unit = "pcs", category = "OTHER" } },
+        { "unknown category", new { name = "Eggs", amount = 6m, unit = "pcs", category = "NOT_A_CATEGORY" } },
+        { "missing category", new { name = "Eggs", amount = 6m, unit = "pcs" } },
+    };
+
+    [Theory]
+    [MemberData(nameof(InvalidEdits))]
+    public async Task EditCustomItem_InvalidBody_Returns400(string because, object body)
+    {
+        var (list, custom) = await SeedListWithCustomItemAsync();
+
+        var response = await EditCustomItemAsync(list.Id, custom.Id, body);
+
+        response.StatusCode.Should().Be(HttpStatusCode.BadRequest, because);
+    }
+
     // ── DELETE /shopping-lists/{id}/items/{itemId} ────────────────────────────
 
     [Fact]

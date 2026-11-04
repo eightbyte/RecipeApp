@@ -1,7 +1,7 @@
 <template>
-  <v-bottom-sheet v-model="model" max-width="600">
+  <v-bottom-sheet v-model="model" max-width="600" :persistent="saving">
     <v-card>
-      <v-card-title class="pt-6 px-6">Add item</v-card-title>
+      <v-card-title class="pt-6 px-6">{{ isEditing ? 'Edit item' : 'Add item' }}</v-card-title>
 
       <v-card-text class="px-6 pb-0">
         <v-combobox
@@ -51,9 +51,15 @@
 
       <v-card-actions class="px-6 pb-6">
         <v-spacer />
-        <v-btn variant="text" @click="cancel">Cancel</v-btn>
-        <v-btn color="primary" variant="flat" :disabled="!form.name.trim()" @click="confirm">
-          Add
+        <v-btn variant="text" :disabled="saving" @click="cancel">Cancel</v-btn>
+        <v-btn
+          color="primary"
+          variant="flat"
+          :disabled="!form.name.trim()"
+          :loading="saving"
+          @click="confirm"
+        >
+          {{ isEditing ? 'Save' : 'Add' }}
         </v-btn>
       </v-card-actions>
     </v-card>
@@ -69,16 +75,25 @@ const MIN_SEARCH_LENGTH = 2
 
 const model = defineModel({ type: Boolean, default: false })
 
+const props = defineProps({
+  // The Custom Item to edit, or null to add a new one.
+  item:   { type: Object, default: null },
+  saving: { type: Boolean, default: false },
+})
+
+const isEditing = computed(() => props.item !== null)
+
 const ingredientStore = useIngredientStore()
 
 const categoryItems = INGREDIENT_CATEGORIES.map(({ title, value }) => ({ title, value }))
 
 const defaultForm = () => ({ name: '', amount: null, unit: '', category: DEFAULT_CATEGORY })
+const itemForm = item => ({ name: item.displayName, amount: item.amount, unit: item.unit ?? '', category: item.category })
 const form = reactive(defaultForm())
 
 watch(model, open => {
   if (!open) return
-  Object.assign(form, defaultForm())
+  Object.assign(form, isEditing.value ? itemForm(props.item) : defaultForm())
   ingredientStore.fetchCatalogue()
 }, { immediate: true })
 
@@ -116,25 +131,32 @@ const suggestions = computed(() => {
 })
 
 // Picking a suggestion yields its row, while typing yields plain text that leaves the Category alone.
+// An edit keeps its Category, so renaming an item never moves it.
 function updateName(value) {
   if (value && typeof value === 'object') {
-    form.name     = value.title
-    form.category = value.category
+    form.name = value.title
+    if (!isEditing.value) form.category = value.category
   } else {
     form.name = value ?? ''
   }
 }
 
-const emit = defineEmits(['confirm'])
+const emit = defineEmits(['confirm', 'save'])
 
+// An edit waits for the parent to close the sheet once the server accepts it, so a failed save keeps the edits.
 function confirm() {
   if (!form.name.trim()) return
-  emit('confirm', {
+  const payload = {
     name:     form.name.trim(),
     amount:   form.amount || null,
     unit:     form.unit.trim() || null,
     category: form.category,
-  })
+  }
+  if (isEditing.value) {
+    emit('save', payload)
+    return
+  }
+  emit('confirm', payload)
   model.value = false
 }
 

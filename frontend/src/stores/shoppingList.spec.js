@@ -116,6 +116,67 @@ describe('addCustomItem', () => {
   })
 })
 
+// ── updateCustomItem ──────────────────────────────────────────────────────────
+
+describe('updateCustomItem', () => {
+  const edit = { name: 'Duck eggs', amount: 12, unit: 'each', category: 'DAIRY' }
+
+  function storeWith(items) {
+    const store = useShoppingListStore()
+    store.list = makeShoppingList({ id: 'list-1', items })
+    return store
+  }
+
+  it('PUTs the edit with its own 10 second timeout', async () => {
+    api.put.mockResolvedValue({ data: makeShoppingListItem({ id: 'eggs', isCustom: true, ...edit }) })
+    const store = storeWith([makeShoppingListItem({ id: 'eggs', isCustom: true })])
+
+    await store.updateCustomItem('eggs', edit)
+
+    expect(api.put).toHaveBeenCalledWith('/shopping-lists/list-1/custom-items/eggs', edit,
+      expect.objectContaining({ timeout: 10_000 }))
+  })
+
+  it('replaces the item in place when its Category is unchanged', async () => {
+    const store = storeWith([
+      makeShoppingListItem({ id: 'eggs', displayName: 'Eggs', category: 'DAIRY', isCustom: true }),
+      makeShoppingListItem({ id: 'milk', displayName: 'Milk', category: 'DAIRY' }),
+    ])
+    api.put.mockResolvedValue({
+      data: makeShoppingListItem({ id: 'eggs', displayName: 'Duck eggs', category: 'DAIRY', isCustom: true }),
+    })
+
+    await store.updateCustomItem('eggs', edit)
+
+    expect(store.list.items.map(i => i.displayName)).toEqual(['Duck eggs', 'Milk'])
+  })
+
+  it('moves the item to the end of the list when its Category changes', async () => {
+    const store = storeWith([
+      makeShoppingListItem({ id: 'eggs', displayName: 'Eggs', category: 'OTHER', isCustom: true }),
+      makeShoppingListItem({ id: 'milk', displayName: 'Milk', category: 'DAIRY' }),
+      makeShoppingListItem({ id: 'soap', displayName: 'Soap', category: 'OTHER', isCustom: true }),
+    ])
+    api.put.mockResolvedValue({
+      data: makeShoppingListItem({ id: 'eggs', displayName: 'Duck eggs', category: 'DAIRY', isCustom: true }),
+    })
+
+    await store.updateCustomItem('eggs', edit)
+
+    expect(store.list.items.map(i => i.displayName)).toEqual(['Milk', 'Soap', 'Duck eggs'])
+  })
+
+  it('rejects and leaves the item unchanged when the save fails', async () => {
+    const original = makeShoppingListItem({ id: 'eggs', displayName: 'Eggs', category: 'OTHER', isCustom: true })
+    const store = storeWith([original])
+    api.put.mockRejectedValue({ status: 500, message: 'Server error' })
+
+    await expect(store.updateCustomItem('eggs', edit)).rejects.toMatchObject({ message: 'Server error' })
+
+    expect(store.list.items).toEqual([makeShoppingListItem({ id: 'eggs', displayName: 'Eggs', category: 'OTHER', isCustom: true })])
+  })
+})
+
 // ── deleteItem ────────────────────────────────────────────────────────────────
 
 describe('deleteItem', () => {

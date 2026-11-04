@@ -65,6 +65,30 @@ public static class ShoppingListEndpoints
         .WithSummary("Update a shopping list item")
         .WithDescription("Toggle the checked state or edit the quantity/unit of any item.");
 
+        // PUT /shopping-lists/{id}/custom-items/{itemId} — edit a custom item
+        group.MapPut("/{id:guid}/custom-items/{itemId:guid}", async (
+            Guid id,
+            Guid itemId,
+            UpdateCustomItemRequest request,
+            ShoppingListService svc) =>
+        {
+            var (result, item) = await svc.UpdateCustomItemAsync(id, itemId, request);
+            return result switch
+            {
+                UpdateCustomItemResult.Updated  => Results.Ok(item),
+                UpdateCustomItemResult.NotFound => Results.NotFound(),
+                UpdateCustomItemResult.Conflict => Results.Conflict(new
+                {
+                    title  = "Cannot edit a recipe-derived item.",
+                    detail = "Recipe-derived items change by editing the meal plan and regenerating the shopping list.",
+                }),
+                _ => Results.StatusCode(500),
+            };
+        })
+        .WithValidation<UpdateCustomItemRequest>()
+        .WithSummary("Edit a custom shopping list item")
+        .WithDescription("Replaces the name, amount, unit and Category of a custom (user-added) item, so a null amount or unit clears it. Recipe-derived items return 409 Conflict.");
+
         // DELETE /shopping-lists/{id}/items/{itemId} — custom items only
         group.MapDelete("/{id:guid}/items/{itemId:guid}", async (
             Guid id,

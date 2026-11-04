@@ -4,8 +4,12 @@
       <v-card-title class="pt-6 px-6">Add item</v-card-title>
 
       <v-card-text class="px-6 pb-0">
-        <v-text-field
-          v-model="form.name"
+        <v-combobox
+          :model-value="form.name"
+          :items="suggestions"
+          :item-props="row => ({ subtitle: row.subtitle })"
+          no-filter
+          hide-no-data
           label="Item name"
           :rules="[v => !!v || 'Item name is required']"
           required
@@ -13,6 +17,7 @@
           density="compact"
           class="mb-2"
           autofocus
+          @update:model-value="updateName"
         />
 
         <div class="d-flex ga-4 mb-2">
@@ -56,10 +61,15 @@
 </template>
 
 <script setup>
-import { reactive, watch } from 'vue'
-import { INGREDIENT_CATEGORIES, DEFAULT_CATEGORY } from '@/constants/categories'
+import { computed, reactive, watch } from 'vue'
+import { INGREDIENT_CATEGORIES, DEFAULT_CATEGORY, categoryTitle } from '@/constants/categories'
+import { useIngredientStore } from '@/stores/ingredients'
+
+const MIN_SEARCH_LENGTH = 2
 
 const model = defineModel({ type: Boolean, default: false })
+
+const ingredientStore = useIngredientStore()
 
 const categoryItems = INGREDIENT_CATEGORIES.map(({ title, value }) => ({ title, value }))
 
@@ -67,8 +77,46 @@ const defaultForm = () => ({ name: '', amount: null, unit: '', category: DEFAULT
 const form = reactive(defaultForm())
 
 watch(model, open => {
-  if (open) Object.assign(form, defaultForm())
+  if (!open) return
+  Object.assign(form, defaultForm())
+  ingredientStore.fetchCatalogue()
+}, { immediate: true })
+
+const suggestions = computed(() => {
+  const search = form.name.trim().toLowerCase()
+  if (search.length < MIN_SEARCH_LENGTH) return []
+
+  const rows = []
+  const addIfMatches = (title, subtitle, isAlias, category) => {
+    const text = title.toLowerCase()
+    if (!text.includes(search)) return
+    const tier = text === search ? 0 : text.startsWith(search) ? 1 : 2
+    rows.push({ title, subtitle, category, tier, isAlias })
+  }
+
+  for (const ingredient of ingredientStore.catalogue) {
+    const category = categoryTitle(ingredient.category)
+    addIfMatches(ingredient.displayName, category, false, ingredient.category)
+    for (const alias of ingredient.aliases) {
+      addIfMatches(alias, `${ingredient.displayName} · ${category}`, true, ingredient.category)
+    }
+  }
+
+  return rows.sort((a, b) =>
+    a.tier - b.tier ||
+    a.isAlias - b.isAlias ||
+    a.title.localeCompare(b.title, undefined, { sensitivity: 'base' }))
 })
+
+// Picking a suggestion yields its row, while typing yields plain text that leaves the Category alone.
+function updateName(value) {
+  if (value && typeof value === 'object') {
+    form.name     = value.title
+    form.category = value.category
+  } else {
+    form.name = value ?? ''
+  }
+}
 
 const emit = defineEmits(['confirm'])
 

@@ -5,6 +5,7 @@ public record IngredientResponse(
     string Name,
     string DisplayName,
     string Category,
+    string[] Aliases,
     string? DefaultUnit,
     decimal? GramsPerMillilitre,
     bool IsStaple,

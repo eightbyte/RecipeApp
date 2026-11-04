@@ -44,6 +44,22 @@ public class IngredientsEndpointTests(DatabaseFixture db) : IAsyncLifetime
     }
 
     [Fact]
+    public async Task ListAll_IncludesAliases()
+    {
+        await using (var ctx = db.CreateDbContext())
+        {
+            var flour = TestDataBuilder.Ingredient("all-purpose flour", "All-Purpose Flour", IngredientCategory.BakingSpices);
+            flour.Aliases = ["flour", "plain flour"];
+            ctx.Ingredients.Add(flour);
+            await ctx.SaveChangesAsync();
+        }
+
+        var list = await Client.GetFromJsonAsync<List<IngredientResponse>>("/api/v1/ingredients");
+
+        list!.Single().Aliases.Should().Equal("flour", "plain flour");
+    }
+
+    [Fact]
     public async Task ListWithSearch_FiltersResults()
     {
         await SeedIngredient("flour", "Flour");

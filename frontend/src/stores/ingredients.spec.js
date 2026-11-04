@@ -51,6 +51,52 @@ describe('fetchIngredients', () => {
   })
 })
 
+// ── fetchCatalogue ────────────────────────────────────────────────────────────
+
+describe('fetchCatalogue', () => {
+  it('loads the whole catalogue once, however often it is called', async () => {
+    api.get.mockResolvedValue({ data: [makeIngredient()] })
+
+    const store = useIngredientStore()
+    await store.fetchCatalogue()
+    await store.fetchCatalogue()
+
+    expect(api.get).toHaveBeenCalledTimes(1)
+    expect(api.get).toHaveBeenCalledWith('/ingredients')
+    expect(store.catalogue).toEqual([makeIngredient()])
+  })
+
+  it('stays silent when the load fails, and retries on the next call', async () => {
+    api.get.mockRejectedValueOnce(new Error('offline'))
+    api.get.mockResolvedValueOnce({ data: [makeIngredient()] })
+
+    const store = useIngredientStore()
+    await expect(store.fetchCatalogue()).resolves.toBeUndefined()
+    expect(store.catalogue).toEqual([])
+    expect(store.error).toBeNull()
+
+    await store.fetchCatalogue()
+    expect(store.catalogue).toEqual([makeIngredient()])
+  })
+
+  it('is kept current by createIngredient and updateIngredient', async () => {
+    const flour = makeIngredient({ id: 'i1' })
+    api.get.mockResolvedValue({ data: [flour] })
+    const store = useIngredientStore()
+    await store.fetchCatalogue()
+
+    const sugar = makeIngredient({ id: 'i2', name: 'sugar', displayName: 'Sugar' })
+    api.post.mockResolvedValue({ data: sugar })
+    await store.createIngredient({})
+
+    const strongFlour = makeIngredient({ id: 'i1', displayName: 'Strong Flour' })
+    api.put.mockResolvedValue({ data: strongFlour })
+    await store.updateIngredient('i1', {})
+
+    expect(store.catalogue).toEqual([strongFlour, sugar])
+  })
+})
+
 // ── fetchCategories ───────────────────────────────────────────────────────────
 
 describe('fetchCategories', () => {

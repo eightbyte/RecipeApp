@@ -198,7 +198,7 @@ const store       = useShoppingListStore()
 const ui          = useUiStore()
 const showChecked = ref(false)
 const sheetOpen   = ref(false)
-const editingItem = ref(null)  // the Custom Item being edited, or null when adding
+const editingItem = ref(null)
 const saving      = ref(false)
 
 const hold = useHold(openSheet)

@@ -378,7 +378,7 @@ describe('ShoppingView', () => {
         const target = row(wrapper, 'Eggs')
         await hold(target)
         await target.trigger('pointerup', pointer())
-        await target.trigger('click')
+        await wrapper.find('input[aria-label="Mark Eggs purchased"]').trigger('click')
         expect(onDocumentClick).not.toHaveBeenCalled()
         expect(store.toggleItem).not.toHaveBeenCalled()
 

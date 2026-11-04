@@ -66,7 +66,7 @@ const stubBottomSheet = {
   emits: ['update:modelValue'],
 }
 
-function mountDialog(modelValue = true, props = {}) {
+function mountSheet(modelValue = true, props = {}) {
   return mount(CustomItemSheet, {
     props: { modelValue, ...props },
     attachTo: document.body,
@@ -79,19 +79,19 @@ function mountDialog(modelValue = true, props = {}) {
 
 describe('CustomItemSheet', () => {
   it('renders the item name field', async () => {
-    const wrapper = mountDialog()
+    const wrapper = mountSheet()
     await flushPromises()
     expect(wrapper.text()).toContain('Item name')
   })
 
   it('renders the category selector', async () => {
-    const wrapper = mountDialog()
+    const wrapper = mountSheet()
     await flushPromises()
     expect(wrapper.text()).toContain('Category')
   })
 
   it('Add button is disabled when name is empty', async () => {
-    const wrapper = mountDialog()
+    const wrapper = mountSheet()
     await flushPromises()
 
     const addButton = wrapper.findAll('button').find(b => b.text() === 'Add')
@@ -99,7 +99,7 @@ describe('CustomItemSheet', () => {
   })
 
   it('emits confirm with payload when Add is clicked with a name', async () => {
-    const wrapper = mountDialog()
+    const wrapper = mountSheet()
     await flushPromises()
 
     // Directly set form fields via the component instance
@@ -123,7 +123,7 @@ describe('CustomItemSheet', () => {
   })
 
   it('emits update:modelValue false when Cancel is clicked', async () => {
-    const wrapper = mountDialog()
+    const wrapper = mountSheet()
     await flushPromises()
 
     const cancelBtn = wrapper.findAll('button').find(b => b.text() === 'Cancel')
@@ -133,7 +133,7 @@ describe('CustomItemSheet', () => {
   })
 
   it('lists DisplayName and alias rows for the typed text, ranked', async () => {
-    const wrapper = mountDialog()
+    const wrapper = mountSheet()
     await flushPromises()
 
     await typeName(wrapper, 'Flour')
@@ -149,7 +149,7 @@ describe('CustomItemSheet', () => {
   })
 
   it('shows no suggestions for fewer than 2 typed characters', async () => {
-    const wrapper = mountDialog()
+    const wrapper = mountSheet()
     await flushPromises()
 
     await typeName(wrapper, ' f ')
@@ -158,7 +158,7 @@ describe('CustomItemSheet', () => {
   })
 
   it('sets the Category from a picked suggestion', async () => {
-    const wrapper = mountDialog()
+    const wrapper = mountSheet()
     await flushPromises()
 
     await typeName(wrapper, 'bread')
@@ -168,7 +168,7 @@ describe('CustomItemSheet', () => {
   })
 
   it('leaves an unknown name at Other', async () => {
-    const wrapper = mountDialog()
+    const wrapper = mountSheet()
     await flushPromises()
 
     await typeName(wrapper, 'Dish soap')
@@ -177,7 +177,7 @@ describe('CustomItemSheet', () => {
   })
 
   it('preselects nothing from typing alone, even an exact match', async () => {
-    const wrapper = mountDialog()
+    const wrapper = mountSheet()
     await flushPromises()
 
     await typeName(wrapper, 'Bread Flour')
@@ -186,7 +186,7 @@ describe('CustomItemSheet', () => {
   })
 
   it('keeps a hand-picked Category through further typing', async () => {
-    const wrapper = mountDialog()
+    const wrapper = mountSheet()
     await flushPromises()
 
     await chooseCategory(wrapper, 'DAIRY')
@@ -196,7 +196,7 @@ describe('CustomItemSheet', () => {
   })
 
   it('overrides a hand-picked Category when a suggestion is picked', async () => {
-    const wrapper = mountDialog()
+    const wrapper = mountSheet()
     await flushPromises()
 
     await chooseCategory(wrapper, 'DAIRY')
@@ -208,7 +208,7 @@ describe('CustomItemSheet', () => {
 
   it('still adds typed text silently when the catalogue fails to load, and retries on the next open', async () => {
     api.get.mockRejectedValue(new Error('offline'))
-    const wrapper = mountDialog()
+    const wrapper = mountSheet()
     await flushPromises()
 
     await typeName(wrapper, 'flour')
@@ -228,7 +228,7 @@ describe('CustomItemSheet', () => {
     const button = (wrapper, label) => wrapper.findAll('button').find(b => b.text() === label)
 
     async function mountEditor(props = {}) {
-      const wrapper = mountDialog(true, { item: eggs, ...props })
+      const wrapper = mountSheet(true, { item: eggs, ...props })
       await flushPromises()
       return wrapper
     }
@@ -332,7 +332,7 @@ describe('CustomItemSheet', () => {
   })
 
   it('resets form when dialog reopens', async () => {
-    const wrapper = mountDialog()
+    const wrapper = mountSheet()
     await flushPromises()
 
     wrapper.vm.form.name = 'Old Name'

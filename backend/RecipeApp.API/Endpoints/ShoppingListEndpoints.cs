@@ -79,15 +79,15 @@ public static class ShoppingListEndpoints
                 UpdateCustomItemResult.NotFound => Results.NotFound(),
                 UpdateCustomItemResult.Conflict => Results.Conflict(new
                 {
-                    title  = "Cannot edit a recipe-derived item.",
-                    detail = "Recipe-derived items change by editing the meal plan and regenerating the shopping list.",
+                    title  = "Cannot edit a Generated Item.",
+                    detail = "Generated Items change by editing the meal plan and regenerating the shopping list.",
                 }),
                 _ => Results.StatusCode(500),
             };
         })
         .WithValidation<UpdateCustomItemRequest>()
-        .WithSummary("Edit a custom shopping list item")
-        .WithDescription("Replaces the name, amount, unit and Category of a custom (user-added) item, so a null amount or unit clears it. Recipe-derived items return 409 Conflict.");
+        .WithSummary("Edit a Custom Item")
+        .WithDescription("Replaces the name, amount, unit and Category of a Custom Item, so a null amount or unit clears it. A Generated Item returns 409 Conflict.");
 
         // DELETE /shopping-lists/{id}/items/{itemId} — custom items only
         group.MapDelete("/{id:guid}/items/{itemId:guid}", async (

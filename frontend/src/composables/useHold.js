@@ -1,9 +1,9 @@
 import { onScopeDispose } from 'vue'
 
 // Longer than the usual 500 ms long-press, so a hold is always deliberate.
-export const HOLD_DURATION_MS = 1000
-export const HOLD_MOVE_TOLERANCE_PX = 10
-export const HOLD_VIBRATION_MS = 50
+const HOLD_DURATION_MS = 1000
+const HOLD_MOVE_TOLERANCE_PX = 10
+const HOLD_VIBRATION_MS = 50
 
 /** Calls onHold(target) after a still press of HOLD_DURATION_MS from any pointer type, built on pointer events because iOS Safari fires no contextmenu on a long-press. */
 export function useHold(onHold) {
@@ -55,7 +55,6 @@ export function useHold(onHold) {
     disarm()
   })
 
-  /** The listeners that make an element holdable, passing target to onHold. */
   function listeners(target) {
     return {
       pointerdown:   event => start(event, target),

@@ -76,7 +76,6 @@ const MIN_SEARCH_LENGTH = 2
 const model = defineModel({ type: Boolean, default: false })
 
 const props = defineProps({
-  // The Custom Item to edit, or null to add a new one.
   item:   { type: Object, default: null },
   saving: { type: Boolean, default: false },
 })
@@ -130,8 +129,7 @@ const suggestions = computed(() => {
     a.title.localeCompare(b.title, undefined, { sensitivity: 'base' }))
 })
 
-// Picking a suggestion yields its row, while typing yields plain text that leaves the Category alone.
-// An edit keeps its Category, so renaming an item never moves it.
+// Picking a suggestion yields its row and typing yields plain text, and only a pick while adding sets the Category so a rename never moves an item.
 function updateName(value) {
   if (value && typeof value === 'object') {
     form.name = value.title

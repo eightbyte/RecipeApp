@@ -2,7 +2,7 @@ import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
 import api from '@/services/api'
 
-export const SAVE_TIMEOUT_MS = 10_000
+const SAVE_TIMEOUT_MS = 10_000
 
 export const useShoppingListStore = defineStore('shoppingList', () => {
   const list    = ref(null)  // ShoppingListResponse | null

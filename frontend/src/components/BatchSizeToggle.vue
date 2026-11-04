@@ -2,7 +2,7 @@
   <v-btn-toggle
     v-model="batchSize"
     aria-label="Batch"
-    mandatory
+    :mandatory="mandatory"
     color="primary"
     :class="{ 'd-flex': stretch }"
   >
@@ -21,10 +21,12 @@
 <script setup>
 import { BATCH_SIZES } from '@/constants/batchSizes'
 
-const batchSize = defineModel({ type: String, required: true })
+// Null when the toggle is not mandatory and no Batch Size matches what it stands in for.
+const batchSize = defineModel({ type: [String, null], required: true })
 
 defineProps({
   buttonSize: { type: String, default: 'default' },
   stretch:    { type: Boolean, default: false },
+  mandatory:  { type: Boolean, default: true },
 })
 </script>

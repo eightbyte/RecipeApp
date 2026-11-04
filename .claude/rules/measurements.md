@@ -15,6 +15,9 @@ paths:
   - "backend/RecipeApp.API/Validators/**/*.cs"
   - "frontend/src/constants/units.js"
   - "frontend/src/constants/batchSizes.js"
+  - "frontend/src/constants/servings.js"
+  - "frontend/src/router/cookingRoute.js"
+  - "frontend/src/components/BatchSizeToggle.vue"
   - "frontend/src/views/RecipeDetailView.vue"
   - "frontend/src/views/RecipeFormView.vue"
   - "frontend/src/views/CookingModeView.vue"
@@ -75,6 +78,9 @@ paths:
   `Enums/BatchSize.cs`, mirrored by `frontend/src/constants/batchSizes.js`, and are applied at
   display or query time only. **Never modify a stored `Amount`.** `SourceAmount` scales the same
   way.
+- The recipe view and cooking mode can also scale to a chosen number of servings: the multiplier
+  is chosen servings ÷ the recipe's Servings, which can be fractional. It is display-only, never
+  stored, and short-circuits on a null amount like every other scaling.
 - Shopping-list consolidation groups by dimension via `MeasurementUnit.Table`, so `1 tbsp` +
   `15 ml` makes one row. It resolves mass/volume mixes through density, and it presents a
   single-unit group in that unit (`2 cup + 1 cup = 3 cup`).

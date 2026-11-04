@@ -5,7 +5,7 @@ import * as directives from 'vuetify/directives'
 import { createPinia, setActivePinia } from 'pinia'
 import PlannedMealCard from './PlannedMealCard.vue'
 import { makeMealPlanDetail, makePlannedMeal } from '@/test/factories'
-import { batchSizeFromCookingQuery } from '@/router/cookingRoute'
+import { servingsFromCookingQuery } from '@/router/cookingRoute'
 import { useMealPlanStore } from '@/stores/mealPlans'
 import { useUiStore } from '@/stores/ui'
 import { runInTimeZone, WEST_OF_UTC } from '@/test/timeZone'
@@ -100,7 +100,8 @@ describe('PlannedMealCard', () => {
 
       const [location] = pushMock.mock.calls[0]
       expect(location).toMatchObject({ name: 'recipe-cooking', params: { id: 'r9' } })
-      expect(batchSizeFromCookingQuery(location.query)).toBe('DOUBLE')
+      // A Double Batch Size of a 4-serving recipe cooks 8 servings.
+      expect(servingsFromCookingQuery(location.query, 4)).toBe(8)
     })
 
     it('Mark as cooked marks the recipe, refreshes the plan and confirms', async () => {

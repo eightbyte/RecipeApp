@@ -196,6 +196,106 @@ describe('ShoppingView', () => {
     expect(wrapper.text()).toContain('0 items remaining')
   })
 
+  describe('hiding a Purchased item', () => {
+    const carrot   = () => makeShoppingListItem({ id: 'carrot', displayName: 'Carrot' })
+    const milk     = () => makeShoppingListItem({ id: 'milk',   displayName: 'Milk', category: 'DAIRY' })
+    const title    = (wrapper, name) => wrapper.findAll('.v-list-item-title').find(t => t.text() === name)
+    const checkbox = (wrapper, name) => wrapper.find(`input[aria-label="Mark ${name} purchased"]`)
+    const toggleShowPurchased = wrapper =>
+      wrapper.findAll('button').find(b => /(Show|Hide) purchased/.test(b.text())).trigger('click')
+
+    async function mountWith(items) {
+      const mounted = await mountView()
+      mounted.store.list = makeShoppingList({ items })
+      await mounted.wrapper.vm.$nextTick()
+      api.put.mockImplementation((_, { isChecked }) => Promise.resolve({ data: { isChecked } }))
+      return mounted
+    }
+
+    async function tick(wrapper, name) {
+      await checkbox(wrapper, name).trigger('click')
+      await flushPromises()
+    }
+
+    async function wait(ms) {
+      vi.advanceTimersByTime(ms)
+      await flushPromises()
+    }
+
+    beforeEach(() => {
+      vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'] })
+    })
+
+    afterEach(() => {
+      vi.useRealTimers()
+    })
+
+    it('keeps a ticked item shown and struck through for 3 seconds, then hides it', async () => {
+      const { wrapper } = await mountWith([carrot()])
+
+      await tick(wrapper, 'Carrot')
+      await wait(2999)
+      expect(title(wrapper, 'Carrot').classes()).toContain('text-decoration-line-through')
+
+      await wait(1)
+      expect(title(wrapper, 'Carrot')).toBeUndefined()
+    })
+
+    it('keeps an item unticked during the delay, and a fresh tick starts a new 3 seconds', async () => {
+      const { wrapper } = await mountWith([carrot()])
+
+      await tick(wrapper, 'Carrot')
+      await wait(2000)
+      await tick(wrapper, 'Carrot')
+      await wait(3000)
+      expect(title(wrapper, 'Carrot').classes()).not.toContain('text-decoration-line-through')
+
+      await tick(wrapper, 'Carrot')
+      await wait(2999)
+      expect(title(wrapper, 'Carrot').exists()).toBe(true)
+      await wait(1)
+      expect(title(wrapper, 'Carrot')).toBeUndefined()
+    })
+
+    it('hides each ticked item 3 seconds after its own tick', async () => {
+      const { wrapper } = await mountWith([carrot(), milk()])
+
+      await tick(wrapper, 'Carrot')
+      await wait(2000)
+      await tick(wrapper, 'Milk')
+      await wait(1000)
+      expect(title(wrapper, 'Carrot')).toBeUndefined()
+      expect(title(wrapper, 'Milk').exists()).toBe(true)
+
+      await wait(2000)
+      expect(title(wrapper, 'Milk')).toBeUndefined()
+    })
+
+    it('hides a ticked item at once when Hide purchased is tapped during the delay', async () => {
+      const { wrapper } = await mountWith([carrot()])
+
+      await tick(wrapper, 'Carrot')
+      await toggleShowPurchased(wrapper)
+      await toggleShowPurchased(wrapper)
+
+      expect(title(wrapper, 'Carrot')).toBeUndefined()
+    })
+
+    it('keeps a ticked item shown while purchased items are shown, and hides it at once on Hide purchased', async () => {
+      const { wrapper } = await mountWith([carrot()])
+      await toggleShowPurchased(wrapper)
+
+      await tick(wrapper, 'Carrot')
+      await wait(3000)
+      expect(title(wrapper, 'Carrot').classes()).toContain('text-decoration-line-through')
+
+      await tick(wrapper, 'Carrot')
+      await tick(wrapper, 'Carrot')
+      await toggleShowPurchased(wrapper)
+      expect(title(wrapper, 'Carrot')).toBeUndefined()
+    })
+  })
+
   describe('Item Sources', () => {
     const row        = (wrapper, name) => wrapper.findAll('.shopping-row').find(r => r.text().includes(name))
     const sourceRows = wrapper => wrapper.findAllComponents({ name: 'VListItem' }).filter(i => i.classes('item-source'))

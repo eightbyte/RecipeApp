@@ -49,7 +49,7 @@
           variant="text"
           size="small"
           :prepend-icon="showChecked ? 'mdi-eye-off-outline' : 'mdi-eye-outline'"
-          @click="showChecked = !showChecked"
+          @click="onToggleShowPurchased"
         >
           {{ showChecked ? 'Hide' : 'Show' }} purchased ({{ checkedCount }})
         </v-btn>
@@ -78,7 +78,7 @@
                       color="primary"
                       :aria-label="`Mark ${item.displayName} purchased`"
                       @pointerdown.stop
-                      @click.stop="store.toggleItem(item.id, !item.isChecked)"
+                      @click.stop="onTogglePurchased(item)"
                     />
                   </template>
 
@@ -218,6 +218,7 @@ import { useUiStore } from '@/stores/ui'
 import { formatCategory, INGREDIENT_CATEGORY_VALUES } from '@/constants/categories'
 import { formatMeasurement } from '@/constants/units'
 import { useHold } from '@/composables/useHold'
+import { useDelayedHide } from '@/composables/useDelayedHide'
 import { recipeRoute } from '@/router/recipeRoutes'
 import { formatDateOnly } from '@/utils/dateOnly'
 import BatchSizeChip from '@/components/BatchSizeChip.vue'
@@ -235,6 +236,9 @@ const saving      = ref(false)
 const SOURCE_DATE_FORMAT = { weekday: 'short', day: 'numeric', month: 'short' }
 
 const hold = useHold(openSheet)
+
+// A mis-tapped checkbox would otherwise make the item vanish before the user sees what they ticked.
+const delayedHide = useDelayedHide()
 
 // Several rows can be open at once, so each Generated Item's open state is kept by id.
 const expandedIds = ref(new Set())
@@ -255,6 +259,19 @@ function isExpanded(item) {
 function toggleSources(item) {
   if (isExpanded(item)) expandedIds.value.delete(item.id)
   else expandedIds.value.add(item.id)
+}
+
+function onTogglePurchased(item) {
+  const isChecked = !item.isChecked
+  if (!isChecked) delayedHide.cancel(item.id)
+  else if (!showChecked.value) delayedHide.delay(item.id)
+  store.toggleItem(item.id, isChecked)
+}
+
+// Hide purchased hides every Purchased item at once, even one still in its delay.
+function onToggleShowPurchased() {
+  delayedHide.cancelAll()
+  showChecked.value = !showChecked.value
 }
 
 function rowListeners(item) {
@@ -290,7 +307,7 @@ const uncheckedCount = computed(() => items.value.filter(i => !i.isChecked).leng
 const visibleGroups = computed(() => {
   const filtered = showChecked.value
     ? items.value
-    : items.value.filter(i => !i.isChecked)
+    : items.value.filter(i => !i.isChecked || delayedHide.isDelayed(i.id))
 
   const grouped = {}
   for (const item of filtered) {

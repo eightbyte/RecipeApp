@@ -268,7 +268,6 @@ function onTogglePurchased(item) {
   store.toggleItem(item.id, isChecked)
 }
 
-// Hide purchased hides every Purchased item at once, even one still in its delay.
 function onToggleShowPurchased() {
   delayedHide.cancelAll()
   showChecked.value = !showChecked.value

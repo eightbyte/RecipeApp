@@ -214,12 +214,12 @@
 
 <script setup>
 import { ref, computed, onMounted } from 'vue'
-import { useRoute } from 'vue-router'
+import { useRoute, useRouter } from 'vue-router'
 import { useRecipeStore } from '@/stores/recipes'
 import { formatMeasurement, formatSourceMeasurement } from '@/constants/units'
 import { BATCH_SIZES, batchSizeMultiplier } from '@/constants/batchSizes'
 import { MIN_SERVINGS, MAX_SERVINGS, formatServings } from '@/constants/servings'
-import { cookingRouteAtServings } from '@/router/cookingRoute'
+import { cookingRouteAtServings, recipeRouteAtServings, servingsFromQuery } from '@/router/recipeRoutes'
 import { useUiStore } from '@/stores/ui'
 import BatchSizeToggle from '@/components/BatchSizeToggle.vue'
 import EmptyState from '@/components/EmptyState.vue'
@@ -227,17 +227,21 @@ import ErrorState from '@/components/ErrorState.vue'
 
 const props = defineProps({ id: { type: String, required: true } })
 const route  = useRoute()
+const router = useRouter()
 const store  = useRecipeStore()
 const ui     = useUiStore()
 
-// Null until a servings control is used, so the view opens at the recipe's own Servings every time.
-const chosenServings          = ref(null)
 const highlightedIngredientId = ref(null)
 const markingCooked           = ref(false)
 
 const recipe = computed(() => store.currentRecipe)
 
-const servings = computed(() => chosenServings.value ?? recipe.value.servings)
+// Carried in the query so a Planned Meal opens at its Batch Size and a reload or a return from cooking keeps the chosen servings.
+const servings = computed(() => servingsFromQuery(route.query, recipe.value.servings))
+
+function chooseServings(chosen) {
+  router.replace(recipeRouteAtServings(recipe.value.id, chosen))
+}
 
 const batchMultiplier = computed(() => servings.value / recipe.value.servings)
 
@@ -246,16 +250,16 @@ const matchingBatchSize = computed({
   get: () => BATCH_SIZES.find(batchSize => batchSize.multiplier === batchMultiplier.value)?.value ?? null,
   set: batchSize => {
     // Tapping the highlighted shortcut again clears the toggle, which leaves the chosen servings as they are.
-    if (batchSize) chosenServings.value = recipe.value.servings * batchSizeMultiplier(batchSize)
+    if (batchSize) chooseServings(recipe.value.servings * batchSizeMultiplier(batchSize))
   },
 })
 
 function stepServingsDown() {
-  chosenServings.value = Math.ceil(servings.value) - 1
+  chooseServings(Math.ceil(servings.value) - 1)
 }
 
 function stepServingsUp() {
-  chosenServings.value = Math.floor(servings.value) + 1
+  chooseServings(Math.floor(servings.value) + 1)
 }
 
 function reload() {

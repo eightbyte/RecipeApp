@@ -92,6 +92,19 @@ export const makeShoppingListItem = (overrides = {}) => ({
   isCustom: false,
   needsReview: false,
   displayOrder: 1,
+  sources: [],
+  ...overrides,
+})
+
+export const makeItemSource = (overrides = {}) => ({
+  recipeId: 'recipe-1',
+  recipeName: 'Pancakes',
+  batchSize: 'REGULAR',
+  scheduledDate: null,
+  amount: 200,
+  unit: 'g',
+  shareAmount: null,
+  shareUnit: null,
   ...overrides,
 })
 

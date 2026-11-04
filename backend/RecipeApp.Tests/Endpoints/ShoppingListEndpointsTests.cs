@@ -4,6 +4,7 @@ using RecipeApp.Tests.Helpers;
 using RecipeApp.Tests.Infrastructure;
 using System.Net;
 using System.Net.Http.Json;
+using System.Text.Json;
 
 namespace RecipeApp.Tests.Endpoints;
 
@@ -70,6 +71,22 @@ public class ShoppingListEndpointsTests(DatabaseFixture db) : IAsyncLifetime
         list.Should().NotBeNull();
         list!.Items.Should().NotBeEmpty();
         list.MealPlanId.Should().Be(plan.Id);
+    }
+
+    [Fact]
+    public async Task GetActive_ListsEachGeneratedItemsSources()
+    {
+        var ingId    = await SeedIngredientAsync();
+        var recipeId = await SeedRecipeAsync(ingId, "Pancakes");
+        var plan     = await CreatePlanViaApi();
+        await AddRecipeToPlanAsync(plan.Id, recipeId);
+
+        using var json = JsonDocument.Parse(await Client.GetStringAsync("/api/v1/shopping-lists/active"));
+
+        var source = json.RootElement.GetProperty("items")[0].GetProperty("sources").EnumerateArray().Single();
+        source.GetProperty("recipeName").GetString().Should().Be("Pancakes");
+        source.GetProperty("scheduledDate").ValueKind.Should().Be(JsonValueKind.Null);
+        source.GetProperty("shareUnit").ValueKind.Should().Be(JsonValueKind.Null);
     }
 
     [Fact]
@@ -198,6 +215,32 @@ public class ShoppingListEndpointsTests(DatabaseFixture db) : IAsyncLifetime
         response.StatusCode.Should().Be(HttpStatusCode.OK);
         var updated = await response.Content.ReadFromJsonAsync<ShoppingListItemResponse>();
         updated!.IsChecked.Should().BeTrue();
+    }
+
+    [Fact]
+    public async Task UpdateItem_ReturnsTheItemsSources()
+    {
+        // The client merges this response into the row, so dropping the sources here would collapse an open row.
+        var ingId    = await SeedIngredientAsync();
+        var recipeId = await SeedRecipeAsync(ingId, "Pancakes");
+        var plan     = await CreatePlanViaApi();
+        await AddRecipeToPlanAsync(plan.Id, recipeId);
+
+        var list = await Client.GetFromJsonAsync<ShoppingListResponse>("/api/v1/shopping-lists/active");
+        var item = list!.Items[0];
+
+        var response = await Client.PutAsJsonAsync(
+            $"/api/v1/shopping-lists/{list.Id}/items/{item.Id}",
+            new { isChecked = true, amount = item.Amount, unit = item.Unit });
+
+        using var json = JsonDocument.Parse(await response.Content.ReadAsStringAsync());
+        var source = json.RootElement.GetProperty("sources").EnumerateArray().Single();
+        source.GetProperty("recipeId").GetGuid().Should().Be(recipeId);
+        source.GetProperty("recipeName").GetString().Should().Be("Pancakes");
+        source.GetProperty("batchSize").GetString().Should().Be("REGULAR");
+        source.GetProperty("amount").GetDecimal().Should().Be(100m);
+        source.GetProperty("unit").GetString().Should().Be("g");
+        source.GetProperty("shareAmount").ValueKind.Should().Be(JsonValueKind.Null);
     }
 
     [Fact]

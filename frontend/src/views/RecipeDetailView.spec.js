@@ -6,7 +6,12 @@ import { createPinia, setActivePinia } from 'pinia'
 import { useRecipeStore } from '@/stores/recipes'
 import RecipeDetailView from './RecipeDetailView.vue'
 import { makeRecipeDetail } from '@/test/factories'
-import { servingsFromCookingQuery } from '@/router/cookingRoute'
+import { reactive } from 'vue'
+import { recipeRoute, recipeRouteAtServings, servingsFromQuery } from '@/router/recipeRoutes'
+
+// Replacing updates the query in place, as the router does when the view stays mounted.
+const route = reactive({ params: { id: 'r1' }, query: {} })
+const replaceMock = vi.fn(location => { route.query = { ...location.query } })
 
 vi.mock('@/services/api', () => ({
   default: { get: vi.fn(), post: vi.fn(), put: vi.fn(), delete: vi.fn() },
@@ -17,8 +22,8 @@ vi.mock('vue-router', async (importActual) => {
   const actual = await importActual()
   return {
     ...actual,
-    useRoute: () => ({ params: { id: 'r1' } }),
-    useRouter: () => ({ push: vi.fn() }),
+    useRoute: () => route,
+    useRouter: () => ({ push: vi.fn(), replace: replaceMock }),
   }
 })
 
@@ -28,6 +33,8 @@ let pinia
 let store
 
 beforeEach(() => {
+  route.query = {}
+  replaceMock.mockClear()
   pinia = createPinia()
   setActivePinia(pinia)
   store = useRecipeStore()
@@ -169,6 +176,35 @@ describe('RecipeDetailView', () => {
     expect(stepperValue(wrapper)).toBe('1.5')
     expect(servingsChip(wrapper).text()).toBe('1.5 servings')
     expect(wrapper.get('#ingredient-ri-1').text()).toContain('100 g')
+  })
+
+  it('opens at a Planned Meal’s Batch Size from ?batch=DOUBLE', async () => {
+    route.query = recipeRoute('test-recipe-1', 'DOUBLE').query
+    const wrapper = await mountView()
+    expect(stepperValue(wrapper)).toBe('8')
+    expect(servingsChip(wrapper).text()).toBe('8 servings')
+    expect(highlightedShortcuts(wrapper)).toEqual(['2×'])
+    expect(wrapper.get('#ingredient-ri-1').text()).toContain('400 g')
+  })
+
+  it('opens at the servings the URL carries', async () => {
+    route.query = recipeRouteAtServings('test-recipe-1', 6).query
+    const wrapper = await mountView()
+    expect(servingsChip(wrapper).text()).toBe('6 servings')
+  })
+
+  it('keeps stepped servings on the URL without adding a history entry', async () => {
+    const wrapper = await mountView()
+    await clickButton(wrapper, 'More servings')
+    const location = replaceMock.mock.lastCall[0]
+    expect(location).toMatchObject({ name: 'recipe-detail', params: { id: 'test-recipe-1' } })
+    expect(location.query).toEqual({ servings: 5 })
+  })
+
+  it('keeps a shortcut’s servings on the URL', async () => {
+    const wrapper = await mountView()
+    await clickButton(wrapper, '½×')
+    expect(replaceMock.mock.lastCall[0].query).toEqual({ servings: 2 })
   })
 
   it('highlights 1× at the recipe’s own Servings', async () => {
@@ -371,7 +407,7 @@ describe('RecipeDetailView — cooking, loading and error states', () => {
     await clickButton(wrapper, 'More servings')
     const startBtn = wrapper.findAllComponents({ name: 'VBtn' })
       .find(b => b.text().includes('Start cooking'))
-    expect(servingsFromCookingQuery(startBtn.props('to').query, 4)).toBe(5)
+    expect(servingsFromQuery(startBtn.props('to').query, 4)).toBe(5)
   })
 
   it('starts cooking at the recipe’s own Servings when none were chosen', async () => {

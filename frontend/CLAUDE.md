@@ -18,7 +18,7 @@ Read `CODING_STANDARDS.md` (repo root) before writing or reviewing code: comment
 | `utils/` | `dateOnly.js` formats date-only values; `storage.js` wraps `localStorage` for device-local preferences |
 | `styles/` | `settings.scss` — Vuetify Sass settings |
 | `router/index.js` | All routes |
-| `router/cookingRoute.js` | Builds and reads the Cooking Mode link, kept apart so importing it doesn't load the router |
+| `router/recipeRoutes.js` | Builds and reads the recipe view and Cooking Mode links with their scale, kept apart so importing it doesn't load the router |
 | `test/` | Vitest `setup.js`, `factories.js`, `timeZone.js` (run a describe block in a given timezone) and `infiniteScrollStub.js` (stands in for `VInfiniteScroll`, which never loads under jsdom) |
 
 Tests sit beside their subject as `*.spec.js` (Vitest + Vue Test Utils). Run with `npm test`.
@@ -43,7 +43,8 @@ each test or in `beforeEach`; a wrapper mounted in `beforeAll` is gone after the
   keep local-time formatting.
 - **Routes:** use the names defined in `router/index.js` (`home`, `recipes`, `recipe-detail`,
   `recipe-cooking`, `meal-plan`, `shopping`, …). A route with `meta.fullscreen` hides the top and
-  bottom bars (Cooking Mode). Link to and read Cooking Mode only through `router/cookingRoute.js`.
+  bottom bars (Cooking Mode). Link to a scaled recipe view or Cooking Mode, and read their scale,
+  only through `router/recipeRoutes.js`.
 - **Loading/empty/error states:** use `EmptyState`, `ErrorState`, and the global snackbar
   (`stores/ui.js` + `AppSnackbar`). Store fetches treat a 404 as "not found" (empty state), not
   as an error.

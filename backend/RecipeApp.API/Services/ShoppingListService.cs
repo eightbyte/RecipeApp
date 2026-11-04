@@ -104,25 +104,14 @@ public class ShoppingListService(AppDbContext db)
         list.UpdatedAt = DateTime.UtcNow;
         await db.SaveChangesAsync();
 
-        // Load ingredient nav (null for custom) — return directly
-        return new ShoppingListItemResponse(
-            item.Id,
-            null,
-            item.CustomName,
-            item.Category,
-            item.Amount,
-            item.Unit,
-            item.IsChecked,
-            item.IsCustom,
-            item.NeedsReview,
-            item.DisplayOrder
-        );
+        return item.ToResponse();
     }
 
     public async Task<ShoppingListItemResponse?> UpdateItemAsync(Guid listId, Guid itemId, UpdateItemRequest request)
     {
         var item = await db.ShoppingListItems
             .Include(i => i.Ingredient)
+            .Include(i => i.Sources)
             .FirstOrDefaultAsync(i => i.Id == itemId && i.ShoppingListId == listId);
 
         if (item is null) return null;
@@ -204,55 +193,76 @@ public class ShoppingListService(AppDbContext db)
         await db.SaveChangesAsync();
     }
 
+    /// <summary>One Planned Meal's measured use of an Ingredient, its recipe lines in one unit summed, ranked by <paramref name="MealOrder"/> in the meal plan.</summary>
+    private sealed record Contribution(PlannedMeal PlannedMeal, int MealOrder, decimal Amount, string Unit);
+
+    /// <summary>A Planned Meal whose recipe names an Ingredient without a Measurement.</summary>
+    private sealed record UnquantifiedUse(PlannedMeal PlannedMeal, int MealOrder);
+
+    private sealed record ConsolidatedRow(decimal? Amount, string? Unit, List<Contribution> Contributions);
+
     private async Task<List<ShoppingListItem>> BuildRecipeItemsAsync(Guid planId)
     {
-        var plannedMeals = await db.PlannedMeals
+        var plannedMeals = (await db.PlannedMeals
             .Where(plannedMeal => plannedMeal.MealPlanId == planId)
             .Include(plannedMeal => plannedMeal.Recipe)
                 .ThenInclude(r => r.Ingredients)
                     .ThenInclude(ri => ri.Ingredient)
             .AsNoTracking()
-            .ToListAsync();
+            .ToListAsync())
+            .OrderBy(plannedMeal => plannedMeal.ScheduledDate.HasValue ? 0 : 1)
+            .ThenBy(plannedMeal => plannedMeal.ScheduledDate)
+            .ThenBy(plannedMeal => plannedMeal.DisplayOrder)
+            .ToList();
 
         // Step 1-3: Scale and group by IngredientId
-        var byIngredient = new Dictionary<Guid, (Ingredient Ingredient, List<(decimal Amount, string Unit)> Rows)>();
+        var byIngredient = new Dictionary<Guid, (Ingredient Ingredient, List<Contribution> Rows)>();
 
         // An unquantified ingredient is partitioned out before grouping so it is never summed, but tracked because the shopper still has to buy it.
-        var unquantifiedIngredients = new Dictionary<Guid, Ingredient>();
+        var unquantifiedIngredients = new Dictionary<Guid, (Ingredient Ingredient, List<UnquantifiedUse> Meals)>();
 
-        foreach (var plannedMeal in plannedMeals)
+        for (var mealOrder = 0; mealOrder < plannedMeals.Count; mealOrder++)
         {
-            var multiplier = BatchSize.Multiplier(plannedMeal.BatchSize);
+            var plannedMeal = plannedMeals[mealOrder];
+            var multiplier  = BatchSize.Multiplier(plannedMeal.BatchSize);
             foreach (var ri in plannedMeal.Recipe.Ingredients)
             {
                 if (ri.Amount is not { } baseAmount || ri.Unit is not { } unit)
                 {
-                    unquantifiedIngredients[ri.IngredientId] = ri.Ingredient;
+                    if (!unquantifiedIngredients.ContainsKey(ri.IngredientId))
+                        unquantifiedIngredients[ri.IngredientId] = (ri.Ingredient, []);
+                    var meals = unquantifiedIngredients[ri.IngredientId].Meals;
+                    if (!meals.Exists(m => m.PlannedMeal.Id == plannedMeal.Id))
+                        meals.Add(new UnquantifiedUse(plannedMeal, mealOrder));
                     continue;
                 }
 
                 if (!byIngredient.ContainsKey(ri.IngredientId))
                     byIngredient[ri.IngredientId] = (ri.Ingredient, []);
-                byIngredient[ri.IngredientId].Rows.Add((baseAmount * multiplier, unit));
+                AddContribution(byIngredient[ri.IngredientId].Rows,
+                    new Contribution(plannedMeal, mealOrder, baseAmount * multiplier, unit.Trim()));
             }
         }
 
         // Steps 4-8: Consolidate units, detect incompatible, sort
-        var consolidated = new List<(Ingredient Ingredient, decimal? Amount, string? Unit, bool NeedsReview)>();
+        var consolidated = new List<(Ingredient Ingredient, decimal? Amount, string? Unit, bool NeedsReview, List<ShoppingListItemSource> Sources)>();
 
-        foreach (var (_, (ing, rows)) in byIngredient)
+        foreach (var (ingredientId, (ing, rows)) in byIngredient)
         {
             var resultRows  = ConsolidateRows(rows, ing.GramsPerMillilitre);
             var needsReview = resultRows.Count > 1;
-            foreach (var (amount, unit) in resultRows)
-                consolidated.Add((ing, amount, unit, needsReview));
+            var unquantifiedMeals = unquantifiedIngredients.TryGetValue(ingredientId, out var unquantified)
+                ? unquantified.Meals
+                : [];
+            foreach (var row in resultRows)
+                consolidated.Add((ing, row.Amount, row.Unit, needsReview, SourcesOf(row, unquantifiedMeals, ing.GramsPerMillilitre)));
         }
 
         // An ingredient the plan only ever names yields one amount-less row, while one measured in any recipe keeps its total alone.
-        foreach (var (ingredientId, ing) in unquantifiedIngredients)
+        foreach (var (ingredientId, (ing, meals)) in unquantifiedIngredients)
         {
             if (byIngredient.ContainsKey(ingredientId)) continue;
-            consolidated.Add((ing, null, null, false));
+            consolidated.Add((ing, null, null, false, SourcesOf(new ConsolidatedRow(null, null, []), meals, null)));
         }
 
         // Sort: by IngredientCategory.All index, then DisplayName, then unit
@@ -277,66 +287,149 @@ public class ShoppingListService(AppDbContext db)
             IsCustom     = false,
             NeedsReview  = x.NeedsReview,
             DisplayOrder = idx + 1,
+            Sources      = x.Sources,
         }).ToList();
 
         return items;
     }
 
+    /// <summary>Adds a Planned Meal's use of an Ingredient, folding it into that meal's earlier line in the same unit so the meal is listed once per unit.</summary>
+    private static void AddContribution(List<Contribution> rows, Contribution contribution)
+    {
+        var index = rows.FindIndex(r =>
+            r.PlannedMeal.Id == contribution.PlannedMeal.Id &&
+            string.Equals(r.Unit, contribution.Unit, StringComparison.OrdinalIgnoreCase));
+
+        if (index == -1)
+            rows.Add(contribution);
+        else
+            rows[index] = rows[index] with { Amount = rows[index].Amount + contribution.Amount };
+    }
+
+    /// <summary>The Item Sources of one row in meal-plan order, adding each Planned Meal that only names the Ingredient unless it already contributed a Measurement.</summary>
+    private static List<ShoppingListItemSource> SourcesOf(
+        ConsolidatedRow row, List<UnquantifiedUse> unquantified, decimal? gramsPerMillilitre)
+    {
+        var measured = row.Contributions.Select(c =>
+        {
+            var (shareAmount, shareUnit) = ShareOf(c, row.Unit, gramsPerMillilitre);
+            return (c.MealOrder, Source: NewSource(c.PlannedMeal, c.Amount, c.Unit, shareAmount, shareUnit));
+        });
+        var unmeasured = unquantified
+            .Where(use => !row.Contributions.Exists(c => c.PlannedMeal.Id == use.PlannedMeal.Id))
+            .Select(use => (use.MealOrder, Source: NewSource(use.PlannedMeal, null, null, null, null)));
+
+        var sources = measured.Concat(unmeasured).OrderBy(s => s.MealOrder).Select(s => s.Source).ToList();
+        for (var i = 0; i < sources.Count; i++)
+            sources[i].DisplayOrder = i + 1;
+        return sources;
+    }
+
+    private static ShoppingListItemSource NewSource(
+        PlannedMeal plannedMeal, decimal? amount, string? unit, decimal? shareAmount, string? shareUnit) => new()
+    {
+        Id            = Guid.NewGuid(),
+        RecipeId      = plannedMeal.RecipeId,
+        RecipeName    = plannedMeal.Recipe.Name,
+        BatchSize     = plannedMeal.BatchSize,
+        ScheduledDate = plannedMeal.ScheduledDate,
+        Amount        = amount,
+        Unit          = unit,
+        ShareAmount   = shareAmount,
+        ShareUnit     = shareUnit,
+    };
+
+    /// <summary>A contribution in the row's unit, or the base unit when the row was promoted to kg or L, so the sources visibly add up to the row; null when that is the recipe's own unit.</summary>
+    private static (decimal? Amount, string? Unit) ShareOf(
+        Contribution contribution, string? rowUnit, decimal? gramsPerMillilitre)
+    {
+        var shareUnit = rowUnit switch
+        {
+            MeasurementUnit.Kilogram => MeasurementUnit.Gram,
+            MeasurementUnit.Litre    => MeasurementUnit.Millilitre,
+            _                        => rowUnit,
+        };
+        if (shareUnit is null || shareUnit == contribution.Unit) return (null, null);
+
+        if (MeasurementUnit.ToBase(contribution.Amount, contribution.Unit) is not { } baseAmount) return (null, null);
+
+        // Volume reaches a mass row only through the Ingredient's density, so its share converts the same way.
+        if (shareUnit == MeasurementUnit.Gram && MeasurementUnit.DimensionOf(contribution.Unit) == UnitDimension.Volume)
+            return gramsPerMillilitre is { } density
+                ? (MeasurementConverter.MillilitresToGrams(baseAmount, density), shareUnit)
+                : (null, null);
+
+        return (Math.Round(baseAmount, 3), shareUnit);
+    }
+
     // ── Consolidation ─────────────────────────────────────────────────────────
 
     /// <summary>Reduces one ingredient's scaled rows to the fewest honest shopping-list rows, summing mass and volume within themselves and converting volume to mass when a density exists.</summary>
-    private static List<(decimal? Amount, string? Unit)> ConsolidateRows(
-        List<(decimal Amount, string Unit)> rows, decimal? gramsPerMillilitre)
+    private static List<ConsolidatedRow> ConsolidateRows(
+        List<Contribution> rows, decimal? gramsPerMillilitre)
     {
         // Group by dimension, giving a unit outside the storable set a bucket of its own so it is never summed with something incompatible.
-        var byDimension = new Dictionary<string, List<(decimal Amount, string Unit)>>(StringComparer.Ordinal);
-        foreach (var (amount, unit) in rows)
+        var byDimension = new Dictionary<string, List<Contribution>>(StringComparer.Ordinal);
+        foreach (var row in rows)
         {
-            var normalised = unit.Trim();
-            var key = MeasurementUnit.DimensionOf(normalised) is { } dimension
+            var key = MeasurementUnit.DimensionOf(row.Unit) is { } dimension
                 ? dimension.ToString()
-                : $"__raw_{normalised.ToLowerInvariant()}";
+                : $"__raw_{row.Unit.ToLowerInvariant()}";
 
             if (!byDimension.TryGetValue(key, out var bucket))
                 byDimension[key] = bucket = [];
-            bucket.Add((amount, normalised));
+            bucket.Add(row);
         }
 
         var massKey   = UnitDimension.Mass.ToString();
         var volumeKey = UnitDimension.Volume.ToString();
 
         // A density makes mass and volume the same purchase, applying to every volume unit unlike the import policy.
+        List<Contribution>? volumeAsMass = null;
         if (gramsPerMillilitre is > 0m &&
-            byDimension.TryGetValue(massKey, out var massRows) &&
+            byDimension.ContainsKey(massKey) &&
             byDimension.Remove(volumeKey, out var volumeRows))
         {
-            var millilitres = SumInBaseUnit(volumeRows);
-            massRows.Add((
-                MeasurementConverter.MillilitresToGrams(millilitres, gramsPerMillilitre.Value),
-                MeasurementUnit.Gram));
+            volumeAsMass = volumeRows;
         }
 
-        var resultRows = new List<(decimal? Amount, string? Unit)>();
+        var resultRows = new List<ConsolidatedRow>();
         foreach (var (key, dimRows) in byDimension)
         {
             if (key == massKey)
             {
-                resultRows.Add(Present(dimRows, MeasurementUnit.Gram, MeasurementUnit.Kilogram));
+                var measurements = Measurements(dimRows);
+                var contributions = dimRows;
+                if (volumeAsMass is not null && gramsPerMillilitre is { } density)
+                {
+                    measurements.Add((
+                        MeasurementConverter.MillilitresToGrams(SumInBaseUnit(Measurements(volumeAsMass)), density),
+                        MeasurementUnit.Gram));
+                    contributions = [.. dimRows, .. volumeAsMass];
+                }
+
+                var (amount, unit) = Present(measurements, MeasurementUnit.Gram, MeasurementUnit.Kilogram);
+                resultRows.Add(new ConsolidatedRow(amount, unit, contributions));
             }
             else if (key == volumeKey)
             {
-                resultRows.Add(Present(dimRows, MeasurementUnit.Millilitre, MeasurementUnit.Litre));
+                var (amount, unit) = Present(Measurements(dimRows), MeasurementUnit.Millilitre, MeasurementUnit.Litre);
+                resultRows.Add(new ConsolidatedRow(amount, unit, dimRows));
             }
             else
             {
                 // Counts and unrecognised units sum only within identical unit strings.
                 foreach (var unitGroup in dimRows.GroupBy(r => r.Unit, StringComparer.OrdinalIgnoreCase))
-                    resultRows.Add((Math.Round(unitGroup.Sum(r => r.Amount), 3), unitGroup.Key));
+                    resultRows.Add(new ConsolidatedRow(
+                        Math.Round(unitGroup.Sum(r => r.Amount), 3), unitGroup.Key, unitGroup.ToList()));
             }
         }
 
         return resultRows;
     }
+
+    private static List<(decimal Amount, string Unit)> Measurements(List<Contribution> rows) =>
+        rows.Select(r => (r.Amount, r.Unit)).ToList();
 
     /// <summary>Presents a summed group, keeping a shared non-base unit as the cook wrote it and otherwise summing in the base unit and promoting to kg or L past 1000.</summary>
     private static (decimal? Amount, string? Unit) Present(
@@ -367,6 +460,7 @@ public class ShoppingListService(AppDbContext db)
         var query = db.ShoppingLists
             .Include(s => s.MealPlan)
             .Include(s => s.Items).ThenInclude(i => i.Ingredient)
+            .Include(s => s.Items).ThenInclude(i => i.Sources)
             .AsNoTracking();
 
         if (planId.HasValue)

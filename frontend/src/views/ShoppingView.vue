@@ -68,7 +68,8 @@
                 <v-list-item
                   class="shopping-row"
                   :class="{ 'opacity-50': item.isChecked }"
-                  v-on="item.isCustom ? customRowListeners(item) : {}"
+                  :aria-expanded="hasSources(item) ? isExpanded(item) : undefined"
+                  v-on="rowListeners(item)"
                 >
                   <template #prepend>
                     <v-checkbox-btn
@@ -130,9 +131,35 @@
                         @pointerdown.stop
                         @click.stop="onDeleteItem(item)"
                       />
+
+                      <v-icon v-if="hasSources(item)" size="20">
+                        {{ isExpanded(item) ? 'mdi-chevron-up' : 'mdi-chevron-down' }}
+                      </v-icon>
                     </div>
                   </template>
                 </v-list-item>
+
+                <!-- ── Item Sources ──────────────────────────────────────── -->
+                <v-expand-transition>
+                  <div v-if="isExpanded(item)">
+                    <v-list density="compact" class="py-0 pl-12" :aria-label="`Recipes needing ${item.displayName}`">
+                      <v-list-item
+                        v-for="(source, sourceIdx) in item.sources"
+                        :key="sourceIdx"
+                        class="item-source"
+                        :to="source.recipeId ? recipeRoute(source.recipeId, source.batchSize) : undefined"
+                      >
+                        <v-list-item-title class="text-body-2">{{ formatSourceLine(source) }}</v-list-item-title>
+                        <v-list-item-subtitle v-if="source.scheduledDate">
+                          {{ formatDateOnly(source.scheduledDate, SOURCE_DATE_FORMAT) }}
+                        </v-list-item-subtitle>
+                        <template #append>
+                          <BatchSizeChip :batch-size="source.batchSize" size="x-small" />
+                        </template>
+                      </v-list-item>
+                    </v-list>
+                  </div>
+                </v-expand-transition>
                 <v-divider v-if="idx < group.items.length - 1" />
               </template>
             </v-list>
@@ -191,6 +218,9 @@ import { useUiStore } from '@/stores/ui'
 import { formatCategory, INGREDIENT_CATEGORY_VALUES } from '@/constants/categories'
 import { formatMeasurement } from '@/constants/units'
 import { useHold } from '@/composables/useHold'
+import { recipeRoute } from '@/router/recipeRoutes'
+import { formatDateOnly } from '@/utils/dateOnly'
+import BatchSizeChip from '@/components/BatchSizeChip.vue'
 import CustomItemSheet from '@/components/CustomItemSheet.vue'
 import EmptyState from '@/components/EmptyState.vue'
 import ErrorState from '@/components/ErrorState.vue'
@@ -202,11 +232,42 @@ const sheetOpen   = ref(false)
 const editingItem = ref(null)
 const saving      = ref(false)
 
+const SOURCE_DATE_FORMAT = { weekday: 'short', day: 'numeric', month: 'short' }
+
 const hold = useHold(openSheet)
+
+// Several rows can be open at once, so each Generated Item's open state is kept by id.
+const expandedIds = ref(new Set())
 
 function openSheet(item) {
   editingItem.value = item
   sheetOpen.value   = true
+}
+
+function hasSources(item) {
+  return item.sources?.length > 0
+}
+
+function isExpanded(item) {
+  return expandedIds.value.has(item.id)
+}
+
+function toggleSources(item) {
+  if (isExpanded(item)) expandedIds.value.delete(item.id)
+  else expandedIds.value.add(item.id)
+}
+
+function rowListeners(item) {
+  if (item.isCustom) return customRowListeners(item)
+  return hasSources(item) ? { click: () => toggleSources(item) } : {}
+}
+
+/** A source such as "Pancakes · 2 tbsp (30 ml)", naming only the recipe when it is Unquantified. */
+function formatSourceLine(source) {
+  const amount = formatMeasurement(source.amount, source.unit)
+  if (!amount) return source.recipeName
+  const share = formatMeasurement(source.shareAmount, source.shareUnit)
+  return share ? `${source.recipeName} · ${amount} (${share})` : `${source.recipeName} · ${amount}`
 }
 
 function customRowListeners(item) {

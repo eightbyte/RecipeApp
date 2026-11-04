@@ -63,7 +63,8 @@ _Avoid_: Menu, schedule
 
 **Planned Meal**:
 One occurrence of a recipe in a Meal Plan, with its own Batch Size and an optional date. The same
-recipe can appear as several Planned Meals.
+recipe can appear as several Planned Meals. Opening a Planned Meal's recipe from anywhere shows it
+at that Planned Meal's Batch Size.
 _Avoid_: Meal plan recipe, plan entry
 
 **Unscheduled**:
@@ -91,6 +92,11 @@ The fixed order in which Categories appear on a shopping list.
 A shopping list item derived from the Active Meal Plan. Regenerating the list replaces every
 Generated Item.
 _Avoid_: Recipe item, auto item
+
+**Item Source**:
+A Planned Meal that contributed to a Generated Item, recorded when the list is generated, with the
+Measurement it contributed.
+_Avoid_: Origin, contributor, source meal
 
 **Custom Item**:
 A shopping list item the user added by hand. Regenerating the list leaves it in place.

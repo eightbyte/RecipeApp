@@ -15,6 +15,7 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
     public DbSet<PlannedMeal> PlannedMeals => Set<PlannedMeal>();
     public DbSet<ShoppingList> ShoppingLists => Set<ShoppingList>();
     public DbSet<ShoppingListItem> ShoppingListItems => Set<ShoppingListItem>();
+    public DbSet<ShoppingListItemSource> ShoppingListItemSources => Set<ShoppingListItemSource>();
     public DbSet<SeedLedgerEntry> SeedLedger => Set<SeedLedgerEntry>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
@@ -141,6 +142,24 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
                 .WithMany()
                 .HasForeignKey(i => i.IngredientId)
                 .OnDelete(DeleteBehavior.Restrict);
+        });
+
+        // ── ShoppingListItemSource ────────────────────────────────────────────
+        modelBuilder.Entity<ShoppingListItemSource>(e =>
+        {
+            e.Property(s => s.Amount).HasPrecision(10, 3);
+            e.Property(s => s.ShareAmount).HasPrecision(10, 3);
+
+            e.HasOne(s => s.ShoppingListItem)
+                .WithMany(i => i.Sources)
+                .HasForeignKey(s => s.ShoppingListItemId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            // A deleted recipe leaves its sources naming it, so the list still says why an item is there.
+            e.HasOne(s => s.Recipe)
+                .WithMany()
+                .HasForeignKey(s => s.RecipeId)
+                .OnDelete(DeleteBehavior.SetNull);
         });
 
         // ── SeedLedgerEntry ───────────────────────────────────────────────────

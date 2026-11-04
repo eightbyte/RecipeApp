@@ -184,13 +184,12 @@ useWakeLock()
 const recipeId = props.id ?? route.params.id
 
 const recipe   = computed(() => store.currentRecipe)
+const headerEl = ref(null)
+const finishing = ref(false)
 
 // Carried in the query from a Planned Meal or the recipe detail view, so a reload keeps it.
 const servings = computed(() => servingsFromCookingQuery(route.query, recipe.value.servings))
 const batchMultiplier = computed(() => servings.value / recipe.value.servings)
-
-const headerEl = ref(null)
-const finishing = ref(false)
 
 // Ephemeral, component-local "done" state that is not persisted.
 const doneStepIds = ref(new Set())

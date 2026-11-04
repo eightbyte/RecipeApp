@@ -237,7 +237,7 @@ const markingCooked           = ref(false)
 
 const recipe = computed(() => store.currentRecipe)
 
-const servings = computed(() => chosenServings.value ?? recipe.value?.servings)
+const servings = computed(() => chosenServings.value ?? recipe.value.servings)
 
 const batchMultiplier = computed(() => servings.value / recipe.value.servings)
 

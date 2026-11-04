@@ -107,4 +107,24 @@ describe('HomeView', () => {
     const cards = wrapper.findAllComponents(PlannedMealCard)
     expect(cards.map(card => card.props())).toEqual(plannedMeals.map(plannedMeal => ({ plannedMeal, planId: 'plan-7' })))
   })
+
+  it('offers to start a new meal plan from the active plan', async () => {
+    const { wrapper, store } = await mountView()
+    store.activePlan = makeMealPlanDetail()
+    await wrapper.vm.$nextTick()
+
+    const startButton = wrapper.findAllComponents({ name: 'VBtn' }).find(btn => btn.text() === 'Start new meal plan')
+    expect(startButton).toBeTruthy()
+    expect(startButton.props('to')).toEqual({ name: 'meal-plan-create' })
+  })
+
+  it('offers "New meal plan", not "Start new meal plan", when there is no active plan', async () => {
+    const { wrapper, store } = await mountView()
+    store.activePlan = null
+    await wrapper.vm.$nextTick()
+
+    const labels = wrapper.findAllComponents({ name: 'VBtn' }).map(btn => btn.text())
+    expect(labels).not.toContain('Start new meal plan')
+    expect(labels).toContain('New meal plan')
+  })
 })

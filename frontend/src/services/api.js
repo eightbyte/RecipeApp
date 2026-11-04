@@ -2,7 +2,7 @@
  * Axios instance for the RecipeApp API, with its base URL read from VITE_API_BASE_URL
  * (the .NET API directly in development, /api/v1 proxied via Nginx in production).
  */
-import axios from 'axios'
+import axios, { AxiosError } from 'axios'
 
 // Strip the /api/v1 path so we have just the origin for static asset URLs
 const _apiHost = (import.meta.env.VITE_API_BASE_URL ?? '').replace(/\/api\/v\d+\/?$/, '')
@@ -20,6 +20,8 @@ const api = axios.create({
     Accept: 'application/json',
   },
   // timeout: 15_000,
+  // Without this a timeout shares ECONNABORTED with an aborted request.
+  transitional: { clarifyTimeoutError: true },
 })
 
 // ── Request interceptor ───────────────────────────────────────────────────────
@@ -36,7 +38,7 @@ api.interceptors.response.use(
     const message = error.response?.data?.detail ?? error.response?.data?.message ?? error.message ?? 'Unknown error'
 
     // Surface a simple error object so callers don't have to dig into Axios internals
-    return Promise.reject({ status, message, original: error })
+    return Promise.reject({ status, message, timedOut: error.code === AxiosError.ETIMEDOUT, original: error })
   },
 )
 

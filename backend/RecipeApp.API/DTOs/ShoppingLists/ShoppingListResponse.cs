@@ -29,6 +29,13 @@ public record AddCustomItemRequest(
     string? Category
 );
 
+public record UpdateCustomItemRequest(
+    string Name,
+    decimal? Amount,
+    string? Unit,
+    string Category
+);
+
 public record UpdateItemRequest(
     bool IsChecked,
     decimal? Amount,

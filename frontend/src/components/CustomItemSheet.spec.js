@@ -3,8 +3,8 @@ import { createVuetify } from 'vuetify'
 import * as components from 'vuetify/components'
 import * as directives from 'vuetify/directives'
 import { createPinia, setActivePinia } from 'pinia'
-import AddCustomItemDialog from './AddCustomItemDialog.vue'
-import { makeIngredient } from '@/test/factories'
+import CustomItemSheet from './CustomItemSheet.vue'
+import { makeIngredient, makeShoppingListItem } from '@/test/factories'
 import api from '@/services/api'
 
 vi.mock('@/services/api', () => ({
@@ -61,14 +61,14 @@ function suggestions() {
 
 // Stub VBottomSheet to avoid teleport DOM isolation issues
 const stubBottomSheet = {
-  props: ['modelValue'],
-  template: '<div v-if="modelValue"><slot /></div>',
+  props: ['modelValue', 'persistent'],
+  template: '<div v-if="modelValue" :data-persistent="String(!!persistent)"><slot /></div>',
   emits: ['update:modelValue'],
 }
 
-function mountDialog(modelValue = true) {
-  return mount(AddCustomItemDialog, {
-    props: { modelValue },
+function mountSheet(modelValue = true, props = {}) {
+  return mount(CustomItemSheet, {
+    props: { modelValue, ...props },
     attachTo: document.body,
     global: {
       plugins: [vuetify],
@@ -77,21 +77,21 @@ function mountDialog(modelValue = true) {
   })
 }
 
-describe('AddCustomItemDialog', () => {
+describe('CustomItemSheet', () => {
   it('renders the item name field', async () => {
-    const wrapper = mountDialog()
+    const wrapper = mountSheet()
     await flushPromises()
     expect(wrapper.text()).toContain('Item name')
   })
 
   it('renders the category selector', async () => {
-    const wrapper = mountDialog()
+    const wrapper = mountSheet()
     await flushPromises()
     expect(wrapper.text()).toContain('Category')
   })
 
   it('Add button is disabled when name is empty', async () => {
-    const wrapper = mountDialog()
+    const wrapper = mountSheet()
     await flushPromises()
 
     const addButton = wrapper.findAll('button').find(b => b.text() === 'Add')
@@ -99,7 +99,7 @@ describe('AddCustomItemDialog', () => {
   })
 
   it('emits confirm with payload when Add is clicked with a name', async () => {
-    const wrapper = mountDialog()
+    const wrapper = mountSheet()
     await flushPromises()
 
     // Directly set form fields via the component instance
@@ -123,7 +123,7 @@ describe('AddCustomItemDialog', () => {
   })
 
   it('emits update:modelValue false when Cancel is clicked', async () => {
-    const wrapper = mountDialog()
+    const wrapper = mountSheet()
     await flushPromises()
 
     const cancelBtn = wrapper.findAll('button').find(b => b.text() === 'Cancel')
@@ -133,7 +133,7 @@ describe('AddCustomItemDialog', () => {
   })
 
   it('lists DisplayName and alias rows for the typed text, ranked', async () => {
-    const wrapper = mountDialog()
+    const wrapper = mountSheet()
     await flushPromises()
 
     await typeName(wrapper, 'Flour')
@@ -149,7 +149,7 @@ describe('AddCustomItemDialog', () => {
   })
 
   it('shows no suggestions for fewer than 2 typed characters', async () => {
-    const wrapper = mountDialog()
+    const wrapper = mountSheet()
     await flushPromises()
 
     await typeName(wrapper, ' f ')
@@ -158,7 +158,7 @@ describe('AddCustomItemDialog', () => {
   })
 
   it('sets the Category from a picked suggestion', async () => {
-    const wrapper = mountDialog()
+    const wrapper = mountSheet()
     await flushPromises()
 
     await typeName(wrapper, 'bread')
@@ -168,7 +168,7 @@ describe('AddCustomItemDialog', () => {
   })
 
   it('leaves an unknown name at Other', async () => {
-    const wrapper = mountDialog()
+    const wrapper = mountSheet()
     await flushPromises()
 
     await typeName(wrapper, 'Dish soap')
@@ -177,7 +177,7 @@ describe('AddCustomItemDialog', () => {
   })
 
   it('preselects nothing from typing alone, even an exact match', async () => {
-    const wrapper = mountDialog()
+    const wrapper = mountSheet()
     await flushPromises()
 
     await typeName(wrapper, 'Bread Flour')
@@ -186,7 +186,7 @@ describe('AddCustomItemDialog', () => {
   })
 
   it('keeps a hand-picked Category through further typing', async () => {
-    const wrapper = mountDialog()
+    const wrapper = mountSheet()
     await flushPromises()
 
     await chooseCategory(wrapper, 'DAIRY')
@@ -196,7 +196,7 @@ describe('AddCustomItemDialog', () => {
   })
 
   it('overrides a hand-picked Category when a suggestion is picked', async () => {
-    const wrapper = mountDialog()
+    const wrapper = mountSheet()
     await flushPromises()
 
     await chooseCategory(wrapper, 'DAIRY')
@@ -208,7 +208,7 @@ describe('AddCustomItemDialog', () => {
 
   it('still adds typed text silently when the catalogue fails to load, and retries on the next open', async () => {
     api.get.mockRejectedValue(new Error('offline'))
-    const wrapper = mountDialog()
+    const wrapper = mountSheet()
     await flushPromises()
 
     await typeName(wrapper, 'flour')
@@ -220,8 +220,119 @@ describe('AddCustomItemDialog', () => {
     expect(api.get).toHaveBeenCalledTimes(2)
   })
 
+  describe('edit mode', () => {
+    const eggs = makeShoppingListItem({
+      id: 'eggs', displayName: 'Eggs', amount: 6, unit: 'pcs', category: 'DAIRY', isCustom: true,
+    })
+
+    const button = (wrapper, label) => wrapper.findAll('button').find(b => b.text() === label)
+
+    async function mountEditor(props = {}) {
+      const wrapper = mountSheet(true, { item: eggs, ...props })
+      await flushPromises()
+      return wrapper
+    }
+
+    function fieldValues(wrapper) {
+      return {
+        name:     wrapper.find('input').element.value,
+        amount:   wrapper.find('input[type="number"]').element.value,
+        unit:     wrapper.find('input[placeholder="g, ml, pcs…"]').element.value,
+        category: wrapper.findComponent({ name: 'VSelect' }).props('modelValue'),
+      }
+    }
+
+    it('opens filled in with the item, titled Edit item, with a Save button', async () => {
+      const wrapper = await mountEditor()
+
+      expect(wrapper.text()).toContain('Edit item')
+      expect(button(wrapper, 'Save')).toBeTruthy()
+      expect(button(wrapper, 'Add')).toBeUndefined()
+      expect(fieldValues(wrapper)).toEqual({ name: 'Eggs', amount: '6', unit: 'pcs', category: 'DAIRY' })
+    })
+
+    it('emits save with every field and stays open', async () => {
+      const wrapper = await mountEditor()
+
+      await typeName(wrapper, 'Duck eggs')
+      await wrapper.find('input[type="number"]').setValue('12')
+      await wrapper.find('input[placeholder="g, ml, pcs…"]').setValue('each')
+      await chooseCategory(wrapper, 'PRODUCE')
+      await button(wrapper, 'Save').trigger('click')
+
+      expect(wrapper.emitted('save')[0][0]).toEqual({ name: 'Duck eggs', amount: 12, unit: 'each', category: 'PRODUCE' })
+      expect(wrapper.emitted('confirm')).toBeUndefined()
+      expect(wrapper.emitted('update:modelValue')).toBeUndefined()
+    })
+
+    it('saves an emptied amount and unit as empty', async () => {
+      const wrapper = await mountEditor()
+
+      await wrapper.find('input[type="number"]').setValue('')
+      await wrapper.find('input[placeholder="g, ml, pcs…"]').setValue('')
+      await button(wrapper, 'Save').trigger('click')
+
+      expect(wrapper.emitted('save')[0][0]).toMatchObject({ amount: null, unit: null })
+    })
+
+    it('opens an item without a quantity with empty Amount and Unit', async () => {
+      const wrapper = await mountEditor({ item: { ...eggs, amount: null, unit: null } })
+
+      expect(fieldValues(wrapper)).toMatchObject({ amount: '', unit: '' })
+    })
+
+    it('sets only the name from a picked suggestion', async () => {
+      const wrapper = await mountEditor()
+
+      await typeName(wrapper, 'bread')
+      await pickSuggestion('Bread Flour')
+      await button(wrapper, 'Save').trigger('click')
+
+      expect(wrapper.emitted('save')[0][0]).toMatchObject({ name: 'Bread Flour', category: 'DAIRY' })
+    })
+
+    it('locks the sheet while saving', async () => {
+      const wrapper = await mountEditor({ saving: true })
+
+      expect(button(wrapper, 'Save').classes()).toContain('v-btn--loading')
+      expect(button(wrapper, 'Cancel').attributes('disabled')).toBeDefined()
+      expect(wrapper.find('[data-persistent]').attributes('data-persistent')).toBe('true')
+    })
+
+    it('can be dismissed when not saving', async () => {
+      const wrapper = await mountEditor()
+
+      expect(button(wrapper, 'Cancel').attributes('disabled')).toBeUndefined()
+      expect(wrapper.find('[data-persistent]').attributes('data-persistent')).toBe('false')
+    })
+
+    it('keeps the edits when a save settles without closing the sheet', async () => {
+      const wrapper = await mountEditor()
+
+      await typeName(wrapper, 'Duck eggs')
+      await button(wrapper, 'Save').trigger('click')
+      await wrapper.setProps({ saving: true })
+      await wrapper.setProps({ saving: false })
+
+      expect(fieldValues(wrapper).name).toBe('Duck eggs')
+    })
+
+    it('discards the edits on Cancel', async () => {
+      const wrapper = await mountEditor()
+
+      await typeName(wrapper, 'Duck eggs')
+      await button(wrapper, 'Cancel').trigger('click')
+      expect(wrapper.emitted('update:modelValue')[0]).toEqual([false])
+
+      await wrapper.setProps({ modelValue: false })
+      await wrapper.setProps({ modelValue: true })
+      await flushPromises()
+      expect(fieldValues(wrapper).name).toBe('Eggs')
+    })
+  })
+
   it('resets form when dialog reopens', async () => {
-    const wrapper = mountDialog()
+    const wrapper = mountSheet()
     await flushPromises()
 
     wrapper.vm.form.name = 'Old Name'

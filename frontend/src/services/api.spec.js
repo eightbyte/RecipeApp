@@ -88,6 +88,18 @@ describe('error interceptor', () => {
 
     await expect(rejected(networkError)).rejects.toMatchObject({
       message: 'Network Error',
+      timedOut: false,
     })
+  })
+
+  it('flags a request that ran past its timeout', async () => {
+    const rejected = getResponseRejectionHandler()
+    const timeoutError = { code: 'ETIMEDOUT', message: 'timeout of 10000ms exceeded' }
+
+    await expect(rejected(timeoutError)).rejects.toMatchObject({ timedOut: true })
+  })
+
+  it('reports a timeout as ETIMEDOUT rather than as an aborted request', () => {
+    expect(api.defaults.transitional.clarifyTimeoutError).toBe(true)
   })
 })

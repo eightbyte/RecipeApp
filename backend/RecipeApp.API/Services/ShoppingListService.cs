@@ -9,6 +9,8 @@ namespace RecipeApp.API.Services;
 
 public enum DeleteItemResult { Deleted, NotFound, Forbidden }
 
+public enum UpdateCustomItemResult { Updated, NotFound, Conflict }
+
 public class ShoppingListService(AppDbContext db)
 {
     /// <summary>Threshold at which a g/ml total is promoted to kg/L for display.</summary>
@@ -83,10 +85,6 @@ public class ShoppingListService(AppDbContext db)
 
         var category = request.Category ?? IngredientCategory.Other;
 
-        var maxOrder = await db.ShoppingListItems
-            .Where(i => i.ShoppingListId == listId && i.Category == category)
-            .MaxAsync(i => (int?)i.DisplayOrder) ?? 0;
-
         var item = new ShoppingListItem
         {
             Id             = Guid.NewGuid(),
@@ -99,7 +97,7 @@ public class ShoppingListService(AppDbContext db)
             IsChecked      = false,
             IsCustom       = true,
             NeedsReview    = false,
-            DisplayOrder   = maxOrder + 1,
+            DisplayOrder   = await NextDisplayOrderAsync(listId, category),
         };
         db.ShoppingListItems.Add(item);
 
@@ -138,6 +136,32 @@ public class ShoppingListService(AppDbContext db)
 
         await db.SaveChangesAsync();
         return item.ToResponse();
+    }
+
+    public async Task<(UpdateCustomItemResult Result, ShoppingListItemResponse? Item)> UpdateCustomItemAsync(
+        Guid listId, Guid itemId, UpdateCustomItemRequest request)
+    {
+        var item = await db.ShoppingListItems
+            .FirstOrDefaultAsync(i => i.Id == itemId && i.ShoppingListId == listId);
+
+        if (item is null) return (UpdateCustomItemResult.NotFound, null);
+        if (!item.IsCustom) return (UpdateCustomItemResult.Conflict, null);
+
+        if (item.Category != request.Category)
+        {
+            item.DisplayOrder = await NextDisplayOrderAsync(listId, request.Category);
+            item.Category     = request.Category;
+        }
+
+        item.CustomName = request.Name.Trim();
+        item.Amount     = request.Amount;
+        item.Unit       = request.Unit?.Trim();
+
+        var list = await db.ShoppingLists.FindAsync(listId);
+        if (list is not null) list.UpdatedAt = DateTime.UtcNow;
+
+        await db.SaveChangesAsync();
+        return (UpdateCustomItemResult.Updated, item.ToResponse());
     }
 
     public async Task<DeleteItemResult> DeleteItemAsync(Guid listId, Guid itemId)
@@ -332,6 +356,11 @@ public class ShoppingListService(AppDbContext db)
         Math.Round(dimRows.Sum(r => MeasurementUnit.ToBase(r.Amount, r.Unit) ?? r.Amount), 3);
 
     // ── Helpers ───────────────────────────────────────────────────────────────
+
+    private async Task<int> NextDisplayOrderAsync(Guid listId, string category) =>
+        (await db.ShoppingListItems
+            .Where(i => i.ShoppingListId == listId && i.Category == category)
+            .MaxAsync(i => (int?)i.DisplayOrder) ?? 0) + 1;
 
     private async Task<ShoppingList?> LoadListWithItems(Guid? planId = null, Guid? listId = null)
     {

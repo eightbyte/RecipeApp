@@ -104,20 +104,7 @@ public class ShoppingListService(AppDbContext db)
         list.UpdatedAt = DateTime.UtcNow;
         await db.SaveChangesAsync();
 
-        // Load ingredient nav (null for custom) — return directly
-        return new ShoppingListItemResponse(
-            item.Id,
-            null,
-            item.CustomName,
-            item.Category,
-            item.Amount,
-            item.Unit,
-            item.IsChecked,
-            item.IsCustom,
-            item.NeedsReview,
-            item.DisplayOrder,
-            []
-        );
+        return item.ToResponse();
     }
 
     public async Task<ShoppingListItemResponse?> UpdateItemAsync(Guid listId, Guid itemId, UpdateItemRequest request)
@@ -264,9 +251,11 @@ public class ShoppingListService(AppDbContext db)
         {
             var resultRows  = ConsolidateRows(rows, ing.GramsPerMillilitre);
             var needsReview = resultRows.Count > 1;
-            var named       = unquantifiedIngredients.TryGetValue(ingredientId, out var u) ? u.Meals : [];
+            var unquantifiedMeals = unquantifiedIngredients.TryGetValue(ingredientId, out var unquantified)
+                ? unquantified.Meals
+                : [];
             foreach (var row in resultRows)
-                consolidated.Add((ing, row.Amount, row.Unit, needsReview, SourcesOf(row, named, ing.GramsPerMillilitre)));
+                consolidated.Add((ing, row.Amount, row.Unit, needsReview, SourcesOf(row, unquantifiedMeals, ing.GramsPerMillilitre)));
         }
 
         // An ingredient the plan only ever names yields one amount-less row, while one measured in any recipe keeps its total alone.
@@ -326,11 +315,11 @@ public class ShoppingListService(AppDbContext db)
             var (shareAmount, shareUnit) = ShareOf(c, row.Unit, gramsPerMillilitre);
             return (c.MealOrder, Source: NewSource(c.PlannedMeal, c.Amount, c.Unit, shareAmount, shareUnit));
         });
-        var named = unquantified
-            .Where(u => !row.Contributions.Exists(c => c.PlannedMeal.Id == u.PlannedMeal.Id))
-            .Select(u => (u.MealOrder, Source: NewSource(u.PlannedMeal, null, null, null, null)));
+        var unmeasured = unquantified
+            .Where(use => !row.Contributions.Exists(c => c.PlannedMeal.Id == use.PlannedMeal.Id))
+            .Select(use => (use.MealOrder, Source: NewSource(use.PlannedMeal, null, null, null, null)));
 
-        var sources = measured.Concat(named).OrderBy(s => s.MealOrder).Select(s => s.Source).ToList();
+        var sources = measured.Concat(unmeasured).OrderBy(s => s.MealOrder).Select(s => s.Source).ToList();
         for (var i = 0; i < sources.Count; i++)
             sources[i].DisplayOrder = i + 1;
         return sources;

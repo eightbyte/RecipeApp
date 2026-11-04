@@ -1,11 +1,6 @@
-/**
- * Vuetify Sass settings. vite-plugin-vuetify compiles Vuetify's styles with this file
- * (`styles.configFile` in vite.config.js), so these values replace Vuetify's defaults.
- */
+/** Vuetify Sass settings compiled via `styles.configFile` in vite.config.js, replacing Vuetify's defaults. */
 @use 'vuetify/settings' with (
-  // The app's one typeface: the platform's UI font (SF Pro on Apple, Segoe UI on Windows,
-  // Roboto on Android). Vuetify's default, "Roboto", is not loaded by the app and falls back
-  // to Arial or Helvetica. Headings use this too ($heading-font-family defaults to it).
+  // The app's one typeface: the platform's UI font, because Vuetify's default "Roboto" is not loaded by the app.
   $body-font-family: (
     system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", "Noto Sans", "Liberation Sans",
     Arial, sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji"

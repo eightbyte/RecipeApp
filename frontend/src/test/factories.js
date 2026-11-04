@@ -10,11 +10,18 @@ export const makeRecipe = (overrides = {}) => ({
   ...overrides,
 })
 
+export const makeRecipePage = (items = [makeRecipe()], overrides = {}) => ({
+  items,
+  totalCount: items.length,
+  ...overrides,
+})
+
 export const makeIngredient = (overrides = {}) => ({
   id: 'test-ingredient-1',
   name: 'flour',
   displayName: 'Flour',
   category: 'DRY_GOODS',
+  aliases: [],
   defaultUnit: 'g',
   createdAt: '2026-01-01T00:00:00Z',
   ...overrides,
@@ -34,7 +41,7 @@ export const makeMealPlanListItem = (overrides = {}) => ({
   id: 'plan-1',
   name: 'Week of 2 June',
   isActive: false,
-  recipeCount: 2,
+  plannedMealCount: 2,
   firstScheduledDate: '2026-06-02',
   lastScheduledDate: '2026-06-05',
   createdAt: '2026-06-01T00:00:00Z',
@@ -42,14 +49,14 @@ export const makeMealPlanListItem = (overrides = {}) => ({
   ...overrides,
 })
 
-export const makeMealPlanRecipe = (overrides = {}) => ({
-  id: 'mpr-1',
+export const makePlannedMeal = (overrides = {}) => ({
+  id: 'planned-meal-1',
   recipeId: 'test-recipe-1',
   recipeName: 'Test Recipe',
   recipeImageUrl: null,
   recipeLastCookedAt: null,
   scheduledDate: null,
-  portionSize: 'REGULAR',
+  batchSize: 'REGULAR',
   displayOrder: 1,
   ...overrides,
 })
@@ -60,7 +67,7 @@ export const makeMealPlanDetail = (overrides = {}) => ({
   isActive: true,
   createdAt: '2026-06-01T00:00:00Z',
   closedAt: null,
-  recipes: [makeMealPlanRecipe()],
+  plannedMeals: [makePlannedMeal()],
   ...overrides,
 })
 
@@ -85,6 +92,19 @@ export const makeShoppingListItem = (overrides = {}) => ({
   isCustom: false,
   needsReview: false,
   displayOrder: 1,
+  sources: [],
+  ...overrides,
+})
+
+export const makeItemSource = (overrides = {}) => ({
+  recipeId: 'recipe-1',
+  recipeName: 'Pancakes',
+  batchSize: 'REGULAR',
+  scheduledDate: null,
+  amount: 200,
+  unit: 'g',
+  shareAmount: null,
+  shareUnit: null,
   ...overrides,
 })
 

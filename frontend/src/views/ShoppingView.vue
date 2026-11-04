@@ -49,7 +49,7 @@
           variant="text"
           size="small"
           :prepend-icon="showChecked ? 'mdi-eye-off-outline' : 'mdi-eye-outline'"
-          @click="showChecked = !showChecked"
+          @click="onToggleShowPurchased"
         >
           {{ showChecked ? 'Hide' : 'Show' }} purchased ({{ checkedCount }})
         </v-btn>
@@ -66,14 +66,19 @@
             <v-list density="compact">
               <template v-for="(item, idx) in group.items" :key="item.id">
                 <v-list-item
+                  class="shopping-row"
                   :class="{ 'opacity-50': item.isChecked }"
-                  @click="store.toggleItem(item.id, !item.isChecked)"
+                  :aria-expanded="hasSources(item) ? isExpanded(item) : undefined"
+                  v-on="rowListeners(item)"
                 >
                   <template #prepend>
                     <v-checkbox-btn
+                      class="purchased-checkbox"
                       :model-value="item.isChecked"
                       color="primary"
-                      @click.stop="store.toggleItem(item.id, !item.isChecked)"
+                      :aria-label="`Mark ${item.displayName} purchased`"
+                      @pointerdown.stop
+                      @click.stop="onTogglePurchased(item)"
                     />
                   </template>
 
@@ -84,7 +89,7 @@
                   </v-list-item-title>
 
                   <v-list-item-subtitle v-if="item.amount">
-                    {{ formatAmount(item.amount, item.unit) }}
+                    {{ formatMeasurement(item.amount, item.unit) }}
                   </v-list-item-subtitle>
 
                   <template #append>
@@ -123,11 +128,38 @@
                         variant="text"
                         color="error"
                         :aria-label="`Remove ${item.displayName}`"
+                        @pointerdown.stop
                         @click.stop="onDeleteItem(item)"
                       />
+
+                      <v-icon v-if="hasSources(item)" size="20">
+                        {{ isExpanded(item) ? 'mdi-chevron-up' : 'mdi-chevron-down' }}
+                      </v-icon>
                     </div>
                   </template>
                 </v-list-item>
+
+                <!-- ── Item Sources ──────────────────────────────────────── -->
+                <v-expand-transition>
+                  <div v-if="isExpanded(item)">
+                    <v-list density="compact" class="py-0 pl-12" :aria-label="`Recipes needing ${item.displayName}`">
+                      <v-list-item
+                        v-for="(source, sourceIdx) in item.sources"
+                        :key="sourceIdx"
+                        class="item-source"
+                        :to="source.recipeId ? recipeRoute(source.recipeId, source.batchSize) : undefined"
+                      >
+                        <v-list-item-title class="text-body-2">{{ formatSourceLine(source) }}</v-list-item-title>
+                        <v-list-item-subtitle v-if="source.scheduledDate">
+                          {{ formatDateOnly(source.scheduledDate, SOURCE_DATE_FORMAT) }}
+                        </v-list-item-subtitle>
+                        <template #append>
+                          <BatchSizeChip :batch-size="source.batchSize" size="x-small" />
+                        </template>
+                      </v-list-item>
+                    </v-list>
+                  </div>
+                </v-expand-transition>
                 <v-divider v-if="idx < group.items.length - 1" />
               </template>
             </v-list>
@@ -164,13 +196,16 @@
       aria-label="Add custom item"
       style="position: fixed; right: 16px"
       elevation="4"
-      @click="addItemDialog = true"
+      @click="openSheet(null)"
     />
 
-    <!-- ── Add custom item dialog ────────────────────────────────────────── -->
-    <AddCustomItemDialog
-      v-model="addItemDialog"
+    <!-- ── Add or edit custom item sheet ─────────────────────────────────── -->
+    <CustomItemSheet
+      v-model="sheetOpen"
+      :item="editingItem"
+      :saving="saving"
       @confirm="onAddCustomItem"
+      @save="onSaveCustomItem"
     />
 
   </v-container>
@@ -180,15 +215,86 @@
 import { ref, computed, onMounted } from 'vue'
 import { useShoppingListStore } from '@/stores/shoppingList'
 import { useUiStore } from '@/stores/ui'
-import { formatCategory } from '@/constants/categories'
-import AddCustomItemDialog from '@/components/AddCustomItemDialog.vue'
+import { formatCategory, INGREDIENT_CATEGORY_VALUES } from '@/constants/categories'
+import { formatMeasurement } from '@/constants/units'
+import { useHold } from '@/composables/useHold'
+import { useDelayedHide } from '@/composables/useDelayedHide'
+import { recipeRoute } from '@/router/recipeRoutes'
+import { formatDateOnly } from '@/utils/dateOnly'
+import BatchSizeChip from '@/components/BatchSizeChip.vue'
+import CustomItemSheet from '@/components/CustomItemSheet.vue'
 import EmptyState from '@/components/EmptyState.vue'
 import ErrorState from '@/components/ErrorState.vue'
 
-const store         = useShoppingListStore()
-const ui            = useUiStore()
-const showChecked   = ref(false)
-const addItemDialog = ref(false)
+const store       = useShoppingListStore()
+const ui          = useUiStore()
+const showChecked = ref(false)
+const sheetOpen   = ref(false)
+const editingItem = ref(null)
+const saving      = ref(false)
+
+const SOURCE_DATE_FORMAT = { weekday: 'short', day: 'numeric', month: 'short' }
+
+const hold = useHold(openSheet)
+
+// A mis-tapped checkbox would otherwise make the item vanish before the user sees what they ticked.
+const delayedHide = useDelayedHide()
+
+// Several rows can be open at once, so each Generated Item's open state is kept by id.
+const expandedIds = ref(new Set())
+
+function openSheet(item) {
+  editingItem.value = item
+  sheetOpen.value   = true
+}
+
+function hasSources(item) {
+  return item.sources?.length > 0
+}
+
+function isExpanded(item) {
+  return expandedIds.value.has(item.id)
+}
+
+function toggleSources(item) {
+  if (isExpanded(item)) expandedIds.value.delete(item.id)
+  else expandedIds.value.add(item.id)
+}
+
+function onTogglePurchased(item) {
+  const isChecked = !item.isChecked
+  if (!isChecked) delayedHide.cancel(item.id)
+  else if (!showChecked.value) delayedHide.delay(item.id)
+  store.toggleItem(item.id, isChecked)
+}
+
+function onToggleShowPurchased() {
+  delayedHide.cancelAll()
+  showChecked.value = !showChecked.value
+}
+
+function rowListeners(item) {
+  if (item.isCustom) return customRowListeners(item)
+  return hasSources(item) ? { click: () => toggleSources(item) } : {}
+}
+
+/** A source such as "Pancakes · 2 tbsp (30 ml)", naming only the recipe when it is Unquantified. */
+function formatSourceLine(source) {
+  const amount = formatMeasurement(source.amount, source.unit)
+  if (!amount) return source.recipeName
+  const share = formatMeasurement(source.shareAmount, source.shareUnit)
+  return share ? `${source.recipeName} · ${amount} (${share})` : `${source.recipeName} · ${amount}`
+}
+
+function customRowListeners(item) {
+  return { ...hold.listeners(item), contextmenu: event => onCustomRowContextMenu(event, item) }
+}
+
+// Android Chrome fires a touch contextmenu at about 500 ms, so only a mouse right-click opens the editor at once.
+function onCustomRowContextMenu(event, item) {
+  event.preventDefault()
+  if (event.pointerType === 'mouse') openSheet(item)
+}
 
 onMounted(() => store.fetchActive())
 
@@ -200,18 +306,23 @@ const uncheckedCount = computed(() => items.value.filter(i => !i.isChecked).leng
 const visibleGroups = computed(() => {
   const filtered = showChecked.value
     ? items.value
-    : items.value.filter(i => !i.isChecked)
+    : items.value.filter(i => !i.isChecked || delayedHide.isDelayed(i.id))
 
   const grouped = {}
   for (const item of filtered) {
     if (!grouped[item.category]) grouped[item.category] = []
     grouped[item.category].push(item)
   }
-  return Object.entries(grouped).map(([category, groupItems]) => ({
-    category,
-    items: groupItems,
-  }))
+  // Groups follow Aisle Order rather than item order, because the server numbers a lone Custom Item 1.
+  return Object.entries(grouped)
+    .map(([category, groupItems]) => ({ category, items: groupItems }))
+    .sort((a, b) => aisleIndex(a.category) - aisleIndex(b.category))
 })
+
+function aisleIndex(category) {
+  const index = INGREDIENT_CATEGORY_VALUES.indexOf(category)
+  return index === -1 ? INGREDIENT_CATEGORY_VALUES.length : index
+}
 
 async function onAddCustomItem(payload) {
   try {
@@ -219,6 +330,22 @@ async function onAddCustomItem(payload) {
     ui.notify({ message: `Added “${payload.displayName ?? payload.name ?? 'item'}”`, color: 'success' })
   } catch (e) {
     ui.notify({ message: e?.message ?? 'Could not add item.', color: 'error' })
+  }
+}
+
+async function onSaveCustomItem(payload) {
+  saving.value = true
+  try {
+    await store.updateCustomItem(editingItem.value.id, payload)
+    sheetOpen.value = false
+    ui.notify({ message: `Saved “${payload.name}”`, color: 'success' })
+  } catch (e) {
+    const message = e?.timedOut
+      ? `Saving “${editingItem.value.displayName}” timed out. Try again.`
+      : e?.message ?? 'Could not save item.'
+    ui.notify({ message, color: 'error' })
+  } finally {
+    saving.value = false
   }
 }
 
@@ -239,8 +366,18 @@ async function onRegenerate() {
     ui.notify({ message: e?.message ?? 'Could not regenerate list.', color: 'error' })
   }
 }
-
-function formatAmount(amount, unit) {
-  return `${amount} ${unit}`
-}
 </script>
+
+<style scoped>
+/* The checkbox is the only control for Purchased, so it gets the 48px minimum touch target. */
+.purchased-checkbox {
+  --v-selection-control-size: 48px;
+}
+
+/* A held row would otherwise select its text or raise the browser's long-press menu. */
+.shopping-row {
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-touch-callout: none;
+}
+</style>

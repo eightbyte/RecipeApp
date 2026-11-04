@@ -3,10 +3,7 @@ using RecipeApp.API.Services;
 
 namespace RecipeApp.Tests.Services;
 
-/// <summary>
-/// Unit tests for the pure/static helpers on RecipeScrapeService.
-/// These do not require a database or real HTTP calls.
-/// </summary>
+/// <summary>Tests for the pure static helpers on RecipeScrapeService, needing no database or HTTP.</summary>
 public class RecipeScrapeServiceTests
 {
     // ── HTML stripping ────────────────────────────────────────────────────────

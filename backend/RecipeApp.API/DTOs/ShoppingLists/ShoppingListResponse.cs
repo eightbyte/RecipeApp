@@ -19,7 +19,19 @@ public record ShoppingListItemResponse(
     bool IsChecked,
     bool IsCustom,
     bool NeedsReview,
-    int DisplayOrder
+    int DisplayOrder,
+    List<ShoppingListItemSourceResponse> Sources
+);
+
+public record ShoppingListItemSourceResponse(
+    Guid? RecipeId,
+    string RecipeName,
+    string BatchSize,
+    DateOnly? ScheduledDate,
+    decimal? Amount,
+    string? Unit,
+    decimal? ShareAmount,
+    string? ShareUnit
 );
 
 public record AddCustomItemRequest(
@@ -27,6 +39,13 @@ public record AddCustomItemRequest(
     decimal? Amount,
     string? Unit,
     string? Category
+);
+
+public record UpdateCustomItemRequest(
+    string Name,
+    decimal? Amount,
+    string? Unit,
+    string Category
 );
 
 public record UpdateItemRequest(

@@ -6,5 +6,5 @@ public record MealPlanDetailResponse(
     bool IsActive,
     DateTime CreatedAt,
     DateTime? ClosedAt,
-    List<MealPlanRecipeResponse> Recipes
+    List<PlannedMealResponse> PlannedMeals
 );

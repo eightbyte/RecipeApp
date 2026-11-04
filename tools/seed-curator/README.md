@@ -1,6 +1,6 @@
 # Seed Corpus Curator
 
-A throwaway local tool for manually reducing the Phase 9 MyPlate harvest before Stage 3 parses it.
+A throwaway local tool for manually reducing the MyPlate harvest before Stage 3 parses it.
 Browse the 1,123 cached recipes, search them by name or by ingredient, and permanently delete the
 ones you do not want in the seed library.
 
@@ -58,7 +58,7 @@ Deleting a recipe removes:
 - its entry in `manifest.json`
 - its entry in `state.json`
 
-**The `manifest.json` entry is the one that matters.** Every Phase 9 stage iterates
+**The `manifest.json` entry is the one that matters.** Every seed pipeline stage iterates
 `manifest.Recipes` — `HarvestAsync` included — so deleting the files alone would leave the recipe
 in the pipeline and let the next `--harvest` download it again. Removing the manifest entry is what
 actually takes a recipe out of the corpus.
@@ -94,7 +94,7 @@ Once you are happy with the reduced corpus, this whole directory can be deleted.
 | `extract.js` | Cached page → searchable record (name, ingredients, directions, notes, source) |
 | `public/index.html` | The entire UI — markup, styles and script in one file |
 
-`extract.js` is intentionally *not* the Phase 9 Stage 3 parser. It only has to be good enough to
+`extract.js` is intentionally *not* the seed pipeline's Stage 3 parser. It only has to be good enough to
 find a recipe, never good enough to import one, so every field degrades to empty rather than
 throwing. It handles both Drupal templates in the corpus
 (`field--name-field-mp-ingredients`, 1,058 pages; `field--name-field-ingredients`, 65 pages) and

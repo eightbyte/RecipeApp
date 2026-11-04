@@ -9,8 +9,7 @@ import {
 
 describe('MEASUREMENT_UNITS', () => {
   it('mirrors MeasurementUnit.All on the backend, in the same order', () => {
-    // Kept in lockstep with backend/RecipeApp.API/Enums/MeasurementUnit.cs. If this list
-    // drifts, the pickers offer units the API will reject (or hide ones it accepts).
+    // Kept in lockstep with the backend enum, or the pickers offer units the API will reject.
     expect(MEASUREMENT_UNITS).toEqual(['g', 'kg', 'ml', 'L', 'pcs', 'tsp', 'tbsp', 'cup'])
   })
 
@@ -29,22 +28,20 @@ describe('formatMeasurement', () => {
     expect(formatMeasurement(2, 'cup')).toBe('2 cup')
   })
 
-  it('trims float noise from portion scaling', () => {
+  it('trims float noise from Batch Size scaling', () => {
     expect(formatMeasurement(0.30000000000000004, 'tsp')).toBe('0.3 tsp')
     expect(formatMeasurement(0.1 + 0.2, 'tsp')).toBe('0.3 tsp')
     expect(formatMeasurement(16.0835, 'g')).toBe('16.08 g')
   })
 
   it('renders nothing for an ingredient with no stated quantity', () => {
-    // "salt" is stored with a null amount and a null unit (Phase 9.1 §3.1). Every call site
-    // guards on the return value, so the ingredient shows as its name alone, not "0 g Salt".
+    // "salt" is stored with a null amount and unit, so it shows as its name alone and not "0 g Salt".
     expect(formatMeasurement(null, null)).toBeNull()
     expect(formatMeasurement(undefined, undefined)).toBeNull()
   })
 
   it('still renders a zero amount, because zero is a quantity', () => {
-    // Zero is never how an absent quantity is stored, so it must not be silently hidden —
-    // seeing "0 g" is how a fabricated amount that got through becomes visible.
+    // Zero is never how an absent quantity is stored, so it must not be hidden, since seeing "0 g" is how a fabricated amount becomes visible.
     expect(formatMeasurement(0, 'g')).toBe('0 g')
   })
 })
@@ -77,7 +74,7 @@ describe('formatSourceMeasurement', () => {
     expect(formatSourceMeasurement(2, 'cups', 'g')).toBe('(2 cups)')
   })
 
-  it('scales the source by the portion multiplier, like the canonical amount', () => {
+  it('scales the source by the Batch Size multiplier, like the canonical amount', () => {
     expect(formatSourceMeasurement(2, 'cups', 'g', 2)).toBe('(4 cups)')
     expect(formatSourceMeasurement(2, 'cups', 'g', 0.5)).toBe('(1 cups)')
   })

@@ -81,6 +81,7 @@ public static class IngredientsEndpoints
             ingredient.Category           = request.Category;
             ingredient.DefaultUnit        = request.DefaultUnit;
             ingredient.GramsPerMillilitre = request.GramsPerMillilitre;
+            ingredient.IsStaple           = request.IsStaple;
             await db.SaveChangesAsync();
 
             return Results.Ok(ingredient.ToResponse());

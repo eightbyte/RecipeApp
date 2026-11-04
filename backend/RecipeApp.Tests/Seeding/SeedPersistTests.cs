@@ -14,15 +14,7 @@ using RecipeApp.Tests.Infrastructure;
 
 namespace RecipeApp.Tests.Seeding;
 
-/// <summary>
-/// Stage 5 end to end (Phase 9 §17.3): normalised artefacts on disk → recipes in a Testcontainers
-/// Postgres, through the app's own DI graph so <c>ConfirmAsync</c>, the resolver and image storage
-/// are the real ones. No GPU and no network — Stage 5 makes no model call, and the deferred client
-/// means the model is never even loaded.
-///
-/// <para>The cache and image storage are redirected to a temp directory, so nothing here touches the
-/// developer's real harvest or <c>uploads/</c>.</para>
-/// </summary>
+/// <summary>Stage 5 end to end through the app's own DI graph into a Testcontainers Postgres, with cache and image storage redirected to a temp directory and no model ever loaded.</summary>
 [Collection("Database")]
 public class SeedPersistTests(DatabaseFixture db) : IAsyncLifetime
 {
@@ -74,9 +66,7 @@ public class SeedPersistTests(DatabaseFixture db) : IAsyncLifetime
     /// <param name="Line">The published line — parsed/ holds it; normalised/ carries it as SourceText.</param>
     private record Line(string Text, string Name, decimal? Amount, string? Unit, decimal? SourceAmount = null, string? SourceUnit = null);
 
-    /// <summary>
-    /// Writes a matching parsed/normalised pair the way Stages 3 and 4 would, fingerprint included.
-    /// </summary>
+    /// <summary>Writes a matching parsed/normalised pair the way Stages 3 and 4 would, fingerprint included.</summary>
     private async Task<NormalisedSeedRecipe> GivenNormalisedAsync(
         string slug, Line[] lines, int[][]? stepIndexes = null, Func<NormalisedSeedRecipe, NormalisedSeedRecipe>? tamper = null)
     {
@@ -297,7 +287,7 @@ public class SeedPersistTests(DatabaseFixture db) : IAsyncLifetime
         {
             var plan = new MealPlan { Id = Guid.NewGuid(), Name = "This week", IsActive = true };
             context.MealPlans.Add(plan);
-            context.MealPlanRecipes.Add(new MealPlanRecipe { Id = Guid.NewGuid(), MealPlanId = plan.Id, RecipeId = recipeId });
+            context.PlannedMeals.Add(new PlannedMeal { Id = Guid.NewGuid(), MealPlanId = plan.Id, RecipeId = recipeId });
             await context.SaveChangesAsync();
         }
 
@@ -382,7 +372,7 @@ public class SeedPersistTests(DatabaseFixture db) : IAsyncLifetime
     [Fact]
     public async Task AnArtefactWithADifferentRowCountThanItsParsedPageIsRejected()
     {
-        // §24.4.2: a "correct" hand edit to normalised/ alone still breaks the pairing with parsed/.
+        // A "correct" hand edit to normalised/ alone still breaks the pairing with parsed/.
         await CatalogueEntryAsync("rice");
         await GivenNormalisedAsync("edited", [new Line("1 cup rice", "rice", 1m, "cup"), new Line("Heading", "rice", null, null)],
             [[0]],
@@ -448,7 +438,7 @@ public class SeedPersistTests(DatabaseFixture db) : IAsyncLifetime
         (await Cache.LoadStateAsync()).Slugs["stateful"].Stage.Should().Be(SeedStage.Persisted);
     }
 
-    // ── Clean-start path B (Phase 10 §4.9) ────────────────────────────────────
+    // ── Clean-start path B ────────────────────────────────────────────────────
 
     [Fact]
     public async Task PersistingAfterAFirstRunAddsTheLibraryAndLeavesTheSamplesUntouched()
@@ -461,8 +451,7 @@ public class SeedPersistTests(DatabaseFixture db) : IAsyncLifetime
         await using (var context = db.CreateDbContext())
             ingredientsBefore = await context.Ingredients.CountAsync();
 
-        // What `seed-recipes --persist` does: a non-force catalogue import, then persist. Names
-        // are shipped catalogue entries, as every MyPlate name must be (D9).
+        // What seed-recipes --persist does: a non-force catalogue import, then persist, using shipped catalogue entry names.
         await CatalogueImport.RunAsync(_factory.Services, NullLogger.Instance);
         await GivenNormalisedAsync("path-b-pilaf",
             [new Line("2 cups rice", "rice", 2m, "cup"), new Line("1 onion, diced", "onion", 1m, "pcs")]);

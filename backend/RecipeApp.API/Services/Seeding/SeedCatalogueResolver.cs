@@ -5,34 +5,13 @@ using RecipeApp.API.Enums;
 
 namespace RecipeApp.API.Services.Seeding;
 
-/// <summary>
-/// Turns a normalised seed recipe into a <see cref="ScrapeConfirmRequest"/> by looking every
-/// ingredient name up in the catalogue — Stage 5's replacement for
-/// <c>RecipeScrapeService.NormaliseAsync</c> (Phase 9.3 §4.8).
-///
-/// <para><b>Zero LLM calls.</b> That is the point of the whole phase. Routing 1,123 recipes through
-/// the scraper's matching pass would have sent the entire catalogue as candidates on every recipe —
-/// 1,475 entries is ~11,800 tokens per call — while <i>also</i> creating new entries mid-run, so
-/// recipe #1 was matched against ~200 candidates and recipe #900 against ~1,300. The same
-/// ingredient name could resolve differently depending on where its recipe sat in the manifest, and
-/// a second machine could produce a different catalogue from the same input. A committed artefact
-/// and a dictionary make the import deterministic.</para>
-///
-/// <para><b>Persistence is still <c>ConfirmAsync</c>'s.</b> Only the construction of the request
-/// changes, so Phase 9 §12's "no parallel persistence logic" rule holds and every invariant
-/// <c>ConfirmAsync</c> enforces — not least <c>RecipeIngredient.ToStoredMeasurement</c>'s
-/// half-set-measurement guard — still applies.</para>
-/// </summary>
+/// <summary>Turns a normalised seed recipe into a <see cref="ScrapeConfirmRequest"/> by dictionary lookup against the catalogue, with zero LLM calls so the import is deterministic.</summary>
 public class SeedCatalogueResolver(
     AppDbContext db,
     MeasurementConverter measurementConverter,
     ILogger<SeedCatalogueResolver> logger)
 {
-    /// <summary>
-    /// The catalogue as a lookup, loaded once per run rather than once per recipe.
-    /// </summary>
-    /// <param name="IdByName">Keyed by every entry's name and every alias, case-insensitively.</param>
-    /// <param name="DensityById">Bulk density for the entries that have one; the rest keep their measurement as stated.</param>
+    /// <summary>The catalogue as a lookup loaded once per run: ids by every name and alias, and bulk densities for the entries that have one.</summary>
     public record CatalogueLookup(
         IReadOnlyDictionary<string, Guid> IdByName,
         IReadOnlyDictionary<Guid, decimal?> DensityById)
@@ -40,14 +19,7 @@ public class SeedCatalogueResolver(
         public int Count => IdByName.Count;
     }
 
-    /// <summary>
-    /// Builds the lookup from the catalogue rows currently in the database.
-    ///
-    /// <para>Names are loaded before aliases and aliases only with <c>TryAdd</c>, so an entry's own
-    /// name always outranks another entry's alias. The artefact's validation forbids that collision
-    /// outright; this is what makes the outcome defined anyway if a hand-edited row ever introduces
-    /// one.</para>
-    /// </summary>
+    /// <summary>Builds the lookup from the catalogue rows currently in the database, loading names before aliases so a name always outranks an alias.</summary>
     public async Task<CatalogueLookup> LoadAsync(CancellationToken ct = default)
     {
         var rows = await db.Ingredients
@@ -70,25 +42,15 @@ public class SeedCatalogueResolver(
         return new CatalogueLookup(idByName, densityById);
     }
 
-    /// <summary>
-    /// Maps one normalised recipe onto a confirm request.
-    /// </summary>
-    /// <param name="allowUnknownIngredients">
-    /// Fall back to creating a catalogue row for a name the artefact does not cover, instead of
-    /// failing the recipe. Off by default: a miss means the committed catalogue is stale relative to
-    /// <c>normalised/</c>, which is a real error and should be loud rather than quietly growing the
-    /// catalogue back into the order-dependent thing this phase removed.
-    /// </param>
-    /// <exception cref="SeedCatalogueResolutionException">
-    /// An ingredient name resolved to nothing. Caught per slug by the stage runner, which records it
-    /// and moves on — the same per-recipe isolation Stages 3 and 4 use.
-    /// </exception>
+    /// <summary>Maps one normalised recipe onto a confirm request.</summary>
+    /// <param name="allowUnknownIngredients">Create a catalogue row for an unknown name instead of failing, which is off by default because a miss means the catalogue is stale.</param>
+    /// <exception cref="SeedCatalogueResolutionException">An ingredient name resolved to nothing.</exception>
     public ScrapeConfirmRequest ToConfirmRequest(
         NormalisedSeedRecipe recipe,
         CatalogueLookup lookup,
         bool allowUnknownIngredients = false)
     {
-        var ingredients = new List<ScrapeConfirmIngredient>(recipe.Ingredients.Count);
+        var ingredients = new List<ScrapeConfirmIngredientRequest>(recipe.Ingredients.Count);
         var unresolved  = new List<string>();
 
         for (var index = 0; index < recipe.Ingredients.Count; index++)
@@ -101,7 +63,7 @@ public class SeedCatalogueResolver(
                 lookup.DensityById.TryGetValue(ingredientId, out var density);
                 var (amount, unit) = ResolveMeasurement(row, density);
 
-                ingredients.Add(new ScrapeConfirmIngredient(
+                ingredients.Add(new ScrapeConfirmIngredientRequest(
                     IngredientId:             ingredientId,
                     NewIngredientName:        null,
                     NewIngredientDisplayName: null,
@@ -121,10 +83,8 @@ public class SeedCatalogueResolver(
                 continue;
             }
 
-            // An unmatched name has no catalogue row and therefore no density by construction, so
-            // its measurement is kept exactly as Stage 4 stated it — there is nothing to resolve a
-            // cup against.
-            ingredients.Add(new ScrapeConfirmIngredient(
+            // An unmatched name has no density, so its measurement is kept exactly as Stage 4 stated it.
+            ingredients.Add(new ScrapeConfirmIngredientRequest(
                 IngredientId:             null,
                 NewIngredientName:        name,
                 NewIngredientDisplayName: row.DisplayName,
@@ -142,7 +102,7 @@ public class SeedCatalogueResolver(
 
         var steps = recipe.Steps
             .OrderBy(step => step.StepNumber)
-            .Select(step => new ScrapeConfirmStep(
+            .Select(step => new ScrapeConfirmStepRequest(
                 step.StepNumber, step.Instruction, [.. step.IngredientIndexes]))
             .ToList();
 
@@ -155,15 +115,7 @@ public class SeedCatalogueResolver(
             Steps:       steps);
     }
 
-    /// <summary>
-    /// Stage B only. Stage A already ran — <see cref="NormalisedSeedIngredient.Amount"/> is the
-    /// post-<c>ToCanonical</c> figure and <c>SourceAmount</c>/<c>SourceUnit</c> hold what preceded
-    /// it — so all that remains is resolving <c>cup</c> against the matched entry's density.
-    ///
-    /// <para>An unquantified row has nothing to resolve and is handed through untouched: a null
-    /// amount never reaches the converter, and a unit without an amount would be as invented as the
-    /// amount (Phase 9.1).</para>
-    /// </summary>
+    /// <summary>Stage B only: resolves <c>cup</c> against the matched entry's density, handing an unquantified row through untouched.</summary>
     private (decimal? Amount, string? Unit) ResolveMeasurement(
         NormalisedSeedIngredient row, decimal? density)
     {
@@ -174,13 +126,7 @@ public class SeedCatalogueResolver(
     }
 }
 
-/// <summary>
-/// A seed recipe naming an ingredient the catalogue does not cover.
-///
-/// <para>This means the shipped catalogue is stale relative to <c>normalised/</c> — the corpus was
-/// re-normalised and produced a new name, or a curated edit lost one (Phase 10 D9: fold, never
-/// drop). The local-only rule 5 test exists to catch it before a persist run does.</para>
-/// </summary>
+/// <summary>A seed recipe naming an ingredient the catalogue does not cover, which means the shipped catalogue is stale relative to <c>normalised/</c>.</summary>
 public class SeedCatalogueResolutionException(string slug, IReadOnlyList<string> names)
     : Exception($"{slug}: the catalogue has no entry for {string.Join(", ", names.Select(n => $"'{n}'"))}. " +
                 "Add each name to seed-data/ingredient-catalogue.json as an entry or an alias, or " +

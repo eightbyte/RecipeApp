@@ -1,6 +1,9 @@
 using FluentAssertions;
+using Microsoft.AspNetCore.Mvc;
 using RecipeApp.API.DTOs.Recipes;
 using RecipeApp.API.Enums;
+using RecipeApp.API.Models;
+using RecipeApp.API.Validators;
 using RecipeApp.Tests.Helpers;
 using RecipeApp.Tests.Infrastructure;
 using System.Net;
@@ -37,7 +40,7 @@ public class RecipesEndpointTests(DatabaseFixture db) : IAsyncLifetime
     // ── List ──────────────────────────────────────────────────────────────────
 
     [Fact]
-    public async Task ListAll_Returns200WithArray()
+    public async Task ListAll_Returns200WithPage()
     {
         var ingId = await SeedIngredientAsync();
         await CreateRecipeViaApi(ingId, "Pasta");
@@ -46,8 +49,9 @@ public class RecipesEndpointTests(DatabaseFixture db) : IAsyncLifetime
         var response = await Client.GetAsync("/api/v1/recipes");
         response.StatusCode.Should().Be(HttpStatusCode.OK);
 
-        var list = await response.Content.ReadFromJsonAsync<List<RecipeListItemResponse>>();
-        list.Should().HaveCount(2);
+        var page = await response.Content.ReadFromJsonAsync<RecipeListPageResponse>();
+        page!.Items.Should().HaveCount(2);
+        page.TotalCount.Should().Be(2);
     }
 
     [Fact]
@@ -58,10 +62,9 @@ public class RecipesEndpointTests(DatabaseFixture db) : IAsyncLifetime
         await CreateRecipeViaApi(ingId, "Tomato Soup");
 
         var response = await Client.GetAsync("/api/v1/recipes?search=bolognese");
-        var list = await response.Content.ReadFromJsonAsync<List<RecipeListItemResponse>>();
+        var page = await response.Content.ReadFromJsonAsync<RecipeListPageResponse>();
 
-        list.Should().HaveCount(1);
-        list![0].Name.Should().Be("Bolognese");
+        page!.Items.Should().ContainSingle().Which.Name.Should().Be("Bolognese");
     }
 
     [Fact]
@@ -73,9 +76,268 @@ public class RecipesEndpointTests(DatabaseFixture db) : IAsyncLifetime
         await ctx.SaveChangesAsync();
 
         var response = await Client.GetAsync("/api/v1/recipes?excludeRecentDays=7");
-        var list = await response.Content.ReadFromJsonAsync<List<RecipeListItemResponse>>();
+        var page = await response.Content.ReadFromJsonAsync<RecipeListPageResponse>();
 
-        list.Should().BeEmpty();
+        page!.Items.Should().BeEmpty();
+    }
+
+    // ── List sorting ──────────────────────────────────────────────────────────
+
+    private static readonly DateTime SortBaseTime = new(2026, 3, 1, 12, 0, 0, DateTimeKind.Utc);
+
+    private static DateTime DaysAfterBase(int days) => SortBaseTime.AddDays(days);
+
+    private async Task SeedRecipesAsync(params Recipe[] recipes)
+    {
+        await using var ctx = db.CreateDbContext();
+        ctx.Recipes.AddRange(recipes);
+        await ctx.SaveChangesAsync();
+    }
+
+    private async Task<RecipeListPageResponse> ListPageAsync(string queryString)
+    {
+        var response = await Client.GetAsync($"/api/v1/recipes{queryString}");
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        return (await response.Content.ReadFromJsonAsync<RecipeListPageResponse>())!;
+    }
+
+    private async Task<List<RecipeListItemResponse>> ListAsync(string queryString) =>
+        (await ListPageAsync(queryString)).Items;
+
+    private async Task<List<string>> ListNamesAsync(string queryString) =>
+        (await ListAsync(queryString)).Select(recipe => recipe.Name).ToList();
+
+    [Fact]
+    public async Task List_SortOmitted_OrdersNewestAddedFirst()
+    {
+        await SeedRecipesAsync(
+            TestDataBuilder.Recipe("Middle", createdAt: DaysAfterBase(1)),
+            TestDataBuilder.Recipe("Oldest", createdAt: DaysAfterBase(0)),
+            TestDataBuilder.Recipe("Newest", createdAt: DaysAfterBase(2)));
+
+        var names = await ListNamesAsync("");
+
+        names.Should().Equal("Newest", "Middle", "Oldest");
+    }
+
+    [Theory]
+    [InlineData("?sort=NAME", new[] { "Charlie", "Bravo", "Alpha" })]
+    [InlineData("?direction=ASC", new[] { "Bravo", "Charlie", "Alpha" })]
+    public async Task List_OneSortParamOmitted_UsesItsDefault(string queryString, string[] expected)
+    {
+        // Sort alone runs descending; direction alone sorts by Date added.
+        await SeedRecipesAsync(
+            TestDataBuilder.Recipe("Bravo", createdAt: DaysAfterBase(0)),
+            TestDataBuilder.Recipe("Charlie", createdAt: DaysAfterBase(1)),
+            TestDataBuilder.Recipe("Alpha", createdAt: DaysAfterBase(2)));
+
+        var names = await ListNamesAsync(queryString);
+
+        names.Should().Equal(expected);
+    }
+
+    [Theory]
+    [InlineData("ASC", new[] { "apple", "Banana", "cherry" })]
+    [InlineData("DESC", new[] { "cherry", "Banana", "apple" })]
+    public async Task List_SortByName_ComparesCaseInsensitively(string direction, string[] expected)
+    {
+        // Mixed case catches a byte-order collation; the tie-on-name test catches a case-aware one.
+        await SeedRecipesAsync(
+            TestDataBuilder.Recipe("Banana", createdAt: DaysAfterBase(0)),
+            TestDataBuilder.Recipe("cherry", createdAt: DaysAfterBase(1)),
+            TestDataBuilder.Recipe("apple", createdAt: DaysAfterBase(2)));
+
+        var names = await ListNamesAsync($"?sort=NAME&direction={direction}");
+
+        names.Should().Equal(expected);
+    }
+
+    [Theory]
+    [InlineData("ASC", new[] { "Oldest", "Middle", "Newest" })]
+    [InlineData("DESC", new[] { "Newest", "Middle", "Oldest" })]
+    public async Task List_SortByDateAdded_OrdersByCreation(string direction, string[] expected)
+    {
+        await SeedRecipesAsync(
+            TestDataBuilder.Recipe("Middle", createdAt: DaysAfterBase(1)),
+            TestDataBuilder.Recipe("Newest", createdAt: DaysAfterBase(2)),
+            TestDataBuilder.Recipe("Oldest", createdAt: DaysAfterBase(0)));
+
+        var names = await ListNamesAsync($"?sort=DATE_ADDED&direction={direction}");
+
+        names.Should().Equal(expected);
+    }
+
+    [Theory]
+    [InlineData("ASC", new[] { "Never cooked", "Cooked long ago", "Cooked lately" })]
+    [InlineData("DESC", new[] { "Cooked lately", "Cooked long ago", "Never cooked" })]
+    public async Task List_SortByLastCooked_TreatsNeverCookedAsLeastRecent(string direction, string[] expected)
+    {
+        await SeedRecipesAsync(
+            TestDataBuilder.Recipe("Cooked lately", lastCookedAt: DaysAfterBase(20), createdAt: DaysAfterBase(0)),
+            TestDataBuilder.Recipe("Never cooked", lastCookedAt: null, createdAt: DaysAfterBase(1)),
+            TestDataBuilder.Recipe("Cooked long ago", lastCookedAt: DaysAfterBase(10), createdAt: DaysAfterBase(2)));
+
+        var names = await ListNamesAsync($"?sort=LAST_COOKED&direction={direction}");
+
+        names.Should().Equal(expected);
+    }
+
+    [Theory]
+    [InlineData("DATE_ADDED", "ASC")]
+    [InlineData("DATE_ADDED", "DESC")]
+    [InlineData("LAST_COOKED", "ASC")]
+    [InlineData("LAST_COOKED", "DESC")]
+    public async Task List_TieOnSortField_BreaksByNameAscendingInEitherDirection(string sort, string direction)
+    {
+        await SeedRecipesAsync(
+            TestDataBuilder.Recipe("Bravo", createdAt: SortBaseTime),
+            TestDataBuilder.Recipe("alpha", createdAt: SortBaseTime));
+
+        var names = await ListNamesAsync($"?sort={sort}&direction={direction}");
+
+        names.Should().Equal("alpha", "Bravo");
+    }
+
+    [Theory]
+    [InlineData("ASC")]
+    [InlineData("DESC")]
+    public async Task List_TieOnName_BreaksByNewestAddedInEitherDirection(string direction)
+    {
+        await SeedRecipesAsync(
+            TestDataBuilder.Recipe("apple", createdAt: DaysAfterBase(0)),
+            TestDataBuilder.Recipe("Apple", createdAt: DaysAfterBase(1)));
+
+        var names = await ListNamesAsync($"?sort=NAME&direction={direction}");
+
+        names.Should().Equal("Apple", "apple");
+    }
+
+    [Theory]
+    [InlineData("NAME", "ASC")]
+    [InlineData("NAME", "DESC")]
+    [InlineData("DATE_ADDED", "ASC")]
+    [InlineData("DATE_ADDED", "DESC")]
+    [InlineData("LAST_COOKED", "ASC")]
+    [InlineData("LAST_COOKED", "DESC")]
+    public async Task List_FullTie_BreaksByIdAscendingInEitherDirection(string sort, string direction)
+    {
+        var lowerId  = Guid.Parse("00000000-0000-0000-0000-000000000001");
+        var higherId = Guid.Parse("00000000-0000-0000-0000-000000000002");
+        await SeedRecipesAsync(
+            TestDataBuilder.Recipe("Twin", createdAt: SortBaseTime, id: higherId),
+            TestDataBuilder.Recipe("Twin", createdAt: SortBaseTime, id: lowerId));
+
+        var list = await ListAsync($"?sort={sort}&direction={direction}");
+
+        list.Select(recipe => recipe.Id).Should().Equal(lowerId, higherId);
+    }
+
+    // ── List paging ───────────────────────────────────────────────────────────
+
+    private static Recipe[] RecipesAddedDaysApart(int count) =>
+        Enumerable.Range(0, count)
+            .Select(day => TestDataBuilder.Recipe($"Recipe {day:D2}", createdAt: DaysAfterBase(day)))
+            .ToArray();
+
+    [Fact]
+    public async Task List_PageAndPageSizeOmitted_ReturnsFirstTwentyAndCountsAll()
+    {
+        await SeedRecipesAsync(RecipesAddedDaysApart(25));
+
+        var page = await ListPageAsync("");
+
+        page.Items.Select(recipe => recipe.Name).Should().Equal(
+            Enumerable.Range(5, 20).Reverse().Select(day => $"Recipe {day:D2}"));
+        page.TotalCount.Should().Be(25);
+    }
+
+    private async Task SeedSoupsAndSaladsAsync() =>
+        await SeedRecipesAsync(
+            TestDataBuilder.Recipe("Soup 3"),
+            TestDataBuilder.Recipe("Soup 1"),
+            TestDataBuilder.Recipe("Soup 5"),
+            TestDataBuilder.Recipe("Soup 2"),
+            TestDataBuilder.Recipe("Soup 4"),
+            TestDataBuilder.Recipe("Soup cooked yesterday", lastCookedAt: DateTime.UtcNow.AddDays(-1)),
+            TestDataBuilder.Recipe("Salad 1"),
+            TestDataBuilder.Recipe("Salad 2"));
+
+    [Fact]
+    public async Task List_PageWithSearchSortAndExcludeRecentDays_PagesTheFilteredOrderAndCountsAllMatches()
+    {
+        await SeedSoupsAndSaladsAsync();
+
+        var page = await ListPageAsync("?search=soup&excludeRecentDays=7&sort=NAME&direction=ASC&page=2&pageSize=2");
+
+        page.Items.Select(recipe => recipe.Name).Should().Equal("Soup 3", "Soup 4");
+        page.TotalCount.Should().Be(5);
+    }
+
+    [Fact]
+    public async Task List_PagePastTheEnd_Returns200WithNoItemsAndTheTotalCount()
+    {
+        await SeedSoupsAndSaladsAsync();
+
+        var page = await ListPageAsync("?search=soup&excludeRecentDays=7&page=4&pageSize=2");
+
+        page.Items.Should().BeEmpty();
+        page.TotalCount.Should().Be(5);
+    }
+
+    [Fact]
+    public async Task List_PageSoFarPastTheEndItsOffsetOverflows_Returns200WithNoItems()
+    {
+        await SeedSoupsAndSaladsAsync();
+
+        var page = await ListPageAsync($"?page={int.MaxValue}&pageSize={RecipeListPaging.MaxPageSize}");
+
+        page.Items.Should().BeEmpty();
+        page.TotalCount.Should().Be(8);
+    }
+
+    [Theory]
+    [InlineData("NAME", "ASC")]
+    [InlineData("NAME", "DESC")]
+    [InlineData("DATE_ADDED", "ASC")]
+    [InlineData("DATE_ADDED", "DESC")]
+    [InlineData("LAST_COOKED", "ASC")]
+    [InlineData("LAST_COOKED", "DESC")]
+    public async Task List_PagesJoined_MatchTheUnpagedOrderWithNoDuplicatesOrGaps(string sort, string direction)
+    {
+        // Ties on name, on CreatedAt and on never cooked, so only the tie-breakers keep pages from overlapping.
+        await SeedRecipesAsync(
+            TestDataBuilder.Recipe("Twin", createdAt: SortBaseTime, id: Guid.Parse("00000000-0000-0000-0000-000000000003")),
+            TestDataBuilder.Recipe("Twin", createdAt: SortBaseTime, id: Guid.Parse("00000000-0000-0000-0000-000000000001")),
+            TestDataBuilder.Recipe("Twin", createdAt: SortBaseTime, id: Guid.Parse("00000000-0000-0000-0000-000000000002")),
+            TestDataBuilder.Recipe("alpha", createdAt: SortBaseTime, lastCookedAt: DaysAfterBase(5)),
+            TestDataBuilder.Recipe("Bravo", createdAt: DaysAfterBase(1)),
+            TestDataBuilder.Recipe("Twin", createdAt: DaysAfterBase(2), lastCookedAt: DaysAfterBase(5)),
+            TestDataBuilder.Recipe("charlie", createdAt: DaysAfterBase(1), lastCookedAt: DaysAfterBase(3)));
+        var sortQuery = $"?sort={sort}&direction={direction}";
+        var unpaged = await ListAsync($"{sortQuery}&pageSize={RecipeListPaging.MaxPageSize}");
+
+        var joined = new List<RecipeListItemResponse>();
+        for (var pageNumber = 1; pageNumber <= 4; pageNumber++)
+            joined.AddRange(await ListAsync($"{sortQuery}&page={pageNumber}&pageSize=2"));
+
+        unpaged.Should().HaveCount(7);
+        joined.Select(recipe => recipe.Id).Should().Equal(unpaged.Select(recipe => recipe.Id));
+    }
+
+    [Theory]
+    [InlineData("?sort=RATING", nameof(RecipeListQuery.Sort))]
+    [InlineData("?sort=name", nameof(RecipeListQuery.Sort))]
+    [InlineData("?direction=UP", nameof(RecipeListQuery.Direction))]
+    [InlineData("?page=0", nameof(RecipeListQuery.Page))]
+    [InlineData("?pageSize=0", nameof(RecipeListQuery.PageSize))]
+    [InlineData("?pageSize=101", nameof(RecipeListQuery.PageSize))]
+    public async Task List_InvalidQueryParam_Returns400Problem(string queryString, string invalidField)
+    {
+        var response = await Client.GetAsync($"/api/v1/recipes{queryString}");
+
+        response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+        var problem = await response.Content.ReadFromJsonAsync<ValidationProblemDetails>();
+        problem!.Errors.Should().ContainKey(invalidField);
     }
 
     // ── Get by ID ─────────────────────────────────────────────────────────────

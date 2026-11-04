@@ -80,6 +80,59 @@ public class ShoppingListValidatorTests
         result.ShouldHaveValidationErrorFor(x => x.Unit);
     }
 
+    // ── UpdateCustomItemRequestValidator ──────────────────────────────────────
+
+    private readonly UpdateCustomItemRequestValidator _editValidator = new();
+
+    [Fact]
+    public void UpdateCustomItem_EmptyName_Fails()
+    {
+        var result = _editValidator.TestValidate(new UpdateCustomItemRequest("", null, null, IngredientCategory.Other));
+        result.ShouldHaveValidationErrorFor(x => x.Name);
+    }
+
+    [Fact]
+    public void UpdateCustomItem_NameOver200Chars_Fails()
+    {
+        var result = _editValidator.TestValidate(new UpdateCustomItemRequest(new string('a', 201), null, null, IngredientCategory.Other));
+        result.ShouldHaveValidationErrorFor(x => x.Name);
+    }
+
+    [Fact]
+    public void UpdateCustomItem_MissingCategory_Fails()
+    {
+        var result = _editValidator.TestValidate(new UpdateCustomItemRequest("X", null, null, null!));
+        result.ShouldHaveValidationErrorFor(x => x.Category).Only();
+    }
+
+    [Fact]
+    public void UpdateCustomItem_InvalidCategory_Fails()
+    {
+        var result = _editValidator.TestValidate(new UpdateCustomItemRequest("X", null, null, "INVALID_CATEGORY"));
+        result.ShouldHaveValidationErrorFor(x => x.Category);
+    }
+
+    [Fact]
+    public void UpdateCustomItem_ZeroAmount_Fails()
+    {
+        var result = _editValidator.TestValidate(new UpdateCustomItemRequest("X", 0m, null, IngredientCategory.Other));
+        result.ShouldHaveValidationErrorFor(x => x.Amount);
+    }
+
+    [Fact]
+    public void UpdateCustomItem_UnitOver20Chars_Fails()
+    {
+        var result = _editValidator.TestValidate(new UpdateCustomItemRequest("X", null, new string('u', 21), IngredientCategory.Other));
+        result.ShouldHaveValidationErrorFor(x => x.Unit);
+    }
+
+    [Fact]
+    public void UpdateCustomItem_AmountWithoutUnit_Passes()
+    {
+        var result = _editValidator.TestValidate(new UpdateCustomItemRequest("Eggs", 6m, null, IngredientCategory.Dairy));
+        result.ShouldNotHaveAnyValidationErrors();
+    }
+
     // ── UpdateItemRequestValidator ────────────────────────────────────────────
 
     private readonly UpdateItemRequestValidator _updateValidator = new();

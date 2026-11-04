@@ -2,7 +2,9 @@ using Microsoft.EntityFrameworkCore;
 using RecipeApp.API.Data;
 using RecipeApp.API.DTOs;
 using RecipeApp.API.DTOs.Recipes;
+using RecipeApp.API.Enums;
 using RecipeApp.API.Models;
+using RecipeApp.API.Validators;
 
 namespace RecipeApp.API.Services;
 
@@ -10,36 +12,68 @@ public class RecipeService(AppDbContext db)
 {
     // ── Queries ───────────────────────────────────────────────────────────────
 
-    public async Task<List<RecipeListItemResponse>> GetListAsync(
-        string? search,
-        string? ingredient,
-        int? excludeRecentDays,
-        DateTime? lastCookedBefore)
+    public async Task<RecipeListPageResponse> GetListAsync(RecipeListQuery listQuery)
     {
-        var query = db.Recipes
+        var recipes = db.Recipes
             .Include(r => r.Ingredients)
             .AsNoTracking()
             .AsQueryable();
 
-        if (!string.IsNullOrWhiteSpace(search))
-            query = query.Where(r => EF.Functions.ILike(r.Name, $"%{search}%"));
+        if (!string.IsNullOrWhiteSpace(listQuery.Search))
+            recipes = recipes.Where(r => EF.Functions.ILike(r.Name, $"%{listQuery.Search}%"));
 
-        if (!string.IsNullOrWhiteSpace(ingredient))
-            query = query.Where(r => r.Ingredients.Any(ri =>
-                EF.Functions.ILike(ri.Ingredient.Name, $"%{ingredient.ToLower()}%")));
+        if (!string.IsNullOrWhiteSpace(listQuery.Ingredient))
+            recipes = recipes.Where(r => r.Ingredients.Any(ri =>
+                EF.Functions.ILike(ri.Ingredient.Name, $"%{listQuery.Ingredient.ToLower()}%")));
 
-        if (excludeRecentDays.HasValue)
+        if (listQuery.ExcludeRecentDays.HasValue)
         {
-            var cutoff = DateTime.UtcNow.AddDays(-excludeRecentDays.Value);
-            query = query.Where(r => r.LastCookedAt == null || r.LastCookedAt < cutoff);
+            var cutoff = DateTime.UtcNow.AddDays(-listQuery.ExcludeRecentDays.Value);
+            recipes = recipes.Where(r => r.LastCookedAt == null || r.LastCookedAt < cutoff);
         }
 
-        if (lastCookedBefore.HasValue)
-            query = query.Where(r => r.LastCookedAt == null || r.LastCookedAt < lastCookedBefore);
+        if (listQuery.LastCookedBefore.HasValue)
+            recipes = recipes.Where(r => r.LastCookedAt == null || r.LastCookedAt < listQuery.LastCookedBefore);
 
-        var recipes = await query.OrderByDescending(r => r.CreatedAt).ToListAsync();
-        return recipes.Select(r => r.ToListItem()).ToList();
+        var totalCount = await recipes.CountAsync();
+
+        var pageSize = listQuery.PageSize ?? RecipeListPaging.DefaultPageSize;
+        // Clamped because a huge page number overflows int, and skipping int.MaxValue rows is already past the end.
+        var skip = (int)Math.Min(((long)(listQuery.Page ?? 1) - 1) * pageSize, int.MaxValue);
+        var pageOfRecipes = await OrderForList(
+                recipes,
+                listQuery.Sort ?? RecipeSort.Default,
+                listQuery.Direction ?? SortDirection.Default)
+            .Skip(skip)
+            .Take(pageSize)
+            .ToListAsync();
+        return new RecipeListPageResponse(pageOfRecipes.Select(r => r.ToListItem()).ToList(), totalCount);
     }
+
+    /// <summary>Orders by the chosen field, then by tie-breakers that never flip with direction so the order is stable across pages.</summary>
+    private static IOrderedQueryable<Recipe> OrderForList(IQueryable<Recipe> recipes, string sort, string direction)
+    {
+        var ascending = direction == SortDirection.Ascending;
+
+        return sort switch
+        {
+            RecipeSort.Name => recipes
+                .OrderByDirection(r => r.Name.ToLower(), ascending)
+                .ThenByDescending(r => r.CreatedAt)
+                .ThenBy(r => r.Id),
+            RecipeSort.DateAdded => ThenByNameThenId(recipes
+                .OrderByDirection(r => r.CreatedAt, ascending)),
+            // Ordering by "has been cooked" first counts never-cooked recipes as least recent, whatever the database's null ordering.
+            RecipeSort.LastCooked => ThenByNameThenId(recipes
+                .OrderByDirection(r => r.LastCookedAt != null, ascending)
+                .ThenByDirection(r => r.LastCookedAt, ascending)),
+            _ => throw new ArgumentOutOfRangeException(
+                nameof(sort), sort, $"Sort must be one of: {string.Join(", ", RecipeSort.All)}"),
+        };
+    }
+
+    private static IOrderedQueryable<Recipe> ThenByNameThenId(IOrderedQueryable<Recipe> orderedRecipes) =>
+        orderedRecipes.ThenBy(r => r.Name.ToLower()).ThenBy(r => r.Id);
 
     public async Task<RecipeDetailResponse?> GetByIdAsync(Guid id)
     {

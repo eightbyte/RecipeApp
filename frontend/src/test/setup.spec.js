@@ -1,7 +1,4 @@
-// Guards enableAutoUnmount in setup.js. jsdom never loads images, so a mounted v-img re-arms a
-// window.setTimeout poll every 100 ms until it is unmounted. Left mounted, that timer can fire
-// after Vitest's jsdom teardown removes `window`, failing the run with an unhandled
-// "ReferenceError: window is not defined" even though every test passed.
+// Guards enableAutoUnmount in setup.js, because a mounted v-img re-arms a timer in jsdom that can fire after teardown and fail the run.
 import { mount } from '@vue/test-utils'
 import { createVuetify } from 'vuetify'
 import * as components from 'vuetify/components'

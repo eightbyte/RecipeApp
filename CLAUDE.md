@@ -2,30 +2,30 @@
 
 Mobile-first web app for storing recipes, building meal plans, and generating shopping lists.
 
-**Status:** v1 feature-complete. Phases 1–10 done. Phase 9 built a personal-use MyPlate library of
-1,123 recipes (closed 2026-09-29). Phase 10 made the app distributable: a curated ingredient
-catalogue and 12 original sample recipes seed every fresh database (closed 2026-10-12). Phase 11
-(self-hosted deployment, `specs/phase-11-deployment.md`) is in progress.
+**Status:** v1 feature-complete and self-hosted. A push to `master` tests, builds and publishes
+images, and the host PC updates itself over Tailscale. A fresh database is seeded with a curated
+ingredient catalogue and 12 original sample recipes. A personal-use library of 1,123 MyPlate
+recipes can be imported on top.
 
 ## Where things are documented
 
 | Need | Read |
 |---|---|
-| Feature requirements, data model | `SPEC.md` |
-| A phase's design and results | `specs/phase-*.md` (the Phase 9 record is `specs/phase-9-seed-recipe-library.md` §21–25) |
-| Seed-data licensing, recipe-pack format | `specs/phase-10-first-run-seed.md` (§1, §4.4) |
+| Domain vocabulary (use these terms) | `CONTEXT.md` |
+| Coding standards for writing or reviewing code: comments, naming, idiom, types, hard-coded values, Vuetify, DTOs | `CODING_STANDARDS.md` |
 | Backend conventions, CLI, config | `backend/CLAUDE.md` |
 | Frontend conventions | `frontend/CLAUDE.md` |
 | First-run seeding, `import-recipes`, clean-start paths | `backend/CLAUDE.md` |
-| MyPlate seed-import pipeline (personal use) | `backend/RecipeApp.API/Services/Seeding/CLAUDE.md` |
+| Recipe-pack file format and import rules | `docs/recipe-packs.md` |
+| MyPlate seed-import pipeline and licensing (personal use) | `backend/RecipeApp.API/Services/Seeding/CLAUDE.md` |
 | Local LLM layer | `backend/RecipeApp.API/Services/Llm/CLAUDE.md` |
-| Self-hosted deployment, CI, updater, rollback | `specs/phase-11-deployment.md` (§4, §5) |
-| Units, amounts, density, portion scaling | `.claude/rules/measurements.md` |
+| Self-hosted deployment, CI, updater, rollback | `docs/deployment.md` |
+| Units, amounts, density, Batch Size scaling | `.claude/rules/measurements.md` |
 | Ingredient categories / aisle order | `.claude/rules/ingredient-categories.md` |
+| Architecture decisions | `docs/adr/` |
 | Past per-phase implementation notes | `docs/history/phase-notes.md` (archive; read only when history matters) |
 
-New phase specs go in `specs/phase-N-<name>.md`. Record a phase's results there, not in a
-`CLAUDE.md`. A `CLAUDE.md` holds only rules that still apply to future work.
+A `CLAUDE.md` holds only rules that still apply to future work.
 
 ## Repository layout
 
@@ -33,9 +33,8 @@ New phase specs go in `specs/phase-N-<name>.md`. Record a phase's results there,
 backend/RecipeApp.API/     .NET 10 Minimal API (Endpoints, Services, Models, DTOs, Validators, Data)
 backend/RecipeApp.Tests/   xunit.v3 + Testcontainers
 frontend/                  Vue 3 SPA (Vite, Pinia, Vuetify)
-specs/                     Phase specifications and results
-docs/                      Reference material and history
-tools/seed-curator/        Throwaway Node tool used once to curate the Phase 9 harvest
+docs/                      Deployment, recipe packs, ADRs, history
+tools/seed-curator/        Throwaway Node tool used once to curate the MyPlate harvest
 deploy/                    Self-hosted PC updater (update.ps1) and its Task Scheduler installer
 .github/workflows/         deploy.yml: on push to master, test, then push images to GHCR
 docker-compose.yml         Local Postgres (+ full stack)
@@ -59,17 +58,18 @@ cd frontend && npm run dev               # http://localhost:3000
 
 API docs `/scalar/v1`, health `/health`, readiness `/health/ready`.
 
-Production may be running on this machine beside the dev stack, from its own clone (Phase 11 D18,
-`specs/phase-11-deployment.md` §4.10). Its Compose project is `recipeapp-prod`. Scope every Docker
-command to the dev project (`recipeapp`) or a scratch project you name with `-p`, and leave every
-`recipeapp-prod` container and volume as it is. Machine-wide cleanup (`docker system prune`,
-`docker volume prune`) can delete production data, so it is off limits.
+Production may be running on this machine beside the dev stack, from its own clone
+(`docs/deployment.md`, "Running beside the development stack"). Its Compose project is
+`recipeapp-prod`. Scope every Docker command to the dev project (`recipeapp`) or a scratch project
+you name with `-p`, and leave every `recipeapp-prod` container and volume as it is. Machine-wide
+cleanup (`docker system prune`, `docker volume prune`) can delete production data, so it is off
+limits.
 
 ## Tests
 
 ```bash
 cd backend && dotnet test RecipeApp.Tests/RecipeApp.Tests.csproj   # needs Docker running
-cd frontend && npm test
+cd frontend && npm test && npm run lint
 powershell -NoProfile -Command "Invoke-Pester deploy\tests"        # updater decisions; Pester 3.4 syntax
 ```
 
@@ -84,8 +84,6 @@ from `frontend/.nvmrc`. Keep `.nvmrc` in step with the `node:` base image in `fr
 
 ## Project rules
 
-- Use descriptive, clear names. Always ensure type safety. Avoid hard-coded values.
-- Test your changes.
 - Never assume. Ask for clarity.
 
 ## Agent skills

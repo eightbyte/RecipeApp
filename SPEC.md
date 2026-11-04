@@ -106,7 +106,7 @@ A mobile-first web application for managing personal recipes, building meal plan
 - **REST API** — standard JSON endpoints; no GraphQL in v1 for simplicity.
 - **Single-user** — no authentication layer in v1 (single household use). Authentication noted in Future Functionality.
 - **Metric-only measurements** — all ingredient amounts stored in metric units (g, kg, ml, L, pcs, tsp, tbsp), plus `cup`. Cups are storable rather than converted blindly: an ingredient carrying a bulk density (`grams_per_millilitre`) has its cups resolved to grams by arithmetic on import, and one without keeps the cup exactly as stated. No imperial output in v1 — customary input (oz, lb, fl oz, pt, qt, gal) is converted to metric on the way in.
-- **Portion multipliers** — stored as an enum: `HALF (0.5)`, `REGULAR (1.0)`, `DOUBLE (2.0)`. Applied at query/display time; base recipe quantities are always stored as-is.
+- **Batch Size** — how many times the whole recipe is made, stored as an enum: `HALF (0.5)`, `REGULAR (1.0)`, `DOUBLE (2.0)`. Applied at query/display time; base recipe quantities are always stored as-is.
 - **Single active meal plan** — enforced at the API layer; creating a new plan marks the previous one as closed.
 
 ---
@@ -155,7 +155,7 @@ recipe_ingredients
   id               UUID  PK
   recipe_id        UUID  FK → recipes
   ingredient_id    UUID  FK → ingredients
-  amount           DECIMAL(10,3)  NOT NULL   (base portion amount)
+  amount           DECIMAL(10,3)  NOT NULL   (amount at Regular Batch Size)
   unit             TEXT  NOT NULL            (g, kg, ml, L, pcs, tsp, tbsp, cup)
   source_amount    DECIMAL(10,3)             (amount as stated by the source recipe, before
                                               conversion; NULL for hand-entered rows)
@@ -196,15 +196,15 @@ meal_plans
 
 > **Constraint:** Only one row may have `is_active = TRUE` at any time (enforced via partial unique index).
 
-### 4.7 Meal Plan Recipes
+### 4.7 Planned Meals
 
 ```
-meal_plan_recipes
+planned_meals
   id               UUID  PK
   meal_plan_id     UUID  FK → meal_plans
   recipe_id        UUID  FK → recipes
   scheduled_date   DATE                   (nullable — not all meals have a date)
-  portion_size     TEXT  DEFAULT 'REGULAR'  (HALF | REGULAR | DOUBLE)
+  batch_size       TEXT  DEFAULT 'REGULAR'  (HALF | REGULAR | DOUBLE)
   display_order    INTEGER                (derived from scheduled_date, then insertion order)
 ```
 
@@ -288,14 +288,14 @@ Base URL: `/api/v1`
 | Method | Endpoint | Description |
 |---|---|---|
 | GET | `/meal-plans` | List all meal plans (paginated) |
-| GET | `/meal-plans/active` | Get current active meal plan with recipes |
+| GET | `/meal-plans/active` | Get current active meal plan with its Planned Meals |
 | GET | `/meal-plans/{id}` | Get specific meal plan |
 | POST | `/meal-plans` | Create new meal plan (deactivates current active) |
 | PUT | `/meal-plans/{id}` | Rename meal plan |
 | DELETE | `/meal-plans/{id}` | Delete meal plan |
-| POST | `/meal-plans/{id}/recipes` | Add recipe to meal plan |
-| PUT | `/meal-plans/{id}/recipes/{mprId}` | Update portion size / scheduled date |
-| DELETE | `/meal-plans/{id}/recipes/{mprId}` | Remove recipe from meal plan |
+| POST | `/meal-plans/{id}/planned-meals` | Add a Planned Meal to a meal plan |
+| PUT | `/meal-plans/{id}/planned-meals/{plannedMealId}` | Update Batch Size / scheduled date |
+| DELETE | `/meal-plans/{id}/planned-meals/{plannedMealId}` | Remove a Planned Meal from a meal plan |
 | GET | `/meal-plans/{id}/suggestions` | Get waste-reduction recipe suggestions |
 
 ### 5.4 Shopping Lists
@@ -325,15 +325,15 @@ Base URL: `/api/v1`
 #### 6.1.1 Recipe Display
 - Recipe card on list view shows: image (or placeholder), name, description snippet, last cooked date.
 - **Grayscale rule:** if `last_cooked_at` is within the past 7 days, the recipe image is rendered in CSS greyscale (`filter: grayscale(100%)`). This applies on both recipe list and meal plan selection views.
-- Detail view shows full ingredient list (at selected portion multiplier) and numbered steps.
+- Detail view shows full ingredient list (at the selected Batch Size) and numbered steps.
 - Each step displays the instruction text plus a chips/badges row listing only the ingredients relevant to that step.
 - Tapping an ingredient chip in a step highlights its entry in the ingredient list.
 
-#### 6.1.2 Portion Adjustment
-- Three options: **½ Portion**, **Regular**, **Double**.
+#### 6.1.2 Batch Size Adjustment
+- A control labelled **Batch** with three options: **½×**, **1×**, **2×**.
 - Multiplier is applied on the client side for display; the stored base amounts are never modified.
 - When a recipe is viewed standalone the selector defaults to Regular.
-- When viewing from within a meal plan, the selector reflects the portion size set in `meal_plan_recipes`.
+- When viewing from within a meal plan, the selector reflects the Planned Meal's Batch Size.
 
 #### 6.1.3 Recipe Scraping via Claude AI
 - User provides a URL.
@@ -356,17 +356,17 @@ Base URL: `/api/v1`
 #### 6.2.1 Active Meal Plan
 - Only one meal plan can be `is_active = TRUE` at a time.
 - Creating a new meal plan sets `is_active = FALSE` and records `closed_at` on the previous active plan.
-- The home screen prominently displays the active meal plan if one exists: each recipe shown as a card with its scheduled date (or "Unscheduled"), portion size badge, and a tap-to-cook action.
+- The home screen prominently displays the active meal plan if one exists: each recipe shown as a card with its scheduled date (or "Unscheduled"), Batch Size badge, and a tap-to-cook action.
 
 #### 6.2.2 Building a Meal Plan
 - Recipe browser within meal plan creation supports:
   - **Name search** — partial text match on recipe name.
   - **Ingredient filter** — filter recipes containing a given ingredient.
   - **Last cooked filter** — "not cooked recently" toggle to surface older recipes.
-- Selecting a recipe adds it to the plan at Regular portion, no date.
+- Selecting a recipe adds it to the plan as a Planned Meal at 1×, no date.
 - Added recipes can have:
   - **Date assigned** — a date picker; multiple recipes may share a date.
-  - **Portion** changed via the three-way selector.
+  - **Batch Size** changed via the three-way **Batch** selector.
 - The meal plan list self-sorts: recipes with dates sort ascending by date, undated recipes appear at the bottom.
 
 #### 6.2.3 Recently Cooked Warning
@@ -390,8 +390,8 @@ Base URL: `/api/v1`
 ### 6.3 Shopping List
 
 #### 6.3.1 Generation Logic
-1. Iterate all `meal_plan_recipes` for the active meal plan.
-2. For each recipe apply the portion multiplier to all `recipe_ingredients`.
+1. Iterate all `planned_meals` for the active meal plan.
+2. For each Planned Meal apply its Batch Size multiplier to all `recipe_ingredients`.
 3. Aggregate by `ingredient_id`, summing amounts. If units differ, attempt unit conversion within the same dimension (e.g., ml → L); flag incompatible units for manual review.
 4. Write aggregated rows to `shopping_list_items` linked to the meal plan's `shopping_list`.
 5. Group items by `category` for display.
@@ -412,7 +412,7 @@ Base URL: `/api/v1`
 - Stored as `is_custom = TRUE`; these items are **not** regenerated or removed when the shopping list is regenerated from the meal plan — only recipe-derived items are replaced.
 
 #### 6.3.5 List Regeneration
-- If meal plan recipes are modified after the list is generated, a banner appears: *"Your meal plan has changed — tap to update shopping list."*
+- If Planned Meals are modified after the list is generated, a banner appears: *"Your meal plan has changed — tap to update shopping list."*
 - Regeneration replaces all non-custom items; custom items are preserved.
 
 ---
@@ -478,11 +478,11 @@ Development is structured into 7 iterative phases. Each phase produces a working
     - Step builder (add/reorder/delete steps)
     - Ingredient list builder (ingredient search/select, amount, unit)
     - Step-ingredient assignment (checkbox overlay per step)
-  - Portion selector (½ / Regular / Double) on detail page — local multiplier only
+  - Batch selector (½× / 1× / 2×) on detail page — local multiplier only
   - Image upload on recipe form
 - [x] Ingredient auto-complete backed by `GET /ingredients?search=`
 
-**Deliverable:** Full recipe CRUD in the UI; portion adjustment works; images upload and display.
+**Deliverable:** Full recipe CRUD in the UI; Batch Size adjustment works; images upload and display.
 
 ---
 
@@ -513,17 +513,17 @@ Development is structured into 7 iterative phases. Each phase produces a working
 **Tasks:**
 - [x] **Backend:**
   - `MealPlanEndpoints`: GET list, GET active, GET by ID, POST, PUT, DELETE, suggestions
-  - `MealPlanRecipeEndpoints`: POST, PUT (portion/date), DELETE (within MealPlanEndpoints.cs)
+  - Planned Meal endpoints: POST, PUT (Batch Size/date), DELETE (within MealPlanEndpoints.cs)
   - Business logic: deactivate existing plan when new one is created (single SaveChanges)
   - `GET /meal-plans/{id}/suggestions` — ingredient overlap algorithm
-  - `MealPlanService`, `MealPlanValidators`, `PortionSize` enum, EF migration `AddMealPlans`
+  - `MealPlanService`, `MealPlanValidators`, `BatchSize` enum, EF migration `AddMealPlans`
 - [x] **Frontend:**
   - Home screen: active meal plan widget (recipe cards sorted by date, greyscale rule)
-  - New meal plan flow: `MealPlanBuilderView` (name entry → recipe browser → date/portion controls)
+  - New meal plan flow: `MealPlanBuilderView` (name entry → recipe browser → date/Batch Size controls)
   - Recipe browser (`RecipeBrowser.vue`) with name search, recently-cooked greyscale and confirmation
   - `RecentlyCookedDialog.vue` — bottom-sheet confirmation
   - `SuggestionsPanel.vue` — waste-reduction suggestions with ingredient labels
-  - `MealPlanView.vue` — active plan with per-recipe overflow menu (date, portion, remove)
+  - `MealPlanView.vue` — active plan with per-Planned-Meal overflow menu (date, Batch Size, remove)
   - `PastPlansView.vue` — read-only closed plans list
   - `MealPlanDetailView.vue` — read-only plan detail (sorted recipes)
   - `mealPlans.js` Pinia store; routes added
@@ -538,7 +538,7 @@ Development is structured into 7 iterative phases. Each phase produces a working
 **Tasks:**
 - [x] **Backend:**
   - `ShoppingListsController`: GET active, GET by ID, POST generate, item CRUD
-  - Aggregation logic: combine recipe ingredients by `ingredient_id`, apply portion multipliers, attempt unit consolidation (ml/L, g/kg)
+  - Aggregation logic: combine recipe ingredients by `ingredient_id`, apply Batch Size multipliers, attempt unit consolidation (ml/L, g/kg)
   - Flag items for unit mismatch review
   - Custom item management (preserve on regeneration)
   - Stale-list detection (return flag if meal plan was modified after list was generated)

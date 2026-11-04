@@ -2,6 +2,8 @@ import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
 import api from '@/services/api'
 
+const SAVE_TIMEOUT_MS = 10_000
+
 export const useShoppingListStore = defineStore('shoppingList', () => {
   const list    = ref(null)  // ShoppingListResponse | null
   const loading = ref(false)
@@ -79,6 +81,27 @@ export const useShoppingListStore = defineStore('shoppingList', () => {
     return data
   }
 
+  // The edit sheet locks until the save settles, so it gets a timeout the global client doesn't have.
+  async function updateCustomItem(itemId, payload) {
+    if (!list.value) return
+    const { data } = await api.put(
+      `/shopping-lists/${list.value.id}/custom-items/${itemId}`,
+      payload,
+      { timeout: SAVE_TIMEOUT_MS }
+    )
+    const idx = list.value.items.findIndex(i => i.id === itemId)
+    if (idx === -1) return data
+
+    // A changed Category puts the item last in that Category, where the server's DisplayOrder puts it on reload.
+    if (list.value.items[idx].category === data.category) {
+      list.value.items[idx] = data
+    } else {
+      list.value.items.splice(idx, 1)
+      list.value.items.push(data)
+    }
+    return data
+  }
+
   async function deleteItem(itemId) {
     if (!list.value) return
     await api.delete(`/shopping-lists/${list.value.id}/items/${itemId}`)
@@ -87,6 +110,6 @@ export const useShoppingListStore = defineStore('shoppingList', () => {
 
   return {
     list, loading, error, isStale,
-    fetchActive, regenerate, toggleItem, updateItem, addCustomItem, deleteItem,
+    fetchActive, regenerate, toggleItem, updateItem, addCustomItem, updateCustomItem, deleteItem,
   }
 })

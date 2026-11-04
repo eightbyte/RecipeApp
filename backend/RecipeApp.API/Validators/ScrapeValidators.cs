@@ -21,22 +21,22 @@ public class ScrapeRecipeRequestValidator : AbstractValidator<ScrapeRecipeReques
     }
 }
 
-public class ScrapeConfirmIngredientValidator : AbstractValidator<ScrapeConfirmIngredient>
+public class ScrapeConfirmIngredientRequestValidator : AbstractValidator<ScrapeConfirmIngredientRequest>
 {
-    public ScrapeConfirmIngredientValidator()
+    public ScrapeConfirmIngredientRequestValidator()
     {
         RuleFor(x => x).Custom((ing, ctx) =>
         {
             if (!ing.IngredientId.HasValue)
             {
                 if (string.IsNullOrWhiteSpace(ing.NewIngredientName))
-                    ctx.AddFailure(nameof(ScrapeConfirmIngredient.NewIngredientName),
+                    ctx.AddFailure(nameof(ScrapeConfirmIngredientRequest.NewIngredientName),
                         "NewIngredientName is required when IngredientId is not provided.");
                 if (string.IsNullOrWhiteSpace(ing.NewIngredientDisplayName))
-                    ctx.AddFailure(nameof(ScrapeConfirmIngredient.NewIngredientDisplayName),
+                    ctx.AddFailure(nameof(ScrapeConfirmIngredientRequest.NewIngredientDisplayName),
                         "NewIngredientDisplayName is required when IngredientId is not provided.");
                 if (string.IsNullOrWhiteSpace(ing.Category))
-                    ctx.AddFailure(nameof(ScrapeConfirmIngredient.Category),
+                    ctx.AddFailure(nameof(ScrapeConfirmIngredientRequest.Category),
                         "Category is required when IngredientId is not provided.");
             }
         });
@@ -46,8 +46,7 @@ public class ScrapeConfirmIngredientValidator : AbstractValidator<ScrapeConfirmI
             .WithMessage($"Category must be one of: {string.Join(", ", IngredientCategory.All)}")
             .When(x => !string.IsNullOrWhiteSpace(x.Category));
 
-        // Amount and Unit are null together or set together — see
-        // RecipeIngredientRequestValidator for why (Phase 9.1 §3.1).
+        // Amount and Unit are null together or set together, as in RecipeIngredientRequestValidator.
         RuleFor(x => x.Amount)
             .GreaterThan(0)
             .When(x => x.Amount.HasValue)
@@ -78,7 +77,7 @@ public class ScrapeConfirmRequestValidator : AbstractValidator<ScrapeConfirmRequ
         RuleFor(x => x.Servings).InclusiveBetween(1, 100);
         RuleFor(x => x.SourceUrl).NotEmpty();
         RuleFor(x => x.Ingredients).NotEmpty().WithMessage("At least one ingredient is required.");
-        RuleForEach(x => x.Ingredients).SetValidator(new ScrapeConfirmIngredientValidator());
+        RuleForEach(x => x.Ingredients).SetValidator(new ScrapeConfirmIngredientRequestValidator());
 
         // Step ingredient indexes must be within bounds of the ingredients list
         RuleFor(x => x).Custom((req, ctx) =>

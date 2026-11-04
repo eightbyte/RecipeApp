@@ -4,47 +4,21 @@ using RecipeApp.API.Enums;
 namespace RecipeApp.API.Data;
 
 /// <summary>
-/// Assigns curated bulk densities to catalogue ingredients so cup measurements convert to mass by
-/// arithmetic rather than by guesswork (Phase 8.5.1 §5.6).
-///
-/// <para><b>Curated reference data, reviewed by a human — deliberately not LLM-generated.</b>
-/// Asking a model to invent densities would relocate the guessing to a place where it looks
-/// authoritative, which is the exact failure mode this phase exists to remove. The set that
-/// actually matters is small.</para>
-///
-/// <para>Only ingredients that are <i>bought by weight</i> get a density. Liquids — water, milk,
-/// cream, stock, oil, juice, vinegar — and syrups and spreads sold by volume are deliberately
-/// absent: converting them to grams would be correct physics and useless cooking. Anything
-/// packing-dominated (leafy greens, cubed bread, mixed salad) is absent for the opposite reason —
-/// no single figure is true. A null density is the correct outcome for both, not a gap to fill.</para>
-///
-/// <para>The seeder is idempotent and only ever fills a null, so it is safe to re-run after the
-/// catalogue grows and it never overwrites a density corrected by hand.</para>
+/// Assigns curated, human-reviewed bulk densities to catalogue ingredients bought by weight, leaving liquids and packing-dominated
+/// ingredients null because no single figure is true for them; it is idempotent and only ever fills a null.
 /// </summary>
 public static class IngredientDensitySeeder
 {
-    /// <summary>
-    /// One curated density.
-    /// </summary>
-    /// <param name="ReferenceName">The name the published figure is quoted against.</param>
-    /// <param name="CatalogueNames">
-    /// Normalised catalogue names this density applies to. Keyed as a list because catalogue
-    /// entries rarely match the reference name — the starter catalogue says <c>plain flour</c>,
-    /// not <c>all-purpose flour</c>.
-    /// </param>
-    /// <param name="GramsPerCup">The published figure, before conversion.</param>
-    /// <param name="Source">Citation, so a disputed value can be traced or an assumption checked.</param>
+    /// <summary>One curated density.</summary>
+    /// <param name="CatalogueNames">Normalised catalogue names this density applies to, since entries rarely match the reference name.</param>
+    /// <param name="Source">Citation, so a disputed value can be traced.</param>
     public record DensityRow(
         string ReferenceName,
         string[] CatalogueNames,
         decimal GramsPerCup,
         string Source)
     {
-        /// <summary>
-        /// Derived by dividing the published grams-per-cup by the app's own
-        /// <see cref="MeasurementUnit.MillilitresPerCup"/>, so the round trip is exact regardless
-        /// of which cup definition the published table used.
-        /// </summary>
+        /// <summary>Derived from the published grams-per-cup and the app's own <see cref="MeasurementUnit.MillilitresPerCup"/>, so the round trip is exact.</summary>
         public decimal GramsPerMillilitre =>
             Math.Round(GramsPerCup / MeasurementUnit.MillilitresPerCup, 4);
     }
@@ -91,8 +65,7 @@ public static class IngredientDensitySeeder
         new("panko breadcrumbs",   ["panko breadcrumbs", "panko"],                                           60, CooksIllus),
 
         // ── Dried legumes ─────────────────────────────────────────────────────
-        // Only the dried forms. Canned equivalents are sold by drained weight and the catalogue
-        // entry for "chickpeas" is a 400 g can, so it is deliberately not matched here.
+        // Only the dried forms, since canned equivalents are sold by drained weight.
         new("dried lentils",       ["dried lentils", "lentils", "red lentils", "green lentils"],            192, UsdaFdc),
         new("dried black beans",   ["dried black beans"],                                                   194, UsdaFdc),
         new("dried chickpeas",     ["dried chickpeas", "dried garbanzo beans"],                             200, UsdaFdc),
@@ -111,15 +84,13 @@ public static class IngredientDensitySeeder
         new("desiccated coconut",  ["desiccated coconut", "shredded coconut"],                               80, CooksIllus),
 
         // ── Dairy solids and fats ─────────────────────────────────────────────
-        // Sold by weight. Milk, cream and yoghurt are absent — they are bought by volume.
+        // Sold by weight, whereas milk, cream and yoghurt are bought by volume and so are absent.
         new("butter",              ["butter", "unsalted butter", "salted butter"],                          227, KingArthur),
         new("grated parmesan",     ["grated parmesan", "parmesan cheese", "parmesan"],                      100, CooksIllus),
         new("shredded cheddar",    ["shredded cheddar", "grated cheddar", "cheddar cheese", "cheddar"],     113, CooksIllus),
         new("shredded mozzarella", ["shredded mozzarella", "mozzarella cheese", "mozzarella"],              112, CooksIllus),
         new("cream cheese",        ["cream cheese"],                                                        232, KingArthur),
-        // Instant, which is what the MyPlate corpus means: one line says so outright, and its
-        // "2/3 cup mixed with 2 cups water" is instant's 1/3-cup-per-cup ratio. USDA FDC agrees on
-        // 68 g for instant (171272); regular non-fat dry milk is 120 g (172195) and is not matched.
+        // Instant, which is what the MyPlate corpus means (68 g per cup, USDA FDC 171272), while regular non-fat dry milk is 120 g and is not matched.
         new("milk powder",         ["milk powder", "powdered milk", "dried milk", "non-fat dry milk"],      68, KingArthur),
 
         // ── Baking and pantry ─────────────────────────────────────────────────
@@ -131,18 +102,12 @@ public static class IngredientDensitySeeder
         new("dried cranberries",   ["dried cranberries"],                                                   120, UsdaFdc),
     ];
 
-    /// <summary>
-    /// Catalogue name → density. Built once; a duplicate catalogue name across two rows is a data
-    /// bug and fails here rather than silently letting one row win.
-    /// </summary>
+    /// <summary>Catalogue name to density, built once so a duplicate catalogue name across two rows fails loudly instead of letting one row win.</summary>
     public static readonly IReadOnlyDictionary<string, decimal> ByCatalogueName =
         Rows.SelectMany(row => row.CatalogueNames.Select(name => (name, row.GramsPerMillilitre)))
             .ToDictionary(x => x.name, x => x.GramsPerMillilitre, StringComparer.OrdinalIgnoreCase);
 
-    /// <summary>
-    /// Fills in the density of every catalogue ingredient that has a curated value and does not
-    /// already have one. Returns the number of rows updated.
-    /// </summary>
+    /// <summary>Fills in the density of every catalogue ingredient that has a curated value and does not already have one, returning the number of rows updated.</summary>
     public static async Task<int> SeedAsync(
         AppDbContext db, ILogger? logger = null, CancellationToken ct = default)
     {
@@ -167,19 +132,7 @@ public static class IngredientDensitySeeder
         return updated;
     }
 
-    /// <summary>
-    /// Looks a density up by the ingredient's own name first, then by any of its aliases.
-    ///
-    /// <para><b>The alias arm is what keeps this working after Phase 9.3.</b> These 124 names were
-    /// written against the old hand-written starter catalogue — the list said <c>plain flour</c>,
-    /// which is why <c>all-purpose flour</c> carries it as a catalogue name. The corpus-derived
-    /// catalogue renames the entries and folds the old spellings in as aliases, so a
-    /// <c>Name</c>-only match would silently stop attaching densities to rows that used to get
-    /// them.</para>
-    ///
-    /// <para>The name still wins where both match, so a curated figure keyed to the canonical entry
-    /// is never displaced by one keyed to a spelling that entry merely answers to.</para>
-    /// </summary>
+    /// <summary>Looks a density up by the ingredient's own name first, then by any alias, so a curated figure keyed to the canonical entry is never displaced.</summary>
     private static bool TryFindDensity(Models.Ingredient ingredient, out decimal density)
     {
         if (ByCatalogueName.TryGetValue(ingredient.Name, out density)) return true;

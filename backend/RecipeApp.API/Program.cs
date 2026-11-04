@@ -11,8 +11,7 @@ using RecipeApp.API.Services.RecipePacks;
 using RecipeApp.API.Services.Seeding;
 using Scalar.AspNetCore;
 
-// Phase 9.3 renamed this. The old token is still recognised so it can be answered with a message
-// naming the replacement, rather than falling through and silently starting the web host.
+// The old token is still recognised so it can be answered with a message naming its replacement rather than silently starting the web host.
 const string ImportCatalogueCommand = "import-catalogue";
 const string RetiredSeedCatalogueCommand = "seed-catalogue";
 
@@ -20,9 +19,7 @@ var isImportCatalogue = args.Contains(ImportCatalogueCommand);
 var isRetiredSeedCatalogue = args.Contains(RetiredSeedCatalogueCommand);
 var isSeedDensities = args.Contains("seed-densities");
 
-// seed-recipes and import-recipes take flags of their own (--discover, --limit 50, --force, …).
-// Everything after the command token is its argument vector, so it is withheld from the host's
-// command-line configuration provider rather than being read as configuration keys.
+// seed-recipes and import-recipes take flags of their own, so everything after the command token is withheld from the host's command-line configuration.
 var seedRecipesIndex = SeedRecipesCommand.IndexIn(args);
 var isSeedRecipes    = seedRecipesIndex >= 0;
 var seedRecipesArgs  = isSeedRecipes ? args[(seedRecipesIndex + 1)..] : [];
@@ -34,8 +31,7 @@ var importRecipesArgs  = isImportRecipes ? args[(importRecipesIndex + 1)..] : []
 var commandIndex = new[] { seedRecipesIndex, importRecipesIndex }.Where(index => index >= 0).DefaultIfEmpty(-1).Min();
 var hostArgs     = commandIndex >= 0 ? args[..commandIndex] : args;
 
-// --force re-applies the artefact over existing rows instead of only filling nulls. Read from the
-// host arguments only, so import-recipes' own --force never force-imports the catalogue.
+// --force re-applies the artefact over existing rows, read from the host arguments only so import-recipes' own --force never force-imports the catalogue.
 var catalogueForce = hostArgs.Contains("--force");
 
 var builder = WebApplication.CreateBuilder(hostArgs);
@@ -78,11 +74,10 @@ builder.Services.AddHttpClient("RecipeScraper", client =>
     client.DefaultRequestHeaders.AcceptLanguage.ParseAdd("en-US,en;q=0.9");
 });
 
-// Headless render fallback for client-side-rendered pages with no JSON-LD/visible text.
-// The browser process is launched lazily on first use, not at startup.
+// Headless render fallback for client-side-rendered pages, launched lazily on first use.
 builder.Services.AddSingleton<IHeadlessRenderer, PlaywrightHeadlessRenderer>();
 
-// ── Seed recipe library (Phase 9 — USDA MyPlate import) ──────────────────────
+// ── Seed recipe library (USDA MyPlate import) ────────────────────────────────
 builder.Services.Configure<RecipeSeedingOptions>(
     builder.Configuration.GetSection(RecipeSeedingOptions.SectionName));
 
@@ -92,16 +87,14 @@ builder.Services.AddSingleton<MyPlateRecipeParser>();
 builder.Services.AddSingleton<SeedRecipeNormaliser>();
 builder.Services.AddSingleton<IRecipeLibrarySeeder, RecipeLibrarySeeder>();
 
-// Stage 4.5 (Phase 9.3) — the corpus-derived ingredient catalogue. The store is needed by every
-// run because `import-catalogue` reads the artefact; the builder only by the one machine that
-// authors it.
+// Stage 4.5: the store is needed by every run because import-catalogue reads the artefact, but the builder only by the machine that authors it.
 builder.Services.AddSingleton<IngredientCatalogueFileStore>();
 builder.Services.AddSingleton<CatalogueBuildFileStore>();
 builder.Services.AddSingleton<IngredientCatalogueBuilder>();
 builder.Services.AddScoped<SeedCatalogueResolver>();
 builder.Services.AddScoped<SeedRecipePersister>();
 
-// ── Recipe packs (Phase 10 §4.4) ─────────────────────────────────────────────
+// ── Recipe packs ─────────────────────────────────────────────────────────────
 builder.Services.Configure<RecipePackOptions>(
     builder.Configuration.GetSection(RecipePackOptions.SectionName));
 
@@ -172,13 +165,10 @@ if (isSeedDensities)
 }
 
 // ── seed-recipes command — harvests the USDA MyPlate library then exits ──────
-// Stages 1-4 touch only the archive, the local cache and the local model, so they run without a
-// database. Stage 5 is the only mode that needs one, and it migrates and imports the catalogue
-// itself before persisting anything.
+// Stages 1-4 run without a database, and Stage 5 migrates and imports the catalogue itself before persisting anything.
 if (isSeedRecipes)
 {
-    // The harvest runs for the best part of an hour, so Ctrl+C is a normal way to stop it.
-    // Cancelling cooperatively lets the cache flush the last page instead of losing it.
+    // Ctrl+C is a normal way to stop a long harvest, and cancelling cooperatively lets the cache flush the last page.
     using var harvestCancellation = new CancellationTokenSource();
     Console.CancelKeyPress += (_, eventArgs) =>
     {
@@ -192,38 +182,32 @@ if (isSeedRecipes)
 }
 
 // ── import-recipes command — imports one recipe pack then exits ──────────────
-// Migrates and loads the catalogue first, so it works against an empty database (Phase 10 §4.4.3).
+// Migrates and loads the catalogue first, so it works against an empty database.
 if (isImportRecipes)
 {
     Environment.ExitCode = await ImportRecipesCommand.RunAsync(app.Services, app.Logger, importRecipesArgs);
     return;
 }
 
-// ── seed-catalogue — retired by Phase 9.3 ────────────────────────────────────
-// Answered rather than ignored: it used to generate a catalogue with an LLM, and silently starting
-// the web host instead would look like the command had run.
+// ── seed-catalogue — retired ─────────────────────────────────────────────────
+// Answered rather than ignored, because silently starting the web host would look like the command had run.
 if (isRetiredSeedCatalogue)
 {
     app.Logger.LogError(
-        "'{Retired}' was retired in Phase 9.3 and no longer exists. It generated a catalogue from " +
-        "a model's idea of common ingredients, which matched only 22.9% of the recipe library. Use " +
-        "'dotnet run -- {Replacement}' instead: it loads the corpus-derived catalogue from " +
-        "seed-data/ingredient-catalogue.json with no LLM and no network. The count argument is " +
-        "gone with it — the catalogue's size is a property of the corpus, not a number you pick.",
+        "'{Retired}' was retired and no longer exists. Use 'dotnet run -- {Replacement}' instead: " +
+        "it loads the curated catalogue from seed-data/ingredient-catalogue.json with no LLM and no network.",
         RetiredSeedCatalogueCommand, ImportCatalogueCommand);
     Environment.ExitCode = 1;
     return;
 }
 
 // ── import-catalogue command — loads the committed artefact then exits ───────
-// No LLM, no network, no arguments, idempotent (Phase 9.3 §4.5).
+// No LLM, no network, no arguments, idempotent.
 if (isImportCatalogue)
 {
     try
     {
-        // Densities attach to catalogue rows, so they can only be applied once the rows exist.
-        // Running them together is what makes the documented catalogue → densities order hard to
-        // get wrong (§4.5).
+        // Densities attach to catalogue rows, so running them together makes the catalogue-then-densities order hard to get wrong.
         await CatalogueImport.RunAsync(app.Services, app.Logger, catalogueForce);
     }
     catch (Exception ex) when (ex is FileNotFoundException or CatalogueValidationException)
@@ -268,10 +252,8 @@ api.MapRecipeScrapeEndpoints();
 api.MapMealPlanEndpoints();
 api.MapShoppingListEndpoints();
 
-// ── First-run seeding (Phase 10 §4.2) ───────────────────────────────────────
-// Every environment except Testing: migrate, then seed the catalogue, densities and sample recipes
-// in that order. The ledger makes each one-time step run once per database, and a failed step logs
-// and lets the app start.
+// ── First-run seeding ───────────────────────────────────────────────────────
+// Every environment except Testing: migrate, then seed the catalogue, densities and sample recipes, once per database.
 if (FirstRunSeeder.RunsIn(app.Environment))
 {
     using var scope = app.Services.CreateScope();

@@ -3,6 +3,8 @@
 Measurement and category rules live in `.claude/rules/` (repo root). Read them before touching
 units, amounts, shopping-list consolidation or ingredient categories.
 
+Read `CODING_STANDARDS.md` (repo root) before writing or reviewing code: comments, naming, nullability, hard-coded values, DTOs and mapping.
+
 ## Layout (`RecipeApp.API/`)
 
 | Folder | Holds |
@@ -12,7 +14,7 @@ units, amounts, shopping-list consolidation or ingredient categories.
 | `DTOs/<Area>/` | Request/response DTOs. `DTOs/Mappings.cs` holds all mapping |
 | `Validators/` | One FluentValidation validator per request DTO. `RecipeLimits.cs` holds the shared length and range limits |
 | `Models/` | EF entities, one per file |
-| `Enums/` | `MeasurementUnit`, `IngredientCategory`, `PortionSize` (the single source of truth for each) |
+| `Enums/` | `MeasurementUnit`, `IngredientCategory`, `BatchSize`, `RecipeSort`, `SortDirection` (the single source of truth for each) |
 | `Services/` | Business logic; `Llm/` local model layer, `Seeding/` MyPlate import pipeline, `RecipePacks/` recipe-pack import |
 | `Data/` | `AppDbContext`, migrations, `FirstRunSeeder` and its ledger keys, catalogue/density seeders |
 | `seed-data/` | `ingredient-catalogue.json` and `sample-recipes.json` (committed, shipped artefacts) and the `myplate/` cache (personal use; only `manifest.json` committed) |
@@ -31,8 +33,6 @@ units, amounts, shopping-list consolidation or ingredient categories.
 - **Service-level writes bypass validation.** `RecipeScrapeService.ConfirmAsync` validates nothing. Any
   caller that is not an endpoint must check against `RecipeLimits`, or it can persist a recipe the
   UI then cannot save.
-- **DTOs:** suffix `Request` / `Response`. **Mapping is manual:** static `ToResponse()` /
-  `ToDetail()` / `ToListItem()` extensions in `DTOs/Mappings.cs`. No AutoMapper.
 - **Migrations:** `dotnet ef migrations add <Name> --output-dir Data/Migrations`.
 - **Timestamps:** `DateTime.UtcNow` and `TIMESTAMPTZ` only. Never local time.
 - Hard deletes. No soft deletes in v1.
@@ -45,6 +45,11 @@ units, amounts, shopping-list consolidation or ingredient categories.
 - Integration tests use Testcontainers (Docker must be running) through `Infrastructure/RecipeAppFactory`
   and `DatabaseFixture`. The suite needs no GPU and no network. Use `StubLlmStructuredClient`,
   `StubHttpClientFactory` and `TestHostEnvironment` instead of the real ones.
+- One class or method: `dotnet test --project RecipeApp.Tests/RecipeApp.Tests.csproj -- --filter-class "*RecipesEndpointTests"`
+  (or `--filter-method "*List_Sort*"`). A filter that matches nothing exits 9 (`--minimum-expected-tests 1`
+  in the csproj), so read the exit code, not just `failed: 0`.
+- `Conventions/` holds source-tree guards: the DTO suffix rule and the no-citation comment rule.
+  A failure there names the rule it enforces.
 - Coverage: `dotnet test RecipeApp.Tests/RecipeApp.Tests.csproj --coverage --coverage-output-format cobertura`.
 
 ## CLI commands
@@ -59,11 +64,10 @@ dotnet run -- seed-recipes [flags]      # MyPlate pipeline — see Services/Seed
 dotnet run -- import-recipes <pack.json> [--create-missing] [--force]   # Import a recipe pack
 ```
 
-`seed-catalogue` was retired in Phase 9.3. It exits 1 and names its replacement.
+`seed-catalogue` is retired. It exits 1 and names its replacement.
 
-`import-recipes` imports a **recipe pack**, the JSON format in `specs/phase-10-first-run-seed.md`
-§4.4. It migrates and runs a non-force `import-catalogue` first, so it works on an empty
-database. A pack is all or nothing, and every error is reported. Unknown ingredients are rejected
+`import-recipes` imports a **recipe pack**, the JSON format in `docs/recipe-packs.md`. It migrates
+and runs a non-force `import-catalogue` first, so it works on an empty database. A pack is all or nothing, and every error is reported. Unknown ingredients are rejected
 unless `--create-missing` adds them as `OTHER`. A recipe whose `sourceUrl` already exists is
 skipped unless `--force` replaces it, and a recipe a meal plan uses is never replaced. Exit code
 0 on success, 1 on any validation failure. `--force` here never force-imports the catalogue.
@@ -120,11 +124,9 @@ defaults live in the committed `appsettings.json`. Nothing secret goes there.
 ## Running against a real database
 
 - **Starting the web host migrates and seeds** a fresh database (see First-run seeding).
-- **Starting the web host loads the LLM** because `Program.cs` resolves `LlamaModelHolder` eagerly.
-  Set `Llm__Local__ModelPath=""` to start without the GPU.
-- **Creating a meal plan closes the active one.** Run end-to-end checks against a clone:
-  `CREATE DATABASE x TEMPLATE recipeapp`, then point `ConnectionStrings__DefaultConnection` at it.
-- **Databases created before Phase 9.3 hold legacy ingredient rows.** Examples are `onions`,
-  `tomato` and `plain flour`. A name outranks an alias, so these rows capture names the catalogue
-  meant as aliases, which splits shopping-list lines and hides densities. A non-force
+- **To see a change in the running app, use the `run-dev` skill.** It starts the API on a clone of
+  the dev database without loading the LLM onto the GPU.
+- **Databases that predate the curated catalogue hold legacy ingredient rows.** Examples are
+  `onions`, `tomato` and `plain flour`. A name outranks an alias, so these rows capture names the
+  catalogue meant as aliases, which splits shopping-list lines and hides densities. A non-force
   `import-catalogue` leaves them in place. A fresh database does not have them.

@@ -2,11 +2,7 @@ using RecipeApp.API.Enums;
 
 namespace RecipeApp.Tests.Enums;
 
-/// <summary>
-/// The unit table is the single authority every other unit check defers to, so it is pinned
-/// exhaustively: every canonical spelling, every alias, and the strict/lenient split that lets
-/// consolidation group by plain string equality.
-/// </summary>
+/// <summary>The unit table is the single authority every other unit check defers to, so it is pinned exhaustively, including the strict/lenient split.</summary>
 public class MeasurementUnitTests
 {
     // ── The storable set ──────────────────────────────────────────────────────
@@ -201,7 +197,7 @@ public class MeasurementUnitTests
     [Fact]
     public void ImportResolvable_IsCupOnly()
     {
-        // Widening this is a deliberate policy change, not an accident — see Phase 8.5.1 §5.4.
+        // Widening this is a deliberate policy change, not an accident.
         MeasurementUnit.ImportResolvable.Should().Equal(MeasurementUnit.Cup);
     }
 }

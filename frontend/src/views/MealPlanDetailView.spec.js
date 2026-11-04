@@ -4,7 +4,8 @@ import * as components from 'vuetify/components'
 import * as directives from 'vuetify/directives'
 import { createPinia, setActivePinia } from 'pinia'
 import MealPlanDetailView from './MealPlanDetailView.vue'
-import { makeMealPlanDetail, makeMealPlanRecipe } from '@/test/factories'
+import { makeMealPlanDetail, makePlannedMeal } from '@/test/factories'
+import { runInTimeZone, WEST_OF_UTC } from '@/test/timeZone'
 
 vi.mock('@/services/api', () => ({
   default: { get: vi.fn(), post: vi.fn() },
@@ -49,11 +50,24 @@ describe('MealPlanDetailView', () => {
     const { wrapper, store } = await mountView()
     store.currentPlan = makeMealPlanDetail({
       name: 'June Week',
-      recipes: [makeMealPlanRecipe({ recipeName: 'Risotto' })],
+      plannedMeals: [makePlannedMeal({ recipeName: 'Risotto' })],
     })
     await wrapper.vm.$nextTick()
     expect(wrapper.text()).toContain('June Week')
     expect(wrapper.text()).toContain('Risotto')
+  })
+
+  describe('west of UTC', () => {
+    runInTimeZone(WEST_OF_UTC)
+
+    it('shows a Planned Meal’s scheduled day and month as stored', async () => {
+      const { wrapper, store } = await mountView()
+      store.currentPlan = makeMealPlanDetail({ plannedMeals: [makePlannedMeal({ scheduledDate: '2026-06-03' })] })
+      await wrapper.vm.$nextTick()
+
+      const dateTexts = wrapper.findAll('.text-center .text-caption').map(el => el.text())
+      expect(dateTexts).toEqual(['3', 'Jun'])
+    })
   })
 
   it('calls fetchPlan with the id prop on mount', async () => {

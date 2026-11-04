@@ -1,4 +1,4 @@
-# ── RecipeApp — test, build and publish images (Phase 11 §4.4) ────────────────
+# ── RecipeApp — test, build and publish images ────────────────────────────────
 #
 # On every push to master: run both test suites, then build and push the API and frontend
 # images to GHCR, tagged with the commit SHA and `latest`. The self-hosted PC pulls `latest`

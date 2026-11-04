@@ -49,9 +49,9 @@
 
       <!-- Chips row -->
       <div class="d-flex ga-2 flex-wrap mb-6">
-        <v-chip size="small" variant="tonal" color="primary">
+        <v-chip size="small" variant="tonal" color="primary" class="servings-chip">
           <v-icon start>mdi-account-group</v-icon>
-          {{ scaledServings }} servings
+          {{ formatServings(servings) }}
         </v-chip>
         <v-chip size="small" variant="tonal" color="secondary">
           <v-icon start>mdi-format-list-bulleted</v-icon>
@@ -80,20 +80,44 @@
         size="large"
         prepend-icon="mdi-chef-hat"
         class="mb-6"
-        :to="{ name: 'recipe-cooking', params: { id: recipe.id }, query: { portion: portionSize } }"
+        :to="cookingRouteAtServings(recipe.id, servings)"
       >
         Start cooking
       </v-btn>
 
-      <!-- ── Portion selector ──────────────────────────────────────────── -->
+      <!-- ── Servings selector ─────────────────────────────────────────── -->
       <v-card class="mb-12 pa-3" variant="outlined">
-        <div class="d-flex align-center ga-4">
-          <span class="text-body-2 font-weight-medium">Portion size</span>
-          <v-btn-toggle v-model="portionSize" mandatory density="compact" color="primary">
-            <v-btn value="HALF"    size="small">½</v-btn>
-            <v-btn value="REGULAR" size="small">Regular</v-btn>
-            <v-btn value="DOUBLE"  size="small">Double</v-btn>
-          </v-btn-toggle>
+        <div class="d-flex align-center flex-wrap ga-4">
+          <div class="d-flex align-center ga-2">
+            <span class="text-body-2 font-weight-medium">Servings</span>
+            <v-btn
+              icon="mdi-minus"
+              size="small"
+              variant="tonal"
+              aria-label="Fewer servings"
+              :disabled="servings <= MIN_SERVINGS"
+              @click="stepServingsDown"
+            />
+            <span
+              class="servings-stepper-value text-body-1 font-weight-medium text-center"
+              style="min-width: 3ch"
+              aria-live="polite"
+            >{{ formatMeasurement(servings) }}</span>
+            <v-btn
+              icon="mdi-plus"
+              size="small"
+              variant="tonal"
+              aria-label="More servings"
+              :disabled="servings >= MAX_SERVINGS"
+              @click="stepServingsUp"
+            />
+          </div>
+          <BatchSizeToggle
+            v-model="matchingBatchSize"
+            :mandatory="false"
+            button-size="small"
+            density="compact"
+          />
         </div>
       </v-card>
 
@@ -111,7 +135,7 @@
                 <v-icon size="8" color="grey" class="mr-2">mdi-circle</v-icon>
               </template>
               <v-list-item-title>
-                <!-- Absent for an ingredient whose source stated no quantity (Phase 9.1 §3.4) -->
+                <!-- Absent for an ingredient whose source stated no quantity -->
                 <span v-if="formatAmount(ing.amount, ing.unit)" class="font-weight-medium">
                   {{ formatAmount(ing.amount, ing.unit) }}
                 </span>
@@ -193,29 +217,50 @@ import { ref, computed, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useRecipeStore } from '@/stores/recipes'
 import { formatMeasurement, formatSourceMeasurement } from '@/constants/units'
+import { BATCH_SIZES, batchSizeMultiplier } from '@/constants/batchSizes'
+import { MIN_SERVINGS, MAX_SERVINGS, formatServings } from '@/constants/servings'
+import { cookingRouteAtServings, recipeRouteAtServings, servingsFromQuery } from '@/router/recipeRoutes'
 import { useUiStore } from '@/stores/ui'
+import BatchSizeToggle from '@/components/BatchSizeToggle.vue'
 import EmptyState from '@/components/EmptyState.vue'
 import ErrorState from '@/components/ErrorState.vue'
 
-const props = defineProps({ id: String })
+const props = defineProps({ id: { type: String, required: true } })
 const route  = useRoute()
 const router = useRouter()
 const store  = useRecipeStore()
 const ui     = useUiStore()
 
-const portionSize            = ref('REGULAR')
 const highlightedIngredientId = ref(null)
-const markingCooked          = ref(false)
+const markingCooked           = ref(false)
 
 const recipe = computed(() => store.currentRecipe)
 
-const portionMultiplier = computed(() =>
-  ({ HALF: 0.5, REGULAR: 1, DOUBLE: 2 })[portionSize.value] ?? 1
-)
+// Carried in the query so a Planned Meal opens at its Batch Size and a reload or a return from cooking keeps the chosen servings.
+const servings = computed(() => servingsFromQuery(route.query, recipe.value.servings))
 
-const scaledServings = computed(() =>
-  Math.round(recipe.value?.servings * portionMultiplier.value) || 0
-)
+function chooseServings(chosen) {
+  router.replace(recipeRouteAtServings(recipe.value.id, chosen))
+}
+
+const batchMultiplier = computed(() => servings.value / recipe.value.servings)
+
+/** The Batch Size shortcut whose multiplier the chosen servings match exactly, or null when none does. */
+const matchingBatchSize = computed({
+  get: () => BATCH_SIZES.find(batchSize => batchSize.multiplier === batchMultiplier.value)?.value ?? null,
+  set: batchSize => {
+    // Tapping the highlighted shortcut again clears the toggle, which leaves the chosen servings as they are.
+    if (batchSize) chooseServings(recipe.value.servings * batchSizeMultiplier(batchSize))
+  },
+})
+
+function stepServingsDown() {
+  chooseServings(Math.ceil(servings.value) - 1)
+}
+
+function stepServingsUp() {
+  chooseServings(Math.floor(servings.value) + 1)
+}
 
 function reload() {
   store.fetchRecipe(props.id ?? route.params.id)
@@ -223,24 +268,16 @@ function reload() {
 
 onMounted(reload)
 
-/**
- * Scaling has to short-circuit on a null amount, not delegate it: `null * 2` is `0` in
- * JavaScript, which would turn an ingredient with no stated quantity into a rendered `0`
- * (Phase 9.1 §3.4). Half of nothing is still nothing.
- */
+/** Scaling short-circuits on a null amount, because `null * 2` is `0` in JavaScript, and half of nothing is still nothing. */
 function formatAmount(baseAmount, unit) {
   if (baseAmount == null) return null
-  return formatMeasurement(baseAmount * portionMultiplier.value, unit)
+  return formatMeasurement(baseAmount * batchMultiplier.value, unit)
 }
 
-/**
- * The measurement as the source recipe stated it, shown alongside the canonical amount
- * so the recipe reads as written while the shopping list still sums grams. Null when the
- * row was hand-entered or nothing was converted.
- */
+/** The measurement as the source recipe stated it, shown alongside the canonical amount, or null when the row was hand-entered or nothing was converted. */
 function formatSource(ing) {
   return formatSourceMeasurement(
-    ing.sourceAmount, ing.sourceUnit, ing.unit, portionMultiplier.value)
+    ing.sourceAmount, ing.sourceUnit, ing.unit, batchMultiplier.value)
 }
 
 function stepIngredients(step) {

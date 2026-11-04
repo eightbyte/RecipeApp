@@ -4,7 +4,8 @@ import * as components from 'vuetify/components'
 import * as directives from 'vuetify/directives'
 import { createPinia, setActivePinia } from 'pinia'
 import HomeView from './HomeView.vue'
-import { makeMealPlanDetail, makeMealPlanRecipe } from '@/test/factories'
+import PlannedMealCard from '@/components/PlannedMealCard.vue'
+import { makeMealPlanDetail, makePlannedMeal } from '@/test/factories'
 
 vi.mock('@/services/api', () => ({
   default: { get: vi.fn(), post: vi.fn() },
@@ -51,9 +52,9 @@ describe('HomeView', () => {
   it('renders recipe cards from activePlan', async () => {
     const { wrapper, store } = await mountView()
     store.activePlan = makeMealPlanDetail({
-      recipes: [
-        makeMealPlanRecipe({ id: 'mpr-1', recipeName: 'Soup' }),
-        makeMealPlanRecipe({ id: 'mpr-2', recipeName: 'Pasta' }),
+      plannedMeals: [
+        makePlannedMeal({ id: 'planned-meal-1', recipeName: 'Soup' }),
+        makePlannedMeal({ id: 'planned-meal-2', recipeName: 'Pasta' }),
       ],
     })
     await wrapper.vm.$nextTick()
@@ -65,8 +66,8 @@ describe('HomeView', () => {
     const { wrapper, store } = await mountView()
     const recentDate = new Date(Date.now() - 2 * 86400_000).toISOString()
     store.activePlan = makeMealPlanDetail({
-      recipes: [
-        makeMealPlanRecipe({ id: 'mpr-1', recipeName: 'Soup', recipeImageUrl: '/uploads/soup.jpg', recipeLastCookedAt: recentDate }),
+      plannedMeals: [
+        makePlannedMeal({ id: 'planned-meal-1', recipeName: 'Soup', recipeImageUrl: '/uploads/soup.jpg', recipeLastCookedAt: recentDate }),
       ],
     })
     await wrapper.vm.$nextTick()
@@ -79,8 +80,8 @@ describe('HomeView', () => {
     const { wrapper, store } = await mountView()
     const oldDate = new Date(Date.now() - 10 * 86400_000).toISOString()
     store.activePlan = makeMealPlanDetail({
-      recipes: [
-        makeMealPlanRecipe({ id: 'mpr-1', recipeName: 'Soup', recipeImageUrl: '/uploads/soup.jpg', recipeLastCookedAt: oldDate }),
+      plannedMeals: [
+        makePlannedMeal({ id: 'planned-meal-1', recipeName: 'Soup', recipeImageUrl: '/uploads/soup.jpg', recipeLastCookedAt: oldDate }),
       ],
     })
     await wrapper.vm.$nextTick()
@@ -97,25 +98,33 @@ describe('HomeView', () => {
     expect(wrapper.find('.v-skeleton-loader').exists()).toBe(true)
   })
 
-  it('notifies after marking a meal recipe as cooked', async () => {
+  it('renders each Planned Meal as a shared card of the active plan', async () => {
     const { wrapper, store } = await mountView()
-    store.activePlan = makeMealPlanDetail({
-      recipes: [makeMealPlanRecipe({ recipeId: 'r5', recipeName: 'Stew' })],
-    })
+    const plannedMeals = [makePlannedMeal({ id: 'planned-meal-1' }), makePlannedMeal({ id: 'planned-meal-2' })]
+    store.activePlan = makeMealPlanDetail({ id: 'plan-7', plannedMeals })
     await wrapper.vm.$nextTick()
 
-    const { useRecipeStore } = await import('@/stores/recipes')
-    const { useUiStore } = await import('@/stores/ui')
-    const recipesStore = useRecipeStore()
-    const ui = useUiStore()
-    vi.spyOn(recipesStore, 'markCooked').mockResolvedValue({})
+    const cards = wrapper.findAllComponents(PlannedMealCard)
+    expect(cards.map(card => card.props())).toEqual(plannedMeals.map(plannedMeal => ({ plannedMeal, planId: 'plan-7' })))
+  })
 
-    const cookBtn = wrapper.findAll('button')
-      .find(b => (b.attributes('aria-label') || '').includes('Mark Stew as cooked'))
-    await cookBtn.trigger('click')
-    await flushPromises()
+  it('offers to start a new meal plan from the active plan', async () => {
+    const { wrapper, store } = await mountView()
+    store.activePlan = makeMealPlanDetail()
+    await wrapper.vm.$nextTick()
 
-    expect(recipesStore.markCooked).toHaveBeenCalledWith('r5')
-    expect(ui.snackbar.show).toBe(true)
+    const startButton = wrapper.findAllComponents({ name: 'VBtn' }).find(btn => btn.text() === 'Start new meal plan')
+    expect(startButton).toBeTruthy()
+    expect(startButton.props('to')).toEqual({ name: 'meal-plan-create' })
+  })
+
+  it('offers "New meal plan", not "Start new meal plan", when there is no active plan', async () => {
+    const { wrapper, store } = await mountView()
+    store.activePlan = null
+    await wrapper.vm.$nextTick()
+
+    const labels = wrapper.findAllComponents({ name: 'VBtn' }).map(btn => btn.text())
+    expect(labels).not.toContain('Start new meal plan')
+    expect(labels).toContain('New meal plan')
   })
 })

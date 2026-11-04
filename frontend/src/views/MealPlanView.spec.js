@@ -4,7 +4,8 @@ import * as components from 'vuetify/components'
 import * as directives from 'vuetify/directives'
 import { createPinia, setActivePinia } from 'pinia'
 import MealPlanView from './MealPlanView.vue'
-import { makeMealPlanDetail, makeMealPlanRecipe } from '@/test/factories'
+import { makeMealPlanDetail, makePlannedMeal } from '@/test/factories'
+import PlannedMealCard from '@/components/PlannedMealCard.vue'
 
 const pushMock = vi.fn()
 
@@ -19,6 +20,13 @@ vi.mock('vue-router', async (importActual) => {
 })
 
 const vuetify = createVuetify({ components, directives })
+
+// Renders an open dialog inline, avoiding teleport DOM isolation.
+const stubDialog = {
+  props: ['modelValue'],
+  template: '<div v-if="modelValue"><slot /></div>',
+  emits: ['update:modelValue'],
+}
 
 let pinia
 
@@ -41,6 +49,7 @@ async function mountView() {
         'router-link': { template: '<a><slot/></a>' },
         teleport: true,
         RecipeBrowser: true,
+        VDialog: stubDialog,
       },
     },
   })
@@ -67,14 +76,14 @@ describe('MealPlanView', () => {
 
   it('gives the overflow trigger an accessible name', async () => {
     const { wrapper, mealPlanStore } = await mountView()
-    mealPlanStore.activePlan = makeMealPlanDetail({ recipes: [makeMealPlanRecipe()] })
+    mealPlanStore.activePlan = makeMealPlanDetail({ plannedMeals: [makePlannedMeal()] })
     await wrapper.vm.$nextTick()
     expect(wrapper.html()).toContain('aria-label="Meal options"')
   })
 
   it('exposes a Plan options menu when a plan is active', async () => {
     const { wrapper, mealPlanStore } = await mountView()
-    mealPlanStore.activePlan = makeMealPlanDetail({ recipes: [makeMealPlanRecipe()] })
+    mealPlanStore.activePlan = makeMealPlanDetail({ plannedMeals: [makePlannedMeal()] })
     await wrapper.vm.$nextTick()
     expect(wrapper.html()).toContain('aria-label="Plan options"')
   })
@@ -85,30 +94,13 @@ describe('MealPlanView', () => {
     expect(pushMock).toHaveBeenCalledWith({ name: 'meal-plan-create' })
   })
 
-  it('Start cooking navigates to the cooking route carrying the meal portion', async () => {
-    const { wrapper } = await mountView()
-    wrapper.vm.startCooking({ recipeId: 'r9', portionSize: 'DOUBLE' })
-    expect(pushMock).toHaveBeenCalledWith({
-      name: 'recipe-cooking',
-      params: { id: 'r9' },
-      query: { portion: 'DOUBLE' },
-    })
-  })
-
-  it('Mark as cooked marks the recipe, refreshes the plan and notifies', async () => {
+  it('renders each Planned Meal as a shared card of the active plan', async () => {
     const { wrapper, mealPlanStore } = await mountView()
-    const { useRecipeStore } = await import('@/stores/recipes')
-    const { useUiStore } = await import('@/stores/ui')
-    const recipesStore = useRecipeStore()
-    const ui = useUiStore()
-    vi.spyOn(recipesStore, 'markCooked').mockResolvedValue({})
-    const refreshSpy = vi.spyOn(mealPlanStore, 'fetchActivePlan').mockResolvedValue(undefined)
+    const plannedMeals = [makePlannedMeal({ id: 'planned-meal-1' }), makePlannedMeal({ id: 'planned-meal-2' })]
+    mealPlanStore.activePlan = makeMealPlanDetail({ id: 'plan-7', plannedMeals })
+    await wrapper.vm.$nextTick()
 
-    await wrapper.vm.markMealCooked({ recipeId: 'r9', recipeName: 'Soup' })
-
-    expect(recipesStore.markCooked).toHaveBeenCalledWith('r9')
-    expect(refreshSpy).toHaveBeenCalled()
-    expect(ui.snackbar.show).toBe(true)
-    expect(ui.snackbar.color).toBe('success')
+    const cards = wrapper.findAllComponents(PlannedMealCard)
+    expect(cards.map(card => card.props())).toEqual(plannedMeals.map(plannedMeal => ({ plannedMeal, planId: 'plan-7' })))
   })
 })

@@ -62,6 +62,10 @@
               Step {{ displayIndex }} / {{ totalSteps }}
             </div>
           </div>
+          <v-chip size="small" color="primary" class="servings-chip">
+            <v-icon start>mdi-account-group</v-icon>
+            {{ formatServings(servings) }}
+          </v-chip>
         </div>
         <v-progress-linear
           :model-value="completionPercent"
@@ -109,7 +113,7 @@
                   :color="isCurrent(index) ? 'primary' : undefined"
                   :variant="isCurrent(index) ? 'flat' : 'tonal'"
                 >
-                  <!-- Absent for an ingredient whose source stated no quantity (Phase 9.1 §3.4) -->
+                  <!-- Absent for an ingredient whose source stated no quantity -->
                   <span
                     v-if="formatAmount(ing.amount, ing.unit)"
                     class="font-weight-medium mr-1"
@@ -161,12 +165,14 @@ import { ref, computed, onMounted, nextTick } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useRecipeStore } from '@/stores/recipes'
 import { formatMeasurement, formatSourceMeasurement } from '@/constants/units'
+import { formatServings } from '@/constants/servings'
+import { recipeRouteAtServings, servingsFromQuery } from '@/router/recipeRoutes'
 import { useUiStore } from '@/stores/ui'
 import { useWakeLock } from '@/composables/useWakeLock'
 import EmptyState from '@/components/EmptyState.vue'
 import ErrorState from '@/components/ErrorState.vue'
 
-const props  = defineProps({ id: String })
+const props  = defineProps({ id: { type: String, required: true } })
 const route  = useRoute()
 const router = useRouter()
 const store  = useRecipeStore()
@@ -177,20 +183,15 @@ useWakeLock()
 
 const recipeId = props.id ?? route.params.id
 
-const PORTION_MULTIPLIERS = { HALF: 0.5, REGULAR: 1, DOUBLE: 2 }
-
-// Portion carried from a meal plan via ?portion=…; defaults to REGULAR.
-const portionSize = computed(() => {
-  const q = route.query.portion
-  return q in PORTION_MULTIPLIERS ? q : 'REGULAR'
-})
-const portionMultiplier = computed(() => PORTION_MULTIPLIERS[portionSize.value] ?? 1)
-
 const recipe   = computed(() => store.currentRecipe)
 const headerEl = ref(null)
 const finishing = ref(false)
 
-// Ephemeral, component-local "done" state — not persisted (spec §3.4).
+// Carried in the query from a Planned Meal or the recipe detail view, so a reload keeps it.
+const servings = computed(() => servingsFromQuery(route.query, recipe.value.servings))
+const batchMultiplier = computed(() => servings.value / recipe.value.servings)
+
+// Ephemeral, component-local "done" state that is not persisted.
 const doneStepIds = ref(new Set())
 
 const totalSteps = computed(() => recipe.value?.steps?.length ?? 0)
@@ -221,19 +222,16 @@ function stepIngredients(step) {
     .filter(Boolean)
 }
 
-/**
- * Short-circuits on a null amount rather than delegating: `null * 2` is `0` in JavaScript,
- * which would turn an ingredient with no stated quantity into a rendered `0` (Phase 9.1 §3.4).
- */
+/** Short-circuits on a null amount, because `null * 2` is `0` in JavaScript and would render an ingredient with no stated quantity as `0`. */
 function formatAmount(baseAmount, unit) {
   if (baseAmount == null) return null
-  return formatMeasurement(baseAmount * portionMultiplier.value, unit)
+  return formatMeasurement(baseAmount * batchMultiplier.value, unit)
 }
 
 /** The measurement as the source recipe stated it; null when there is nothing to add. */
 function formatSource(ing) {
   return formatSourceMeasurement(
-    ing.sourceAmount, ing.sourceUnit, ing.unit, portionMultiplier.value)
+    ing.sourceAmount, ing.sourceUnit, ing.unit, batchMultiplier.value)
 }
 
 function toggleStep(step) {
@@ -279,7 +277,7 @@ async function finish() {
   try {
     await store.markCooked(recipeId)
     ui.notify({ message: `Marked “${recipe.value?.name}” as cooked`, color: 'success' })
-    router.replace({ name: 'recipe-detail', params: { id: recipeId } })
+    router.replace(recipeRouteAtServings(recipeId, servings.value))
   } catch (e) {
     ui.notify({ message: e?.message ?? 'Could not mark as cooked.', color: 'error' })
   } finally {
@@ -291,8 +289,7 @@ onMounted(load)
 </script>
 
 <style scoped>
-/* Full-viewport overlay — owns the whole screen, independent of v-main padding.
-   100dvh keeps the sticky footer clear of mobile browser chrome (spec §8). */
+/* Full-viewport overlay that owns the whole screen, with 100dvh keeping the sticky footer clear of mobile browser chrome. */
 .cooking-mode {
   position: fixed;
   inset: 0;

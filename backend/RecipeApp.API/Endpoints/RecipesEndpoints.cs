@@ -1,8 +1,10 @@
 using Microsoft.EntityFrameworkCore;
 using RecipeApp.API.Data;
 using RecipeApp.API.DTOs.Recipes;
+using RecipeApp.API.Enums;
 using RecipeApp.API.Filters;
 using RecipeApp.API.Services;
+using RecipeApp.API.Validators;
 
 namespace RecipeApp.API.Endpoints;
 
@@ -13,16 +15,17 @@ public static class RecipesEndpoints
         var group = routes.MapGroup("/recipes").WithTags("Recipes");
 
         // GET /recipes
-        group.MapGet("/", async (
-            string? search,
-            string? ingredient,
-            int? excludeRecentDays,
-            DateTime? lastCookedBefore,
-            RecipeService svc) =>
-            Results.Ok(await svc.GetListAsync(search, ingredient, excludeRecentDays, lastCookedBefore))
+        group.MapGet("/", async ([AsParameters] RecipeListQuery listQuery, RecipeService svc) =>
+            Results.Ok(await svc.GetListAsync(listQuery))
         )
+        .WithValidation<RecipeListQuery>()
         .WithSummary("List recipes")
-        .WithDescription("Supports optional filters: search (name), ingredient, excludeRecentDays, lastCookedBefore.");
+        .WithDescription(
+            "Supports optional filters: search (name), ingredient, excludeRecentDays, lastCookedBefore. " +
+            $"Orders by sort ({string.Join(", ", RecipeSort.All)}; default {RecipeSort.Default}) " +
+            $"and direction ({string.Join(", ", SortDirection.All)}; default {SortDirection.Default}). " +
+            $"Returns one page: page counts from 1 (default 1), and pageSize defaults to {RecipeListPaging.DefaultPageSize} " +
+            $"and is at most {RecipeListPaging.MaxPageSize}. totalCount counts every recipe that matches the filters.");
 
         // GET /recipes/{id}
         group.MapGet("/{id:guid}", async (Guid id, RecipeService svc) =>

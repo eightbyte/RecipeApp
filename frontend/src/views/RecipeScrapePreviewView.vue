@@ -218,8 +218,7 @@ onMounted(() => {
     name:          ing.name,
     displayName:   ing.displayName,
     amount:        ing.amount,
-    // A scraped unit outside the storable set (e.g. "clove") shows unselected and has to be
-    // picked before the recipe can be saved.
+    // A scraped unit outside the storable set shows unselected and has to be picked before the recipe can be saved.
     unit:          units.includes(ing.unit) ? ing.unit : null,
     sourceAmount:  ing.sourceAmount ?? null,
     sourceUnit:    ing.sourceUnit ?? null,
@@ -270,7 +269,7 @@ async function saveRecipe() {
       newIngredientName:      ing.isNew ? ing.name : null,
       newIngredientDisplayName: ing.isNew ? ing.displayName : null,
       category:               ing.isNew ? ing.category : null,
-      // An empty amount round-trips as null, never as 0 (Phase 9.1 §3.4).
+      // An empty amount round-trips as null, never as 0.
       ...toPayloadMeasurement(ing.amount, ing.unit),
       sourceAmount:           ing.sourceAmount ?? null,
       sourceUnit:             ing.sourceUnit ?? null,

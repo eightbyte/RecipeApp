@@ -37,16 +37,16 @@
               <div class="text-body-1 font-weight-medium">{{ plan.name }}</div>
               <div class="text-caption text-medium-emphasis mt-1">
                 <span v-if="plan.firstScheduledDate">
-                  {{ formatDate(plan.firstScheduledDate) }}
+                  {{ formatScheduledDate(plan.firstScheduledDate) }}
                   <span v-if="plan.lastScheduledDate && plan.lastScheduledDate !== plan.firstScheduledDate">
-                    – {{ formatDate(plan.lastScheduledDate) }}
+                    – {{ formatScheduledDate(plan.lastScheduledDate) }}
                   </span>
                 </span>
                 <span v-else>No dates scheduled</span>
               </div>
             </div>
             <div class="text-right">
-              <v-chip size="x-small" class="mb-1">{{ plan.recipeCount }} recipes</v-chip>
+              <v-chip size="x-small" class="mb-1">{{ plan.plannedMealCount }} recipes</v-chip>
               <div class="text-caption text-medium-emphasis">
                 Closed {{ formatDate(plan.closedAt) }}
               </div>
@@ -62,6 +62,7 @@
 <script setup>
 import { computed, onMounted } from 'vue'
 import { useMealPlanStore } from '@/stores/mealPlans'
+import { formatDateOnly } from '@/utils/dateOnly'
 import EmptyState from '@/components/EmptyState.vue'
 import ErrorState from '@/components/ErrorState.vue'
 
@@ -72,6 +73,8 @@ const pastPlans = computed(() => mealPlanStore.plans.filter(p => !p.isActive))
 
 onMounted(() => mealPlanStore.fetchPlans())
 
-const formatDate = (d) =>
-  d ? new Date(d).toLocaleDateString('en-AU', { year: 'numeric', month: 'short', day: 'numeric' }) : ''
+const DATE_FORMAT = { year: 'numeric', month: 'short', day: 'numeric' }
+
+const formatDate          = (d) => d ? new Date(d).toLocaleDateString('en-AU', DATE_FORMAT) : ''
+const formatScheduledDate = (d) => formatDateOnly(d, DATE_FORMAT)
 </script>

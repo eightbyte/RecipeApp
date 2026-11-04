@@ -7,25 +7,8 @@ using RecipeApp.API.Services.Seeding;
 namespace RecipeApp.API.Data;
 
 /// <summary>
-/// Startup seeding for every environment except <see cref="TestingEnvironmentName"/>
-/// (Phase 10 §4.2). Migrates, then seeds a fresh database once with the shipped ingredient
-/// catalogue and the sample recipe pack.
-///
-/// <para><b>Each one-time step runs once per database (D2).</b> The <see cref="SeedLedgerEntry"/>
-/// row, not the seeded data, records that it ran, so deleting every sample recipe does not bring
-/// them back. A step and its ledger row commit in one transaction: a crash halfway leaves no row,
-/// and the step re-runs cleanly on the next start.</para>
-///
-/// <para><b>An upgraded database is left alone (§4.3).</b> A step whose ledger row is missing but
-/// whose target already holds data records <see cref="SeedLedgerOutcome.SkippedExistingData"/> and
-/// inserts nothing, so a database holding the MyPlate library does not gain 12 more recipes.</para>
-///
-/// <para><b>A failed step never stops the app.</b> It logs every error, writes no ledger row, and
-/// is retried on the next start, after the artefact is fixed.</para>
-///
-/// <para>Order is load-bearing: densities attach to catalogue rows, and the sample recipes resolve
-/// their ingredients through the catalogue. Densities fill nulls only, so they run on every start
-/// with no ledger row.</para>
+/// Startup seeding for every environment except <see cref="TestingEnvironmentName"/>: migrates, then seeds a fresh database once
+/// with the shipped ingredient catalogue and the sample recipe pack, never stopping the app on failure.
 /// </summary>
 public class FirstRunSeeder(
     AppDbContext db,
@@ -34,10 +17,7 @@ public class FirstRunSeeder(
     RecipePackImporter packImporter,
     ILogger<FirstRunSeeder> logger)
 {
-    /// <summary>
-    /// The environment integration tests run under. Startup seeding stays out of it so each test
-    /// controls its own data.
-    /// </summary>
+    /// <summary>The environment integration tests run under, in which startup seeding stays out so each test controls its own data.</summary>
     public const string TestingEnvironmentName = "Testing";
 
     public static bool RunsIn(IHostEnvironment environment) =>
@@ -118,8 +98,7 @@ public class FirstRunSeeder(
         }
         catch (Exception ex) when (ex is not OperationCanceledException)
         {
-            // Includes a second host recording the same step first: the ledger's primary key
-            // rejects this insert and the step's writes roll back with it.
+            // A second host recording the same step first is also caught here, because the ledger's primary key rejects the insert.
             logger.LogError(ex,
                 "First-run step '{Step}' failed and was rolled back. It will be retried on the next start.", key);
         }
@@ -189,11 +168,7 @@ public class FirstRunSeeder(
         return null;
     }
 
-    /// <summary>
-    /// Imports the built-in pack inside the step's transaction. Never with <c>--create-missing</c>
-    /// or <c>--force</c> (§4.4.3): every sample ingredient must resolve against the shipped
-    /// catalogue, and the step only runs on an empty <c>Recipes</c> table.
-    /// </summary>
+    /// <summary>Imports the built-in pack inside the step's transaction, never with <c>--create-missing</c> or <c>--force</c>, because every sample ingredient must resolve against the shipped catalogue.</summary>
     private async Task<bool> ApplySamplePackAsync(RecipePackFile pack, CancellationToken ct)
     {
         var result = await packImporter.ImportAsync(

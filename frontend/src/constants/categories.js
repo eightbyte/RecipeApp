@@ -1,11 +1,4 @@
-/**
- * The ingredient categories, mirroring `IngredientCategory.All` on the backend
- * (backend/RecipeApp.API/Enums/IngredientCategory.cs).
- *
- * **The order is the shopping list's aisle order** — the backend sorts a generated list by it —
- * so it must match the backend's exactly. `GET /api/v1/ingredients/categories` returns the same
- * values in the same order; this file adds what a picker or a list heading shows for each.
- */
+/** The ingredient categories, mirroring `IngredientCategory.All` on the backend in the same order, which is the shopping list's aisle order. */
 export const INGREDIENT_CATEGORIES = [
   { value: 'PRODUCE',        title: 'Produce',              icon: '🥦' },
   { value: 'MEAT_SEAFOOD',   title: 'Meat & Seafood',       icon: '🥩' },
@@ -35,12 +28,12 @@ export const INGREDIENT_CATEGORY_VALUES = INGREDIENT_CATEGORIES.map(category => 
 
 const categoriesByValue = new Map(INGREDIENT_CATEGORIES.map(category => [category.value, category]))
 
-/**
- * The heading a shopping list shows for a category, e.g. `🧂 Baking & Spices`.
- *
- * An unrecognised value renders as itself rather than disappearing — a list stored before a
- * category was renamed must still show its items under some heading.
- */
+/** The label for a category, rendering an unrecognised value as itself rather than dropping it. */
+export function categoryTitle(value) {
+  return categoriesByValue.get(value)?.title ?? value
+}
+
+/** The heading a shopping list shows for a category, rendering an unrecognised value as itself rather than dropping it. */
 export function formatCategory(value) {
   const category = categoriesByValue.get(value)
   return category ? `${category.icon} ${category.title}` : value

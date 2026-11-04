@@ -5,8 +5,7 @@ import api, { assetUrl } from './api'
 describe('assetUrl', () => {
   it('prepends API host to a relative path', () => {
     const result = assetUrl('/uploads/images/foo.jpg')
-    // VITE_API_BASE_URL is http://localhost:5000/api/v1 in the test env.
-    // assetUrl strips /api/v1, so host is http://localhost:5000
+    // assetUrl strips /api/v1 from the test env's VITE_API_BASE_URL, leaving the host.
     expect(result).toBe('http://localhost:5000/uploads/images/foo.jpg')
   })
 
@@ -30,12 +29,10 @@ describe('assetUrl', () => {
 })
 
 // ── Response error interceptor ────────────────────────────────────────────────
-// Access the registered rejection handler directly to test the transformation
-// without needing real network calls.
+// Call the registered rejection handler directly to test the transformation without network calls.
 
 function getResponseRejectionHandler() {
-  // axios stores handlers in interceptors.response.handlers[]
-  // Each handler has { fulfilled, rejected, runWhen }
+  // axios stores handlers as { fulfilled, rejected, runWhen } in interceptors.response.handlers.
   const handlers = api.interceptors.response.handlers
   const handler = handlers.find(h => h !== null && h.rejected)
   return handler?.rejected
@@ -91,6 +88,18 @@ describe('error interceptor', () => {
 
     await expect(rejected(networkError)).rejects.toMatchObject({
       message: 'Network Error',
+      timedOut: false,
     })
+  })
+
+  it('flags a request that ran past its timeout', async () => {
+    const rejected = getResponseRejectionHandler()
+    const timeoutError = { code: 'ETIMEDOUT', message: 'timeout of 10000ms exceeded' }
+
+    await expect(rejected(timeoutError)).rejects.toMatchObject({ timedOut: true })
+  })
+
+  it('reports a timeout as ETIMEDOUT rather than as an aborted request', () => {
+    expect(api.defaults.transitional.clarifyTimeoutError).toBe(true)
   })
 })

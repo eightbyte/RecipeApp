@@ -1,7 +1,7 @@
 namespace RecipeApp.API.DTOs.MealPlans;
 
-public record AddMealPlanRecipeRequest(
+public record AddPlannedMealRequest(
     Guid RecipeId,
     DateOnly? ScheduledDate,
-    string? PortionSize
+    string? BatchSize
 );

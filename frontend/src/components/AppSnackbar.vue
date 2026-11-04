@@ -1,9 +1,5 @@
 <template>
-  <!--
-    Single global snackbar, mounted once in App.vue so every view — including
-    full-screen Cooking Mode — can surface feedback via useUiStore().notify().
-    role="status" + aria-live="polite" announce the message to screen readers.
-  -->
+  <!-- Single global snackbar mounted once in App.vue so every view, including full-screen Cooking Mode, can surface feedback via useUiStore().notify(). -->
   <v-snackbar
     :model-value="ui.snackbar.show"
     :color="ui.snackbar.color"

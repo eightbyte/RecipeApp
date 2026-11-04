@@ -2,15 +2,9 @@ version: "3.9"
 
 # ── RecipeApp — Development Docker Compose ────────────────────────────────────
 #
-# Services:
-#   postgres  — PostgreSQL 16 database
-#   api       — .NET 10 Web API  (http://localhost:5000)
-#   frontend  — Vue 3 / Vite dev server  (http://localhost:3000)
-#
-# Quick start:
-#   docker compose up -d postgres
-#   cd backend/RecipeApp.API && dotnet run    # or: docker compose up api
-#   cd frontend && npm run dev                # or: docker compose up frontend
+# postgres (5432), api (http://localhost:5000) and the nginx-served frontend (http://localhost).
+# Day to day, run only `docker compose up -d postgres` and start the API and Vite natively.
+# Production layers docker-compose.prod.yml on top of this file (docs/deployment.md).
 
 services:
 

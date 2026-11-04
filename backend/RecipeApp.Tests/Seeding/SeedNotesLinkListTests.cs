@@ -3,11 +3,7 @@ using RecipeApp.API.Services.Seeding;
 
 namespace RecipeApp.Tests.Seeding;
 
-/// <summary>
-/// Stage 5's removal of MyPlate's related-foods link list from page notes (Phase 9 §25.8). The
-/// shapes are the corpus's: the list alone, the list trailing a sentence, and — on 23 recipes —
-/// real content on a later line that must survive.
-/// </summary>
+/// <summary>Stage 5's removal of MyPlate's related-foods link list from page notes, covering the list alone, trailing a sentence, and followed by real content that must survive.</summary>
 public class SeedNotesLinkListTests
 {
     private static readonly string Marker = new RecipeSeedingOptions().NotesLinkListMarker;

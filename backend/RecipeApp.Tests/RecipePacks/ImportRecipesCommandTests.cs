@@ -4,10 +4,7 @@ using RecipeApp.API.Services.RecipePacks;
 
 namespace RecipeApp.Tests.RecipePacks;
 
-/// <summary>
-/// The <c>import-recipes</c> CLI's own argument vector (Phase 10 §4.4.3). Pure functions.
-/// The command against a database is in <see cref="ImportRecipesCommandRunTests"/>.
-/// </summary>
+/// <summary>The <c>import-recipes</c> CLI's own argument vector, as pure functions.</summary>
 public class ImportRecipesCommandTests
 {
     private static ImportRecipesCommand.ImportRecipesArguments? Parse(params string[] args) =>

@@ -8,7 +8,6 @@ function normalizeImageUrl(recipe) {
 }
 
 export const useRecipeStore = defineStore('recipes', () => {
-  const recipes       = ref([])   // RecipeListItemResponse[]
   const currentRecipe = ref(null) // RecipeDetailResponse | null
   const loading       = ref(false)
   const error         = ref(null)
@@ -21,17 +20,10 @@ export const useRecipeStore = defineStore('recipes', () => {
 
   // ── Queries ────────────────────────────────────────────────────────────────
 
-  async function fetchRecipes(params = {}) {
-    loading.value = true
-    error.value   = null
-    try {
-      const { data } = await api.get('/recipes', { params })
-      recipes.value = data.map(normalizeImageUrl)
-    } catch (e) {
-      error.value = e.message
-    } finally {
-      loading.value = false
-    }
+  /** One page of the recipe list as `{ items, totalCount }`, leaving the store untouched because each list keeps its own pages. */
+  async function fetchRecipePage(params, { signal } = {}) {
+    const { data } = await api.get('/recipes', { params, signal })
+    return { items: data.items.map(normalizeImageUrl), totalCount: data.totalCount }
   }
 
   async function fetchRecipe(id) {
@@ -55,23 +47,18 @@ export const useRecipeStore = defineStore('recipes', () => {
 
   async function createRecipe(payload) {
     const { data } = await api.post('/recipes', payload)
-    const normalized = normalizeImageUrl(data)
-    recipes.value.unshift(normalized)
-    return normalized
+    return normalizeImageUrl(data)
   }
 
   async function updateRecipe(id, payload) {
     const { data } = await api.put(`/recipes/${id}`, payload)
     const normalized = normalizeImageUrl(data)
-    const idx = recipes.value.findIndex(r => r.id === id)
-    if (idx !== -1) recipes.value[idx] = normalized
     if (currentRecipe.value?.id === id) currentRecipe.value = normalized
     return normalized
   }
 
   async function deleteRecipe(id) {
     await api.delete(`/recipes/${id}`)
-    recipes.value = recipes.value.filter(r => r.id !== id)
     if (currentRecipe.value?.id === id) currentRecipe.value = null
   }
 
@@ -81,10 +68,7 @@ export const useRecipeStore = defineStore('recipes', () => {
     const { data } = await api.post(`/recipes/${id}/image`, form, {
       headers: { 'Content-Type': 'multipart/form-data' },
     })
-    // Update imageUrl on the cached list item and detail
     const absUrl = assetUrl(data.imageUrl)
-    const listItem = recipes.value.find(r => r.id === id)
-    if (listItem) listItem.imageUrl = absUrl
     if (currentRecipe.value?.id === id) currentRecipe.value.imageUrl = absUrl
     return absUrl
   }
@@ -92,8 +76,6 @@ export const useRecipeStore = defineStore('recipes', () => {
   async function markCooked(id) {
     const { data } = await api.post(`/recipes/${id}/cook`)
     const normalized = normalizeImageUrl(data)
-    const idx = recipes.value.findIndex(r => r.id === id)
-    if (idx !== -1) recipes.value[idx].lastCookedAt = data.lastCookedAt
     if (currentRecipe.value?.id === id) currentRecipe.value = normalized
     return normalized
   }
@@ -117,9 +99,7 @@ export const useRecipeStore = defineStore('recipes', () => {
     confirmLoading.value = true
     try {
       const { data } = await api.post('/recipes/scrape/confirm', payload)
-      const normalized = normalizeImageUrl(data)
-      recipes.value.unshift(normalized)
-      return normalized.id
+      return data.id
     } finally {
       confirmLoading.value = false
     }
@@ -139,8 +119,8 @@ export const useRecipeStore = defineStore('recipes', () => {
   }
 
   return {
-    recipes, currentRecipe, loading, error,
-    fetchRecipes, fetchRecipe,
+    currentRecipe, loading, error,
+    fetchRecipePage, fetchRecipe,
     createRecipe, updateRecipe, deleteRecipe,
     uploadImage, markCooked, isRecentlyCooked,
     scrapePreview, scrapeError, scrapeLoading, confirmLoading,

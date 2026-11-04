@@ -10,23 +10,8 @@ using RecipeApp.API.Services.Llm;
 namespace RecipeApp.API.Services.Seeding;
 
 /// <summary>
-/// Stage 4 (Phase 9 §11), one recipe at a time: the grammar-constrained LLM pass that turns a
-/// parsed page's ingredient lines into measured ingredients and links each step to the ingredients
-/// it uses, then holds the result to the §11.3 validation gate.
-///
-/// <para><b>The schema is Phase 3's, verbatim.</b> <see cref="RecipeScrapeService.RecipeSchemaJson"/>
-/// already describes exactly this shape and is already enforced through
-/// <see cref="JsonSchemaGrammar"/>; a second, divergent schema would be a maintenance trap (§11).
-/// Only the prompt differs, because the input here is clean structured text rather than stripped
-/// page HTML.</para>
-///
-/// <para><b>What the model is allowed to change is deliberately narrow.</b> Stage 3 found that
-/// every page publishes an ordered step list (§22.1), so the steps' wording, the name, the servings
-/// and the description are taken from the parsed page and the model's versions are dropped on the
-/// floor. It supplies ingredient measurements and step→ingredient linkage, and nothing else.</para>
-///
-/// <para>No database and no network: the input is <c>parsed/</c> and the output is
-/// <c>normalised/</c>. Catalogue matching and persistence are Stage 5's.</para>
+/// Stage 4, one recipe at a time: the grammar-constrained LLM pass that measures each ingredient line and links steps
+/// to ingredients, then holds the result to the validation gate.
 /// </summary>
 public class SeedRecipeNormaliser(
     ILlmStructuredClient llm,
@@ -35,43 +20,16 @@ public class SeedRecipeNormaliser(
 {
     private readonly RecipeSeedingOptions _options = options.Value;
 
-    /// <summary>
-    /// Every unit the pipeline will accept, spelled out for the model: the storable set plus the
-    /// customary spellings Stage A converts. Derived from the two authoritative tables rather than
-    /// restated, so the vocabulary the prompt promises and the one the gate enforces cannot drift
-    /// apart (CLAUDE.md).
-    /// </summary>
+    /// <summary>Every unit the pipeline accepts, derived from the two authoritative tables so the prompt and the gate cannot drift apart.</summary>
     private static readonly string AllowedUnits = string.Join(", ",
         MeasurementUnit.AcceptedSpellings
             .Concat(MeasurementConverter.ConvertibleUnits)
             .Distinct(StringComparer.OrdinalIgnoreCase)
             .OrderBy(unit => unit, StringComparer.OrdinalIgnoreCase));
 
-    // Do not add a fraction conversion table here. It was tried, against a real failure — 37.3% of
-    // ingredient lines state a fraction and the surviving quantity errors were all fractions read as
-    // an adjacent value. Handing the model the ten conversions it needed made the failure class
-    // nearly three times worse, because it stopped reading the line and started choosing from the
-    // list: 1/8 came back as 1, 1/2 as 0.125, and '1 teaspoon salt', which contains no fraction at
-    // all, came back as 0.25. A list of plausible answers is a list of things to guess from.
-    // See the Stage 4 results section of the phase 9 spec.
+    // Do not add a fraction conversion table: handing the model the conversions made its quantity errors about three times worse.
 
-    /// <summary>
-    /// Words the corpus writes where a unit would go, none of which measures anything. Two kinds,
-    /// and Phase 9 already decided both go to <c>pcs</c> with the word kept in notes:
-    /// <list type="bullet">
-    /// <item><b>Sizes</b> — 356 <c>medium</c>, 122 <c>large</c>, 86 <c>small</c>, plus <c>whole</c>,
-    /// <c>ripe</c> and <c>mini</c>. §11.1's own table: <c>"1 medium onion"</c> is <c>1 pcs</c>.</item>
-    /// <item><b>Counted things</b> — 97 <c>clove</c>, 45 <c>slice</c>, 45 <c>package</c>,
-    /// 23 <c>head</c>, 23 <c>dash</c>, 12 <c>spray</c>, and the rest. A clove is not a unit; three
-    /// packages of relish is three things.</item>
-    /// </list>
-    ///
-    /// <para>Applied here rather than asked for, because asking did not work: with the rule stated
-    /// twice in the prompt and demonstrated in the worked example, a descriptor in the unit column
-    /// was still <b>12 of the 23 failures</b> in a 53-recipe sample. This is a fixed rename of a
-    /// closed set of words, not a guess — the amount is untouched, <c>SourceUnit</c> still records
-    /// what the model said, and a word that <i>is</i> a measurement never reaches this set.</para>
-    /// </summary>
+    /// <summary>Words the corpus writes where a unit would go that measure nothing (sizes and counted things), mapped to <c>pcs</c> with the word kept in notes.</summary>
     private static readonly HashSet<string> CountWords =
         new(StringComparer.OrdinalIgnoreCase)
         {
@@ -83,44 +41,12 @@ public class SeedRecipeNormaliser(
             "container", "containers", "bunch", "bunches", "sprig", "sprigs", "ear", "ears",
             "leaf", "leaves", "piece", "pieces", "fillet", "fillets", "breast", "breasts",
             "loaf", "loaves", "bag", "bags", "box", "boxes", "jar", "jars", "bottle", "bottles",
-            // Unsized measures. Not quantities of anything, but the line does count them, so the
-            // count is what survives — "1 dash salt" is one thing of salt, not 1/8 of a teaspoon
-            // this project would have invented.
+            // Unsized measures count their things, so "1 dash salt" is one thing of salt rather than an invented fraction of a teaspoon.
             "dash", "dashes", "pinch", "pinches", "spray", "sprays", "splash", "splashes",
             "drop", "drops", "handful", "handfuls", "sprinkle", "sprinkles",
         };
 
-    /// <summary>
-    /// The rules the extraction schema cannot express. Most exist because of what this corpus
-    /// measures rather than what recipes generally look like:
-    /// <list type="bullet">
-    /// <item>Container sizes — 329 lines read <c>1 can (14.5 ounces) …</c>, where the useful
-    /// quantity is the parenthesised net weight, not the can.</item>
-    /// <item>Counted items — 356 <c>medium</c>, 122 <c>large</c>, 97 garlic <c>clove(s)</c> and
-    /// 45 <c>slice(s)</c>. None is a unit of measurement; all of them are <c>pcs</c>.</item>
-    /// <item>Unquantified lines — 432 lines state no quantity at all, and the model must say so
-    /// rather than invent one (Phase 9.1). The gate rejects it either way, but a rejected recipe
-    /// is a lost recipe, so the prompt teaches the rule the gate enforces.</item>
-    /// <item>Quantities that sit late in the line — 109 lines put theirs in the trailing note
-    /// (<c>orange peel, dried (1 teaspoon, optional)</c>), so "starts with a number" is the wrong
-    /// test and the rule is stated as "contains a number".</item>
-    /// </list>
-    ///
-    /// <para><b>What is deliberately not here.</b> A rule for <c>divided</c> (76 lines across 65
-    /// recipes, where the model halves the amount because the line says the cook will) and a table
-    /// of fraction conversions. Both were written against measured failures and both were removed
-    /// after measuring: together they took quantity rejections from 9 in 44 recipes to 14 in 45. The
-    /// prompt is already long, and every rule added to it competes with the ones that work.</para>
-    ///
-    /// <para>The worked example is not decoration, and every line in it was chosen by a measured
-    /// failure rather than by taste. A rules-only version of this prompt lost the first seven
-    /// recipes outright, because a 7B model reliably wrote the size word into the unit —
-    /// <c>large pcs</c>, <c>medium, chopped</c>, <c>cloves, minced</c> — which no amount of
-    /// restating the rule in prose fixed. Then the example itself caused a failure: with a bare
-    /// <c>salt</c> as its null case, the model learned <i>salt</i> was the exemption rather than
-    /// <i>no number</i>, and started nulling <c>1 teaspoon salt</c>. That is why the null case here
-    /// is cheese and salt appears with a quantity.</para>
-    /// </summary>
+    /// <summary>The rules the extraction schema cannot express, kept short because every rule added competes with the ones that work.</summary>
     private static readonly string NormaliseSystemPrompt =
         "You are a recipe data extraction assistant. The user gives you one recipe's ingredient " +
         "lines and cooking steps, already separated. Each ingredient line carries a label in " +
@@ -182,20 +108,12 @@ public class SeedRecipeNormaliser(
     /// <summary>Exposed so a test can assert the vocabulary comes from the real unit tables.</summary>
     internal static string SystemPrompt => NormaliseSystemPrompt;
 
-    /// <summary>
-    /// Runs the LLM pass for one parsed recipe and returns output the §11.3 gate has admitted.
-    /// </summary>
-    /// <param name="parsed">Stage 3 output for this slug.</param>
-    /// <param name="parsedFingerprint">Hash of that output, recorded so a re-parse invalidates this one.</param>
-    /// <exception cref="SeedNormaliseException">
-    /// The recipe could not be normalised within <see cref="RecipeSeedingOptions.MaxLlmRetries"/>
-    /// retries. Never partially applied — a suspect recipe is excluded, not persisted (§11.3).
-    /// </exception>
+    /// <summary>Runs the LLM pass for one parsed recipe and returns output the validation gate has admitted.</summary>
+    /// <exception cref="SeedNormaliseException">The recipe could not be normalised within <see cref="RecipeSeedingOptions.MaxLlmRetries"/> retries.</exception>
     public async Task<NormalisedSeedRecipe> NormaliseAsync(
         ParsedSeedRecipe parsed, string parsedFingerprint, CancellationToken ct = default)
     {
-        // Servings comes from the page, not the model, so no retry could change it. Checked once,
-        // up front, rather than after burning inference on a recipe that cannot be stored.
+        // Servings comes from the page, so check it once up front rather than after spending inference on an unstorable recipe.
         if (parsed.Servings <= 0)
             throw new SeedNormaliseException(SeedNormaliseFailure.NonPositiveServings,
                 $"the parsed page yielded {parsed.Servings} servings");
@@ -221,8 +139,7 @@ public class SeedRecipeNormaliser(
             {
                 lastFailure = ex;
 
-                // The rejected answer, verbatim: §13 makes prompt iteration the intended loop, and
-                // iterating on a rejection reason without the output that caused it is guesswork.
+                // Log the rejected answer verbatim, because iterating on a rejection reason without its output is guesswork.
                 logger.LogDebug(
                     "{Slug}: attempt {Attempt} of {Cap} rejected — {Reason}. Answer: {Answer}",
                     parsed.Slug, attempt, attemptCap, ex.Message,
@@ -260,9 +177,7 @@ public class SeedRecipeNormaliser(
         }
         catch (Exception ex)
         {
-            // Includes an unloaded model and a decoding failure. Which of the two it is cannot be
-            // told apart reliably here, so both are reported per recipe and the runner's
-            // consecutive-failure guard catches the systemic case.
+            // Covers an unloaded model and a decoding failure alike; the runner's consecutive-failure guard catches the systemic case.
             throw new SeedNormaliseException(SeedNormaliseFailure.InvalidLlmOutput, ex.Message);
         }
 
@@ -283,9 +198,7 @@ public class SeedRecipeNormaliser(
             throw new SeedNormaliseException(SeedNormaliseFailure.InvalidLlmOutput, ex.Message);
         }
 
-        // The grammar makes these arrays mandatory, so their absence means the answer did not come
-        // from a grammar-constrained decode at all. Checked rather than assumed, because the
-        // alternative is a NullReferenceException unwinding a nine-hour run.
+        // The grammar makes these arrays mandatory, so their absence means the answer was not grammar-constrained.
         if (extracted is null || extracted.Ingredients is null || extracted.Steps is null)
             throw new SeedNormaliseException(SeedNormaliseFailure.InvalidLlmOutput,
                 "the answer is missing the ingredients or steps array");
@@ -293,19 +206,7 @@ public class SeedRecipeNormaliser(
         return extracted;
     }
 
-    /// <summary>
-    /// The recipe as the model sees it. Labelled, because every structural rule in the prompt — one
-    /// object per line, same order, matching step numbers — is stated against these labels.
-    ///
-    /// <para><b>The ingredient labels count from zero and the step labels count from one, because
-    /// that is what each is asked for.</b> They used to both count from one, which meant the only
-    /// 0-based number in the exchange was one the model had to work out for itself, and it did not:
-    /// asked which ingredients a step used, a single answer mixed the two bases — <c>[0]</c> for the
-    /// first ingredient but <c>[8]</c> and <c>[9]</c> for the eighth and ninth of nine. Only the
-    /// overrun past the end was detectable; the rest was silently off by one. Stating the range in
-    /// words did not help, because the conflict was between two things the model could both read.
-    /// A label it can copy is not a rule it has to apply.</para>
-    /// </summary>
+    /// <summary>The recipe as the model sees it, with ingredient labels counting from zero and step labels from one because that is what each is asked for.</summary>
     internal static string BuildUserContent(ParsedSeedRecipe parsed)
     {
         var content = new StringBuilder();
@@ -322,8 +223,7 @@ public class SeedRecipeNormaliser(
             var line = parsed.Ingredients[index];
             content.Append('[').Append(index).Append("] ");
 
-            // The whole published line, exactly as the gate will read it back. The model and the
-            // gate must be looking at the same text, or one of them is judging a different recipe.
+            // The whole published line, exactly as the gate will read it back.
             content.AppendLine(line.FullText);
         }
 
@@ -334,8 +234,7 @@ public class SeedRecipeNormaliser(
         for (var index = 0; index < parsed.Steps.Count; index++)
             content.Append(index + 1).Append(". ").AppendLine(parsed.Steps[index]);
 
-        // Restated where the steps are, so the answer to "which ingredients does this step use" is
-        // in view at the point the question is being answered.
+        // Restated beside the steps so the ingredients are in view when the question is answered.
         content.AppendLine()
                .Append("For each step, ingredient_indexes holds the labels in square brackets " +
                        "above, copied exactly. This recipe's labels run from [0] to [")
@@ -345,14 +244,9 @@ public class SeedRecipeNormaliser(
         return content.ToString();
     }
 
-    // ── The validation gate (§11.3) ───────────────────────────────────────────
+    // ── The validation gate ───────────────────────────────────────────────────
 
-    /// <summary>
-    /// Applies every §11.3 rule and, if they all hold, assembles the cached artefact. Validation
-    /// and assembly are one pass because the gate's verdict already carries the measurement as it
-    /// should be stored — canonicalising a second time risks disagreeing with the check that
-    /// admitted the row (Phase 9.1).
-    /// </summary>
+    /// <summary>Applies every gate rule and, if they all hold, assembles the cached artefact in one pass so the measurement is canonicalised only once.</summary>
     private NormalisedSeedRecipe Accept(
         ParsedSeedRecipe parsed,
         string parsedFingerprint,
@@ -382,15 +276,7 @@ public class SeedRecipeNormaliser(
         };
     }
 
-    /// <summary>
-    /// Pairs each returned ingredient with the source line it came from and runs the quantity gate
-    /// against that line.
-    ///
-    /// <para>Pairing is positional, which is why the count must match exactly rather than within
-    /// §11.3's tolerance of two. That tolerance predates Phase 9.1: the gate now decides each row
-    /// against what its own source line said, so a row whose source line is a guess would be judged
-    /// against a guess. Exact pairing is the stricter reading and the one the gate needs.</para>
-    /// </summary>
+    /// <summary>Pairs each returned ingredient with its source line by position, which is why the count must match exactly, and runs the quantity gate against that line.</summary>
     private List<NormalisedSeedIngredient> BuildIngredients(
         ParsedSeedRecipe parsed, RecipeScrapeService.ExtractedRecipe extracted)
     {
@@ -405,25 +291,18 @@ public class SeedRecipeNormaliser(
         {
             var returned = extracted.Ingredients[index];
 
-            // The whole published line, both spans — see ParsedIngredientLine.FullText. Reading the
-            // item text alone would call 109 corpus lines unquantified whose amount lives only in
-            // the note, and then reject the model for having read them correctly.
+            // Use the whole published line, since some amounts live only in the trailing note.
             var sourceText = parsed.Ingredients[index].FullText;
 
             if (string.IsNullOrWhiteSpace(returned.Name))
                 throw new SeedNormaliseException(SeedNormaliseFailure.MissingIngredientName,
                     $"ingredient {index + 1} ('{sourceText}') came back with no name");
 
-            // The raw amount this row will be built from: what the model read, then repaired against
-            // the line itself where the line settles the question on its own. Both repairs below
-            // take their value from the source text, never from the answer (Phase 9.1).
+            // The raw amount this row is built from, repaired against the source line where the line settles the question on its own.
             var rawAmount = (decimal?)returned.Amount;
             var rawUnit   = returned.Unit;
 
-            // Repair 1 — a count the model declined to read. "1 dash black pepper" resembles an
-            // unquantified seasoning and the model reads it as one, but the line does state a count,
-            // and Phase 9 already decided an unsized measure counts its things as pcs. The unit
-            // follows from ResolveCountUnit below, which sees a line naming no real unit.
+            // Repair 1: a count the model declined to read, as in "1 dash black pepper", is recovered from the line.
             if (rawAmount is null &&
                 SeedQuantityGate.TryReadCountedQuantity(sourceText, CountWords) is { } counted)
             {
@@ -436,18 +315,7 @@ public class SeedRecipeNormaliser(
                 rawUnit   = null;
             }
 
-            // Repair 2 — an amount the model left out of a line that states exactly one number.
-            // Closing an inconsistency the next repair creates rather than a new licence: on such a
-            // line the gate already *requires* the stored amount to equal the line's own number, so a
-            // wrong one is corrected to it and only a null was treated differently. Filling it
-            // produces the one value the gate would have accepted anyway.
-            //
-            // The class this was measured against is MyPlate's optional ingredient, which states its
-            // quantity in a trailing note — "salt (optional, 1/4 teaspoon)" — and whose "optional"
-            // leads the model to report no quantity at all. 146 lines on 119 recipes. Phase 9.1's rule
-            // survives intact: the model still cannot opt itself out by returning null, because the
-            // source decides either way. HasStatedQuantity gates it, so a genuinely unquantified line
-            // and a line whose only number is a cut size both stay unquantified.
+            // Repair 2: fill an amount the model left out of a line that states exactly one number, since the source decides either way.
             if (rawAmount is null &&
                 SeedQuantityGate.HasStatedQuantity(sourceText) &&
                 SeedQuantityGate.TryReadSoleNumber(sourceText) is { } statedSole &&
@@ -461,18 +329,7 @@ public class SeedRecipeNormaliser(
                 rawAmount = statedSole;
             }
 
-            // Repair 3 — a misread number on a line that states exactly one. The gate already
-            // trusts this arithmetic enough to reject a recipe on it, so it is trusted to supply
-            // the answer instead: the number is parsed off the source by the same reader, and
-            // there is no ambiguity about which number is meant when the line states one. The
-            // model keeps the unit, which it reads reliably. Lines stating several numbers —
-            // container sizes, pack counts — are not checkable and are left untouched.
-            //
-            // Restricted to a positive amount on purpose. A zero or a negative is not a digit read
-            // wrongly, it is an answer that is not a quantity at all, and NonPositiveQuantity
-            // rejects it deliberately — repairing over that would hide a row the model failed on
-            // rather than misread. Every one of the 15 contradictions measured on the corpus was a
-            // positive number, so nothing observed is lost by being strict here.
+            // Repair 3: correct a misread positive number on a line that states exactly one, while zero and negatives stay rejected.
             if (rawAmount > 0m &&
                 SeedQuantityGate.CheckAgainstStatedNumber(sourceText, rawAmount) is { } mismatch &&
                 SeedQuantityGate.TryReadSoleNumber(sourceText) is { } sole)
@@ -485,13 +342,7 @@ public class SeedRecipeNormaliser(
                 rawAmount = sole;
             }
 
-            // Repair 4 — the unit, on a line that states one number and names its unit immediately
-            // after it. Correcting only the amount is not enough and makes this worse: rescuing a
-            // recipe whose number was wrong can carry a wrong unit in with it, which is how
-            // "1 tablespoon cinnamon" first came back as "1 cup" — sixteen times too much, positive,
-            // storable, and in agreement with the line's only number. Measured, the model's unit
-            // matches the line's on 1,702 of the 1,703 rows this rule applies to, so it corrects
-            // almost nothing and what it does correct is wrong.
+            // Repair 4: correct the unit when the line names one immediately after its single number, because a rescued amount can carry a wrong unit with it.
             if (SeedQuantityGate.TryReadSoleStatedUnit(sourceText) is { } lineUnit &&
                 !IsSameMeasurement(ResolveCountUnit(rawUnit, sourceText), lineUnit))
             {
@@ -503,10 +354,7 @@ public class SeedRecipeNormaliser(
                 rawUnit = lineUnit;
             }
 
-            // Stage A: the model preserves the unit as stated (§11.1), so 'ounces' has to become
-            // grams before the gate can ask whether the unit is storable. Skipped entirely when
-            // there is no quantity — there is nothing to convert, and a unit measuring nothing is
-            // as invented as an amount would be.
+            // Stage A: convert the unit as stated before the gate asks whether it is storable, and skip it when there is no quantity.
             decimal? statedAmount = null;
             string?  statedUnit   = rawUnit;
 
@@ -528,12 +376,7 @@ public class SeedRecipeNormaliser(
                                   : returned.DisplayName.Trim(),
                 Amount:       verdict.Amount,
                 Unit:         verdict.Unit,
-                // Provenance: the measurement this row was read from, before Stage A touched it.
-                // Never summed and never consolidated — it exists so a conversion can be audited,
-                // which is why it records the repaired number rather than a discarded misread: a
-                // SourceAmount that does not convert to Amount audits nothing. The run log names
-                // every repair, and SourceText keeps the line itself. An accepted row has a source
-                // amount exactly when it has a stored one.
+                // Provenance: the measurement this row was read from, after repairs but before Stage A, and never summed.
                 SourceAmount: rawAmount is { } raw ? Math.Round(raw, 3) : null,
                 SourceUnit:   rawAmount is null ? null : rawUnit?.Trim(),
                 Notes:        string.IsNullOrWhiteSpace(returned.Notes) ? null : returned.Notes.Trim(),
@@ -543,12 +386,7 @@ public class SeedRecipeNormaliser(
         return rows;
     }
 
-    /// <summary>
-    /// Checks the step structure and rebuilds the steps from the parsed page, keeping only the
-    /// model's ingredient linkage. Stage 3 already segmented the directions off the page's own
-    /// <c>&lt;ol&gt;</c> (§22.1), so a paraphrase, a truncation or a leaked footnote cannot enter
-    /// the library through here.
-    /// </summary>
+    /// <summary>Checks the step structure and rebuilds the steps from the parsed page, keeping only the model's ingredient linkage.</summary>
     private static List<NormalisedSeedStep> BuildSteps(
         ParsedSeedRecipe parsed, RecipeScrapeService.ExtractedRecipe extracted, int ingredientCount)
     {
@@ -584,29 +422,8 @@ public class SeedRecipeNormaliser(
     }
 
     /// <summary>
-    /// Resolves what the model put in the unit column to something storable, where the answer is
-    /// fixed rather than a judgement. Three cases, in order:
-    ///
-    /// <list type="number">
-    /// <item><b>No unit, and the line names none either.</b> <c>1 granny smith apple</c>,
-    /// <c>7 apples</c>, <c>16 lettuce leaves</c> — the line counts whole things, so the count is
-    /// <c>pcs</c>. Decided from the source, never from the answer: <c>2 cups flour</c> names a unit,
-    /// so the same bare number there is a dropped <c>cup</c> and stays a rejection.</item>
-    /// <item><b>A leading real unit.</b> The model writes <c>"pound, chunks"</c> when it has
-    /// nowhere else to put the preparation; the measurement is the leading phrase and Stage A
-    /// converts it. Checked before the count words so <c>pound</c> never becomes <c>pcs</c>.</item>
-    /// <item><b>A leading count word.</b> <c>"ripe, fresh"</c>, <c>"medium"</c>, <c>"cloves"</c>,
-    /// <c>"dash"</c> → <c>pcs</c>.</item>
-    /// </list>
-    ///
-    /// <para><b>The leading phrase is tried longest-first, not one word at a time.</b> Half the
-    /// customary table is multi-word — <c>fl oz</c>, <c>fluid ounce</c>, <c>us fluid ounces</c> —
-    /// and a single-word test reads <c>us</c> or <c>fluid</c> off those and matches nothing, so a
-    /// correctly-read measurement fell through to the gate and was rejected as unstorable. Joining
-    /// the words back together also normalises the model's own spacing and punctuation, so
-    /// <c>"fl.  oz"</c> resolves too.</para>
-    ///
-    /// <para>Anything else is returned untouched, for Stage A and the gate to reject.</para>
+    /// Resolves the model's unit column to something storable where the answer is fixed rather than a judgement: a bare count,
+    /// a leading real unit (tried longest-first), or a leading count word.
     /// </summary>
     private static string? ResolveCountUnit(string? unit, string sourceText)
     {
@@ -631,12 +448,7 @@ public class SeedRecipeNormaliser(
     /// <summary>Runs of letters in a value the model may have written as a punctuated phrase.</summary>
     private static readonly Regex UnitWords = new(@"[A-Za-z]+", RegexOptions.Compiled);
 
-    /// <summary>
-    /// Whether two unit spellings measure the same thing, compared through Stage A so a difference in
-    /// spelling is not mistaken for a difference in measurement. One unit of each is converted and
-    /// both halves of the result are compared: <c>ounce</c> and <c>pound</c> both canonicalise to
-    /// <c>g</c> and are emphatically not the same unit, so comparing the unit alone would miss it.
-    /// </summary>
+    /// <summary>Whether two unit spellings measure the same thing, compared after Stage A so both the unit and the converted amount are checked.</summary>
     private static bool IsSameMeasurement(string? left, string? right)
     {
         if (string.IsNullOrWhiteSpace(left) || string.IsNullOrWhiteSpace(right))

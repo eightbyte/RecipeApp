@@ -4,10 +4,11 @@ import * as components from 'vuetify/components'
 import * as directives from 'vuetify/directives'
 import { createPinia, setActivePinia } from 'pinia'
 import MealPlanBuilderView from './MealPlanBuilderView.vue'
-import { makeMealPlanDetail } from '@/test/factories'
+import { makeMealPlanDetail, makePlannedMeal } from '@/test/factories'
+import api from '@/services/api'
 
 vi.mock('@/services/api', () => ({
-  default: { get: vi.fn(), post: vi.fn() },
+  default: { get: vi.fn(), post: vi.fn(), put: vi.fn() },
   assetUrl: vi.fn((p) => p ?? ''),
 }))
 
@@ -81,6 +82,42 @@ describe('MealPlanBuilderView', () => {
 
     expect(store.currentPlan).toBeNull()
     expect(wrapper.text()).toContain('Plan name')
+  })
+
+  describe('editing a Planned Meal', () => {
+    const plannedMealPath = '/meal-plans/plan-1/planned-meals/planned-meal-1'
+
+    async function mountWithPlannedMeal() {
+      const mounted = await mountView()
+      const plan = makeMealPlanDetail({
+        id: 'plan-1',
+        plannedMeals: [makePlannedMeal({ scheduledDate: '2026-06-03', batchSize: 'HALF' })],
+      })
+      api.put.mockResolvedValue({ data: {} })
+      api.get.mockResolvedValue({ data: plan })
+      mounted.store.currentPlan = plan
+      await mounted.wrapper.vm.$nextTick()
+      return mounted
+    }
+
+    it('keeps the Batch Size when the date changes', async () => {
+      const { wrapper } = await mountWithPlannedMeal()
+
+      await wrapper.find('input[type="date"]').setValue('2026-06-05')
+      await flushPromises()
+
+      expect(api.put).toHaveBeenCalledWith(plannedMealPath, { scheduledDate: '2026-06-05', batchSize: 'HALF' })
+    })
+
+    it('keeps the date when the Batch Size changes', async () => {
+      const { wrapper } = await mountWithPlannedMeal()
+
+      const doubleButton = wrapper.findAll('button').find(button => button.text() === '2×')
+      await doubleButton.trigger('click')
+      await flushPromises()
+
+      expect(api.put).toHaveBeenCalledWith(plannedMealPath, { scheduledDate: '2026-06-03', batchSize: 'DOUBLE' })
+    })
   })
 
   it('warns that creating a new plan closes the current active plan', async () => {

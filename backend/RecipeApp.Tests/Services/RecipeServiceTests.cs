@@ -26,9 +26,9 @@ public class RecipeServiceTests(DatabaseFixture db) : IAsyncLifetime
         await ctx.SaveChangesAsync();
 
         var svc = new RecipeService(ctx);
-        var list = await svc.GetListAsync(null, null, null, null);
+        var page = await svc.GetListAsync(TestDataBuilder.RecipeListQuery());
 
-        list.Should().HaveCount(3);
+        page.Items.Should().HaveCount(3);
     }
 
     [Fact]
@@ -40,10 +40,10 @@ public class RecipeServiceTests(DatabaseFixture db) : IAsyncLifetime
         await ctx.SaveChangesAsync();
 
         var svc = new RecipeService(ctx);
-        var list = await svc.GetListAsync("spag", null, null, null);
+        var page = await svc.GetListAsync(TestDataBuilder.RecipeListQuery(search: "spag"));
 
-        list.Should().HaveCount(1);
-        list[0].Name.Should().Be("Spaghetti Bolognese");
+        page.Items.Should().HaveCount(1);
+        page.Items[0].Name.Should().Be("Spaghetti Bolognese");
     }
 
     [Fact]
@@ -54,9 +54,9 @@ public class RecipeServiceTests(DatabaseFixture db) : IAsyncLifetime
         await ctx.SaveChangesAsync();
 
         var svc = new RecipeService(ctx);
-        var list = await svc.GetListAsync("xyz-no-match", null, null, null);
+        var page = await svc.GetListAsync(TestDataBuilder.RecipeListQuery(search: "xyz-no-match"));
 
-        list.Should().BeEmpty();
+        page.Items.Should().BeEmpty();
     }
 
     [Fact]
@@ -68,9 +68,9 @@ public class RecipeServiceTests(DatabaseFixture db) : IAsyncLifetime
         await ctx.SaveChangesAsync();
 
         var svc = new RecipeService(ctx);
-        var list = await svc.GetListAsync(null, null, 7, null);
+        var page = await svc.GetListAsync(TestDataBuilder.RecipeListQuery(excludeRecentDays: 7));
 
-        list.Should().BeEmpty();
+        page.Items.Should().BeEmpty();
     }
 
     [Fact]
@@ -81,9 +81,9 @@ public class RecipeServiceTests(DatabaseFixture db) : IAsyncLifetime
         await ctx.SaveChangesAsync();
 
         var svc = new RecipeService(ctx);
-        var list = await svc.GetListAsync(null, null, 7, null);
+        var page = await svc.GetListAsync(TestDataBuilder.RecipeListQuery(excludeRecentDays: 7));
 
-        list.Should().HaveCount(1);
+        page.Items.Should().HaveCount(1);
     }
 
     [Fact]
@@ -94,10 +94,10 @@ public class RecipeServiceTests(DatabaseFixture db) : IAsyncLifetime
         await ctx.SaveChangesAsync();
 
         var svc = new RecipeService(ctx);
-        var list = await svc.GetListAsync(null, null, null,
-            lastCookedBefore: new DateTime(2026, 6, 1, 0, 0, 0, DateTimeKind.Utc));
+        var page = await svc.GetListAsync(TestDataBuilder.RecipeListQuery(
+            lastCookedBefore: new DateTime(2026, 6, 1, 0, 0, 0, DateTimeKind.Utc)));
 
-        list.Should().HaveCount(1);
+        page.Items.Should().HaveCount(1);
     }
 
     [Fact]
@@ -108,9 +108,9 @@ public class RecipeServiceTests(DatabaseFixture db) : IAsyncLifetime
         await ctx.SaveChangesAsync();
 
         var svc = new RecipeService(ctx);
-        var list = await svc.GetListAsync(null, null, 7, null);
+        var page = await svc.GetListAsync(TestDataBuilder.RecipeListQuery(excludeRecentDays: 7));
 
-        list.Should().HaveCount(1);
+        page.Items.Should().HaveCount(1);
     }
 
     // ── GetByIdAsync ──────────────────────────────────────────────────────────
@@ -224,8 +224,7 @@ public class RecipeServiceTests(DatabaseFixture db) : IAsyncLifetime
     [Fact]
     public async Task CreateAsync_UnquantifiedIngredient_RoundTripsAsNull()
     {
-        // "salt" states no quantity, and null is the true statement of that (Phase 9.1 §3.1).
-        // Zero would render as "0 g Salt" and sum into a shopping list.
+        // "salt" states no quantity and null is the true statement of that, whereas zero would render as "0 g Salt".
         await using var ctx = db.CreateDbContext();
         var ing = TestDataBuilder.Ingredient();
         ctx.Ingredients.Add(ing);
@@ -245,10 +244,7 @@ public class RecipeServiceTests(DatabaseFixture db) : IAsyncLifetime
     [Fact]
     public async Task CreateAsync_NullAmountWithAUnit_DropsTheUnitRatherThanStoringAHalfSetPair()
     {
-        // ConfirmAsync and CreateAsync perform no validation of their own — validation lives in
-        // the endpoint filter, which a service-level caller such as the Phase 9 seeder bypasses
-        // entirely. The invariant "Unit is null whenever Amount is" therefore holds at the entity
-        // boundary rather than only at the edge (Phase 9.1 §1.2).
+        // ConfirmAsync and CreateAsync validate nothing, so "Unit is null whenever Amount is" must hold at the entity boundary.
         await using var ctx = db.CreateDbContext();
         var ing = TestDataBuilder.Ingredient();
         ctx.Ingredients.Add(ing);
@@ -266,8 +262,7 @@ public class RecipeServiceTests(DatabaseFixture db) : IAsyncLifetime
     [Fact]
     public async Task CreateAsync_AmountWithNoUnit_KeepsTheAmount()
     {
-        // The converse is deliberately not coerced: an amount the caller stated is real data, and
-        // the validators reject it loudly rather than having it quietly discarded.
+        // The converse is deliberately not coerced, because an amount the caller stated is real data that the validators reject loudly.
         await using var ctx = db.CreateDbContext();
         var ing = TestDataBuilder.Ingredient();
         ctx.Ingredients.Add(ing);
@@ -472,10 +467,7 @@ public class RecipeServiceTests(DatabaseFixture db) : IAsyncLifetime
         ctx.Recipes.Add(recipe);
         await ctx.SaveChangesAsync();
 
-        // `ctx` tracks `recipe`, so the entity MarkCooked mutates is the same instance —
-        // reading recipe.UpdatedAt after the call would see the already-refreshed value.
-        // Copy the original (DateTime is a struct) and verify via a fresh context so the
-        // assertion reflects the persisted value, not the tracked in-memory one.
+        // ctx tracks recipe, so copy the original and verify via a fresh context so the assertion reflects the persisted value.
         var originalUpdatedAt = recipe.UpdatedAt;
 
         await Task.Delay(10);

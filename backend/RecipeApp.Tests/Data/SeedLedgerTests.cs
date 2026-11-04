@@ -7,12 +7,7 @@ using RecipeApp.Tests.Infrastructure;
 
 namespace RecipeApp.Tests.Data;
 
-/// <summary>
-/// The first-run seed ledger table against a real Postgres (Phase 10 §4.1).
-///
-/// <para>The primary key on <c>Key</c> is the race guard the first-run seeder relies on, so it
-/// is proved here rather than assumed from the model configuration.</para>
-/// </summary>
+/// <summary>The first-run seed ledger table against a real Postgres, proving the primary key the seeder relies on as its race guard.</summary>
 [Collection("Database")]
 public class SeedLedgerTests(DatabaseFixture db) : IAsyncLifetime
 {
@@ -67,8 +62,7 @@ public class SeedLedgerTests(DatabaseFixture db) : IAsyncLifetime
     [Fact]
     public async Task ASecondRowForTheSameStepIsRejected()
     {
-        // Two hosts starting on a fresh database each open a separate context and each try to
-        // record the step. The database, not the seeder, must make the loser fail.
+        // Two hosts starting on a fresh database each try to record the step, and the database, not the seeder, must make the loser fail.
         await using (var first = db.CreateDbContext())
         {
             first.SeedLedger.Add(Entry(SeedLedgerKeys.SampleRecipes));

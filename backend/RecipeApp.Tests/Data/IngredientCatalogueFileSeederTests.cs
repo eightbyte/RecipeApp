@@ -8,15 +8,7 @@ using RecipeApp.Tests.Infrastructure;
 
 namespace RecipeApp.Tests.Data;
 
-/// <summary>
-/// The seeding half of Stage 4.5 (Phase 9.3 §4.5) — artefact into Postgres, with no LLM and no
-/// network.
-///
-/// <para>The contract under test is <b>fill nulls, never overwrite</b>, the same one
-/// <see cref="IngredientDensitySeeder"/> honours. Seed data is a starting point; a value a human
-/// corrected outranks the one the file suggests, and a deliberate refresh is what
-/// <c>--force</c> is for.</para>
-/// </summary>
+/// <summary>The seeding half of Stage 4.5, artefact into Postgres with no LLM or network, under the contract fill nulls and never overwrite.</summary>
 [Collection("Database")]
 public class IngredientCatalogueFileSeederTests(DatabaseFixture db) : IAsyncLifetime
 {
@@ -38,8 +30,9 @@ public class IngredientCatalogueFileSeederTests(DatabaseFixture db) : IAsyncLife
         string? displayName = null,
         string category = IngredientCategory.Produce,
         string? defaultUnit = MeasurementUnit.Piece,
-        string[]? aliases = null) =>
-        new(name, displayName ?? name, category, defaultUnit, aliases ?? []);
+        string[]? aliases = null,
+        bool isStaple = false) =>
+        new(name, displayName ?? name, category, defaultUnit, aliases ?? [], isStaple);
 
     private async Task<Ingredient> SeedRowAsync(Ingredient row)
     {
@@ -74,6 +67,19 @@ public class IngredientCatalogueFileSeederTests(DatabaseFixture db) : IAsyncLife
         onion.Category.Should().Be(IngredientCategory.Produce);
         onion.DefaultUnit.Should().Be(MeasurementUnit.Piece);
         onion.Aliases.Should().Equal("onions");
+    }
+
+    [Fact]
+    public async Task InsertsTheStapleFlagFromTheArtefact()
+    {
+        await using var context = db.CreateDbContext();
+
+        await IngredientCatalogueFileSeeder.SeedAsync(context, Catalogue(
+            Entry("salt", isStaple: true),
+            Entry("onion")));
+
+        (await ReadAsync("salt")).IsStaple.Should().BeTrue();
+        (await ReadAsync("onion")).IsStaple.Should().BeFalse();
     }
 
     [Fact]
@@ -115,8 +121,7 @@ public class IngredientCatalogueFileSeederTests(DatabaseFixture db) : IAsyncLife
     [Fact]
     public async Task NeverOverwritesACorrectedValue()
     {
-        // The contract that protects a reviewer's work. Someone decided an onion is bought by
-        // weight here; the artefact does not get to argue.
+        // Someone decided an onion is bought by weight here, and the artefact does not get to argue.
         await SeedRowAsync(new Ingredient
         {
             Id = Guid.NewGuid(), Name = "onion", DisplayName = "Brown Onion",
@@ -135,8 +140,7 @@ public class IngredientCatalogueFileSeederTests(DatabaseFixture db) : IAsyncLife
     [Fact]
     public async Task ReplacesTheOtherCategoryPlaceholderButNotARealJudgement()
     {
-        // "OTHER" is the column default, so a row carrying it was never categorised rather than
-        // categorised as miscellaneous.
+        // "OTHER" is the column default, so a row carrying it was never categorised rather than categorised as miscellaneous.
         await SeedRowAsync(new Ingredient
         {
             Id = Guid.NewGuid(), Name = "peanut butter", DisplayName = "Peanut Butter",
@@ -158,10 +162,25 @@ public class IngredientCatalogueFileSeederTests(DatabaseFixture db) : IAsyncLife
     }
 
     [Fact]
+    public async Task NeverRestoresAStapleFlagTheUserCleared()
+    {
+        await SeedRowAsync(new Ingredient
+        {
+            Id = Guid.NewGuid(), Name = "salt", DisplayName = "Salt",
+            Category = IngredientCategory.BakingSpices, IsStaple = false,
+        });
+
+        await using var context = db.CreateDbContext();
+        await IngredientCatalogueFileSeeder.SeedAsync(context, Catalogue(
+            Entry("salt", "Salt", IngredientCategory.BakingSpices, isStaple: true)));
+
+        (await ReadAsync("salt")).IsStaple.Should().BeFalse();
+    }
+
+    [Fact]
     public async Task MergesAliasesRatherThanReplacingThem()
     {
-        // A row created at runtime by a scrape is exactly the case this protects: taking its
-        // aliases away would break lookups that already work.
+        // A row created at runtime by a scrape is exactly the case this protects, since taking its aliases away would break lookups that already work.
         await SeedRowAsync(new Ingredient
         {
             Id = Guid.NewGuid(), Name = "chickpeas", DisplayName = "Chickpeas",
@@ -205,10 +224,33 @@ public class IngredientCatalogueFileSeederTests(DatabaseFixture db) : IAsyncLife
     }
 
     [Fact]
+    public async Task ForceReAppliesTheStapleFlag()
+    {
+        await SeedRowAsync(new Ingredient
+        {
+            Id = Guid.NewGuid(), Name = "salt", DisplayName = "Salt",
+            Category = IngredientCategory.BakingSpices, IsStaple = false,
+        });
+        await SeedRowAsync(new Ingredient
+        {
+            Id = Guid.NewGuid(), Name = "onion", DisplayName = "Onion",
+            Category = IngredientCategory.Produce, IsStaple = true,
+        });
+
+        await using var context = db.CreateDbContext();
+        await IngredientCatalogueFileSeeder.SeedAsync(context, Catalogue(
+            Entry("salt", "Salt", IngredientCategory.BakingSpices, isStaple: true),
+            Entry("onion", "Onion", IngredientCategory.Produce)),
+            force: true);
+
+        (await ReadAsync("salt")).IsStaple.Should().BeTrue();
+        (await ReadAsync("onion")).IsStaple.Should().BeFalse();
+    }
+
+    [Fact]
     public async Task ForceDoesNotDeleteRowsTheArtefactDoesNotMention()
     {
-        // A refresh re-applies the artefact; it is not a reset. Deleting a user's own ingredient
-        // would cascade into every recipe that uses it.
+        // A refresh re-applies the artefact but is not a reset, because deleting a user's own ingredient would cascade into every recipe that uses it.
         await SeedRowAsync(new Ingredient
         {
             Id = Guid.NewGuid(), Name = "kohlrabi", DisplayName = "Kohlrabi",
@@ -227,8 +269,7 @@ public class IngredientCatalogueFileSeederTests(DatabaseFixture db) : IAsyncLife
     [Fact]
     public async Task RefusesAnArtefactThatContradictsItself()
     {
-        // The file is hand-editable by design — a reviewer correcting a category is the intended
-        // workflow — so the rules are checked again here rather than trusted from build time.
+        // The file is hand-editable by design, so the rules are checked again here rather than trusted from build time.
         await using var context = db.CreateDbContext();
 
         var seed = async () => await IngredientCatalogueFileSeeder.SeedAsync(context, Catalogue(
@@ -258,10 +299,7 @@ public class IngredientCatalogueFileSeederTests(DatabaseFixture db) : IAsyncLife
     [Fact]
     public async Task DensitiesStillAttachThroughTheNewNamesOrTheirAliases()
     {
-        // The density table's 124 names were written against the old starter catalogue — it said
-        // 'plain flour', which is why 'all-purpose flour' carries that as a catalogue name. The
-        // corpus-derived catalogue renames the entry and folds the old spelling in as an alias, so
-        // a Name-only match would silently stop attaching densities.
+        // The density table was written against the old starter catalogue, so a name-only match would silently stop attaching densities once spellings became aliases.
         await using var context = db.CreateDbContext();
 
         await IngredientCatalogueFileSeeder.SeedAsync(context, Catalogue(

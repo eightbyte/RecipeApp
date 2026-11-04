@@ -32,7 +32,7 @@ public class ShoppingListServiceTests(DatabaseFixture db) : IAsyncLifetime
 
         var mealSvc = new MealPlanService(ctx);
         var plan = await mealSvc.CreateAsync(TestDataBuilder.CreateMealPlanRequest("Active Plan"));
-        await mealSvc.AddRecipeAsync(plan.Id, TestDataBuilder.AddMealPlanRecipeRequest(r.Id));
+        await mealSvc.AddPlannedMealAsync(plan.Id, TestDataBuilder.AddPlannedMealRequest(r.Id));
 
         var ingredient = await ctx.Ingredients.FindAsync(ing.Id);
         var recipe     = await ctx.Recipes.FindAsync(Guid.Parse(r.Id.ToString()));
@@ -81,7 +81,7 @@ public class ShoppingListServiceTests(DatabaseFixture db) : IAsyncLifetime
         ctx.ShoppingLists.Should().HaveCount(1);
     }
 
-    // ── Aggregation — portion multipliers ────────────────────────────────────
+    // ── Aggregation — Batch Size multipliers ──────────────────────────────────
 
     [Fact]
     public async Task GetActiveAsync_AppliesHalfMultiplier()
@@ -99,8 +99,8 @@ public class ShoppingListServiceTests(DatabaseFixture db) : IAsyncLifetime
 
         var mealSvc = new MealPlanService(ctx);
         var plan = await mealSvc.CreateAsync(TestDataBuilder.CreateMealPlanRequest("Plan"));
-        await mealSvc.AddRecipeAsync(plan.Id,
-            new API.DTOs.MealPlans.AddMealPlanRecipeRequest(r.Id, null, PortionSize.Half));
+        await mealSvc.AddPlannedMealAsync(plan.Id,
+            new API.DTOs.MealPlans.AddPlannedMealRequest(r.Id, null, BatchSize.Half));
 
         var svc  = new ShoppingListService(ctx);
         var list = await svc.GetActiveAsync();
@@ -124,8 +124,8 @@ public class ShoppingListServiceTests(DatabaseFixture db) : IAsyncLifetime
 
         var mealSvc = new MealPlanService(ctx);
         var plan = await mealSvc.CreateAsync(TestDataBuilder.CreateMealPlanRequest("Plan"));
-        await mealSvc.AddRecipeAsync(plan.Id,
-            new API.DTOs.MealPlans.AddMealPlanRecipeRequest(r.Id, null, PortionSize.Double));
+        await mealSvc.AddPlannedMealAsync(plan.Id,
+            new API.DTOs.MealPlans.AddPlannedMealRequest(r.Id, null, BatchSize.Double));
 
         var svc  = new ShoppingListService(ctx);
         var list = await svc.GetActiveAsync();
@@ -155,8 +155,8 @@ public class ShoppingListServiceTests(DatabaseFixture db) : IAsyncLifetime
 
         var mealSvc = new MealPlanService(ctx);
         var plan = await mealSvc.CreateAsync(TestDataBuilder.CreateMealPlanRequest("Plan"));
-        await mealSvc.AddRecipeAsync(plan.Id, TestDataBuilder.AddMealPlanRecipeRequest(r1.Id));
-        await mealSvc.AddRecipeAsync(plan.Id, TestDataBuilder.AddMealPlanRecipeRequest(r2.Id));
+        await mealSvc.AddPlannedMealAsync(plan.Id, TestDataBuilder.AddPlannedMealRequest(r1.Id));
+        await mealSvc.AddPlannedMealAsync(plan.Id, TestDataBuilder.AddPlannedMealRequest(r2.Id));
 
         var svc  = new ShoppingListService(ctx);
         var list = await svc.GetActiveAsync();
@@ -188,8 +188,8 @@ public class ShoppingListServiceTests(DatabaseFixture db) : IAsyncLifetime
 
         var mealSvc = new MealPlanService(ctx);
         var plan = await mealSvc.CreateAsync(TestDataBuilder.CreateMealPlanRequest("Plan"));
-        await mealSvc.AddRecipeAsync(plan.Id, TestDataBuilder.AddMealPlanRecipeRequest(r1.Id));
-        await mealSvc.AddRecipeAsync(plan.Id, TestDataBuilder.AddMealPlanRecipeRequest(r2.Id));
+        await mealSvc.AddPlannedMealAsync(plan.Id, TestDataBuilder.AddPlannedMealRequest(r1.Id));
+        await mealSvc.AddPlannedMealAsync(plan.Id, TestDataBuilder.AddPlannedMealRequest(r2.Id));
 
         var svc  = new ShoppingListService(ctx);
         var list = await svc.GetActiveAsync();
@@ -221,8 +221,8 @@ public class ShoppingListServiceTests(DatabaseFixture db) : IAsyncLifetime
 
         var mealSvc = new MealPlanService(ctx);
         var plan = await mealSvc.CreateAsync(TestDataBuilder.CreateMealPlanRequest("Plan"));
-        await mealSvc.AddRecipeAsync(plan.Id, TestDataBuilder.AddMealPlanRecipeRequest(r1.Id));
-        await mealSvc.AddRecipeAsync(plan.Id, TestDataBuilder.AddMealPlanRecipeRequest(r2.Id));
+        await mealSvc.AddPlannedMealAsync(plan.Id, TestDataBuilder.AddPlannedMealRequest(r1.Id));
+        await mealSvc.AddPlannedMealAsync(plan.Id, TestDataBuilder.AddPlannedMealRequest(r2.Id));
 
         var svc  = new ShoppingListService(ctx);
         var list = await svc.GetActiveAsync();
@@ -251,8 +251,8 @@ public class ShoppingListServiceTests(DatabaseFixture db) : IAsyncLifetime
 
         var mealSvc = new MealPlanService(ctx);
         var plan = await mealSvc.CreateAsync(TestDataBuilder.CreateMealPlanRequest("Plan"));
-        await mealSvc.AddRecipeAsync(plan.Id, TestDataBuilder.AddMealPlanRecipeRequest(r1.Id));
-        await mealSvc.AddRecipeAsync(plan.Id, TestDataBuilder.AddMealPlanRecipeRequest(r2.Id));
+        await mealSvc.AddPlannedMealAsync(plan.Id, TestDataBuilder.AddPlannedMealRequest(r1.Id));
+        await mealSvc.AddPlannedMealAsync(plan.Id, TestDataBuilder.AddPlannedMealRequest(r2.Id));
 
         var svc  = new ShoppingListService(ctx);
         var list = await svc.GetActiveAsync();
@@ -263,12 +263,9 @@ public class ShoppingListServiceTests(DatabaseFixture db) : IAsyncLifetime
         item.NeedsReview.Should().BeFalse();
     }
 
-    // ── Aggregation — dimensioned spoons and cups (Phase 8.5.1 §3.3, §7) ──────
+    // ── Aggregation — dimensioned spoons and cups ─────────────────────────────
 
-    /// <summary>
-    /// Builds an active plan whose recipes each contribute one row for the same ingredient,
-    /// then returns the generated shopping list.
-    /// </summary>
+    /// <summary>Builds an active plan whose recipes each contribute one row for the same ingredient, then returns the generated shopping list.</summary>
     private async Task<ShoppingListResponse> BuildListForAsync(
         decimal? gramsPerMillilitre,
         params (decimal? Amount, string? Unit)[] rows)
@@ -288,7 +285,7 @@ public class ShoppingListServiceTests(DatabaseFixture db) : IAsyncLifetime
                 $"R{i}", null, null, 4,
                 [new API.DTOs.Recipes.RecipeIngredientRequest(ing.Id, rows[i].Amount, rows[i].Unit, null, 0)],
                 [new API.DTOs.Recipes.RecipeStepRequest(1, "Cook", [])]));
-            await mealSvc.AddRecipeAsync(plan.Id, TestDataBuilder.AddMealPlanRecipeRequest(recipe.Id));
+            await mealSvc.AddPlannedMealAsync(plan.Id, TestDataBuilder.AddPlannedMealRequest(recipe.Id));
         }
 
         return (await new ShoppingListService(ctx).GetActiveAsync())!;
@@ -297,8 +294,7 @@ public class ShoppingListServiceTests(DatabaseFixture db) : IAsyncLifetime
     [Fact]
     public async Task Aggregation_ConsolidatesTablespoonsWithMillilitres()
     {
-        // Regression for the bug that shipped before Phase 8.5.1: tsp and tbsp had no dimension,
-        // so two physically identical measurements produced two rows and a spurious review flag.
+        // Regression: tsp and tbsp once had no dimension, so two physically identical measurements produced two rows and a spurious review flag.
         var list = await BuildListForAsync(null, (1m, "tbsp"), (15m, "ml"));
 
         var item = list.Items.Single();
@@ -310,8 +306,7 @@ public class ShoppingListServiceTests(DatabaseFixture db) : IAsyncLifetime
     [Fact]
     public async Task Aggregation_SumsTeaspoonsInTeaspoons()
     {
-        // Every contributing row uses the same unit, so there is nothing to convert and no
-        // arithmetic improves on what the cook wrote.
+        // Every contributing row uses the same unit, so there is nothing to convert.
         var list = await BuildListForAsync(null, (1m, "tbsp"), (2m, "tbsp"));
 
         var item = list.Items.Single();
@@ -335,8 +330,7 @@ public class ShoppingListServiceTests(DatabaseFixture db) : IAsyncLifetime
     [Fact]
     public async Task Aggregation_TeaspoonPlusGrams_WithDensity_ResolvesToOneMassRow()
     {
-        // Density applies to every volume unit here, unlike the import policy: a shopping total
-        // is a quantity to buy, and 1 tsp salt plus 10 g salt is one item.
+        // Density applies to every volume unit here, unlike the import policy, because a shopping total is a quantity to buy.
         var list = await BuildListForAsync(1.2167m, (1m, "tsp"), (10m, "g"));
 
         var item = list.Items.Single();
@@ -348,8 +342,7 @@ public class ShoppingListServiceTests(DatabaseFixture db) : IAsyncLifetime
     [Fact]
     public async Task Aggregation_CupsWithoutDensity_StayCups()
     {
-        // No fabricated mass and no misleading millilitres — 2 cups of spinach plus 1 cup is
-        // 3 cups, and any gram figure would be invented (Phase 8.5.1 §5.3).
+        // No fabricated mass for a cup with no density, so 2 cups plus 1 cup is 3 cups.
         var list = await BuildListForAsync(null, (2m, "cup"), (1m, "cup"));
 
         var item = list.Items.Single();
@@ -390,13 +383,12 @@ public class ShoppingListServiceTests(DatabaseFixture db) : IAsyncLifetime
         item.NeedsReview.Should().BeFalse();
     }
 
-    // ── Aggregation — unquantified ingredients (Phase 9.1 §3.5) ──────────────
+    // ── Aggregation — unquantified ingredients ────────────────────────────────
 
     [Fact]
     public async Task Aggregation_OnlyEverUnquantified_YieldsOneAmountLessRow()
     {
-        // The shopper still has to buy the salt, so the ingredient is not dropped — it becomes
-        // the amount-less row a custom item already takes, which ShoppingView already renders.
+        // The shopper still has to buy the salt, so it becomes an amount-less row rather than being dropped.
         var list = await BuildListForAsync(null, (null, null), (null, null));
 
         var item = list.Items.Single();
@@ -408,8 +400,7 @@ public class ShoppingListServiceTests(DatabaseFixture db) : IAsyncLifetime
     [Fact]
     public async Task Aggregation_QuantifiedAndUnquantified_KeepsTheQuantifiedTotalAlone()
     {
-        // "500 g flour and also some flour" is no more useful than "500 g flour". Crucially the
-        // unquantified row is not summed as a zero, which would claim the plan needs none of it.
+        // The unquantified row must not be summed as a zero, which would claim the plan needs none of it.
         var list = await BuildListForAsync(null, (200m, "g"), (null, null));
 
         var item = list.Items.Single();
@@ -421,8 +412,7 @@ public class ShoppingListServiceTests(DatabaseFixture db) : IAsyncLifetime
     [Fact]
     public async Task Aggregation_UnquantifiedRow_DoesNotFlagAnIncompatibleMixForReview()
     {
-        // An absent amount is not a third dimension to reconcile: the mass/count split is what
-        // needs review, and the unquantified row neither adds a row nor changes the flag.
+        // An absent amount is not a third dimension, so the unquantified row neither adds a row nor changes the review flag.
         var list = await BuildListForAsync(null, (150m, "g"), (2m, "pcs"), (null, null));
 
         list.Items.Should().HaveCount(2);
@@ -433,11 +423,292 @@ public class ShoppingListServiceTests(DatabaseFixture db) : IAsyncLifetime
     [Fact]
     public async Task Aggregation_UnquantifiedRow_IsNeverStoredAsZero()
     {
-        // The corpus check after Stage 4 asserts zero rows with Amount = 0; a zero anywhere means
-        // a fabricated quantity got through (Phase 9.1 §7).
+        // A zero anywhere would mean a fabricated quantity got through.
         var list = await BuildListForAsync(null, (null, null));
 
         list.Items.Should().NotContain(i => i.Amount == 0m);
+    }
+
+    // ── Item Sources ──────────────────────────────────────────────────────────
+
+    [Fact]
+    public async Task Sources_TwoPlannedMealsWithDifferentBatchSizes_ListsEachScaled()
+    {
+        await using var ctx = db.CreateDbContext();
+        var ing = TestDataBuilder.Ingredient();
+        ctx.Ingredients.Add(ing);
+        await ctx.SaveChangesAsync();
+
+        var recipeSvc = new RecipeService(ctx);
+        var pancakes = await recipeSvc.CreateAsync(new API.DTOs.Recipes.CreateRecipeRequest(
+            "Pancakes", null, null, 4,
+            [new API.DTOs.Recipes.RecipeIngredientRequest(ing.Id, 200m, "g", null, 0)],
+            [new API.DTOs.Recipes.RecipeStepRequest(1, "Cook", [])]));
+        var waffles = await recipeSvc.CreateAsync(new API.DTOs.Recipes.CreateRecipeRequest(
+            "Waffles", null, null, 4,
+            [new API.DTOs.Recipes.RecipeIngredientRequest(ing.Id, 300m, "g", null, 0)],
+            [new API.DTOs.Recipes.RecipeStepRequest(1, "Cook", [])]));
+
+        var mealSvc = new MealPlanService(ctx);
+        var plan = await mealSvc.CreateAsync(TestDataBuilder.CreateMealPlanRequest("Plan"));
+        await mealSvc.AddPlannedMealAsync(plan.Id,
+            TestDataBuilder.AddPlannedMealRequest(pancakes.Id, batchSize: BatchSize.Half));
+        await mealSvc.AddPlannedMealAsync(plan.Id,
+            TestDataBuilder.AddPlannedMealRequest(waffles.Id, batchSize: BatchSize.Double));
+
+        var list = await new ShoppingListService(ctx).GetActiveAsync();
+
+        var item = list!.Items.Single();
+        item.Amount.Should().Be(700m);
+        item.Sources.Should().SatisfyRespectively(
+            first =>
+            {
+                first.RecipeId.Should().Be(pancakes.Id);
+                first.RecipeName.Should().Be("Pancakes");
+                first.BatchSize.Should().Be(BatchSize.Half);
+                first.Amount.Should().Be(100m);
+                first.Unit.Should().Be("g");
+                first.ShareAmount.Should().BeNull();
+                first.ShareUnit.Should().BeNull();
+            },
+            second =>
+            {
+                second.RecipeId.Should().Be(waffles.Id);
+                second.RecipeName.Should().Be("Waffles");
+                second.BatchSize.Should().Be(BatchSize.Double);
+                second.Amount.Should().Be(600m);
+                second.Unit.Should().Be("g");
+            });
+    }
+
+    [Fact]
+    public async Task Sources_TablespoonAndCupInOneVolumeRow_EachCarryItsShareInMillilitres()
+    {
+        // 2 tbsp (30 ml) + 1 cup (240 ml) = 270 ml, so the shares add up to the row the recipes' own units don't.
+        var list = await BuildListForAsync(null, (2m, "tbsp"), (1m, "cup"));
+
+        var item = list.Items.Single();
+        item.Amount.Should().Be(270m);
+        item.Unit.Should().Be("ml");
+        item.Sources.Select(s => (s.RecipeName, s.Amount, s.Unit, s.ShareAmount, s.ShareUnit))
+            .Should().Equal(("R0", 2m, "tbsp", 30m, "ml"), ("R1", 1m, "cup", 240m, "ml"));
+    }
+
+    [Fact]
+    public async Task Sources_VolumeMergedIntoMassByDensity_SharesInGrams()
+    {
+        // 1 cup x 240 ml x 0.5 g/ml = 120 g, plus 120 g = 240 g.
+        var list = await BuildListForAsync(0.5m, (1m, "cup"), (120m, "g"));
+
+        list.Items.Single().Sources.Select(s => (s.Amount, s.Unit, s.ShareAmount, s.ShareUnit))
+            .Should().Equal((1m, "cup", 120m, "g"), (120m, "g", null, null));
+    }
+
+    [Fact]
+    public async Task Sources_RowPromotedToLitres_SharesInMillilitres()
+    {
+        // 750 ml + 0.5 L = 1.25 L, so the shares stay in the base unit the total was summed in.
+        var list = await BuildListForAsync(null, (750m, "ml"), (0.5m, "L"));
+
+        var item = list.Items.Single();
+        item.Unit.Should().Be("L");
+        item.Sources.Select(s => (s.Amount, s.Unit, s.ShareAmount, s.ShareUnit))
+            .Should().Equal((750m, "ml", null, null), (0.5m, "L", 500m, "ml"));
+    }
+
+    [Fact]
+    public async Task Sources_SplitRows_EachListOnlyTheMealsThatFedThem()
+    {
+        var list = await BuildListForAsync(null, (2m, "pcs"), (100m, "g"));
+
+        list.Items.Single(i => i.Unit == "pcs").Sources.Should().ContainSingle(s => s.RecipeName == "R0");
+        list.Items.Single(i => i.Unit == "g").Sources.Should().ContainSingle(s => s.RecipeName == "R1");
+    }
+
+    [Fact]
+    public async Task Sources_UnquantifiedMeal_IsListedWithoutAnAmount()
+    {
+        var list = await BuildListForAsync(null, (200m, "g"), (null, null));
+
+        list.Items.Single().Sources.Select(s => (s.RecipeName, s.Amount, s.Unit, s.ShareAmount, s.ShareUnit))
+            .Should().Equal(("R0", 200m, "g", null, null), ("R1", null, null, null, null));
+    }
+
+    [Fact]
+    public async Task Sources_OnlyEverUnquantified_ListsEveryMealOnTheAmountLessRow()
+    {
+        var list = await BuildListForAsync(null, (null, null), (null, null));
+
+        list.Items.Single().Sources.Select(s => s.RecipeName).Should().Equal("R0", "R1");
+    }
+
+    [Fact]
+    public async Task Sources_UnquantifiedMeal_AppearsOnEverySplitRow()
+    {
+        var list = await BuildListForAsync(null, (150m, "g"), (2m, "pcs"), (null, null));
+
+        list.Items.Should().HaveCount(2);
+        list.Items.Should().AllSatisfy(i =>
+            i.Sources.Should().ContainSingle(s => s.RecipeName == "R2" && s.Amount == null));
+    }
+
+    /// <summary>Creates a recipe of the given lines for one ingredient.</summary>
+    private static async Task<Guid> CreateRecipeAsync(
+        RecipeService recipeSvc, string name, Guid ingredientId, params (decimal? Amount, string? Unit)[] lines)
+    {
+        var recipe = await recipeSvc.CreateAsync(new API.DTOs.Recipes.CreateRecipeRequest(
+            name, null, null, 4,
+            lines.Select((l, i) => new API.DTOs.Recipes.RecipeIngredientRequest(ingredientId, l.Amount, l.Unit, null, i)).ToList(),
+            [new API.DTOs.Recipes.RecipeStepRequest(1, "Cook", [])]));
+        return recipe.Id;
+    }
+
+    [Fact]
+    public async Task Sources_FollowTheMealPlan_DatedByDateThenUnscheduledByPlanOrder()
+    {
+        await using var ctx = db.CreateDbContext();
+        var ing = TestDataBuilder.Ingredient();
+        ctx.Ingredients.Add(ing);
+        await ctx.SaveChangesAsync();
+
+        var recipeSvc = new RecipeService(ctx);
+        var mealSvc   = new MealPlanService(ctx);
+        var plan      = await mealSvc.CreateAsync(TestDataBuilder.CreateMealPlanRequest("Plan"));
+        foreach (var (name, date) in new (string, DateOnly?)[]
+                 {
+                     ("Unscheduled first", null),
+                     ("Wednesday", new DateOnly(2026, 6, 3)),
+                     ("Unscheduled second", null),
+                     ("Monday", new DateOnly(2026, 6, 1)),
+                 })
+        {
+            var recipeId = await CreateRecipeAsync(recipeSvc, name, ing.Id, (100m, "g"));
+            await mealSvc.AddPlannedMealAsync(plan.Id, TestDataBuilder.AddPlannedMealRequest(recipeId, date));
+        }
+
+        var list = await new ShoppingListService(ctx).GetActiveAsync();
+
+        var sources = list!.Items.Single().Sources;
+        sources.Select(s => s.RecipeName)
+            .Should().Equal("Monday", "Wednesday", "Unscheduled first", "Unscheduled second");
+        sources[0].ScheduledDate.Should().Be(new DateOnly(2026, 6, 1));
+        sources[2].ScheduledDate.Should().BeNull();
+    }
+
+    [Fact]
+    public async Task Sources_SameRecipePlannedTwice_IsTwoSources()
+    {
+        await using var ctx = db.CreateDbContext();
+        var ing = TestDataBuilder.Ingredient();
+        ctx.Ingredients.Add(ing);
+        await ctx.SaveChangesAsync();
+
+        var recipeId = await CreateRecipeAsync(new RecipeService(ctx), "Pancakes", ing.Id, (100m, "g"));
+        var mealSvc  = new MealPlanService(ctx);
+        var plan     = await mealSvc.CreateAsync(TestDataBuilder.CreateMealPlanRequest("Plan"));
+        await mealSvc.AddPlannedMealAsync(plan.Id, TestDataBuilder.AddPlannedMealRequest(recipeId));
+        await mealSvc.AddPlannedMealAsync(plan.Id, TestDataBuilder.AddPlannedMealRequest(recipeId, batchSize: BatchSize.Double));
+
+        var list = await new ShoppingListService(ctx).GetActiveAsync();
+
+        list!.Items.Single().Sources.Select(s => (s.RecipeName, s.Amount))
+            .Should().Equal(("Pancakes", 100m), ("Pancakes", 200m));
+    }
+
+    [Fact]
+    public async Task Sources_OneMealUsingTheIngredientTwice_MergesLinesInTheSameUnitOnly()
+    {
+        await using var ctx = db.CreateDbContext();
+        var ing = TestDataBuilder.Ingredient(gramsPerMillilitre: 0.5m);
+        ctx.Ingredients.Add(ing);
+        await ctx.SaveChangesAsync();
+
+        var recipeId = await CreateRecipeAsync(new RecipeService(ctx), "Cake", ing.Id,
+            (2m, "tbsp"), (1m, "tbsp"), (50m, "g"), (null, null));
+        var mealSvc = new MealPlanService(ctx);
+        var plan    = await mealSvc.CreateAsync(TestDataBuilder.CreateMealPlanRequest("Plan"));
+        await mealSvc.AddPlannedMealAsync(plan.Id, TestDataBuilder.AddPlannedMealRequest(recipeId));
+
+        var list = await new ShoppingListService(ctx).GetActiveAsync();
+
+        // 3 tbsp = 45 ml x 0.5 g/ml = 22.5 g; the unquantified line adds nothing for a meal already listed.
+        list!.Items.Single().Sources.Select(s => (s.Amount, s.Unit, s.ShareAmount, s.ShareUnit))
+            .Should().BeEquivalentTo([(3m, "tbsp", 22.5m, "g"), (50m, "g", (decimal?)null, (string?)null)]);
+    }
+
+    [Fact]
+    public async Task Sources_RemovingAPlannedMeal_LeavesTheListsSourcesIntact()
+    {
+        var (_, recipe, plan) = await SeedActivePlanWithRecipeAsync();
+
+        await using var ctx = db.CreateDbContext();
+        var svc  = new ShoppingListService(ctx);
+        await svc.GetActiveAsync();
+
+        var mealSvc = new MealPlanService(ctx);
+        var planned = (await mealSvc.GetByIdAsync(plan.Id))!.PlannedMeals.Single();
+        await mealSvc.RemovePlannedMealAsync(plan.Id, planned.Id);
+
+        var list = await svc.GetActiveAsync();
+        list!.IsStale.Should().BeTrue();
+        list.Items.Single().Sources.Should().ContainSingle(s => s.RecipeId == recipe.Id && s.RecipeName == "Test Recipe");
+    }
+
+    [Fact]
+    public async Task Sources_RecipeDeletedAfterGeneration_KeepsItsNameWithoutALink()
+    {
+        var (_, recipe, plan) = await SeedActivePlanWithRecipeAsync();
+
+        await using var ctx = db.CreateDbContext();
+        var svc = new ShoppingListService(ctx);
+        await svc.GetActiveAsync();
+
+        var mealSvc = new MealPlanService(ctx);
+        var planned = (await mealSvc.GetByIdAsync(plan.Id))!.PlannedMeals.Single();
+        await mealSvc.RemovePlannedMealAsync(plan.Id, planned.Id);
+        await new RecipeService(ctx).DeleteAsync(recipe.Id);
+
+        var list = await svc.GetActiveAsync();
+        var source = list!.Items.Single().Sources.Single();
+        source.RecipeId.Should().BeNull();
+        source.RecipeName.Should().Be("Test Recipe");
+    }
+
+    [Fact]
+    public async Task Sources_RegenerateReplacesThem_AndCustomItemsHaveNone()
+    {
+        var (ing, _, plan) = await SeedActivePlanWithRecipeAsync();
+
+        await using var ctx = db.CreateDbContext();
+        var svc  = new ShoppingListService(ctx);
+        var list = await svc.GetActiveAsync();
+        await svc.AddCustomItemAsync(list!.Id, new AddCustomItemRequest("Bread", null, null, null));
+
+        var recipeId = await CreateRecipeAsync(new RecipeService(ctx), "Second", ing.Id, (50m, "g"));
+        await new MealPlanService(ctx).AddPlannedMealAsync(plan.Id, TestDataBuilder.AddPlannedMealRequest(recipeId));
+
+        var regenerated = await svc.RegenerateActiveAsync();
+
+        regenerated!.Items.Single(i => !i.IsCustom).Sources.Select(s => s.RecipeName)
+            .Should().Equal("Test Recipe", "Second");
+        regenerated.Items.Single(i => i.IsCustom).Sources.Should().BeEmpty();
+        ctx.ShoppingListItemSources.Should().HaveCount(2);
+    }
+
+    [Fact]
+    public async Task Sources_EditingAnItemsAmount_LeavesItsSourcesUnchanged()
+    {
+        var (_, _, _) = await SeedActivePlanWithRecipeAsync(amount: 200m);
+
+        await using var ctx = db.CreateDbContext();
+        var svc  = new ShoppingListService(ctx);
+        var list = await svc.GetActiveAsync();
+        var item = list!.Items.Single();
+
+        var updated = await svc.UpdateItemAsync(list.Id, item.Id, new UpdateItemRequest(true, 500m, "g"));
+
+        updated!.Amount.Should().Be(500m);
+        updated.Sources.Should().ContainSingle(s => s.Amount == 200m && s.Unit == "g");
     }
 
     // ── Category ordering ─────────────────────────────────────────────────────
@@ -462,7 +733,7 @@ public class ShoppingListServiceTests(DatabaseFixture db) : IAsyncLifetime
 
         var mealSvc = new MealPlanService(ctx);
         var plan = await mealSvc.CreateAsync(TestDataBuilder.CreateMealPlanRequest("Plan"));
-        await mealSvc.AddRecipeAsync(plan.Id, TestDataBuilder.AddMealPlanRecipeRequest(r.Id));
+        await mealSvc.AddPlannedMealAsync(plan.Id, TestDataBuilder.AddPlannedMealRequest(r.Id));
 
         var svc  = new ShoppingListService(ctx);
         var list = await svc.GetActiveAsync();
@@ -487,7 +758,7 @@ public class ShoppingListServiceTests(DatabaseFixture db) : IAsyncLifetime
     }
 
     [Fact]
-    public async Task IsStale_TrueAfterMealPlanRecipeMutation()
+    public async Task IsStale_TrueAfterPlannedMealMutation()
     {
         var (ing, _, plan) = await SeedActivePlanWithRecipeAsync();
 
@@ -507,7 +778,7 @@ public class ShoppingListServiceTests(DatabaseFixture db) : IAsyncLifetime
             [new API.DTOs.Recipes.RecipeStepRequest(1, "Cook", [])]));
 
         var mealSvc = new MealPlanService(ctx);
-        await mealSvc.AddRecipeAsync(plan.Id, TestDataBuilder.AddMealPlanRecipeRequest(r2.Id));
+        await mealSvc.AddPlannedMealAsync(plan.Id, TestDataBuilder.AddPlannedMealRequest(r2.Id));
 
         var refreshed = await svc.GetActiveAsync();
         refreshed!.IsStale.Should().BeTrue();

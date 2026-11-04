@@ -1,10 +1,6 @@
 namespace RecipeApp.Tests.Infrastructure;
 
-/// <summary>
-/// Locates source-tree files that tests check as artefacts, such as the shipped ingredient
-/// catalogue and the local MyPlate cache. Found by walking up from the test binaries, so it works
-/// from any build output directory.
-/// </summary>
+/// <summary>Locates source-tree files that tests check as artefacts, found by walking up from the test binaries so it works from any build output directory.</summary>
 public static class RepositoryPaths
 {
     private const string ApiProjectDirectory = "RecipeApp.API";
@@ -12,6 +8,9 @@ public static class RepositoryPaths
 
     /// <summary>The API project directory, which is the app's content root.</summary>
     public static string ApiContentRoot { get; } = FindApiContentRoot();
+
+    /// <summary>The repository root, holding <c>backend/</c> and <c>frontend/</c>.</summary>
+    public static string RepositoryRoot => Path.GetFullPath(Path.Combine(ApiContentRoot, "..", ".."));
 
     /// <summary>The shipped catalogue in the source tree.</summary>
     public static string ShippedCataloguePath =>

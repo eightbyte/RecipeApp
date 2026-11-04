@@ -5,16 +5,13 @@ public record ScrapePreviewResponse(
     string? Description,
     int Servings,
     string SourceUrl,
-    List<ScrapePreviewIngredient> Ingredients,
-    List<ScrapePreviewStep> Steps
+    List<ScrapePreviewIngredientResponse> Ingredients,
+    List<ScrapePreviewStepResponse> Steps
 );
 
-/// <param name="Amount">
-/// Null when the source line stated no quantity — the preview shows an empty amount field rather
-/// than a fabricated number (Phase 9.1 §3.4).
-/// </param>
+/// <param name="Amount">Null when the source line stated no quantity, so the preview shows an empty field rather than a fabricated number.</param>
 /// <param name="Unit">Null exactly when <paramref name="Amount"/> is null.</param>
-public record ScrapePreviewIngredient(
+public record ScrapePreviewIngredientResponse(
     Guid? IngredientId,
     string Name,
     string DisplayName,
@@ -28,7 +25,7 @@ public record ScrapePreviewIngredient(
     int DisplayOrder
 );
 
-public record ScrapePreviewStep(
+public record ScrapePreviewStepResponse(
     int StepNumber,
     string Instruction,
     List<int> IngredientIndexes

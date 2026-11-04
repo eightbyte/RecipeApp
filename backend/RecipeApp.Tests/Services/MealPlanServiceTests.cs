@@ -79,14 +79,14 @@ public class MealPlanServiceTests(DatabaseFixture db) : IAsyncLifetime
         var svc    = new MealPlanService(ctx);
         var recipe = await new RecipeService(ctx).CreateAsync(TestDataBuilder.CreateRecipeRequest(ing.Id, "Pasta"));
         var plan   = await svc.CreateAsync(TestDataBuilder.CreateMealPlanRequest("Active Plan"));
-        await svc.AddRecipeAsync(plan.Id, TestDataBuilder.AddMealPlanRecipeRequest(recipe.Id));
+        await svc.AddPlannedMealAsync(plan.Id, TestDataBuilder.AddPlannedMealRequest(recipe.Id));
 
         var active = await svc.GetActiveAsync();
 
         active.Should().NotBeNull();
         active!.Id.Should().Be(plan.Id);
-        active.Recipes.Should().HaveCount(1);
-        active.Recipes[0].RecipeName.Should().Be("Pasta");
+        active.PlannedMeals.Should().HaveCount(1);
+        active.PlannedMeals[0].RecipeName.Should().Be("Pasta");
     }
 
     [Fact]
@@ -115,10 +115,10 @@ public class MealPlanServiceTests(DatabaseFixture db) : IAsyncLifetime
         list[0].IsActive.Should().BeTrue();
     }
 
-    // ── AddRecipeAsync ────────────────────────────────────────────────────────
+    // ── AddPlannedMealAsync ───────────────────────────────────────────────────
 
     [Fact]
-    public async Task AddRecipeAsync_IncreasesDisplayOrder()
+    public async Task AddPlannedMealAsync_IncreasesDisplayOrder()
     {
         await using var ctx = db.CreateDbContext();
         var ing = TestDataBuilder.Ingredient();
@@ -132,15 +132,15 @@ public class MealPlanServiceTests(DatabaseFixture db) : IAsyncLifetime
         var svc  = new MealPlanService(ctx);
         var plan = await svc.CreateAsync(TestDataBuilder.CreateMealPlanRequest("Plan"));
 
-        var mpr1 = await svc.AddRecipeAsync(plan.Id, TestDataBuilder.AddMealPlanRecipeRequest(r1.Id));
-        var mpr2 = await svc.AddRecipeAsync(plan.Id, TestDataBuilder.AddMealPlanRecipeRequest(r2.Id));
+        var plannedMeal1 = await svc.AddPlannedMealAsync(plan.Id, TestDataBuilder.AddPlannedMealRequest(r1.Id));
+        var plannedMeal2 = await svc.AddPlannedMealAsync(plan.Id, TestDataBuilder.AddPlannedMealRequest(r2.Id));
 
-        mpr1!.DisplayOrder.Should().Be(1);
-        mpr2!.DisplayOrder.Should().Be(2);
+        plannedMeal1!.DisplayOrder.Should().Be(1);
+        plannedMeal2!.DisplayOrder.Should().Be(2);
     }
 
     [Fact]
-    public async Task AddRecipeAsync_SameRecipeTwiceIsAllowed()
+    public async Task AddPlannedMealAsync_SameRecipeTwiceIsAllowed()
     {
         await using var ctx = db.CreateDbContext();
         var ing = TestDataBuilder.Ingredient();
@@ -151,15 +151,15 @@ public class MealPlanServiceTests(DatabaseFixture db) : IAsyncLifetime
         var svc    = new MealPlanService(ctx);
         var plan   = await svc.CreateAsync(TestDataBuilder.CreateMealPlanRequest("Plan"));
 
-        await svc.AddRecipeAsync(plan.Id, TestDataBuilder.AddMealPlanRecipeRequest(recipe.Id));
-        await svc.AddRecipeAsync(plan.Id, TestDataBuilder.AddMealPlanRecipeRequest(recipe.Id));
+        await svc.AddPlannedMealAsync(plan.Id, TestDataBuilder.AddPlannedMealRequest(recipe.Id));
+        await svc.AddPlannedMealAsync(plan.Id, TestDataBuilder.AddPlannedMealRequest(recipe.Id));
 
         var detail = await svc.GetByIdAsync(plan.Id);
-        detail!.Recipes.Should().HaveCount(2);
+        detail!.PlannedMeals.Should().HaveCount(2);
     }
 
     [Fact]
-    public async Task AddRecipeAsync_UnknownPlan_ReturnsNull()
+    public async Task AddPlannedMealAsync_UnknownPlan_ReturnsNull()
     {
         await using var ctx = db.CreateDbContext();
         var ing = TestDataBuilder.Ingredient();
@@ -169,23 +169,23 @@ public class MealPlanServiceTests(DatabaseFixture db) : IAsyncLifetime
         var recipe = await new RecipeService(ctx).CreateAsync(TestDataBuilder.CreateRecipeRequest(ing.Id));
         var svc    = new MealPlanService(ctx);
 
-        var result = await svc.AddRecipeAsync(Guid.NewGuid(), TestDataBuilder.AddMealPlanRecipeRequest(recipe.Id));
+        var result = await svc.AddPlannedMealAsync(Guid.NewGuid(), TestDataBuilder.AddPlannedMealRequest(recipe.Id));
         result.Should().BeNull();
     }
 
     [Fact]
-    public async Task AddRecipeAsync_UnknownRecipe_ReturnsNull()
+    public async Task AddPlannedMealAsync_UnknownRecipe_ReturnsNull()
     {
         await using var ctx = db.CreateDbContext();
         var svc  = new MealPlanService(ctx);
         var plan = await svc.CreateAsync(TestDataBuilder.CreateMealPlanRequest("Plan"));
 
-        var result = await svc.AddRecipeAsync(plan.Id, TestDataBuilder.AddMealPlanRecipeRequest(Guid.NewGuid()));
+        var result = await svc.AddPlannedMealAsync(plan.Id, TestDataBuilder.AddPlannedMealRequest(Guid.NewGuid()));
         result.Should().BeNull();
     }
 
     [Fact]
-    public async Task AddRecipeAsync_DefaultsToRegularPortion()
+    public async Task AddPlannedMealAsync_DefaultsToRegularBatchSize()
     {
         await using var ctx = db.CreateDbContext();
         var ing = TestDataBuilder.Ingredient();
@@ -196,14 +196,14 @@ public class MealPlanServiceTests(DatabaseFixture db) : IAsyncLifetime
         var svc    = new MealPlanService(ctx);
         var plan   = await svc.CreateAsync(TestDataBuilder.CreateMealPlanRequest("Plan"));
 
-        var mpr = await svc.AddRecipeAsync(plan.Id, new API.DTOs.MealPlans.AddMealPlanRecipeRequest(recipe.Id, null, null));
-        mpr!.PortionSize.Should().Be(PortionSize.Regular);
+        var plannedMeal = await svc.AddPlannedMealAsync(plan.Id, new API.DTOs.MealPlans.AddPlannedMealRequest(recipe.Id, null, null));
+        plannedMeal!.BatchSize.Should().Be(BatchSize.Regular);
     }
 
-    // ── UpdateRecipeAsync ─────────────────────────────────────────────────────
+    // ── UpdatePlannedMealAsync ────────────────────────────────────────────────
 
     [Fact]
-    public async Task UpdateRecipeAsync_UpdatesDateAndPortion()
+    public async Task UpdatePlannedMealAsync_UpdatesDateAndBatchSize()
     {
         await using var ctx = db.CreateDbContext();
         var ing = TestDataBuilder.Ingredient();
@@ -213,17 +213,17 @@ public class MealPlanServiceTests(DatabaseFixture db) : IAsyncLifetime
         var recipe = await new RecipeService(ctx).CreateAsync(TestDataBuilder.CreateRecipeRequest(ing.Id));
         var svc    = new MealPlanService(ctx);
         var plan   = await svc.CreateAsync(TestDataBuilder.CreateMealPlanRequest("Plan"));
-        var mpr    = await svc.AddRecipeAsync(plan.Id, TestDataBuilder.AddMealPlanRecipeRequest(recipe.Id));
+        var plannedMeal    = await svc.AddPlannedMealAsync(plan.Id, TestDataBuilder.AddPlannedMealRequest(recipe.Id));
 
         var date = new DateOnly(2026, 6, 5);
-        var updated = await svc.UpdateRecipeAsync(plan.Id, mpr!.Id, new API.DTOs.MealPlans.UpdateMealPlanRecipeRequest(date, PortionSize.Double));
+        var updated = await svc.UpdatePlannedMealAsync(plan.Id, plannedMeal!.Id, new API.DTOs.MealPlans.UpdatePlannedMealRequest(date, BatchSize.Double));
 
         updated!.ScheduledDate.Should().Be(date);
-        updated.PortionSize.Should().Be(PortionSize.Double);
+        updated.BatchSize.Should().Be(BatchSize.Double);
     }
 
     [Fact]
-    public async Task UpdateRecipeAsync_WrongPlanId_ReturnsNull()
+    public async Task UpdatePlannedMealAsync_WrongPlanId_ReturnsNull()
     {
         await using var ctx = db.CreateDbContext();
         var ing = TestDataBuilder.Ingredient();
@@ -233,18 +233,18 @@ public class MealPlanServiceTests(DatabaseFixture db) : IAsyncLifetime
         var recipe = await new RecipeService(ctx).CreateAsync(TestDataBuilder.CreateRecipeRequest(ing.Id));
         var svc    = new MealPlanService(ctx);
         var plan   = await svc.CreateAsync(TestDataBuilder.CreateMealPlanRequest("Plan"));
-        var mpr    = await svc.AddRecipeAsync(plan.Id, TestDataBuilder.AddMealPlanRecipeRequest(recipe.Id));
+        var plannedMeal    = await svc.AddPlannedMealAsync(plan.Id, TestDataBuilder.AddPlannedMealRequest(recipe.Id));
 
-        var result = await svc.UpdateRecipeAsync(Guid.NewGuid(), mpr!.Id,
-            new API.DTOs.MealPlans.UpdateMealPlanRecipeRequest(null, PortionSize.Regular));
+        var result = await svc.UpdatePlannedMealAsync(Guid.NewGuid(), plannedMeal!.Id,
+            new API.DTOs.MealPlans.UpdatePlannedMealRequest(null, BatchSize.Regular));
 
         result.Should().BeNull();
     }
 
-    // ── RemoveRecipeAsync ─────────────────────────────────────────────────────
+    // ── RemovePlannedMealAsync ────────────────────────────────────────────────
 
     [Fact]
-    public async Task RemoveRecipeAsync_RemovesFromPlan()
+    public async Task RemovePlannedMealAsync_RemovesFromPlan()
     {
         await using var ctx = db.CreateDbContext();
         var ing = TestDataBuilder.Ingredient();
@@ -254,17 +254,17 @@ public class MealPlanServiceTests(DatabaseFixture db) : IAsyncLifetime
         var recipe = await new RecipeService(ctx).CreateAsync(TestDataBuilder.CreateRecipeRequest(ing.Id));
         var svc    = new MealPlanService(ctx);
         var plan   = await svc.CreateAsync(TestDataBuilder.CreateMealPlanRequest("Plan"));
-        var mpr    = await svc.AddRecipeAsync(plan.Id, TestDataBuilder.AddMealPlanRecipeRequest(recipe.Id));
+        var plannedMeal    = await svc.AddPlannedMealAsync(plan.Id, TestDataBuilder.AddPlannedMealRequest(recipe.Id));
 
-        var removed = await svc.RemoveRecipeAsync(plan.Id, mpr!.Id);
+        var removed = await svc.RemovePlannedMealAsync(plan.Id, plannedMeal!.Id);
 
         removed.Should().BeTrue();
         var detail = await svc.GetByIdAsync(plan.Id);
-        detail!.Recipes.Should().BeEmpty();
+        detail!.PlannedMeals.Should().BeEmpty();
     }
 
     [Fact]
-    public async Task RemoveRecipeAsync_WrongPlanId_ReturnsFalse()
+    public async Task RemovePlannedMealAsync_WrongPlanId_ReturnsFalse()
     {
         await using var ctx = db.CreateDbContext();
         var ing = TestDataBuilder.Ingredient();
@@ -274,16 +274,16 @@ public class MealPlanServiceTests(DatabaseFixture db) : IAsyncLifetime
         var recipe = await new RecipeService(ctx).CreateAsync(TestDataBuilder.CreateRecipeRequest(ing.Id));
         var svc    = new MealPlanService(ctx);
         var plan   = await svc.CreateAsync(TestDataBuilder.CreateMealPlanRequest("Plan"));
-        var mpr    = await svc.AddRecipeAsync(plan.Id, TestDataBuilder.AddMealPlanRecipeRequest(recipe.Id));
+        var plannedMeal    = await svc.AddPlannedMealAsync(plan.Id, TestDataBuilder.AddPlannedMealRequest(recipe.Id));
 
-        var result = await svc.RemoveRecipeAsync(Guid.NewGuid(), mpr!.Id);
+        var result = await svc.RemovePlannedMealAsync(Guid.NewGuid(), plannedMeal!.Id);
         result.Should().BeFalse();
     }
 
     // ── DeleteAsync ───────────────────────────────────────────────────────────
 
     [Fact]
-    public async Task DeleteAsync_CascadesMealPlanRecipes()
+    public async Task DeleteAsync_CascadesPlannedMeals()
     {
         await using var ctx = db.CreateDbContext();
         var ing = TestDataBuilder.Ingredient();
@@ -293,11 +293,11 @@ public class MealPlanServiceTests(DatabaseFixture db) : IAsyncLifetime
         var recipe = await new RecipeService(ctx).CreateAsync(TestDataBuilder.CreateRecipeRequest(ing.Id));
         var svc    = new MealPlanService(ctx);
         var plan   = await svc.CreateAsync(TestDataBuilder.CreateMealPlanRequest("Plan"));
-        await svc.AddRecipeAsync(plan.Id, TestDataBuilder.AddMealPlanRecipeRequest(recipe.Id));
+        await svc.AddPlannedMealAsync(plan.Id, TestDataBuilder.AddPlannedMealRequest(recipe.Id));
 
         await svc.DeleteAsync(plan.Id);
 
-        ctx.MealPlanRecipes.Count(mpr => mpr.MealPlanId == plan.Id).Should().Be(0);
+        ctx.PlannedMeals.Count(plannedMeal => plannedMeal.MealPlanId == plan.Id).Should().Be(0);
     }
 
     [Fact]
@@ -327,12 +327,12 @@ public class MealPlanServiceTests(DatabaseFixture db) : IAsyncLifetime
         var plan = await svc.CreateAsync(TestDataBuilder.CreateMealPlanRequest("Plan"));
 
         // Add undated first, dated second
-        await svc.AddRecipeAsync(plan.Id, TestDataBuilder.AddMealPlanRecipeRequest(r1.Id));
-        await svc.AddRecipeAsync(plan.Id, new API.DTOs.MealPlans.AddMealPlanRecipeRequest(r2.Id, new DateOnly(2026, 6, 5), null));
+        await svc.AddPlannedMealAsync(plan.Id, TestDataBuilder.AddPlannedMealRequest(r1.Id));
+        await svc.AddPlannedMealAsync(plan.Id, new API.DTOs.MealPlans.AddPlannedMealRequest(r2.Id, new DateOnly(2026, 6, 5), null));
 
         var detail = await svc.GetByIdAsync(plan.Id);
-        detail!.Recipes[0].RecipeName.Should().Be("Dated");
-        detail.Recipes[1].RecipeName.Should().Be("Undated");
+        detail!.PlannedMeals[0].RecipeName.Should().Be("Dated");
+        detail.PlannedMeals[1].RecipeName.Should().Be("Undated");
     }
 
     // ── GetSuggestionsAsync ───────────────────────────────────────────────────
@@ -370,7 +370,7 @@ public class MealPlanServiceTests(DatabaseFixture db) : IAsyncLifetime
 
         var svc  = new MealPlanService(ctx);
         var plan = await svc.CreateAsync(TestDataBuilder.CreateMealPlanRequest("Plan"));
-        await svc.AddRecipeAsync(plan.Id, TestDataBuilder.AddMealPlanRecipeRequest(r1.Id));
+        await svc.AddPlannedMealAsync(plan.Id, TestDataBuilder.AddPlannedMealRequest(r1.Id));
 
         var suggestions = await svc.GetSuggestionsAsync(plan.Id);
 
@@ -416,7 +416,7 @@ public class MealPlanServiceTests(DatabaseFixture db) : IAsyncLifetime
 
         var svc  = new MealPlanService(ctx);
         var plan = await svc.CreateAsync(TestDataBuilder.CreateMealPlanRequest("Plan"));
-        await svc.AddRecipeAsync(plan.Id, TestDataBuilder.AddMealPlanRecipeRequest(planRecipe.Id));
+        await svc.AddPlannedMealAsync(plan.Id, TestDataBuilder.AddPlannedMealRequest(planRecipe.Id));
 
         var suggestions = await svc.GetSuggestionsAsync(plan.Id);
 

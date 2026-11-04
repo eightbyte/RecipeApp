@@ -7,7 +7,7 @@ paths:
   - "backend/RecipeApp.API/seed-data/ingredient-catalogue.json"
   - "frontend/src/constants/categories.js"
   - "frontend/src/views/ShoppingView.vue"
-  - "frontend/src/components/AddCustomItemDialog.vue"
+  - "frontend/src/components/CustomItemSheet.vue"
   - "frontend/src/views/RecipeScrapePreviewView.vue"
 ---
 

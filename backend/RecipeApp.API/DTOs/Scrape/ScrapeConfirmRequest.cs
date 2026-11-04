@@ -5,16 +5,13 @@ public record ScrapeConfirmRequest(
     string? Description,
     string SourceUrl,
     int Servings,
-    List<ScrapeConfirmIngredient> Ingredients,
-    List<ScrapeConfirmStep> Steps
+    List<ScrapeConfirmIngredientRequest> Ingredients,
+    List<ScrapeConfirmStepRequest> Steps
 );
 
-/// <param name="Amount">
-/// Null when the source line stated no quantity (Phase 9.1 §3.1). Must be null exactly when
-/// <paramref name="Unit"/> is null.
-/// </param>
+/// <param name="Amount">Null when the source line stated no quantity.</param>
 /// <param name="Unit">Null exactly when <paramref name="Amount"/> is null.</param>
-public record ScrapeConfirmIngredient(
+public record ScrapeConfirmIngredientRequest(
     Guid? IngredientId,
     string? NewIngredientName,
     string? NewIngredientDisplayName,
@@ -27,7 +24,7 @@ public record ScrapeConfirmIngredient(
     string? SourceUnit = null
 );
 
-public record ScrapeConfirmStep(
+public record ScrapeConfirmStepRequest(
     int StepNumber,
     string Instruction,
     List<int> IngredientIndexes

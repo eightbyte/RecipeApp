@@ -2,6 +2,7 @@ using FluentAssertions;
 using FluentValidation.TestHelper;
 using RecipeApp.API.DTOs.Recipes;
 using RecipeApp.API.Validators;
+using RecipeApp.Tests.Helpers;
 
 namespace RecipeApp.Tests.Validators;
 
@@ -11,6 +12,7 @@ public class RecipeValidatorTests
     private readonly RecipeStepRequestValidator _stepValidator = new();
     private readonly CreateRecipeValidator _createValidator = new();
     private readonly UpdateRecipeValidator _updateValidator = new();
+    private readonly RecipeListQueryValidator _listQueryValidator = new();
 
     // ── RecipeIngredientRequestValidator ──────────────────────────────────────
 
@@ -70,14 +72,13 @@ public class RecipeValidatorTests
     [InlineData("teaspoon")]
     public void Ingredient_NonCanonicalUnitSpelling_HasErrorOnUnit(string unit)
     {
-        // MeasurementUnit.IsValid is deliberately strict: stored units are always the canonical
-        // spelling, which is what lets shopping-list consolidation group by plain equality.
+        // MeasurementUnit.IsValid is deliberately strict, so stored units are canonical and consolidation can group by plain equality.
         var result = _ingredientValidator.TestValidate(
             new RecipeIngredientRequest(Guid.NewGuid(), 100m, unit, null, 0));
         result.ShouldHaveValidationErrorFor(x => x.Unit);
     }
 
-    // ── Unquantified ingredients (Phase 9.1 §3.1) ─────────────────────────────
+    // ── Unquantified ingredients ──────────────────────────────────────────────
 
     [Fact]
     public void Ingredient_NullAmountAndNullUnit_HasNoErrors()
@@ -108,8 +109,7 @@ public class RecipeValidatorTests
     [Fact]
     public void Ingredient_NullAmount_StillCarriesSourceProvenance()
     {
-        // Provenance is independent of the canonical measurement: an imported line can record
-        // what it said while stating no quantity of its own.
+        // Provenance is independent of the canonical measurement, so an imported line can record what it said while stating no quantity.
         var result = _ingredientValidator.TestValidate(
             new RecipeIngredientRequest(Guid.NewGuid(), null, null, null, 0,
                 SourceAmount: null, SourceUnit: null));
@@ -372,5 +372,71 @@ public class RecipeValidatorTests
         var result = _updateValidator.TestValidate(req);
         result.IsValid.Should().BeFalse();
         result.Errors.Should().Contain(e => e.PropertyName.Contains("IngredientIndexes"));
+    }
+
+    // ── RecipeListQueryValidator ──────────────────────────────────────────────
+
+    [Fact]
+    public void ListQuery_SortAndDirectionOmitted_HasNoErrors()
+    {
+        var result = _listQueryValidator.TestValidate(TestDataBuilder.RecipeListQuery());
+        result.ShouldNotHaveAnyValidationErrors();
+    }
+
+    [Theory]
+    [InlineData("NAME", "ASC")]
+    [InlineData("DATE_ADDED", "DESC")]
+    [InlineData("LAST_COOKED", "ASC")]
+    public void ListQuery_KnownSortAndDirection_HasNoErrors(string sort, string direction)
+    {
+        var result = _listQueryValidator.TestValidate(TestDataBuilder.RecipeListQuery(sort, direction));
+        result.ShouldNotHaveAnyValidationErrors();
+    }
+
+    [Theory]
+    [InlineData("RATING")]
+    [InlineData("name")]
+    [InlineData("")]
+    public void ListQuery_UnknownSort_HasErrorOnSort(string sort)
+    {
+        var result = _listQueryValidator.TestValidate(TestDataBuilder.RecipeListQuery(sort: sort));
+        result.ShouldHaveValidationErrorFor(x => x.Sort);
+    }
+
+    [Theory]
+    [InlineData("UP")]
+    [InlineData("asc")]
+    [InlineData("")]
+    public void ListQuery_UnknownDirection_HasErrorOnDirection(string direction)
+    {
+        var result = _listQueryValidator.TestValidate(TestDataBuilder.RecipeListQuery(direction: direction));
+        result.ShouldHaveValidationErrorFor(x => x.Direction);
+    }
+
+    [Theory]
+    [InlineData(1, 1)]
+    [InlineData(50, 100)]
+    public void ListQuery_PageAndPageSizeInRange_HasNoErrors(int page, int pageSize)
+    {
+        var result = _listQueryValidator.TestValidate(TestDataBuilder.RecipeListQuery(page: page, pageSize: pageSize));
+        result.ShouldNotHaveAnyValidationErrors();
+    }
+
+    [Theory]
+    [InlineData(0)]
+    [InlineData(-1)]
+    public void ListQuery_PageBelowOne_HasErrorOnPage(int page)
+    {
+        var result = _listQueryValidator.TestValidate(TestDataBuilder.RecipeListQuery(page: page));
+        result.ShouldHaveValidationErrorFor(x => x.Page);
+    }
+
+    [Theory]
+    [InlineData(0)]
+    [InlineData(101)]
+    public void ListQuery_PageSizeOutOfRange_HasErrorOnPageSize(int pageSize)
+    {
+        var result = _listQueryValidator.TestValidate(TestDataBuilder.RecipeListQuery(pageSize: pageSize));
+        result.ShouldHaveValidationErrorFor(x => x.PageSize);
     }
 }

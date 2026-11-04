@@ -26,15 +26,28 @@ public static class TestDataBuilder
     public static Recipe Recipe(
         string name = "Test Recipe",
         int servings = 4,
-        DateTime? lastCookedAt = null) => new()
+        DateTime? lastCookedAt = null,
+        DateTime? createdAt = null,
+        Guid? id = null) => new()
     {
-        Id = Guid.NewGuid(),
+        Id = id ?? Guid.NewGuid(),
         Name = name,
         Servings = servings,
         LastCookedAt = lastCookedAt,
-        CreatedAt = DateTime.UtcNow,
+        CreatedAt = createdAt ?? DateTime.UtcNow,
         UpdatedAt = DateTime.UtcNow,
     };
+
+    public static RecipeListQuery RecipeListQuery(
+        string? search = null,
+        string? ingredient = null,
+        int? excludeRecentDays = null,
+        DateTime? lastCookedBefore = null,
+        string? sort = null,
+        string? direction = null,
+        int? page = null,
+        int? pageSize = null) =>
+        new(search, ingredient, excludeRecentDays, lastCookedBefore, sort, direction, page, pageSize);
 
     public static CreateRecipeRequest CreateRecipeRequest(
         Guid ingredientId,
@@ -83,25 +96,25 @@ public static class TestDataBuilder
         CreatedAt = createdAt ?? DateTime.UtcNow,
     };
 
-    public static MealPlanRecipe MealPlanRecipe(
+    public static PlannedMeal PlannedMeal(
         Guid mealPlanId,
         Guid recipeId,
         DateOnly? scheduledDate = null,
-        string portionSize = PortionSize.Regular,
+        string batchSize = BatchSize.Regular,
         int displayOrder = 1) => new()
     {
         Id            = Guid.NewGuid(),
         MealPlanId    = mealPlanId,
         RecipeId      = recipeId,
         ScheduledDate = scheduledDate,
-        PortionSize   = portionSize,
+        BatchSize     = batchSize,
         DisplayOrder  = displayOrder,
     };
 
     public static CreateMealPlanRequest CreateMealPlanRequest(string name = "Test Plan") => new(name);
 
-    public static AddMealPlanRecipeRequest AddMealPlanRecipeRequest(
+    public static AddPlannedMealRequest AddPlannedMealRequest(
         Guid recipeId,
         DateOnly? scheduledDate = null,
-        string? portionSize = null) => new(recipeId, scheduledDate, portionSize);
+        string? batchSize = null) => new(recipeId, scheduledDate, batchSize);
 }

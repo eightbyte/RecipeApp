@@ -5,11 +5,7 @@ namespace RecipeApp.API.Enums;
 /// <summary>Physical dimension a measurement unit belongs to.</summary>
 public enum UnitDimension { Mass, Volume, Count }
 
-/// <summary>
-/// The authoritative set of storable measurement units.
-/// Mass base unit is g; volume base unit is ml. Stored values are always the
-/// canonical spelling below — use <see cref="TryCanonicalise"/> on anything from outside.
-/// </summary>
+/// <summary>The authoritative set of storable measurement units, always stored in canonical spelling, so use <see cref="TryCanonicalise"/> on anything from outside.</summary>
 public static class MeasurementUnit
 {
     public const string Gram       = "g";
@@ -21,12 +17,7 @@ public static class MeasurementUnit
     public const string Tablespoon = "tbsp";
     public const string Cup        = "cup";
 
-    /// <summary>
-    /// Millilitres per cup. The app's canonical definition (US legal cup),
-    /// matching the 240.0 factor RecipeScrapeService.UnitConversions used until Phase 8.5.1.
-    /// A definition rather than a preference — changing it would silently reinterpret
-    /// every already-stored value, so it is deliberately not configurable.
-    /// </summary>
+    /// <summary>Millilitres per cup (the US legal cup), a definition rather than a preference, so it is not configurable.</summary>
     public const decimal MillilitresPerCup = 240m;
 
     /// <summary>Canonical spellings in display order. This is the storable set.</summary>
@@ -47,17 +38,10 @@ public static class MeasurementUnit
             [Piece]      = (UnitDimension.Count,  1m),
         };
 
-    /// <summary>
-    /// Units whose stored form may be resolved by ingredient context on import
-    /// (see <c>MeasurementConverter.ResolveForImport</c> and Phase 8.5.1 §5.4).
-    /// </summary>
+    /// <summary>Units whose stored form may be resolved by ingredient context on import.</summary>
     public static readonly IReadOnlyList<string> ImportResolvable = [Cup];
 
-    /// <summary>
-    /// Spellings the scraper/LLM commonly emits, mapped to the canonical unit. Case-insensitive.
-    /// Deliberately excludes units with no fixed size (clove, pinch, can, slice, bunch) — those
-    /// cannot be canonicalised and must be corrected by a human or rejected by the seeder gate.
-    /// </summary>
+    /// <summary>Spellings the scraper and LLM commonly emit, mapped to the canonical unit, excluding units with no fixed size such as <c>clove</c> or <c>pinch</c>.</summary>
     private static readonly Dictionary<string, string> Aliases = new(StringComparer.OrdinalIgnoreCase)
     {
         ["gram"]        = Gram,       ["grams"]      = Gram,
@@ -73,29 +57,14 @@ public static class MeasurementUnit
         ["cups"]        = Cup,
     };
 
-    /// <summary>
-    /// Every spelling <see cref="TryCanonicalise"/> will accept — the canonical set plus the aliases
-    /// above.
-    ///
-    /// <para>Exists for the one caller that has to <i>state</i> the vocabulary rather than test
-    /// against it: an LLM prompt naming the units it may use. Listing only <see cref="All"/> there
-    /// understates what the pipeline takes, and the prompt then contradicts itself the moment an
-    /// example says <c>teaspoon</c>. Derived here so the promise and the check cannot drift.</para>
-    /// </summary>
+    /// <summary>Every spelling <see cref="TryCanonicalise"/> will accept, derived here so an LLM prompt naming the units cannot drift from the check.</summary>
     public static readonly IReadOnlyList<string> AcceptedSpellings = [.. All, .. Aliases.Keys];
 
-    /// <summary>
-    /// Strict: true only for a canonical spelling. Validators use this, which guarantees stored
-    /// units are always canonical — that is what lets consolidation group by plain equality.
-    /// </summary>
+    /// <summary>Strict: true only for a canonical spelling, which guarantees stored units are canonical so consolidation can group by equality.</summary>
     public static bool IsValid([NotNullWhen(true)] string? unit) =>
         unit is not null && Table.ContainsKey(unit.Trim());
 
-    /// <summary>
-    /// Lenient: resolves canonical spellings in any case ("ML", "Tbsp") and known aliases
-    /// ("teaspoons") to the canonical unit. Returns false for anything else; the caller decides
-    /// what that means. Every path receiving a unit from outside canonicalises first, validates second.
-    /// </summary>
+    /// <summary>Lenient: resolves canonical spellings in any case and known aliases to the canonical unit, and every path receiving a unit from outside canonicalises first and validates second.</summary>
     public static bool TryCanonicalise(string? unit, [NotNullWhen(true)] out string? canonical)
     {
         canonical = null;

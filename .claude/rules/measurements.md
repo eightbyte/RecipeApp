@@ -1,7 +1,7 @@
 ---
 paths:
   - "backend/RecipeApp.API/Enums/MeasurementUnit.cs"
-  - "backend/RecipeApp.API/Enums/PortionSize.cs"
+  - "backend/RecipeApp.API/Enums/BatchSize.cs"
   - "backend/RecipeApp.API/Services/MeasurementConverter.cs"
   - "backend/RecipeApp.API/Services/MeasurementOptions.cs"
   - "backend/RecipeApp.API/Services/ShoppingListService.cs"
@@ -14,6 +14,10 @@ paths:
   - "backend/RecipeApp.API/DTOs/**/*.cs"
   - "backend/RecipeApp.API/Validators/**/*.cs"
   - "frontend/src/constants/units.js"
+  - "frontend/src/constants/batchSizes.js"
+  - "frontend/src/constants/servings.js"
+  - "frontend/src/router/recipeRoutes.js"
+  - "frontend/src/components/BatchSizeToggle.vue"
   - "frontend/src/views/RecipeDetailView.vue"
   - "frontend/src/views/RecipeFormView.vue"
   - "frontend/src/views/CookingModeView.vue"
@@ -67,10 +71,20 @@ paths:
 - When an amount is repaired on import, the source fields record the repaired measurement, not the
   discarded misread.
 
-## Portions and consolidation
+## Batch Size and consolidation
 
-- Portion sizes are `HALF` (×0.5), `REGULAR` (×1.0) and `DOUBLE` (×2.0), applied at display or
-  query time only. **Never modify a stored `Amount`.** `SourceAmount` scales the same way.
+- A Batch Size multiplies the whole recipe, never one serving. The values are `HALF` (×0.5),
+  `REGULAR` (×1.0) and `DOUBLE` (×2.0), shown as ½×, 1× and 2×. They live only in
+  `Enums/BatchSize.cs`, mirrored by `frontend/src/constants/batchSizes.js`, and are applied at
+  display or query time only. **Never modify a stored `Amount`.** `SourceAmount` scales the same
+  way.
+- The recipe view and cooking mode can also scale to a chosen number of servings: the multiplier
+  is chosen servings ÷ the recipe's Servings, which can be fractional. It is display-only, never
+  stored, and short-circuits on a null amount like every other scaling.
+- The recipe view reads its scale from the URL, the same `servings`-then-`batch` query as cooking
+  mode (`router/recipeRoutes.js`), and keeps a chosen number of servings there.
 - Shopping-list consolidation groups by dimension via `MeasurementUnit.Table`, so `1 tbsp` +
   `15 ml` makes one row. It resolves mass/volume mixes through density, and it presents a
   single-unit group in that unit (`2 cup + 1 cup = 3 cup`).
+- Item Sources record each contribution in the recipe's unit plus its share in the row's unit (the
+  base unit when the row is promoted to `kg`/`L`). They are never summed back into totals.

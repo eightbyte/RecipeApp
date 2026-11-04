@@ -1,13 +1,7 @@
 import { defineStore } from 'pinia'
 import { ref } from 'vue'
 
-/**
- * Global UI store — a lightweight feedback channel shared across views.
- *
- * `notify()` raises a single snackbar (rendered once by AppSnackbar in App.vue).
- * Keeping this out of the Axios interceptor avoids the interceptor → store
- * circular dependency (see services/api.js); views/stores call notify() directly.
- */
+/** Global UI store: a feedback channel whose notify() raises the single snackbar, kept out of the Axios interceptor to avoid a circular dependency. */
 export const useUiStore = defineStore('ui', () => {
   const snackbar = ref({ show: false, message: '', color: 'success' })
 

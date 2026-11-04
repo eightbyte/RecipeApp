@@ -10,10 +10,7 @@ public class RecipeIngredientRequestValidator : AbstractValidator<RecipeIngredie
     {
         RuleFor(x => x.IngredientId).NotEmpty();
 
-        // Amount and Unit are null together or set together. Null asserts "this ingredient has no
-        // stated quantity" (Phase 9.1 §3.1); a half-set pair is a half-written row, and a unit with
-        // no amount fabricates a measurement exactly as a mass derived from an unknown density
-        // would. Zero is still rejected — it is a quantity, and a wrong one.
+        // Amount and Unit are null together or set together: a half-set pair is a half-written row, and zero is still rejected as a wrong quantity.
         RuleFor(x => x.Amount)
             .GreaterThan(0)
             .When(x => x.Amount.HasValue)
@@ -95,5 +92,24 @@ public class UpdateRecipeValidator : AbstractValidator<UpdateRecipeRequest>
                 }
             }
         });
+    }
+}
+
+public class RecipeListQueryValidator : AbstractValidator<RecipeListQuery>
+{
+    public RecipeListQueryValidator()
+    {
+        RuleFor(x => x.Sort)
+            .Must(sort => sort != null && RecipeSort.IsValid(sort))
+            .WithMessage($"Sort must be one of: {string.Join(", ", RecipeSort.All)}")
+            .When(x => x.Sort is not null);
+
+        RuleFor(x => x.Direction)
+            .Must(direction => direction != null && SortDirection.IsValid(direction))
+            .WithMessage($"Direction must be one of: {string.Join(", ", SortDirection.All)}")
+            .When(x => x.Direction is not null);
+
+        RuleFor(x => x.Page).GreaterThanOrEqualTo(1);
+        RuleFor(x => x.PageSize).InclusiveBetween(1, RecipeListPaging.MaxPageSize);
     }
 }

@@ -12,6 +12,11 @@ An entry in the Ingredient Catalogue: a single foodstuff such as "onion", with i
 alternate names. It has no amount.
 _Avoid_: Catalogue item, food
 
+**Staple**:
+An Ingredient the user always has on hand. Staples are left out of recipe suggestions and kept
+apart on the shopping list.
+_Avoid_: Pantry item, common item
+
 **Recipe Ingredient**:
 One line in a recipe's ingredient list: an amount and unit (or none), a note such as "finely
 chopped", and the one Ingredient it refers to.
@@ -36,9 +41,10 @@ The number of people a recipe's stated amounts feed.
 _Avoid_: Yield, portions
 
 **Batch Size**:
-How many times the whole recipe is made: a multiple of the recipe, never of one serving. Its
-current values are Half, Regular and Double. Asking for a number of servings is a way of choosing
-a Batch Size, not a separate setting.
+How many times the whole recipe is made: a multiple of the recipe, never of one serving. A
+Planned Meal's Batch Size is Half, Regular or Double. The recipe view and cooking mode can show any
+Batch Size, chosen through Servings. Asking for a number of servings is a way of choosing a Batch
+Size, not a separate setting.
 _Avoid_: Portion, portion size, custom servings
 
 **Cooked**:
@@ -57,7 +63,8 @@ _Avoid_: Menu, schedule
 
 **Planned Meal**:
 One occurrence of a recipe in a Meal Plan, with its own Batch Size and an optional date. The same
-recipe can appear as several Planned Meals.
+recipe can appear as several Planned Meals. Opening a Planned Meal's recipe from anywhere shows it
+at that Planned Meal's Batch Size.
 _Avoid_: Meal plan recipe, plan entry
 
 **Unscheduled**:
@@ -85,6 +92,11 @@ The fixed order in which Categories appear on a shopping list.
 A shopping list item derived from the Active Meal Plan. Regenerating the list replaces every
 Generated Item.
 _Avoid_: Recipe item, auto item
+
+**Item Source**:
+A Planned Meal that contributed to a Generated Item, recorded when the list is generated, with the
+Measurement it contributed.
+_Avoid_: Origin, contributor, source meal
 
 **Custom Item**:
 A shopping list item the user added by hand. Regenerating the list leaves it in place.

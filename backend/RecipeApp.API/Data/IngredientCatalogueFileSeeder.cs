@@ -5,43 +5,15 @@ using RecipeApp.API.Services.Seeding;
 
 namespace RecipeApp.API.Data;
 
-/// <summary>
-/// Loads the committed ingredient catalogue into Postgres (Phase 9.3 §4.5) — the seeding half of
-/// Stage 4.5, and the only half any machine but the author's ever runs.
-///
-/// <para><b>No LLM, no network, no arguments.</b> This replaced <c>IngredientCatalogueSeeder</c>,
-/// which generated a catalogue from a model's notion of "common household cooking ingredients" — a
-/// list whose relationship to the recipe corpus was coincidental by construction, and which was
-/// unreproducible because it carried a rolling exclusion list of what it had already produced. The
-/// catalogue this reads was derived from the corpus, curated by hand and committed, so every
-/// machine gets the same catalogue.</para>
-///
-/// <para><b>Fill nulls, never overwrite.</b> The same contract
-/// <see cref="IngredientDensitySeeder"/> already honours, and for the same reason: seed data is a
-/// starting point, and a value a human corrected outranks the one this file suggests. A deliberate
-/// refresh is what <c>--force</c> is for.</para>
-/// </summary>
+/// <summary>Loads the committed ingredient catalogue into Postgres with no LLM, network or arguments, filling nulls and never overwriting a human correction.</summary>
 public static class IngredientCatalogueFileSeeder
 {
-    /// <summary>What one run changed.</summary>
-    /// <param name="Inserted">Entries that had no catalogue row and now do.</param>
-    /// <param name="Updated">Existing rows whose nulls were filled, or which <paramref name="Forced"/> overwrote.</param>
-    /// <param name="Unchanged">Existing rows the artefact had nothing to add to.</param>
-    /// <param name="Forced">Whether existing values were overwritten rather than only filled.</param>
+    /// <summary>What one run changed: entries inserted, rows updated, rows unchanged, and whether existing values were overwritten rather than only filled.</summary>
     public record SeedCatalogueOutcome(int Inserted, int Updated, int Unchanged, bool Forced);
 
-    /// <summary>
-    /// Applies the artefact to the catalogue.
-    /// </summary>
-    /// <param name="force">
-    /// Re-apply every field over existing rows rather than only filling nulls. A deliberate refresh,
-    /// never the default — it discards corrections.
-    /// </param>
-    /// <exception cref="CatalogueValidationException">
-    /// The artefact contradicts itself. Checked again here rather than trusted from build time: the
-    /// file is hand-editable by design — a reviewer correcting a category is the intended workflow —
-    /// so a rule enforced only at authoring time stops holding the moment someone acts on the review.
-    /// </exception>
+    /// <summary>Applies the artefact to the catalogue.</summary>
+    /// <param name="force">Re-apply every field over existing rows rather than only filling nulls, which discards corrections.</param>
+    /// <exception cref="CatalogueValidationException">The artefact contradicts itself, which is checked again here because the file is hand-editable.</exception>
     public static async Task<SeedCatalogueOutcome> SeedAsync(
         AppDbContext db,
         IngredientCatalogueFile catalogue,
@@ -71,6 +43,7 @@ public static class IngredientCatalogueFileSeeder
                     Category    = entry.Category,
                     DefaultUnit = entry.DefaultUnit,
                     Aliases     = [.. entry.Aliases],
+                    IsStaple    = entry.IsStaple,
                     CreatedAt   = DateTime.UtcNow,
                 });
                 inserted++;
@@ -91,14 +64,7 @@ public static class IngredientCatalogueFileSeeder
         return new SeedCatalogueOutcome(inserted, updated, unchanged, force);
     }
 
-    /// <summary>
-    /// Brings one existing row up to date, returning whether anything changed.
-    ///
-    /// <para>Without <paramref name="force"/> this only ever fills a null or replaces the
-    /// <c>"OTHER"</c> placeholder, and aliases are merged rather than replaced — a row created at
-    /// runtime by a scrape is exactly the case this protects, and taking its aliases away would
-    /// break lookups that already work.</para>
-    /// </summary>
+    /// <summary>Brings one existing row up to date and returns whether anything changed, only filling nulls and merging aliases, and leaving the Staple flag alone, unless <paramref name="force"/> is set.</summary>
     private static bool Apply(Ingredient row, IngredientCatalogueEntry entry, bool force)
     {
         var changed = false;
@@ -108,9 +74,7 @@ public static class IngredientCatalogueFileSeeder
             if (row.DisplayName != entry.DisplayName) { row.DisplayName = entry.DisplayName; changed = true; }
         }
 
-        // "OTHER" is the column default, so a row carrying it was never categorised rather than
-        // categorised as miscellaneous. Anything else is a judgement — the artefact's or a human's —
-        // and is left alone.
+        // "OTHER" is the column default, so a row carrying it was never categorised; anything else is a judgement and is left alone.
         if (force || string.IsNullOrWhiteSpace(row.Category) || row.Category == IngredientCategory.Other)
         {
             if (row.Category != entry.Category) { row.Category = entry.Category; changed = true; }
@@ -120,6 +84,9 @@ public static class IngredientCatalogueFileSeeder
         {
             if (row.DefaultUnit != entry.DefaultUnit) { row.DefaultUnit = entry.DefaultUnit; changed = true; }
         }
+
+        // A flag cannot record that it was never set, so only a forced run may overrule the row.
+        if (force && row.IsStaple != entry.IsStaple) { row.IsStaple = entry.IsStaple; changed = true; }
 
         var aliases = force
             ? entry.Aliases

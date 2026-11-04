@@ -4,10 +4,7 @@ using RecipeApp.API.Services;
 
 namespace RecipeApp.Tests.Services;
 
-/// <summary>
-/// Stage A (customary → metric + alias canonicalisation) and Stage B (ingredient-aware cup
-/// resolution). Both are pure — no database, no HTTP, no inference.
-/// </summary>
+/// <summary>Stage A (customary to metric and alias canonicalisation) and Stage B (ingredient-aware cup resolution), both pure.</summary>
 public class MeasurementConverterTests
 {
     private static MeasurementConverter Build(bool resolveCupsOnImport = true) =>
@@ -27,8 +24,7 @@ public class MeasurementConverterTests
     [InlineData("fl ozs",       1.0,  29.574, "ml")]
     [InlineData("fluid oz",     1.0,  29.574, "ml")]
     [InlineData("fluid ounce",  1.0,  29.574, "ml")]
-    // The plural was the one missing spelling while every other unit here had both, and it cost a
-    // recipe: the model read "10 3/4 us fluid ounces" correctly and the gate rejected the unit.
+    // The plural was the one missing spelling, and it cost a recipe when the gate rejected "us fluid ounces".
     [InlineData("fluid ounces",    10.75, 317.915, "ml")]
     [InlineData("us fluid ounce",   1.0,   29.574, "ml")]
     [InlineData("us fluid ounces",  6.0,  177.441, "ml")]
@@ -84,7 +80,7 @@ public class MeasurementConverterTests
     [Fact]
     public void ToCanonical_DoesNotConvertCupsToMillilitres()
     {
-        // Phase 8.5.1 §5.5 — a cup is only resolved once the ingredient is known (Stage B).
+        // A cup is only resolved once the ingredient is known (Stage B).
         var (amount, unit) = MeasurementConverter.ToCanonical(2.0, "cups");
         amount.Should().Be(2m);
         unit.Should().Be("cup");
@@ -124,7 +120,7 @@ public class MeasurementConverterTests
     [Fact]
     public void ResolveForImport_CupWithoutDensity_KeepsTheCup()
     {
-        // Packing-dominated or simply unknown: any gram figure would be invented (§5.3).
+        // Packing-dominated or simply unknown, so any gram figure would be invented.
         var (amount, unit) = Build().ResolveForImport(2m, MeasurementUnit.Cup, null);
         amount.Should().Be(2m);
         unit.Should().Be(MeasurementUnit.Cup);
@@ -140,8 +136,7 @@ public class MeasurementConverterTests
     [InlineData("pcs")]
     public void ResolveForImport_LeavesEveryOtherUnitAlone(string unit)
     {
-        // Only cup is import-resolvable. Spoons stay spoons even when a density exists —
-        // "1 tsp salt" is better guidance to a cook than "6 g salt".
+        // Only cup is import-resolvable, so spoons stay spoons even when a density exists.
         var (amount, outUnit) = Build().ResolveForImport(1m, unit, 1.2167m);
         amount.Should().Be(1m);
         outUnit.Should().Be(unit);
@@ -169,8 +164,7 @@ public class MeasurementConverterTests
     [Fact]
     public void ResolveForImport_RoundTripsAPublishedGramsPerCupFigure()
     {
-        // Densities are derived as gramsPerCup / MillilitresPerCup, so one cup must give the
-        // published figure back exactly (§5.2).
+        // Densities are gramsPerCup divided by MillilitresPerCup, so one cup must give the published figure back exactly.
         const decimal gramsPerCup = 113m;   // whole wheat flour
         var density = Math.Round(gramsPerCup / MeasurementUnit.MillilitresPerCup, 4);
 

@@ -1,9 +1,6 @@
 namespace RecipeApp.API.DTOs.Recipes;
 
-/// <summary>
-/// Replaces all ingredients and steps on the recipe.
-/// The IngredientIndexes in each step reference this request's Ingredients list (0-based).
-/// </summary>
+/// <summary>Replaces all ingredients and steps on the recipe, with each step's IngredientIndexes referencing this request's 0-based Ingredients list.</summary>
 public record UpdateRecipeRequest(
     string Name,
     string? Description,

@@ -93,12 +93,7 @@ public class JsonSchemaGrammarTests
         gbnf.Should().Contain("null");
     }
 
-    /// <summary>
-    /// A number is only useful if it parses. JSON forbids a leading zero on a multi-digit run, so a
-    /// grammar that admits <c>00</c> lets the decoder produce an answer no JSON reader will accept —
-    /// and the failure lands thousands of bytes away from the digit that caused it. Phase 9 Stage 4
-    /// lost a recipe to exactly that.
-    /// </summary>
+    /// <summary>JSON forbids a leading zero on a multi-digit run, so a grammar that admits <c>00</c> lets the decoder produce an answer no reader will accept.</summary>
     [Theory]
     [InlineData("integer")]
     [InlineData("number")]
@@ -133,12 +128,7 @@ public class JsonSchemaGrammarTests
         gbnf.Should().NotBeNullOrWhiteSpace();
     }
 
-    /// <summary>
-    /// Read from the live constant, not a copy: decoding is grammar-constrained, so if the
-    /// service's schema ever declares <c>amount</c> as a bare number again the grammar will
-    /// <i>force</i> the model to invent one for a line reading <c>salt</c> (Phase 9.1 §1.3).
-    /// A copy in this file could drift back without anything noticing.
-    /// </summary>
+    /// <summary>Read from the live constant, not a copy, because a copy could drift back to a bare-number <c>amount</c> that forces the model to invent one.</summary>
     [Fact]
     public void ToGbnf_LiveRecipeExtractionSchema_LetsTheModelStateAnAbsentQuantity()
     {
@@ -161,8 +151,7 @@ public class JsonSchemaGrammarTests
         ingredient["properties"]!["unit"]!["type"]!.AsArray()
             .Select(t => t!.GetValue<string>()).Should().BeEquivalentTo("string", "null");
 
-        // ...and still required, so an absent quantity is an explicit assertion rather than a
-        // key the model quietly omitted (Phase 9.1 §3.3).
+        // ...and still required, so an absent quantity is an explicit assertion rather than a key the model quietly omitted.
         ingredient["required"]!.AsArray()
             .Select(t => t!.GetValue<string>()).Should().Contain(["amount", "unit"]);
     }
@@ -180,8 +169,7 @@ public class JsonSchemaGrammarTests
     [Fact]
     public void ToGbnf_StringEnum_AdmitsOnlyTheListedValues()
     {
-        // Phase 9.3: told category "MUST be exactly one value from this list", the model answered
-        // SPICES and CONDIMENT, because a free string admitted them. An enum makes them unreachable.
+        // An enum makes values like SPICES and CONDIMENT unreachable, which a free string admitted.
         var schema = JsonNode.Parse("""
             {
               "type": "object",
@@ -223,10 +211,7 @@ public class JsonSchemaGrammarTests
 
     // ── Schemas referenced from RecipeScrapeService ───────────────────────────
 
-    // The recipe extraction schema is read from RecipeScrapeService.RecipeSchemaJson directly.
-    // A local copy used to live here and had already drifted from the live constant by the time
-    // Phase 9.1 made amount nullable — the copy still declared it a bare number, so these tests
-    // would have kept passing while the grammar forced the model to invent a quantity.
+    // The recipe extraction schema is read from RecipeScrapeService.RecipeSchemaJson directly, because a local copy drifted from the live constant once already.
 
     private const string MatchingSchemaJson = """
         {

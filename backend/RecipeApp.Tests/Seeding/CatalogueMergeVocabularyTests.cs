@@ -3,11 +3,7 @@ using RecipeApp.API.Services.Seeding;
 
 namespace RecipeApp.Tests.Seeding;
 
-/// <summary>
-/// Phase 9.3 §5's MERGE list as a closed vocabulary. Every case below is a corpus pair the grouping
-/// model actually proposed, labelled against §5 — the table exists because the model could not be
-/// talked out of the refused half.
-/// </summary>
+/// <summary>The merge vocabulary as a closed list, where every case is a corpus pair the grouping model actually proposed.</summary>
 public class CatalogueMergeVocabularyTests
 {
     [Theory]
@@ -18,7 +14,7 @@ public class CatalogueMergeVocabularyTests
     [InlineData("bay leaf", "bay leaves")]
     [InlineData("pear half", "pear halves")]
     [InlineData("peach", "peaches")]
-    // Fat, sodium and sugar variants (§11 Q1: merge).
+    // Fat, sodium and sugar variants merge.
     [InlineData("chicken broth", "low-sodium chicken broth")]
     [InlineData("milk", "fat-free (skim) milk")]
     [InlineData("milk", "whole milk")]
@@ -65,17 +61,14 @@ public class CatalogueMergeVocabularyTests
     [Fact]
     public void DifferOnlyByMergeVocabulary_TwoNamesMadeOnlyOfMergeWordsDoNotShareAnEmptyCore()
     {
-        // Stage 4 left layout text in some names. Stripped of merge words, 'chopped' and 'sliced'
-        // would both be empty — and two empty cores are equal.
+        // Stripped of merge words, 'chopped' and 'sliced' would both be empty cores, and two empty cores are equal.
         CatalogueMergeVocabulary.DifferOnlyByMergeVocabulary("chopped", "sliced").Should().BeFalse();
     }
 
     [Fact]
     public void DifferOnlyByMergeVocabulary_LeavesTheCannedJudgementToTheModel()
     {
-        // 'diced' is a cut word, so the table allows this pair — and §2.3 is why it must not decide
-        // it: every one of the corpus's 32 'diced tomatoes' lines is a can. The model reads the line;
-        // the table can only refuse, never merge.
+        // 'diced' is a cut word so the table allows this pair, but it can only refuse and never merge, because the model must read the line.
         CatalogueMergeVocabulary.DifferOnlyByMergeVocabulary("tomatoes", "diced tomatoes").Should().BeTrue();
     }
 }

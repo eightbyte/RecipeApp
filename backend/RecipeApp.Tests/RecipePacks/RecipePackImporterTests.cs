@@ -12,11 +12,7 @@ using static RecipeApp.Tests.RecipePacks.RecipePackFixtures;
 
 namespace RecipeApp.Tests.RecipePacks;
 
-/// <summary>
-/// Recipe-pack import against a real Postgres (Phase 10 §4.4.2), through the app's own DI graph so
-/// the validator, <c>RecipeService</c> and image storage are the real ones. Image storage is
-/// redirected to a temp directory.
-/// </summary>
+/// <summary>Recipe-pack import against a real Postgres through the app's own DI graph, with image storage redirected to a temp directory.</summary>
 [Collection("Database")]
 public class RecipePackImporterTests(DatabaseFixture db) : IAsyncLifetime
 {
@@ -140,8 +136,7 @@ public class RecipePackImporterTests(DatabaseFixture db) : IAsyncLifetime
     [Fact]
     public async Task StepsLinkTheRowsTheyName()
     {
-        // Olive oil is listed twice (once by alias) and the second step names it by another alias:
-        // both rows resolve to one entry, so the step links both.
+        // Olive oil is listed twice and the second step names it by another alias, so both rows resolve to one entry and the step links both.
         var pack = Pack(Recipe("Garlic Rice",
             [
                 Row("Onion"),
@@ -311,7 +306,7 @@ public class RecipePackImporterTests(DatabaseFixture db) : IAsyncLifetime
             var recipe = await context.Recipes.SingleAsync();
             var plan   = TestDataBuilder.MealPlan();
             context.MealPlans.Add(plan);
-            context.MealPlanRecipes.Add(TestDataBuilder.MealPlanRecipe(plan.Id, recipe.Id));
+            context.PlannedMeals.Add(TestDataBuilder.PlannedMeal(plan.Id, recipe.Id));
             await context.SaveChangesAsync();
         }
 
@@ -358,8 +353,7 @@ public class RecipePackImporterTests(DatabaseFixture db) : IAsyncLifetime
     [Fact]
     public async Task APackThatFailsAfterCopyingAnImageLeavesNoFileBehind()
     {
-        // Validation cannot fail after a write starts, so the database is made to: a trigger rejects
-        // the second recipe after the first has been saved and its image copied.
+        // Validation cannot fail after a write starts, so a database trigger rejects the second recipe after the first has been saved and its image copied.
         const string poisonedName = "Poisoned";
         await using (var context = db.CreateDbContext())
         {

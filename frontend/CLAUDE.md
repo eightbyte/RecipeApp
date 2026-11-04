@@ -1,7 +1,9 @@
 # Frontend — Vue 3 SPA
 
 Measurement and category rules live in `.claude/rules/` (repo root). Read them before touching
-amount formatting, portion scaling, unit pickers or category lists.
+amount formatting, Batch Size scaling, unit pickers or category lists.
+
+Read `CODING_STANDARDS.md` (repo root) before writing or reviewing code: comments, naming, prop types, hard-coded values, Vuetify.
 
 ## Layout (`src/`)
 
@@ -11,11 +13,13 @@ amount formatting, portion scaling, unit pickers or category lists.
 | `components/` | Shared components; `layout/` has `AppTopBar`, `AppBottomNav` |
 | `stores/` | Pinia, one file per domain (`recipes`, `ingredients`, `mealPlans`, `shoppingList`, `ui`) |
 | `services/api.js` | The pre-configured Axios instance |
-| `constants/` | `units.js`, `categories.js` — mirrors of the backend enums |
-| `composables/` | `useWakeLock.js` |
+| `constants/` | `units.js`, `categories.js`, `batchSizes.js`, `recipeSorts.js` — mirrors of the backend enums; `servings.js` mirrors the Servings limits in `RecipeLimits` and formats a servings count |
+| `composables/` | `useWakeLock.js`; `useRecipePages.js` pages a recipe list and holds the shared `SEARCH_DEBOUNCE_MS`; `useHold.js` is the 1-second press-and-hold on pointer events (editing a Custom Item); `useDelayedHide.js` keeps each just-ticked Purchased item shown for 3 seconds on its own timer |
+| `utils/` | `dateOnly.js` formats date-only values; `storage.js` wraps `localStorage` for device-local preferences |
 | `styles/` | `settings.scss` — Vuetify Sass settings |
 | `router/index.js` | All routes |
-| `test/` | Vitest `setup.js` and `factories.js` |
+| `router/recipeRoutes.js` | Builds and reads the recipe view and Cooking Mode links with their scale, kept apart so importing it doesn't load the router |
+| `test/` | Vitest `setup.js`, `factories.js`, `timeZone.js` (run a describe block in a given timezone) and `infiniteScrollStub.js` (stands in for `VInfiniteScroll`, which never loads under jsdom) |
 
 Tests sit beside their subject as `*.spec.js` (Vitest + Vue Test Utils). Run with `npm test`.
 `src/test/setup.js` unmounts every wrapper after each test (`enableAutoUnmount`), so mount inside
@@ -26,22 +30,32 @@ each test or in `beforeEach`; a wrapper mounted in `beforeAll` is gone after the
 - **`<script setup>` only.** No Options API.
 - **HTTP:** import `api` from `@/services/api.js`. Never use raw `fetch` or `axios`.
 - **Pinia:** `use<Domain>Store()`. Every API call goes through a store action.
-- **Vuetify first.** Prefer a Vuetify component over raw HTML wherever one exists.
-- **Vuetify is the only styling framework** ([ADR 0001](../docs/adr/0001-vuetify-is-the-only-styling-framework.md)).
-  Don't add Bootstrap or another CSS framework. Spacing classes follow Vuetify's 4px-per-step
-  scale (`mb-4` is 16px, `mb-6` is 24px).
 - **Typeface:** the system font stack, set once as `$body-font-family` in `src/styles/settings.scss`.
   Vuetify compiles it into `html` and every typography class (`text-h6`, `text-caption`, …).
-- **Never hard-code a unit or category list.** Consume `constants/units.js` / `constants/categories.js`.
+- **Never hard-code a unit, category, Batch Size or recipe sort list.** Consume `constants/units.js`,
+  `constants/categories.js`, `constants/batchSizes.js` / `constants/recipeSorts.js`.
+- **Device-local preferences** (such as the Recipes tab sort) go through `utils/storage.js`, never
+  `localStorage` directly, because storage can throw. Each key is named once beside its constants.
 - **Grayscale rule:** add class `grayscale` to a recipe image when `lastCookedAt` is within 7 days.
+- **Planned Meals** on Home and Meal Plan render through `components/PlannedMealCard.vue`.
+- **Date-only values** (`scheduledDate`, `firstScheduledDate`, …) display through `formatDateOnly` from
+  `utils/dateOnly.js`, so they show the stored day in every timezone. Timestamps such as `createdAt`
+  keep local-time formatting.
 - **Routes:** use the names defined in `router/index.js` (`home`, `recipes`, `recipe-detail`,
   `recipe-cooking`, `meal-plan`, `shopping`, …). A route with `meta.fullscreen` hides the top and
-  bottom bars (Cooking Mode).
+  bottom bars (Cooking Mode). Link to a scaled recipe view or Cooking Mode, and read their scale,
+  only through `router/recipeRoutes.js`.
 - **Loading/empty/error states:** use `EmptyState`, `ErrorState`, and the global snackbar
   (`stores/ui.js` + `AppSnackbar`). Store fetches treat a 404 as "not found" (empty state), not
   as an error.
-- **PWA:** `vite-plugin-pwa` runtime-caches `/api/v1/recipes` and `/uploads/images/`. Change the
+- **PWA:** `vite-plugin-pwa` runtime-caches the recipe list (`/api/v1/recipes`, NetworkFirst in
+  `recipe-list`, so the pages joined on scroll come from one version of the list), single recipes
+  (`/api/v1/recipes/{id}`, StaleWhileRevalidate in `recipe-api`) and `/uploads/images/`. Change the
   caching rules with that in mind.
+- **Recipe lists** (Recipes tab, `RecipeBrowser`) load a page at a time through
+  `composables/useRecipePages.js`, one instance per list, and render through
+  `components/RecipeInfiniteScroll.vue`. A recipe mutation does not patch any list, because each
+  list refetches page 1 when it mounts.
 
 ## Environment (`.env.development`)
 

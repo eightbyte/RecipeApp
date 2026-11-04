@@ -2,8 +2,7 @@
 
 Verbatim archive of the per-phase notes that lived in the root `CLAUDE.md` through Phase 9
 (moved 2026-09-29). Historical record only — **not** loaded into prompts and not maintained.
-Where a note conflicts with the code or the current `CLAUDE.md` files, those win. Detailed
-phase records live in `specs/`.
+Where a note conflicts with the code or the current `CLAUDE.md` files, those win.
 
 - **No AutoMapper** — manual mapping in `DTOs/Mappings.cs` (extension methods on entity types). Simpler to trace, no reflection.
 - FluentValidation validators are registered automatically via `AddValidatorsFromAssemblyContaining<Program>()` (scoped).
@@ -46,7 +45,7 @@ phase records live in `specs/`.
   validate-and-return block at the top of all twelve mutating endpoints, attaches
   `ProducesValidationProblem()` so `/scalar/v1` documents the 400 (declaring it does suppress
   ASP.NET's inferred default `200`; documenting accurate success/404/409 responses is a separate
-  pass, see the phase spec §15), and always passes `HttpContext.RequestAborted`. Endpoint
+  pass), and always passes `HttpContext.RequestAborted`. Endpoint
   handlers no longer take `IValidator<T>`, and `using FluentValidation;` is gone from all five
   endpoint files. Tests: `Filters/ValidationFilterTests.cs` (scoped resolution through the
   filter, short-circuit, pass-through, and an OpenAPI assertion that discovers validated
@@ -64,13 +63,13 @@ phase records live in `specs/`.
   flags are not read as config keys. `RecipeJsonLdExtractor` gained a public `TryFindRecipeNode`
   (the harvester needs `image.url`; the Stage 3 parser will need the rest) — the existing
   script-scanning loop was extracted behind it, unchanged.
-  Three deviations from the spec:
-  **(0)** the cache lives at `seed-data/myplate`, not §5's `data/seed/myplate` — Windows paths are
+  Three deviations from the original plan:
+  **(0)** the cache lives at `seed-data/myplate`, not the planned `data/seed/myplate` — Windows paths are
   case-insensitive, so `data/` merges into the existing EF Core `Data/` folder and the harvest
   lands beside `AppDbContext.cs`. Verified: it did, before the rename.
   The other two were forced by the live archive:
-  **(1)** the CDX query omits `collapse=urlkey` (spec §8). Collapse keeps the *first* capture per
-  key, which makes §8's own preferred-year rule inert — measured, it pins 1,086 of 1,123 recipes
+  **(1)** the CDX query omits `collapse=urlkey`, which the original plan used. Collapse keeps the *first* capture per
+  key, which makes the plan's own preferred-year rule inert — measured, it pins 1,086 of 1,123 recipes
   to a 2024 capture, whereas the uncollapsed query resolves 1,121 to the 2025 captures taken just
   before the site was retired. Identical slug set; ~5 MB and ~35 s instead of ~9 s, once.
   `DiscoveryTimeoutSeconds` (300) exists for that one large request.
@@ -104,7 +103,7 @@ phase records live in `specs/`.
   steps, 1,058 primary + 65 legacy templates. (Recorded as 1,089 until the last 34 pages were
   harvested; the hazard measurements below were taken on that first 1,089 and have not been
   re-run against the full corpus.)
-- **What the corpus settled about Stage 3's hazards** (spec §10.3, all re-measured against the
+- **What the corpus settled about Stage 3's hazards** (all re-measured against the
   1,089 cached pages rather than the single research page they were observed on):
   - **Hazard 2 (mojibake) does not exist here.** Zero `U+FFFD` and zero undecoded entities across
     the corpus, so **no stripping logic was written**. The observation behind it —
@@ -113,14 +112,14 @@ phase records live in `specs/`.
   - **Hazard 1 (truncated descriptions) is real: 286 pages.** The parser prefers
     `.mp-recipe-full__description` and falls back to JSON-LD; the two agree on the other 797.
   - **Hazard 5 (notes bleeding into steps) is real but not marker-shaped: 30 pages.** Only 11 of
-    those carry the `*` the spec said to split on; the rest are `Storage:` / `Create-a-Flavor
+    those carry the `*` the plan said to split on; the rest are `Storage:` / `Create-a-Flavor
     Changes:` / bare prose. The rule used instead is structural — **nothing after the last
     `<ol>` is a step** — which covers all 30 and needs no marker.
   - **Hazard 6 (adapted-source credits): 1,081 of 1,089 pages** carry one; captured to
     `SourceCredit` via `.field__item`, which drops the `Source:` label without string-stripping.
   - **Hazard 4 (toolbar injection) is not a live risk, but scoping is kept anyway.** No recipe
     field class occurs outside `.mp-recipe-full` or more than once per page.
-- **Two structural facts about the corpus that the spec did not predict**, both of which silently
+- **Two structural facts about the corpus that the plan did not predict**, both of which silently
   lose content if ignored:
   - **Every one of the 1,089 pages renders its directions as an `<ol>`** — steps are already
     segmented, so Stage 3 emits them directly and nothing has to be guessed. But **28 pages carry
@@ -138,13 +137,13 @@ phase records live in `specs/`.
 - **Stage 4 risk measured from the parsed output: `Amount <= 0` cannot be a blanket rejection.**
   432 of 8,601 ingredient lines (5.0%) contain no digit at all — `salt`, `pepper`,
   `nonstick cooking spray`, `salt and pepper, to taste` — and they are spread across **313 of the
-  1,089 recipes (28.7%)**. Spec §11.3's validation gate rejects any recipe with an ingredient
+  1,089 recipes (28.7%)**. The planned validation gate rejects any recipe with an ingredient
   whose `Amount <= 0`; applied literally that fails 28.7% of the corpus on its own and puts the
-  §20 "≥ 95% persisted" bar out of reach before the LLM has made a single mistake. Stage 4 needs a
+  "≥ 95% persisted" bar out of reach before the LLM has made a single mistake. Stage 4 needs a
   deliberate policy for unquantified ingredients (a `to taste` convention, or exempting them from
   the gate) rather than inheriting the rule as written.
   **Resolved by Phase 9.1 (below), which is implemented.**
-- Phase 9.1 (`specs/phase-9.1-unquantified-ingredients.md`, backend + frontend, no new packages)
+- Phase 9.1 (backend + frontend, no new packages)
   made "this ingredient has no stated quantity" representable — the prerequisite for Stage 4, not
   part of it. It is not a "to taste" convention: only 40 of the 432 lines say "to taste" and 49%
   are ordinary foods (`raisins`, `lemon zest`), so the predicate is *the source states no
@@ -174,10 +173,10 @@ phase records live in `specs/`.
   span. `ShoppingView` needed no change — it was already guarded. **Blast radius is deliberate and
   wider than seeding**: hand-entered recipes may now omit an amount, and a scrape preview shows an
   empty field where it used to show a fabricated number.
-- **Phase 9 Stage 4 (LLM normalise) — benchmark clears the §20 bar; full corpus pass still to
+- **Phase 9 Stage 4 (LLM normalise) — benchmark clears the 95% bar; full corpus pass still to
   run (2026-09-09).** Backend-only, no new
   packages. `seed-recipes --normalise` walks `parsed/`, runs each recipe through a
-  grammar-constrained LLM pass, applies the §11.3 gate, and writes `normalised/{slug}.json`. No
+  grammar-constrained LLM pass, applies the validation gate, and writes `normalised/{slug}.json`. No
   database: catalogue matching and `NormaliseAsync` are deliberately Stage 5's, so the artefact
   stays machine-independent. Added `Services/Seeding/SeedRecipeNormaliser.cs` and
   `SeedNormaliseModels.cs`; `RecipeLibrarySeeder` gained `NormaliseAsync`, `SeedCacheStore` gained
@@ -188,7 +187,7 @@ phase records live in `specs/`.
   `Services/Llm/LLamaSharpStructuredClientTests.cs`, plus Stage 4 cases on the existing files — 917
   suite-wide, no GPU and no network.
   **Where it stands: 30 of 31 recipes normalised (96.8%) on the 30-recipe benchmark, clearing the
-  §20 bar.** Getting there took six measured runs; the trajectory was 56.6% → 66.7% → 85.7% →
+  95% bar.** Getting there took six measured runs; the trajectory was 56.6% → 66.7% → 85.7% →
   96.8%. The benchmark is `seed-recipes --normalise --force --limit 30`, which counts *successes*,
   so the attempt count is the denominator and the failure taxonomy is the result. **The full corpus
   has not been normalised yet** — the benchmark leaves 30 recipes in `normalised/`. Projected at
@@ -331,7 +330,7 @@ phase records live in `specs/`.
 - **Phase 9 Stage 4 — the full corpus pass is complete (2026-09-11). 1,123 of 1,123 recipes
   normalised, zero failures, zero stale fingerprints.** `seed-recipes --report` reads uniformly
   `Normalised 1123`. The four quantity repairs and the abort-guard fix above were built against a
-  30-recipe backlog and **generalised**: 91.3% became 100%, clearing §20's 95% bar with no recipe
+  30-recipe backlog and **generalised**: 91.3% became 100%, clearing the 95% bar with no recipe
   left behind and none excluded. Retries stayed cheap — **968 recipes succeeded on the first
   attempt**, 89 needed two, 51 three, 14 four or more. (`state.json`'s `attempts` **accumulates
   across runs**, so the two slugs reading 8 and 10 are a recipe carried through three separate
@@ -355,7 +354,7 @@ phase records live in `specs/`.
   SHA of that file taken at normalise time and cannot be recomputed by hand. **Four coupled
   invariants across two files — hand-editing these artefacts is not viable; re-run the slug.**
   **`normalised/` is an input nothing re-validates between Stage 4 and Stage 5 — Stage 5 should
-  re-assert the parsed-count pairing and the index range as it loads each artefact.** See §24.4.2.
+  re-assert the parsed-count pairing and the index range as it loads each artefact.**
   **Four things the finished corpus settles:**
   - **Phase 9.1's rule held corpus-wide, and the repairs shrank the class it governs.** 331 rows
     (3.7%) are unquantified, down from the 5.0% no-digit rate Phase 9.1 measured, because repairs 1
@@ -390,15 +389,14 @@ phase records live in `specs/`.
   **What Stage 5 is walking into: 1,476 distinct ingredient names, 56.1% of them appearing exactly
   once.** Singular and plural still split (`tomato` 63 rows, `tomatoes` 66), which is what Phase 9.3
   was built to absorb — **and 8 of its 19 remaining misses are exactly that split surviving into the
-  aliases** (see §24.4.1). Metadata coverage is high: 8 recipes have no image (they carry no JSON-LD
+  aliases**. Metadata coverage is high: 8 recipes have no image (they carry no JSON-LD
   image node), 4 no description, 8 no source credit, 75 no notes.
 - **Phase 9.3 — corpus-derived ingredient catalogue (2026-09-12). Built and committed** (`51c6e44`).
-  (`specs/phase-9.3-corpus-derived-ingredient-catalogue.md`; §12 is the implementation record.)
   Backend-only, no new packages. Added `Ingredient.Aliases` (`text[]`, default `{}`, unindexed) with
   migration `AddIngredientAliases`; alias-aware lookup in scrape pass 1 **and**
   `ResolveOrCreateIngredientAsync` (names load first, aliases via `TryAdd`, so a name always wins).
   Added `Services/Seeding/`: `IngredientCatalogueBuilder` (`--build-catalogue`), `SeedCatalogueModels`,
-  `IngredientCatalogueFileStore`, `IngredientCatalogueValidator` (§4.7 rules 1–4 at build and seed time,
+  `IngredientCatalogueFileStore`, `IngredientCatalogueValidator` (rules 1–4 at build and seed time,
   5–6 at build only), `CatalogueMergeVocabulary`, `SeedCatalogueResolver` (Stage 5's lookup). Added
   `Data/IngredientCatalogueFileSeeder` behind `import-catalogue`. **Deleted** `IngredientCatalogueSeeder`;
   `seed-catalogue` is still recognised and exits 1 naming its replacement. `DataSeeder`'s guard moved
@@ -417,11 +415,11 @@ phase records live in `specs/`.
     Keys now fold a plural only onto a singular the corpus itself uses.
   - **Every remaining error was an over-merge of a particular kind into a general name** — noodles,
     mustards, cereals, flours, lettuces all absorbed into the bare head noun. Prompt rules naming that
-    shape halved it and stopped. **`CatalogueMergeVocabulary` is §5's closed MERGE list as a table**:
+    shape halved it and stopped. **`CatalogueMergeVocabulary` is the closed MERGE list as a table**:
     a model-proposed merge stands only where the names differ by plural, fat/sodium/sugar level, size,
     cut or freshness words. It refines and never proposes, so `diced tomatoes` (canned) is still the
     model's call. Benchmark of 245 hand-labelled names: 119 wrongly merged → 57 (prompt) → **0**
-    (vocabulary), at the cost of about half the must-merge pairs — the over-split direction §5 chose.
+    (vocabulary), at the cost of about half the must-merge pairs — the over-split direction the design chose.
     `ground`, `dried`, `white` and `cooked` are **deliberately absent**; each admits a false merge seen
     in the logs. Adding a word is a review decision; the build log's `kept apart:` lines are the list.
   - **A count cannot review a catalogue.** The builder logs every `merged:` and `kept apart:` line, and
@@ -455,8 +453,7 @@ phase records live in `specs/`.
   names are unresolvable against it — 22 rows on 20 recipes, which `SeedCatalogueResolver` rejects
   outright. 0 alias collisions and 0 unreachable entries, so the artefact is tight but incomplete.
   **Reachability should be a test, not a claim** — one pass over `normalised/` against the artefact,
-  no GPU and no database, and it is the assertion that would have caught this. Details and the
-  15 names: `specs/phase-9-seed-recipe-library.md` §24.4.1. 469 of 1,475 names
+  no GPU and no database, and it is the assertion that would have caught this. 469 of 1,475 names
   (3,094 rows) changed category; OTHER fell from 46 entries to 13. 41 of 50 curated densities still
   attach — regrouping lost none. Headline moves hold by name: `salt` (357 rows), `black pepper`,
   `sugar`, `flour` → BAKING_SPICES; `honey`, `peanut butter`, `maple syrup` → JAM_NUT_BUTTER;
@@ -507,7 +504,7 @@ phase records live in `specs/`.
   preview with `--build-catalogue --batch` before trusting them on a full build. Local databases
   keep the old categories until `import-catalogue --force`.
 - **Phase 9 Stage 5 (persist) — implemented; trial persisted 20/20 (2026-09-28).**
-  Backend-only, no packages, no migration. Record: `specs/phase-9-seed-recipe-library.md` §25.
+  Backend-only, no packages, no migration.
   Added `Services/Seeding/SeedRecipePersister.cs` (`Prepare` needs no database; `PersistAsync` runs
   `ConfirmAsync` and the photo copy in one transaction), `SeedPersistModels.cs`,
   `SeedNonIngredientRows.cs`, `SeedTrialSelection.cs`, `Services/Llm/DeferredLlmStructuredClient.cs`,
@@ -519,7 +516,7 @@ phase records live in `specs/`.
     rows on 21 recipes. It is not a rule because no rule works: `Dressing`, `Salad` and `Cookie Crust`
     *resolve* against the catalogue, and "unquantified, used by no step" also catches
     `salt (optional)`. **Removing a row re-points every step index above it**, which is the
-    corruption §24.4.2 found in hand edits. A list line that matches nothing is logged as stale.
+    corruption found in hand edits. A list line that matches nothing is logged as stale.
   - **An amount its line cannot account for is dropped, not persisted or rejected.** A line has to
     state two or more numbers for this to apply, and it catches 33 rows on 31 recipes
     (`SeedQuantityGate.IsAmountExplainedByLine`: equal to a number on the line or to the product of
@@ -546,10 +543,10 @@ phase records live in `specs/`.
   - **11 aliases were hand-added to the catalogue artefact.** `applesauce and yogurt` → `applesauce`
     drops the yogurt on one optional line, so review it. `sweet potato pancakes` is now an
     unreachable entry that was left in place for review.
-  **The trial (§25.6–25.8): 20/20 persisted, all 11 §14.1 criteria pass or are explained, and every
-  step is character-identical to `parsed/`.** **The full run (2026-09-29, §25.9): 1,123 persisted,
+  **The trial: 20/20 persisted, all 11 acceptance criteria pass or are explained, and every
+  step is character-identical to `parsed/`.** **The full run (2026-09-29): 1,123 persisted,
   0 failed, in under a minute** — 8,853 ingredient rows, 6,857 steps, 1,115 photos, 335 unquantified
-  rows, every count matching the artefacts. The §25.8 decisions it applied: `garlic clove` merged into
+  rows, every count matching the artefacts. The decisions it applied: `garlic clove` merged into
   `garlic` (the name reads right for minced garlic in spoons, 33 of its 56 rows), `cooked brown rice`
   → GRAINS_RICE, `yellow cornmeal` and `non-fat dry milk` given the existing `cornmeal` and
   `milk powder` densities (instant dry milk, 68 g/cup — the corpus's reconstitution ratio says so,

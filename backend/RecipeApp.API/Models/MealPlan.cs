@@ -13,9 +13,9 @@ public class MealPlan
     /// <summary>Null while active; set when the plan is deactivated.</summary>
     public DateTime? ClosedAt { get; set; }
 
-    /// <summary>Bumped when recipes are added, updated, or removed; used for stale-list detection.</summary>
+    /// <summary>Bumped when Planned Meals are added, updated, or removed; used for stale-list detection.</summary>
     public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
 
     // Navigation
-    public ICollection<MealPlanRecipe> Recipes { get; set; } = [];
+    public ICollection<PlannedMeal> PlannedMeals { get; set; } = [];
 }

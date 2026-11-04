@@ -44,6 +44,22 @@ public class IngredientsEndpointTests(DatabaseFixture db) : IAsyncLifetime
     }
 
     [Fact]
+    public async Task ListAll_IncludesAliases()
+    {
+        await using (var ctx = db.CreateDbContext())
+        {
+            var flour = TestDataBuilder.Ingredient("all-purpose flour", "All-Purpose Flour", IngredientCategory.BakingSpices);
+            flour.Aliases = ["flour", "plain flour"];
+            ctx.Ingredients.Add(flour);
+            await ctx.SaveChangesAsync();
+        }
+
+        var list = await Client.GetFromJsonAsync<List<IngredientResponse>>("/api/v1/ingredients");
+
+        list!.Single().Aliases.Should().Equal("flour", "plain flour");
+    }
+
+    [Fact]
     public async Task ListWithSearch_FiltersResults()
     {
         await SeedIngredient("flour", "Flour");
@@ -143,6 +159,24 @@ public class IngredientsEndpointTests(DatabaseFixture db) : IAsyncLifetime
 
         var body = await response.Content.ReadFromJsonAsync<IngredientResponse>();
         body!.DisplayName.Should().Be("Strong Flour");
+    }
+
+    [Fact]
+    public async Task Update_SetsAndClearsTheStapleFlag()
+    {
+        var seeded = await SeedIngredient("salt", "Salt", IngredientCategory.BakingSpices);
+        seeded.IsStaple.Should().BeFalse();
+
+        var makeStaple = new UpdateIngredientRequest("Salt", IngredientCategory.BakingSpices, null, IsStaple: true);
+        var madeStaple = await Client.PutAsJsonAsync($"/api/v1/ingredients/{seeded.Id}", makeStaple);
+        (await madeStaple.Content.ReadFromJsonAsync<IngredientResponse>())!.IsStaple.Should().BeTrue();
+
+        var fetched = await Client.GetFromJsonAsync<IngredientResponse>($"/api/v1/ingredients/{seeded.Id}");
+        fetched!.IsStaple.Should().BeTrue();
+
+        var clearStaple = new UpdateIngredientRequest("Salt", IngredientCategory.BakingSpices, null, IsStaple: false);
+        var clearedStaple = await Client.PutAsJsonAsync($"/api/v1/ingredients/{seeded.Id}", clearStaple);
+        (await clearedStaple.Content.ReadFromJsonAsync<IngredientResponse>())!.IsStaple.Should().BeFalse();
     }
 
     [Fact]

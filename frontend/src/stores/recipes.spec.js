@@ -1,6 +1,6 @@
 import { setActivePinia, createPinia } from 'pinia'
 import { useRecipeStore } from './recipes'
-import { makeRecipe, makeRecipeDetail } from '@/test/factories'
+import { makeRecipe, makeRecipeDetail, makeRecipePage } from '@/test/factories'
 
 vi.mock('@/services/api', () => ({
   default: {
@@ -19,74 +19,70 @@ beforeEach(() => {
   vi.clearAllMocks()
 })
 
-// ── fetchRecipes ──────────────────────────────────────────────────────────────
+// ── fetchRecipePage ───────────────────────────────────────────────────────────
 
-describe('fetchRecipes', () => {
-  it('populates store.recipes from API response', async () => {
+describe('fetchRecipePage', () => {
+  it('returns the page items and the total count from the API', async () => {
     const recipes = [makeRecipe({ id: '1', name: 'A' }), makeRecipe({ id: '2', name: 'B' })]
-    api.get.mockResolvedValue({ data: recipes })
+    api.get.mockResolvedValue({ data: makeRecipePage(recipes, { totalCount: 30 }) })
 
     const store = useRecipeStore()
-    await store.fetchRecipes()
+    const page = await store.fetchRecipePage({ search: 'a', page: 2 })
 
-    expect(store.recipes).toHaveLength(2)
+    expect(api.get).toHaveBeenCalledWith('/recipes', { params: { search: 'a', page: 2 }, signal: undefined })
+    expect(page.items.map(r => r.id)).toEqual(['1', '2'])
+    expect(page.totalCount).toBe(30)
   })
 
-  it('sets loading true during fetch, false after', async () => {
-    let resolveGet
-    api.get.mockReturnValue(new Promise(r => { resolveGet = r }))
+  it('passes the abort signal to the request', async () => {
+    api.get.mockResolvedValue({ data: makeRecipePage([]) })
+    const controller = new AbortController()
 
     const store = useRecipeStore()
-    const promise = store.fetchRecipes()
-    expect(store.loading).toBe(true)
+    await store.fetchRecipePage({ page: 1 }, { signal: controller.signal })
 
-    resolveGet({ data: [] })
-    await promise
-    expect(store.loading).toBe(false)
+    expect(api.get.mock.lastCall[1].signal).toBe(controller.signal)
   })
 
-  it('sets store.error on API failure and leaves recipes unchanged', async () => {
-    const original = [makeRecipe()]
-    api.get.mockResolvedValueOnce({ data: original })
-    const store = useRecipeStore()
-    await store.fetchRecipes()
-
+  it('rejects on API failure without touching the store loading or error state', async () => {
     api.get.mockRejectedValue({ message: 'Network error' })
-    await store.fetchRecipes()
 
-    expect(store.error).toBe('Network error')
-    expect(store.recipes).toEqual(expect.arrayContaining([expect.objectContaining({ id: original[0].id })]))
+    const store = useRecipeStore()
+    await expect(store.fetchRecipePage({ page: 1 })).rejects.toMatchObject({ message: 'Network error' })
+
+    expect(store.loading).toBe(false)
+    expect(store.error).toBeNull()
   })
 
   it('normalises a relative imageUrl using assetUrl', async () => {
     assetUrl.mockImplementation((p) => p ? `http://localhost:5000${p}` : '')
-    api.get.mockResolvedValue({ data: [makeRecipe({ imageUrl: '/uploads/images/foo.jpg' })] })
+    api.get.mockResolvedValue({ data: makeRecipePage([makeRecipe({ imageUrl: '/uploads/images/foo.jpg' })]) })
 
     const store = useRecipeStore()
-    await store.fetchRecipes()
+    const page = await store.fetchRecipePage({ page: 1 })
 
-    expect(store.recipes[0].imageUrl).toBe('http://localhost:5000/uploads/images/foo.jpg')
+    expect(page.items[0].imageUrl).toBe('http://localhost:5000/uploads/images/foo.jpg')
   })
 
   it('leaves an absolute imageUrl unchanged', async () => {
     const absUrl = 'http://cdn.example.com/img.jpg'
     assetUrl.mockImplementation((p) => p ?? '')
-    api.get.mockResolvedValue({ data: [makeRecipe({ imageUrl: absUrl })] })
+    api.get.mockResolvedValue({ data: makeRecipePage([makeRecipe({ imageUrl: absUrl })]) })
 
     const store = useRecipeStore()
-    await store.fetchRecipes()
+    const page = await store.fetchRecipePage({ page: 1 })
 
-    expect(store.recipes[0].imageUrl).toBe(absUrl)
+    expect(page.items[0].imageUrl).toBe(absUrl)
   })
 
   it('converts null imageUrl to empty string via assetUrl', async () => {
     assetUrl.mockImplementation((p) => p ?? '')
-    api.get.mockResolvedValue({ data: [makeRecipe({ imageUrl: null })] })
+    api.get.mockResolvedValue({ data: makeRecipePage([makeRecipe({ imageUrl: null })]) })
 
     const store = useRecipeStore()
-    await store.fetchRecipes()
+    const page = await store.fetchRecipePage({ page: 1 })
 
-    expect(store.recipes[0].imageUrl).toBe('')
+    expect(page.items[0].imageUrl).toBe('')
   })
 })
 
@@ -138,10 +134,8 @@ describe('updateRecipe', () => {
 describe('deleteRecipe', () => {
   it('calls DELETE /recipes/:id', async () => {
     api.delete.mockResolvedValue({})
-    api.get.mockResolvedValue({ data: [makeRecipe({ id: 'r1' })] })
 
     const store = useRecipeStore()
-    await store.fetchRecipes()
     await store.deleteRecipe('r1')
 
     expect(api.delete).toHaveBeenCalledWith('/recipes/r1')
@@ -248,16 +242,6 @@ describe('confirmScrape', () => {
 
     expect(api.post).toHaveBeenCalledWith('/recipes/scrape/confirm', { name: 'Bolognese' })
     expect(id).toBe('new-recipe-id')
-  })
-
-  it('adds confirmed recipe to recipes list', async () => {
-    const detail = makeRecipeDetail({ id: 'r-new' })
-    api.post.mockResolvedValue({ data: detail })
-
-    const store = useRecipeStore()
-    await store.confirmScrape({})
-
-    expect(store.recipes.some(r => r.id === 'r-new')).toBe(true)
   })
 })
 

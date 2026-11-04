@@ -56,6 +56,9 @@ namespace RecipeApp.API.Data.Migrations
                         .HasPrecision(8, 4)
                         .HasColumnType("numeric(8,4)");
 
+                    b.Property<bool>("IsStaple")
+                        .HasColumnType("boolean");
+
                     b.Property<string>("Name")
                         .IsRequired()
                         .HasColumnType("text");
@@ -103,23 +106,23 @@ namespace RecipeApp.API.Data.Migrations
                     b.ToTable("MealPlans");
                 });
 
-            modelBuilder.Entity("RecipeApp.API.Models.MealPlanRecipe", b =>
+            modelBuilder.Entity("RecipeApp.API.Models.PlannedMeal", b =>
                 {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uuid");
+
+                    b.Property<string>("BatchSize")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("text")
+                        .HasDefaultValue("REGULAR");
 
                     b.Property<int>("DisplayOrder")
                         .HasColumnType("integer");
 
                     b.Property<Guid>("MealPlanId")
                         .HasColumnType("uuid");
-
-                    b.Property<string>("PortionSize")
-                        .IsRequired()
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("text")
-                        .HasDefaultValue("REGULAR");
 
                     b.Property<Guid>("RecipeId")
                         .HasColumnType("uuid");
@@ -133,7 +136,7 @@ namespace RecipeApp.API.Data.Migrations
 
                     b.HasIndex("RecipeId");
 
-                    b.ToTable("MealPlanRecipes");
+                    b.ToTable("PlannedMeals");
                 });
 
             modelBuilder.Entity("RecipeApp.API.Models.Recipe", b =>
@@ -356,10 +359,59 @@ namespace RecipeApp.API.Data.Migrations
                     b.ToTable("ShoppingListItems");
                 });
 
-            modelBuilder.Entity("RecipeApp.API.Models.MealPlanRecipe", b =>
+            modelBuilder.Entity("RecipeApp.API.Models.ShoppingListItemSource", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<decimal?>("Amount")
+                        .HasPrecision(10, 3)
+                        .HasColumnType("numeric(10,3)");
+
+                    b.Property<string>("BatchSize")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<int>("DisplayOrder")
+                        .HasColumnType("integer");
+
+                    b.Property<Guid?>("RecipeId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("RecipeName")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<DateOnly?>("ScheduledDate")
+                        .HasColumnType("date");
+
+                    b.Property<decimal?>("ShareAmount")
+                        .HasPrecision(10, 3)
+                        .HasColumnType("numeric(10,3)");
+
+                    b.Property<string>("ShareUnit")
+                        .HasColumnType("text");
+
+                    b.Property<Guid>("ShoppingListItemId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Unit")
+                        .HasColumnType("text");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("RecipeId");
+
+                    b.HasIndex("ShoppingListItemId");
+
+                    b.ToTable("ShoppingListItemSources");
+                });
+
+            modelBuilder.Entity("RecipeApp.API.Models.PlannedMeal", b =>
                 {
                     b.HasOne("RecipeApp.API.Models.MealPlan", "MealPlan")
-                        .WithMany("Recipes")
+                        .WithMany("PlannedMeals")
                         .HasForeignKey("MealPlanId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
@@ -453,6 +505,24 @@ namespace RecipeApp.API.Data.Migrations
                     b.Navigation("ShoppingList");
                 });
 
+            modelBuilder.Entity("RecipeApp.API.Models.ShoppingListItemSource", b =>
+                {
+                    b.HasOne("RecipeApp.API.Models.Recipe", "Recipe")
+                        .WithMany()
+                        .HasForeignKey("RecipeId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
+                    b.HasOne("RecipeApp.API.Models.ShoppingListItem", "ShoppingListItem")
+                        .WithMany("Sources")
+                        .HasForeignKey("ShoppingListItemId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Recipe");
+
+                    b.Navigation("ShoppingListItem");
+                });
+
             modelBuilder.Entity("RecipeApp.API.Models.Ingredient", b =>
                 {
                     b.Navigation("RecipeIngredients");
@@ -460,7 +530,7 @@ namespace RecipeApp.API.Data.Migrations
 
             modelBuilder.Entity("RecipeApp.API.Models.MealPlan", b =>
                 {
-                    b.Navigation("Recipes");
+                    b.Navigation("PlannedMeals");
                 });
 
             modelBuilder.Entity("RecipeApp.API.Models.Recipe", b =>
@@ -483,6 +553,11 @@ namespace RecipeApp.API.Data.Migrations
             modelBuilder.Entity("RecipeApp.API.Models.ShoppingList", b =>
                 {
                     b.Navigation("Items");
+                });
+
+            modelBuilder.Entity("RecipeApp.API.Models.ShoppingListItem", b =>
+                {
+                    b.Navigation("Sources");
                 });
 #pragma warning restore 612, 618
         }

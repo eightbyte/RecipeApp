@@ -4,10 +4,7 @@ using RecipeApp.API.Services.Seeding;
 
 namespace RecipeApp.Tests.Seeding;
 
-/// <summary>
-/// The <c>seed-recipes</c> CLI's own argument vector (Phase 9 §15) and the manifest narrowing that
-/// <c>--slug</c> drives. Pure functions — no cache, no network, no inference.
-/// </summary>
+/// <summary>The <c>seed-recipes</c> CLI's own argument vector and the manifest narrowing that <c>--slug</c> drives, as pure functions.</summary>
 public class SeedRecipesCommandTests
 {
     private static SeedRecipesCommand.SeedRecipesArguments? Parse(params string[] args) =>
@@ -43,7 +40,7 @@ public class SeedRecipesCommandTests
     [InlineData("--limit", "50")]
     public void TryParse_AModifierAlone_StillRunsTheFullPipeline(params string[] args)
     {
-        // §15: `seed-recipes --trial`, `--force` and `--limit 50` are full-pipeline modes.
+        // seed-recipes --trial, --force and --limit 50 are full-pipeline modes.
         Parse(args)!.RunsFullPipeline.Should().BeTrue();
     }
 
@@ -81,7 +78,7 @@ public class SeedRecipesCommandTests
     [Fact]
     public void TrialSelection_PinsTwentyDistinctSlugs()
     {
-        // §14: twenty, stratified, reproducible. A duplicate would silently shrink the trial.
+        // Twenty, stratified and reproducible, where a duplicate would silently shrink the trial.
         SeedTrialSelection.Slugs.Should().HaveCount(20).And.OnlyHaveUniqueItems();
         SeedTrialSelection.Slugs.Should().OnlyContain(slug => SeedCacheStore.IsValidSlug(slug));
     }
@@ -116,10 +113,7 @@ public class SeedRecipesCommandTests
         arguments.Slugs.Should().Equal("apple-cake", "3-can-chili");
     }
 
-    /// <summary>
-    /// Slugs become filenames, so the CLI applies the same guard the cache does rather than letting
-    /// an unsafe value travel any further.
-    /// </summary>
+    /// <summary>Slugs become filenames, so the CLI applies the same guard the cache does rather than letting an unsafe value travel further.</summary>
     [Theory]
     [InlineData("../escape")]
     [InlineData("Apple-Cake")]

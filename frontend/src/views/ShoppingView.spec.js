@@ -112,6 +112,15 @@ describe('ShoppingView', () => {
     expect(store.regenerate).toHaveBeenCalled()
   })
 
+  it('shows just the amount for an item with no unit', async () => {
+    const { wrapper, store } = await mountView()
+    store.list = makeShoppingList({
+      items: [makeShoppingListItem({ id: 'i1', displayName: 'Apple', isCustom: true, amount: 2, unit: null })],
+    })
+    await wrapper.vm.$nextTick()
+    expect(wrapper.get('.v-list-item-subtitle').text().trim()).toBe('2')
+  })
+
   it('shows warning chip for needsReview items', async () => {
     const { wrapper, store } = await mountView()
     store.list = makeShoppingList({

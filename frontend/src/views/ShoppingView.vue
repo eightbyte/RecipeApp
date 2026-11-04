@@ -88,7 +88,7 @@
                   </v-list-item-title>
 
                   <v-list-item-subtitle v-if="item.amount">
-                    {{ formatAmount(item.amount, item.unit) }}
+                    {{ formatMeasurement(item.amount, item.unit) }}
                   </v-list-item-subtitle>
 
                   <template #append>
@@ -189,6 +189,7 @@ import { ref, computed, onMounted } from 'vue'
 import { useShoppingListStore } from '@/stores/shoppingList'
 import { useUiStore } from '@/stores/ui'
 import { formatCategory, INGREDIENT_CATEGORY_VALUES } from '@/constants/categories'
+import { formatMeasurement } from '@/constants/units'
 import { useHold } from '@/composables/useHold'
 import CustomItemSheet from '@/components/CustomItemSheet.vue'
 import EmptyState from '@/components/EmptyState.vue'
@@ -287,10 +288,6 @@ async function onRegenerate() {
   } catch (e) {
     ui.notify({ message: e?.message ?? 'Could not regenerate list.', color: 'error' })
   }
-}
-
-function formatAmount(amount, unit) {
-  return `${amount} ${unit}`
 }
 </script>
 

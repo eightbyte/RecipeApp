@@ -15,7 +15,7 @@ Read `CODING_STANDARDS.md` (repo root) before writing or reviewing code: comment
 | `Validators/` | One FluentValidation validator per request DTO. `RecipeLimits.cs` holds the shared length and range limits |
 | `Models/` | EF entities, one per file |
 | `Enums/` | `MeasurementUnit`, `IngredientCategory`, `BatchSize`, `RecipeSort`, `SortDirection` (the single source of truth for each) |
-| `Services/` | Business logic; `Llm/` local model layer, `Seeding/` MyPlate import pipeline, `RecipePacks/` recipe-pack import |
+| `Services/` | Business logic; `Llm/` Model Server client, `Seeding/` MyPlate import pipeline, `RecipePacks/` recipe-pack import |
 | `Data/` | `AppDbContext`, migrations, `FirstRunSeeder` and its ledger keys, catalogue/density seeders |
 | `seed-data/` | `ingredient-catalogue.json` and `sample-recipes.json` (committed, shipped artefacts) and the `myplate/` cache (personal use; only `manifest.json` committed) |
 
@@ -43,8 +43,9 @@ Read `CODING_STANDARDS.md` (repo root) before writing or reviewing code: comment
 - Runs on **Microsoft.Testing.Platform**, enabled by the repo-root `global.json`. xunit.v3 is
   MTP-only. **Do not re-add `Microsoft.NET.Test.Sdk` or `xunit.runner.visualstudio`.**
 - Integration tests use Testcontainers (Docker must be running) through `Infrastructure/RecipeAppFactory`
-  and `DatabaseFixture`. The suite needs no GPU and no network. Use `StubLlmStructuredClient`,
-  `StubHttpClientFactory` and `TestHostEnvironment` instead of the real ones.
+  and `DatabaseFixture`. The suite needs no GPU, no Model Server and no network. Use
+  `StubLlmStructuredClient`, `StubModelServerStatusProbe`, `StubHttpClientFactory` and
+  `TestHostEnvironment` instead of the real ones.
 - One class or method: `dotnet test --project RecipeApp.Tests/RecipeApp.Tests.csproj -- --filter-class "*RecipesEndpointTests"`
   (or `--filter-method "*List_Sort*"`). A filter that matches nothing exits 9 (`--minimum-expected-tests 1`
   in the csproj), so read the exit code, not just `failed: 0`.
@@ -115,7 +116,8 @@ collide afterwards: the samples have no `SourceUrl`, so `--persist --force` neve
 |---|---|
 | `ConnectionStrings:DefaultConnection` | PostgreSQL |
 | `ImageStorage:BasePath` | Local path for recipe images |
-| `Llm:Local:*` | Model path, GPU layers, chat template, sampling. See `Services/Llm/CLAUDE.md` |
+| `Llm:ModelServer:BaseUrl` | The Model Server, `http://localhost:9931` with the start script's defaults. Empty disables Scraping. See `Services/Llm/CLAUDE.md` |
+| `Llm:ModelServer:ApiKey` | Bearer key, matching the server's `ApiKey` setting. Empty for a loopback server with no key |
 | `Measurement:ResolveCupsOnImport` | Resolve `cup` to grams on import where a density exists (default `true`) |
 
 `RecipeScraping`, `RecipeSeeding` (seed pipeline), `RecipePacks` (sample pack path) and `Llm`
@@ -125,7 +127,8 @@ defaults live in the committed `appsettings.json`. Nothing secret goes there.
 
 - **Starting the web host migrates and seeds** a fresh database (see First-run seeding).
 - **To see a change in the running app, use the `run-dev` skill.** It starts the API on a clone of
-  the dev database without loading the LLM onto the GPU.
+  the dev database. Scraping and the seed pipeline's model stages also need the Model Server
+  (`tools/llm-server/start.ps1`); everything else runs without it.
 - **Databases that predate the curated catalogue hold legacy ingredient rows.** Examples are
   `onions`, `tomato` and `plain flour`. A name outranks an alias, so these rows capture names the
   catalogue meant as aliases, which splits shopping-list lines and hides densities. A non-force

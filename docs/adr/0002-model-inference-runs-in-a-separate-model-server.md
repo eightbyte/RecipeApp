@@ -107,3 +107,32 @@ calls. *Rejected:* it is a host-side companion app again, and starting it by han
   recipe in progress.
 - The API does not enforce which model is loaded. It reports and logs the model's name, so a
   quality regression can be traced to the model file first.
+
+## Outcome
+
+Measured on 2026-11-05 against llama.cpp `b12110` (the build stable `v0.9.0` names; Windows,
+CUDA 12.4) with Qwen3.5-9B-Q6_K, `--ctx-size 8192`, all layers on the GPU, `--parallel 1`, port
+9931 (`llama-server`'s own default).
+
+- **Prompt path: `/v1/chat/completions` with the GGUF's own chat template**, thinking off
+  (`--reasoning off` on the server, `chat_template_kwargs.enable_thinking=false` per request).
+  The rendered prompt is not byte-identical to LLamaSharp's: it ends with an empty
+  `<think>\n\n</think>\n\n` block after `<|im_start|>assistant\n`. The `/completion` fall-back was
+  not needed.
+- **Normalise benchmark: passed.** `seed-recipes --normalise --force --limit 30` on a copy of the
+  seed cache normalised **30 of 30 (100%)**, none failed, three needed a retry. 33 calls averaged
+  8.9 s, about 9.8 s per recipe (LLamaSharp: 96.8%, 9.2 s per recipe).
+- **Catalogue smoke run: inference passed, the build did not.** `seed-recipes --build-catalogue`
+  on the same copy ran all 45 batches (1,477 names) in 18m51s. Every batch answered on its first
+  attempt: no unanswered names, no failed grouping call, no invalid JSON. The builder's validator
+  then rejected the result with 50 duplicate display names. Each one is a variant the model kept
+  apart but labelled with its neighbour's generic name (`ranch dressing` as `Dressing`,
+  `baking apples` as `Apple`), so nothing was written and the command exited 1. The
+  display-name check was added on 2026-10-12, after the last LLamaSharp catalogue build
+  (2026-09-15), so no engine has passed it yet. The shipped catalogue is curated by hand and is
+  unaffected.
+- **A Model Server stopped mid-generation drops the request without an HTTP answer**, as
+  `ResponseEnded` on a graceful close or `Unknown` over a reset, not `ConnectionError`. The client
+  treats any request that gets no HTTP answer as `offline`, so a Scrape caught in it returns 503.
+- Port 9931 replaces the 8080 that issue #46 named as the default. 9931 is `llama-server`'s actual
+  default in b12110.

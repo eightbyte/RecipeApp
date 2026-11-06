@@ -13,7 +13,7 @@ Read `CODING_STANDARDS.md` (repo root) before writing or reviewing code: comment
 | `components/` | Shared components; `layout/` has `AppTopBar`, `AppBottomNav` |
 | `stores/` | Pinia, one file per domain (`recipes`, `ingredients`, `mealPlans`, `shoppingList`, `ui`) |
 | `services/api.js` | The pre-configured Axios instance |
-| `constants/` | `units.js`, `categories.js`, `batchSizes.js`, `recipeSorts.js` — mirrors of the backend enums; `servings.js` mirrors the Servings limits in `RecipeLimits` and formats a servings count |
+| `constants/` | `units.js`, `categories.js`, `batchSizes.js`, `recipeSorts.js` — mirrors of the backend enums; `servings.js` mirrors the Servings limits in `RecipeLimits` and formats a servings count; `modelServer.js` mirrors `ModelServerState` and its `UnavailableReason()` wording |
 | `composables/` | `useWakeLock.js`; `useRecipePages.js` pages a recipe list and holds the shared `SEARCH_DEBOUNCE_MS`; `useHold.js` is the 1-second press-and-hold on pointer events (editing a Custom Item); `useDelayedHide.js` keeps each just-ticked Purchased item shown for 3 seconds on its own timer |
 | `utils/` | `dateOnly.js` formats date-only values; `storage.js` wraps `localStorage` for device-local preferences |
 | `styles/` | `settings.scss` — Vuetify Sass settings |

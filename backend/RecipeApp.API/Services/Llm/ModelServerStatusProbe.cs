@@ -60,13 +60,10 @@ public sealed class ModelServerStatusProbe(IHttpClientFactory httpClientFactory,
     }
 
     /// <summary>The state a response proves on its own, or null when it is a success and the probe should go on.</summary>
-    private static ModelServerState? StateOf(HttpStatusCode status) => status switch
-    {
-        HttpStatusCode.OK                 => null,
-        HttpStatusCode.ServiceUnavailable => ModelServerState.Loading,
-        HttpStatusCode.Unauthorized       => ModelServerState.Unauthorized,
-        _                                 => ModelServerState.Offline,
-    };
+    private static ModelServerState? StateOf(HttpStatusCode status) =>
+        status == HttpStatusCode.OK
+            ? null
+            : ModelServerClient.UnavailableStateOf(status) ?? ModelServerState.Offline;
 
     /// <summary>The first model's id, which is the start script's --alias, or null when the list is not in the shape llama-server sends.</summary>
     private static async Task<string?> ReadModelNameAsync(HttpResponseMessage models, CancellationToken ct)

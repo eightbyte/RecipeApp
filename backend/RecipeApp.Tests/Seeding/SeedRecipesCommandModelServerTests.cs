@@ -76,6 +76,18 @@ public class SeedRecipesCommandModelServerTests : IDisposable
         harvester.Reached.Should().BeFalse();
     }
 
+    /// <summary>With no stage flag every stage runs, Stage 4 included, so hours of harvesting must not come before the check.</summary>
+    [Fact]
+    public async Task FullPipeline_ModelServerNotReady_ExitsOneBeforeReadingTheManifest()
+    {
+        var (services, harvester, _) = Build(ModelServerState.Offline);
+
+        var exitCode = await SeedRecipesCommand.RunAsync(services, NullLogger.Instance, []);
+
+        exitCode.Should().Be(1);
+        harvester.Reached.Should().BeFalse();
+    }
+
     /// <summary>--force discards a GPU pass, so it must not run before the check that decides there is a GPU to redo it.</summary>
     [Fact]
     public async Task NormaliseForce_ModelServerNotReady_KeepsTheCachedNormalisedOutput()

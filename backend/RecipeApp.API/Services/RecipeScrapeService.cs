@@ -555,10 +555,14 @@ public class RecipeScrapeService(
 
             var matchSchema = JsonNode.Parse(MatchingSchemaJson)!;
 
+            // Its own budget, because the Model Server queues behind other callers and the client has no timeout.
+            using var matchCts    = new CancellationTokenSource(TimeSpan.FromSeconds(_options.LlmTimeoutSeconds));
+            using var matchLinked = CancellationTokenSource.CreateLinkedTokenSource(ct, matchCts.Token);
+
             try
             {
                 var matchJson = await llm.CompleteStructuredAsync(
-                    systemPrompt, userContent, matchSchema, maxTokens: 2048, ct);
+                    systemPrompt, userContent, matchSchema, maxTokens: 2048, matchLinked.Token);
 
                 var matchResponse = matchJson.Deserialize<MatchingResponse>(LlmJsonOptions);
                 if (matchResponse?.Results != null)

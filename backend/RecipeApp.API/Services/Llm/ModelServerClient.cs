@@ -60,17 +60,16 @@ public sealed class ModelServerClient(IHttpClientFactory httpClientFactory, IOpt
         {
             response = await http.SendAsync(request, ct);
         }
-        catch (HttpRequestException ex) when (ex.HttpRequestError == HttpRequestError.ConnectionError)
+        catch (HttpRequestException)
         {
+            // No HTTP answer at all: refused, or dropped mid-generation when the server is stopped (ResponseEnded or a reset).
             throw new ModelServerUnavailableException(ModelServerState.Offline);
         }
 
         using (response)
         {
-            if (response.StatusCode == HttpStatusCode.Unauthorized)
-                throw new ModelServerUnavailableException(ModelServerState.Unauthorized);
-            if (response.StatusCode == HttpStatusCode.ServiceUnavailable)
-                throw new ModelServerUnavailableException(ModelServerState.Loading);
+            if (UnavailableStateOf(response.StatusCode) is { } unavailable)
+                throw new ModelServerUnavailableException(unavailable);
 
             response.EnsureSuccessStatusCode();
 
@@ -81,6 +80,14 @@ public sealed class ModelServerClient(IHttpClientFactory httpClientFactory, IOpt
             return ParseAnswer(content.Trim());
         }
     }
+
+    /// <summary>The state a running Model Server's answer proves it cannot serve in (401 rejects the key, 503 is still loading), or null for any other status.</summary>
+    internal static ModelServerState? UnavailableStateOf(HttpStatusCode status) => status switch
+    {
+        HttpStatusCode.Unauthorized       => ModelServerState.Unauthorized,
+        HttpStatusCode.ServiceUnavailable => ModelServerState.Loading,
+        _                                 => null,
+    };
 
     /// <summary>A request to <paramref name="path"/> under the configured base URL, carrying the API key when one is set.</summary>
     internal static HttpRequestMessage CreateRequest(HttpMethod method, ModelServerOptions server, string path)

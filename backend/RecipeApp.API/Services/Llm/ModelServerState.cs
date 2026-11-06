@@ -24,7 +24,7 @@ public enum ModelServerState
 
 public static class ModelServerStateExtensions
 {
-    /// <summary>Why inference is unavailable in this state, phrased to follow "Scraping is unavailable: " so every caller words it the same way.</summary>
+    /// <summary>Why inference is unavailable in this state, a lower-case clause that follows "… is unavailable: " so every caller, and the frontend, words it the same way.</summary>
     public static string UnavailableReason(this ModelServerState state) => state switch
     {
         ModelServerState.Loading      => "the Model Server is still loading the model, try again in a moment.",

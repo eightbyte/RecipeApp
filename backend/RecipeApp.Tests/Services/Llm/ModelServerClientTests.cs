@@ -153,6 +153,22 @@ public class ModelServerClientTests
             .Which.State.Should().Be(ModelServerState.Offline);
     }
 
+    /// <summary>
+    /// Measured: stop.ps1 killing llama-server mid-generation ends the open request with no HTTP answer, as ResponseEnded on a
+    /// graceful close or Unknown over a reset, and a Scrape caught in it must still read as the server having gone.
+    /// </summary>
+    [Theory]
+    [InlineData(HttpRequestError.ResponseEnded)]
+    [InlineData(HttpRequestError.Unknown)]
+    public async Task Complete_ConnectionDroppedMidRequest_ThrowsUnavailableWithStateOffline(HttpRequestError error)
+    {
+        var act = CompleteAgainst(_ => throw new HttpRequestException(
+            error, "An existing connection was forcibly closed by the remote host.", new IOException()));
+
+        (await act.Should().ThrowAsync<ModelServerUnavailableException>())
+            .Which.State.Should().Be(ModelServerState.Offline);
+    }
+
     [Fact]
     public async Task Complete_Unauthorized_ThrowsUnavailableWithStateUnauthorized()
     {

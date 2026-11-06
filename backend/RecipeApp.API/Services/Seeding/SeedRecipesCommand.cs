@@ -44,6 +44,11 @@ public static class SeedRecipesCommand
         /// <summary>Discard cached pages and images before harvesting.</summary>
         public bool RefreshCache { get; init; }
 
+        /// <summary>Whether the run reaches a stage that calls the model: Stage 4 or 4.5 named, or no stage flag, which runs every stage.</summary>
+        public bool CallsTheModel =>
+            !Report && (Normalise || BuildCatalogue
+                        || !(Discover || Harvest || RefreshCache || Parse || Persist));
+
         /// <summary>Restrict the run to the pinned stratified subset (<see cref="SeedTrialSelection"/>), which with <c>--persist</c> means Stage 5 only.</summary>
         public bool Trial { get; init; }
 
@@ -182,8 +187,7 @@ public static class SeedRecipesCommand
         try
         {
             // Before --force clears anything, because a stopped Model Server would otherwise cost the cached pass it cannot redo.
-            if ((arguments.Normalise || arguments.BuildCatalogue) && !arguments.Report
-                && !await ModelServerIsReadyAsync(services, logger, ct))
+            if (arguments.CallsTheModel && !await ModelServerIsReadyAsync(services, logger, ct))
                 return FailureExitCode;
 
             if (arguments.Report)

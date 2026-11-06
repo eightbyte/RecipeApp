@@ -455,7 +455,7 @@ public class IngredientCatalogueBuilder(
                         "unanswered and {Collapsed} in collapsed groups; retrying.",
                         index + 1, batches.Count, attempt, reading.Unanswered, batch.Count, reading.Collapsed);
                 }
-                catch (Exception ex) when (ex is not OperationCanceledException)
+                catch (Exception ex) when (ex is not OperationCanceledException and not ModelServerUnavailableException)
                 {
                     // A failed batch is recorded and skipped, and its names fall through to gap recovery as single-name entries.
                     logger.LogWarning(ex,

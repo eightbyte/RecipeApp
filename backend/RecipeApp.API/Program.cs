@@ -1,6 +1,5 @@
 using FluentValidation;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Diagnostics.HealthChecks;
 using Microsoft.Extensions.FileProviders;
 using Microsoft.Extensions.Options;
 using RecipeApp.API.Data;
@@ -109,22 +108,16 @@ builder.Services.AddHttpClient(WaybackHarvester.HttpClientName, (sp, client) =>
     client.DefaultRequestHeaders.UserAgent.ParseAdd(seeding.UserAgent);
 });
 
-// ── LLM (Local provider via LLamaSharp) ──────────────────────────────────────
+// ── LLM (the Model Server, llama.cpp's llama-server over HTTP) ───────────────
 builder.Services.Configure<LlmOptions>(
     builder.Configuration.GetSection(LlmOptions.SectionName));
 
-builder.Services.AddSingleton<LlamaModelHolder>();
+// No timeout: each caller's LlmTimeoutSeconds budget owns the limit, so a long completion surfaces as LlmTimeout rather than a failure.
+builder.Services.AddHttpClient(ModelServerClient.HttpClientName, client =>
+    client.Timeout = Timeout.InfiniteTimeSpan);
 
-builder.Services.AddSingleton<ILlmStructuredClient>(sp =>
-{
-    var opts = sp.GetRequiredService<IOptions<LlmOptions>>().Value;
-    return opts.Provider switch
-    {
-        "Local" => new DeferredLlmStructuredClient(
-            () => new LLamaSharpStructuredClient(sp.GetRequiredService<LlamaModelHolder>())),
-        var p   => throw new InvalidOperationException($"Unknown Llm:Provider '{p}'."),
-    };
-});
+builder.Services.AddSingleton<ILlmStructuredClient, ModelServerClient>();
+builder.Services.AddSingleton<IModelServerStatusProbe, ModelServerStatusProbe>();
 
 // ── CORS ──────────────────────────────────────────────────────────────────────
 builder.Services.AddCors(options =>
@@ -138,17 +131,13 @@ builder.Services.AddCors(options =>
 });
 
 // ── Health Checks ─────────────────────────────────────────────────────────────
+// The Model Server is deliberately absent: the updater rolls back on a failed readiness check, and the server is off most of the time.
 builder.Services.AddHealthChecks()
     .AddNpgSql(
         sp => sp.GetRequiredService<IConfiguration>().GetConnectionString("DefaultConnection")!,
         name: "postgres",
         tags: ["ready"]
-    )
-    .AddCheck("llm-model", () =>
-    {
-        // Checked lazily — only reports unhealthy if holder exists but failed to load a configured path
-        return HealthCheckResult.Healthy("LLM model status checked at request time.");
-    }, tags: ["ready"]);
+    );
 
 // ─────────────────────────────────────────────────────────────────────────────
 var app = builder.Build();
@@ -249,6 +238,7 @@ var api = app.MapGroup("/api/v1");
 api.MapIngredientsEndpoints();
 api.MapRecipesEndpoints();
 api.MapRecipeScrapeEndpoints();
+api.MapModelServerEndpoints();
 api.MapMealPlanEndpoints();
 api.MapShoppingListEndpoints();
 
@@ -258,16 +248,6 @@ if (FirstRunSeeder.RunsIn(app.Environment))
 {
     using var scope = app.Services.CreateScope();
     await scope.ServiceProvider.GetRequiredService<FirstRunSeeder>().RunAsync();
-}
-
-// Eagerly resolve the model holder (non-test environments) so a bad path surfaces at startup
-if (!app.Environment.IsEnvironment(FirstRunSeeder.TestingEnvironmentName))
-{
-    var holder = app.Services.GetRequiredService<LlamaModelHolder>();
-    if (holder.IsLoaded)
-        app.Logger.LogInformation("LLM model is ready.");
-    else
-        app.Logger.LogWarning("LLM model is not loaded. Set Llm:Local:ModelPath to enable local inference.");
 }
 
 app.Run();

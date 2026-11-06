@@ -1,4 +1,5 @@
 using RecipeApp.API.Data;
+using RecipeApp.API.Services.Llm;
 
 namespace RecipeApp.API.Services.Seeding;
 
@@ -180,6 +181,11 @@ public static class SeedRecipesCommand
 
         try
         {
+            // Before --force clears anything, because a stopped Model Server would otherwise cost the cached pass it cannot redo.
+            if ((arguments.Normalise || arguments.BuildCatalogue) && !arguments.Report
+                && !await ModelServerIsReadyAsync(services, logger, ct))
+                return FailureExitCode;
+
             if (arguments.Report)
                 return await ReportAsync(cache, logger, ct);
 
@@ -211,6 +217,14 @@ public static class SeedRecipesCommand
             logger.LogError("Seed harvest aborted: {Message}", ex.Message);
             return FailureExitCode;
         }
+        catch (ModelServerUnavailableException ex)
+        {
+            // Mid-run: the recipe in progress was left unrecorded, so a re-run resumes with it.
+            logger.LogError(
+                "Stopped: {Reason} Cached output is kept and a re-run resumes where it stopped.",
+                Capitalise(ex.State.UnavailableReason()));
+            return FailureExitCode;
+        }
         catch (CatalogueValidationException ex)
         {
             // Nothing was written, and a catalogue that contradicts itself is worse than none.
@@ -231,6 +245,25 @@ public static class SeedRecipesCommand
             return FailureExitCode;
         }
     }
+
+    /// <summary>Checks the Model Server once before a stage that needs it, reporting the state rather than failing recipe after recipe.</summary>
+    private static async Task<bool> ModelServerIsReadyAsync(IServiceProvider services, ILogger logger, CancellationToken ct)
+    {
+        var status = await services.GetRequiredService<IModelServerStatusProbe>().GetStatusAsync(ct);
+        if (status.State == ModelServerState.Ready)
+        {
+            logger.LogInformation("Model Server ready with model {Model}.", status.Model ?? "(unnamed)");
+            return true;
+        }
+
+        logger.LogError(
+            "{Reason} Start it with tools/llm-server/start.ps1 and check Llm:ModelServer:BaseUrl.",
+            Capitalise(status.State.UnavailableReason()));
+        return false;
+    }
+
+    private static string Capitalise(string text) =>
+        text.Length == 0 ? text : char.ToUpperInvariant(text[0]) + text[1..];
 
     private static async Task<int> DiscoverAsync(
         IWaybackHarvester harvester, ILogger logger, CancellationToken ct)

@@ -2,6 +2,7 @@ using System.Text.Json.Nodes;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
+using RecipeApp.API.Services.Llm;
 using RecipeApp.API.Services.Seeding;
 using RecipeApp.Tests.Infrastructure;
 
@@ -520,6 +521,30 @@ public class RecipeLibrarySeederTests : IDisposable
         result.Aborted.Should().BeTrue();
         result.Failed.Should().Be(2);
         result.Failures.Should().NotContainKey("three", "the run stopped before reaching it");
+    }
+
+    /// <summary>A stopped Model Server is not a bad recipe, so the run stops at once rather than failing every remaining recipe until the abort guard trips.</summary>
+    [Fact]
+    public async Task NormaliseAsync_ModelServerGoesAwayMidRun_StopsWithoutRecordingTheRecipeAsFailed()
+    {
+        _options = new RecipeSeedingOptions { MaxLlmRetries = 2, MaxConsecutiveLlmFailures = 5 };
+
+        var cache = await GivenParsedRecipesAsync("one", "two", "three");
+        var llm   = new StubLlmStructuredClient(call => call == 1
+            ? RiceAnswer()
+            : throw new ModelServerUnavailableException(ModelServerState.Offline));
+
+        var act = () => BuildSeeder(cache, llm).NormaliseAsync(ManifestOf("one", "two", "three"));
+
+        (await act.Should().ThrowAsync<ModelServerUnavailableException>())
+            .Which.State.Should().Be(ModelServerState.Offline);
+        llm.CallCount.Should().Be(2, "an unavailable server is not retried");
+
+        var state = await BuildCache().LoadStateAsync();
+        state.Slugs["one"].Stage.Should().Be(SeedStage.Normalised, "work done before the outage is kept");
+        state.Slugs["two"].Stage.Should().Be(SeedStage.Parsed, "the recipe in progress is left to resume");
+        state.Slugs["two"].LastError.Should().BeNull();
+        state.Slugs["three"].Stage.Should().Be(SeedStage.Parsed);
     }
 
     /// <summary>A gate rejection proves the pipeline works, so the abort guard counts only systemic failures, because counting rejections wedged resumed runs.</summary>

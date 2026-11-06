@@ -1,25 +1,21 @@
-using LLama.Sampling;
 using Microsoft.Extensions.Configuration;
-using Microsoft.Extensions.Logging.Abstractions;
-using Microsoft.Extensions.Options;
 using RecipeApp.API.Services.Llm;
 
 namespace RecipeApp.Tests.Services.Llm;
 
-/// <summary>The decoder settings applied to every local model call, asserted against LLamaSharp's own defaults so the test survives the library changing its mind.</summary>
+/// <summary>The decoder settings sent with every Model Server call, pinned to the values the prompts were measured against.</summary>
 public class LlmSamplingOptionsTests
 {
     /// <summary>Asserts the measured outcome rather than the intuitive one: decoding conservatively for extraction measured worse, because the retry that compensates for systematic misreads needs the randomness.</summary>
     [Fact]
-    public void Defaults_MatchTheLibrarysPipeline_BecauseDecodingColderMeasuredWorse()
+    public void Defaults_AreTheMeasuredValues_BecauseDecodingColderMeasuredWorse()
     {
-        using var chatTuned = new DefaultSamplingPipeline();
         var ours = new LlmSamplingOptions();
 
-        ours.Temperature.Should().Be(chatTuned.Temperature);
-        ours.TopK.Should().Be(chatTuned.TopK);
-        ours.TopP.Should().Be(chatTuned.TopP);
-        ours.MinP.Should().Be(chatTuned.MinP);
+        ours.Temperature.Should().Be(0.75f);
+        ours.TopK.Should().Be(40);
+        ours.TopP.Should().Be(0.9f);
+        ours.MinP.Should().Be(0.1f);
     }
 
     /// <summary>Greedy decoding is not available to these pipelines, because at temperature zero a retry reproduces the answer that was just rejected.</summary>
@@ -36,39 +32,49 @@ public class LlmSamplingOptionsTests
         var configuration = new ConfigurationBuilder()
             .AddInMemoryCollection(new Dictionary<string, string?>
             {
-                ["Llm:Local:Sampling:Temperature"] = "0.05",
-                ["Llm:Local:Sampling:TopK"]        = "12",
-                ["Llm:Local:Sampling:TopP"]        = "0.8",
-                ["Llm:Local:Sampling:MinP"]        = "0.15",
+                ["Llm:Sampling:Temperature"] = "0.05",
+                ["Llm:Sampling:TopK"]        = "12",
+                ["Llm:Sampling:TopP"]        = "0.8",
+                ["Llm:Sampling:MinP"]        = "0.15",
             })
             .Build();
 
         var options = new LlmOptions();
         configuration.GetSection(LlmOptions.SectionName).Bind(options);
 
-        options.Local.Sampling.Temperature.Should().Be(0.05f);
-        options.Local.Sampling.TopK.Should().Be(12);
-        options.Local.Sampling.TopP.Should().Be(0.8f);
-        options.Local.Sampling.MinP.Should().Be(0.15f);
+        options.Sampling.Temperature.Should().Be(0.05f);
+        options.Sampling.TopK.Should().Be(12);
+        options.Sampling.TopP.Should().Be(0.8f);
+        options.Sampling.MinP.Should().Be(0.15f);
     }
 
-    /// <summary>The holder reads its settings before deciding whether it has a model to load, so a machine with no GGUF file still answers the client's question.</summary>
     [Fact]
-    public void Holder_SurfacesTheConfiguredSampling_EvenWithNoModelConfigured()
+    public void Configuration_BindsTheModelServerSettings()
     {
-        var options = Options.Create(new LlmOptions
-        {
-            Local = new LocalLlmOptions
+        var configuration = new ConfigurationBuilder()
+            .AddInMemoryCollection(new Dictionary<string, string?>
             {
-                ModelPath = string.Empty,
-                Sampling  = new LlmSamplingOptions { Temperature = 0.3f, TopK = 7 },
-            },
-        });
+                ["Llm:ModelServer:BaseUrl"]              = "http://host.docker.internal:9931",
+                ["Llm:ModelServer:ApiKey"]               = "secret",
+                ["Llm:ModelServer:StatusTimeoutSeconds"] = "5",
+            })
+            .Build();
 
-        using var holder = new LlamaModelHolder(options, NullLogger<LlamaModelHolder>.Instance);
+        var options = new LlmOptions();
+        configuration.GetSection(LlmOptions.SectionName).Bind(options);
 
-        holder.IsLoaded.Should().BeFalse();
-        holder.Sampling.Temperature.Should().Be(0.3f);
-        holder.Sampling.TopK.Should().Be(7);
+        options.ModelServer.BaseUrl.Should().Be("http://host.docker.internal:9931");
+        options.ModelServer.ApiKey.Should().Be("secret");
+        options.ModelServer.StatusTimeoutSeconds.Should().Be(5);
+    }
+
+    [Fact]
+    public void ModelServerDefaults_MeanNoModelServer_AndAThreeSecondStatusCheck()
+    {
+        var defaults = new ModelServerOptions();
+
+        defaults.BaseUrl.Should().BeEmpty();
+        defaults.ApiKey.Should().BeEmpty();
+        defaults.StatusTimeoutSeconds.Should().Be(3);
     }
 }

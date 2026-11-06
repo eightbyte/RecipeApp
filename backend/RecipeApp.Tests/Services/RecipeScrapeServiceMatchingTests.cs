@@ -27,6 +27,7 @@ public class RecipeScrapeServiceMatchingTests(DatabaseFixture db) : IAsyncLifeti
             httpClientFactory: null!,     // not used in NormaliseAsync
             options: opts,
             llm: fakeLlm,
+            modelServer: null!,           // not used in NormaliseAsync
             db: db.CreateDbContext(),
             headlessRenderer: null!,      // not used in NormaliseAsync
             measurementConverter: new MeasurementConverter(Options.Create(new MeasurementOptions())),

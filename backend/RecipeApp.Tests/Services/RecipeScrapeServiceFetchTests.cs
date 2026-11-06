@@ -28,6 +28,7 @@ public class RecipeScrapeServiceFetchTests
             httpClientFactory: new FakeHttpClientFactory(staticHtml),
             options: Options.Create(options),
             llm: null!,                 // not used in FetchAndStripHtmlAsync
+            modelServer: null!,         // not used in FetchAndStripHtmlAsync
             db: null!,                  // not used in FetchAndStripHtmlAsync
             headlessRenderer: headlessRenderer,
             measurementConverter: new MeasurementConverter(Options.Create(new MeasurementOptions())),

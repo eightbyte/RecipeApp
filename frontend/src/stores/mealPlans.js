@@ -123,7 +123,7 @@ export const useMealPlanStore = defineStore('mealPlans', () => {
 
   // The API replaces every field, so unchanged ones are copied from the current Planned Meal.
   async function updatePlannedMeal(planId, plannedMeal, changes) {
-    const body = { scheduledDate: plannedMeal.scheduledDate, batchSize: plannedMeal.batchSize, ...changes }
+    const body = { scheduledDate: plannedMeal.scheduledDate, servings: plannedMeal.servings, ...changes }
     await api.put(`/meal-plans/${planId}/planned-meals/${plannedMeal.id}`, { ...body, scheduledDate: body.scheduledDate || null })
     await _refreshPlan(planId)
   }

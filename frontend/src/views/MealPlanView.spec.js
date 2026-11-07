@@ -6,6 +6,7 @@ import { createPinia, setActivePinia } from 'pinia'
 import MealPlanView from './MealPlanView.vue'
 import { makeMealPlanDetail, makePlannedMeal } from '@/test/factories'
 import PlannedMealCard from '@/components/PlannedMealCard.vue'
+import RecipeBrowser from '@/components/RecipeBrowser.vue'
 
 const pushMock = vi.fn()
 
@@ -102,5 +103,18 @@ describe('MealPlanView', () => {
 
     const cards = wrapper.findAllComponents(PlannedMealCard)
     expect(cards.map(card => card.props())).toEqual(plannedMeals.map(plannedMeal => ({ plannedMeal, planId: 'plan-7' })))
+  })
+
+  it('leaves the Servings of an added recipe to the recipe', async () => {
+    const { wrapper, mealPlanStore } = await mountView()
+    mealPlanStore.activePlan = makeMealPlanDetail({ id: 'plan-7' })
+    const addSpy = vi.spyOn(mealPlanStore, 'addPlannedMeal').mockResolvedValue(undefined)
+    await wrapper.vm.$nextTick()
+
+    await wrapper.findAll('button').find(button => button.text() === 'Add recipe').trigger('click')
+    wrapper.findComponent(RecipeBrowser).vm.$emit('add', { id: 'r7', name: 'Soup' })
+    await flushPromises()
+
+    expect(addSpy).toHaveBeenCalledWith('plan-7', { recipeId: 'r7', scheduledDate: null })
   })
 })

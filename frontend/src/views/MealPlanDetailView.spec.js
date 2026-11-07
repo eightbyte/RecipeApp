@@ -4,6 +4,7 @@ import * as components from 'vuetify/components'
 import * as directives from 'vuetify/directives'
 import { createPinia, setActivePinia } from 'pinia'
 import MealPlanDetailView from './MealPlanDetailView.vue'
+import ServingsChip from '@/components/ServingsChip.vue'
 import { makeMealPlanDetail, makePlannedMeal } from '@/test/factories'
 import { runInTimeZone, WEST_OF_UTC } from '@/test/timeZone'
 
@@ -55,6 +56,13 @@ describe('MealPlanDetailView', () => {
     await wrapper.vm.$nextTick()
     expect(wrapper.text()).toContain('June Week')
     expect(wrapper.text()).toContain('Risotto')
+  })
+
+  it('shows each Planned Meal’s Servings', async () => {
+    const { wrapper, store } = await mountView()
+    store.currentPlan = makeMealPlanDetail({ plannedMeals: [makePlannedMeal({ servings: 6 })] })
+    await wrapper.vm.$nextTick()
+    expect(wrapper.findComponent(ServingsChip).text()).toBe('6 servings')
   })
 
   describe('west of UTC', () => {

@@ -114,7 +114,6 @@ import { ref, onMounted } from 'vue'
 import { onBeforeRouteLeave, useRouter } from 'vue-router'
 import { useMealPlanStore } from '@/stores/mealPlans'
 import { useUiStore } from '@/stores/ui'
-import { DEFAULT_BATCH_SIZE } from '@/constants/batchSizes'
 import PlannedMealCard from '@/components/PlannedMealCard.vue'
 import RecipeBrowser from '@/components/RecipeBrowser.vue'
 import EmptyState from '@/components/EmptyState.vue'
@@ -142,11 +141,7 @@ async function onAddRecipe(recipe) {
   if (!mealPlanStore.activePlan) return
   browserOpen.value = false
   try {
-    await mealPlanStore.addPlannedMeal(mealPlanStore.activePlan.id, {
-      recipeId: recipe.id,
-      scheduledDate: null,
-      batchSize: DEFAULT_BATCH_SIZE,
-    })
+    await mealPlanStore.addPlannedMeal(mealPlanStore.activePlan.id, { recipeId: recipe.id, scheduledDate: null })
     ui.notify({ message: `Added “${recipe.name}” to your plan`, color: 'success' })
   } catch (e) {
     ui.notify({ message: e?.message ?? 'Could not add recipe.', color: 'error' })

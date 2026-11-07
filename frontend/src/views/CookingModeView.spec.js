@@ -7,7 +7,7 @@ import { useRecipeStore } from '@/stores/recipes'
 import { useUiStore } from '@/stores/ui'
 import CookingModeView from './CookingModeView.vue'
 import { makeRecipeDetail } from '@/test/factories'
-import { cookingRoute, cookingRouteAtServings, servingsFromQuery } from '@/router/recipeRoutes'
+import { cookingRoute, servingsFromQuery } from '@/router/recipeRoutes'
 
 const backMock = vi.fn()
 const replaceMock = vi.fn()
@@ -132,7 +132,7 @@ describe('CookingModeView', () => {
   })
 
   it('returns to the recipe view at the servings Cooking Mode was opened at', async () => {
-    routeQuery = cookingRoute('r1', 'DOUBLE').query
+    routeQuery = cookingRoute('r1', 8).query
     const w = await mountView()
     vi.spyOn(store, 'markCooked').mockResolvedValue(threeStepRecipe())
 
@@ -170,35 +170,27 @@ describe('CookingModeView', () => {
   })
 
   it('scales to the servings in a link from the recipe view', async () => {
-    routeQuery = cookingRouteAtServings('r1', 6).query
+    routeQuery = cookingRoute('r1', 6).query
     const w = await mountView()
     expect(servingsChip(w).text()).toBe('6 servings')
     expect(w.text()).toContain('300 g')
   })
 
   it('shows fractional servings the way amounts show', async () => {
-    routeQuery = cookingRouteAtServings('r1', 1.5).query
+    routeQuery = cookingRoute('r1', 1.5).query
     const w = await mountView()
     expect(servingsChip(w).text()).toBe('1.5 servings')
     expect(w.text()).toContain('75 g')
   })
 
   it('reads "1 serving" at exactly one serving', async () => {
-    routeQuery = cookingRouteAtServings('r1', 1).query
+    routeQuery = cookingRoute('r1', 1).query
     const w = await mountView()
     expect(servingsChip(w).text()).toBe('1 serving')
   })
 
-  it('shows a Planned Meal’s Batch Size as the servings it makes', async () => {
-    // A Double Planned Meal of a 4-serving recipe cooks 8 servings.
-    routeQuery = cookingRoute('r1', 'DOUBLE').query
-    const w = await mountView()
-    expect(servingsChip(w).text()).toBe('8 servings')
-    expect(w.text()).toContain('400 g')
-  })
-
-  it('treats an unknown Batch Size in the query as the recipe’s own Servings', async () => {
-    routeQuery = cookingRoute('r1', 'TRIPLE').query
+  it('ignores a Batch Size left in an old link', async () => {
+    routeQuery = { batch: 'DOUBLE' }
     const w = await mountView()
     expect(servingsChip(w).text()).toBe('4 servings')
     expect(w.text()).toContain('200 g')

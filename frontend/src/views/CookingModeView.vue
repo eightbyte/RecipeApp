@@ -166,7 +166,7 @@ import { useRoute, useRouter } from 'vue-router'
 import { useRecipeStore } from '@/stores/recipes'
 import { formatMeasurement, formatSourceMeasurement } from '@/constants/units'
 import { formatServings } from '@/constants/servings'
-import { recipeRouteAtServings, servingsFromQuery } from '@/router/recipeRoutes'
+import { recipeRoute, servingsFromQuery } from '@/router/recipeRoutes'
 import { useUiStore } from '@/stores/ui'
 import { useWakeLock } from '@/composables/useWakeLock'
 import EmptyState from '@/components/EmptyState.vue'
@@ -277,7 +277,7 @@ async function finish() {
   try {
     await store.markCooked(recipeId)
     ui.notify({ message: `Marked “${recipe.value?.name}” as cooked`, color: 'success' })
-    router.replace(recipeRouteAtServings(recipeId, servings.value))
+    router.replace(recipeRoute(recipeId, servings.value))
   } catch (e) {
     ui.notify({ message: e?.message ?? 'Could not mark as cooked.', color: 'error' })
   } finally {

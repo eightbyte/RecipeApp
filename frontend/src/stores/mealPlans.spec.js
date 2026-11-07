@@ -45,7 +45,7 @@ describe('fetchActivePlan', () => {
   it('normalises recipeImageUrl on Planned Meals', async () => {
     assetUrl.mockImplementation((p) => p ? `http://localhost:5000${p}` : '')
     const plan = makeMealPlanDetail({
-      plannedMeals: [{ id: 'planned-meal-1', recipeId: 'r1', recipeName: 'A', recipeImageUrl: '/uploads/a.jpg', recipeLastCookedAt: null, scheduledDate: null, batchSize: 'REGULAR', displayOrder: 1 }],
+      plannedMeals: [{ id: 'planned-meal-1', recipeId: 'r1', recipeName: 'A', recipeImageUrl: '/uploads/a.jpg', recipeLastCookedAt: null, scheduledDate: null, servings: 4, displayOrder: 1 }],
     })
     api.get.mockResolvedValue({ data: plan })
 
@@ -94,7 +94,7 @@ describe('addPlannedMeal', () => {
 
     const store = useMealPlanStore()
     store.currentPlan = plan
-    await store.addPlannedMeal('plan-1', { recipeId: 'r1', scheduledDate: null, batchSize: 'REGULAR' })
+    await store.addPlannedMeal('plan-1', { recipeId: 'r1', scheduledDate: null })
 
     expect(api.post).toHaveBeenCalledWith('/meal-plans/plan-1/planned-meals', expect.any(Object))
     expect(api.get).toHaveBeenCalledWith('/meal-plans/plan-1')
@@ -114,40 +114,40 @@ describe('updatePlannedMeal', () => {
     return store
   }
 
-  it('keeps the scheduled date when only the Batch Size changes', async () => {
+  it('keeps the scheduled date when only the Servings change', async () => {
     const store = storeWithPlan()
-    const plannedMeal = makePlannedMeal({ scheduledDate: '2026-06-03', batchSize: 'REGULAR' })
+    const plannedMeal = makePlannedMeal({ scheduledDate: '2026-06-03', servings: 4 })
 
-    await store.updatePlannedMeal('plan-1', plannedMeal, { batchSize: 'DOUBLE' })
+    await store.updatePlannedMeal('plan-1', plannedMeal, { servings: 8 })
 
-    expect(api.put).toHaveBeenCalledWith(plannedMealPath, { scheduledDate: '2026-06-03', batchSize: 'DOUBLE' })
+    expect(api.put).toHaveBeenCalledWith(plannedMealPath, { scheduledDate: '2026-06-03', servings: 8 })
   })
 
-  it('keeps the Batch Size when only the scheduled date changes', async () => {
+  it('keeps the Servings when only the scheduled date changes', async () => {
     const store = storeWithPlan()
-    const plannedMeal = makePlannedMeal({ scheduledDate: null, batchSize: 'HALF' })
+    const plannedMeal = makePlannedMeal({ scheduledDate: null, servings: 2 })
 
     await store.updatePlannedMeal('plan-1', plannedMeal, { scheduledDate: '2026-06-04' })
 
-    expect(api.put).toHaveBeenCalledWith(plannedMealPath, { scheduledDate: '2026-06-04', batchSize: 'HALF' })
+    expect(api.put).toHaveBeenCalledWith(plannedMealPath, { scheduledDate: '2026-06-04', servings: 2 })
   })
 
   it('sends a cleared scheduled date as null so the Planned Meal becomes Unscheduled', async () => {
     const store = storeWithPlan()
-    const plannedMeal = makePlannedMeal({ scheduledDate: '2026-06-03', batchSize: 'DOUBLE' })
+    const plannedMeal = makePlannedMeal({ scheduledDate: '2026-06-03', servings: 8 })
 
     await store.updatePlannedMeal('plan-1', plannedMeal, { scheduledDate: '' })
 
-    expect(api.put).toHaveBeenCalledWith(plannedMealPath, { scheduledDate: null, batchSize: 'DOUBLE' })
+    expect(api.put).toHaveBeenCalledWith(plannedMealPath, { scheduledDate: null, servings: 8 })
   })
 
   it('sends a missing scheduled date as null', async () => {
     const store = storeWithPlan()
-    const { scheduledDate, ...plannedMealWithoutDate } = makePlannedMeal({ batchSize: 'HALF' })
+    const { scheduledDate, ...plannedMealWithoutDate } = makePlannedMeal({ servings: 2 })
 
-    await store.updatePlannedMeal('plan-1', plannedMealWithoutDate, { batchSize: 'DOUBLE' })
+    await store.updatePlannedMeal('plan-1', plannedMealWithoutDate, { servings: 8 })
 
-    expect(api.put).toHaveBeenCalledWith(plannedMealPath, { scheduledDate: null, batchSize: 'DOUBLE' })
+    expect(api.put).toHaveBeenCalledWith(plannedMealPath, { scheduledDate: null, servings: 8 })
   })
 
 })

@@ -1,12 +1,22 @@
 <template>
   <v-container class="pa-4" max-width="600">
 
+    <div v-if="restoring" class="d-flex justify-center py-6">
+      <v-progress-circular indeterminate color="primary" />
+    </div>
+
+    <ErrorState
+      v-else-if="restoreError"
+      :message="restoreError"
+      @retry="restorePlan(planInUrl)"
+    />
+
     <!-- ── Step 1: Name entry ────────────────────────────────────────── -->
-    <div v-if="!mealPlanStore.currentPlan">
+    <div v-else-if="!builtPlan">
       <h2 class="text-h6 font-weight-bold mb-6">New Meal Plan</h2>
 
       <v-alert
-        v-if="mealPlanStore.activePlan"
+        v-if="mealPlanStore.activePlan && !creating"
         type="info"
         variant="tonal"
         density="compact"
@@ -19,7 +29,6 @@
       <v-text-field
         v-model="planName"
         label="Plan name"
-        placeholder="e.g. Week of 2 June"
         variant="outlined"
         :error-messages="nameError"
         @keyup.enter="createPlan"
@@ -42,19 +51,20 @@
     <div v-else>
       <div class="d-flex align-center justify-space-between mb-6">
         <div>
-          <h2 class="text-h6 font-weight-bold mb-2">{{ mealPlanStore.currentPlan.name }}</h2>
+          <h2 class="text-h6 font-weight-bold mb-2">{{ builtPlan.name }}</h2>
           <div class="text-caption text-medium-emphasis">Active plan — add recipes below</div>
         </div>
         <v-btn color="primary" variant="tonal" @click="done">Done</v-btn>
       </div>
 
       <!-- Added recipes -->
-      <div v-if="mealPlanStore.currentPlan.plannedMeals.length > 0" class="mb-6">
+      <div v-if="builtPlan.plannedMeals.length > 0" class="mb-6">
         <v-card
-          v-for="meal in mealPlanStore.currentPlan.plannedMeals"
+          v-for="meal in builtPlan.plannedMeals"
           :key="meal.id"
           class="mb-2"
           variant="outlined"
+          @click="openRecipe(meal)"
         >
           <div class="pa-3">
             <div class="d-flex align-center ga-2 mb-2">
@@ -63,10 +73,10 @@
                 <v-icon v-else color="grey" size="16">mdi-food</v-icon>
               </v-avatar>
               <div class="flex-grow-1 text-body-2 font-weight-medium">{{ meal.recipeName }}</div>
-              <v-btn icon="mdi-delete" variant="text" size="x-small" color="error" @click="removePlannedMeal(meal.id)" />
+              <v-btn icon="mdi-delete" variant="text" size="x-small" color="error" @click.stop="removePlannedMeal(meal.id)" />
             </div>
 
-            <div class="d-flex ga-2 flex-wrap">
+            <div class="d-flex ga-2 flex-wrap" @click.stop>
               <v-text-field
                 :model-value="meal.scheduledDate ?? ''"
                 type="date"
@@ -108,25 +118,52 @@
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue'
-import { useRouter } from 'vue-router'
+import { computed, ref, onMounted } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
 import { useMealPlanStore } from '@/stores/mealPlans'
 import { DEFAULT_BATCH_SIZE } from '@/constants/batchSizes'
+import { recipeRoute } from '@/router/recipeRoutes'
+import { DISPLAY_LOCALE } from '@/utils/dateOnly'
 import BatchSizeToggle from '@/components/BatchSizeToggle.vue'
+import ErrorState from '@/components/ErrorState.vue'
 import RecipeBrowser from '@/components/RecipeBrowser.vue'
 import SuggestionsPanel from '@/components/SuggestionsPanel.vue'
 
+const PLAN_QUERY_KEY = 'plan'
+
 const router        = useRouter()
+const route         = useRoute()
 const mealPlanStore = useMealPlanStore()
 
-const planName  = ref('')
-const nameError = ref('')
-const creating  = ref(false)
+// App.vue keys each view by its full path, so the plan in this builder's URL never changes while it is mounted.
+const planInUrl = route.query[PLAN_QUERY_KEY]
+const builtPlan = computed(() =>
+  planInUrl && mealPlanStore.currentPlan?.id === planInUrl ? mealPlanStore.currentPlan : null)
 
-// Always open the builder at the name-entry step, discarding any plan left in the store from a previously viewed plan.
+const planName     = ref(`Week of ${new Date().toLocaleDateString(DISPLAY_LOCALE, { day: 'numeric', month: 'long' })}`)
+const nameError    = ref('')
+const creating     = ref(false)
+const restoring    = ref(false)
+const restoreError = ref(null)
+
+// Without a plan in the URL, start at the name step rather than at a plan left in the store from a previously viewed plan.
 onMounted(() => {
-  mealPlanStore.currentPlan = null
+  if (planInUrl) restorePlan(planInUrl)
+  else mealPlanStore.currentPlan = null
 })
+
+async function restorePlan(planId) {
+  restoring.value    = true
+  restoreError.value = null
+  try {
+    await mealPlanStore.fetchPlan(planId)
+    if (mealPlanStore.currentPlan) await mealPlanStore.fetchSuggestions(planId)
+    else if (mealPlanStore.error) restoreError.value = mealPlanStore.error
+    else router.replace({ name: 'meal-plan-create' })
+  } finally {
+    restoring.value = false
+  }
+}
 
 async function createPlan() {
   if (!planName.value.trim()) {
@@ -137,14 +174,16 @@ async function createPlan() {
   creating.value  = true
   try {
     const id = await mealPlanStore.createPlan(planName.value.trim())
-    await mealPlanStore.fetchSuggestions(id)
-  } finally {
+    // On success this builder stays busy on the name step until the one mounted at the new URL replaces it.
+    await router.replace({ name: 'meal-plan-create', query: { [PLAN_QUERY_KEY]: id } })
+  } catch (e) {
     creating.value = false
+    throw e
   }
 }
 
 async function addRecipe(recipe) {
-  const planId = mealPlanStore.currentPlan?.id
+  const planId = builtPlan.value?.id
   if (!planId) return
   await mealPlanStore.addPlannedMeal(planId, {
     recipeId: recipe.id,
@@ -154,7 +193,7 @@ async function addRecipe(recipe) {
 }
 
 async function addSuggestion(suggestion) {
-  const planId = mealPlanStore.currentPlan?.id
+  const planId = builtPlan.value?.id
   if (!planId) return
   await mealPlanStore.addPlannedMeal(planId, {
     recipeId: suggestion.recipeId,
@@ -163,14 +202,18 @@ async function addSuggestion(suggestion) {
   })
 }
 
+function openRecipe(meal) {
+  router.push(recipeRoute(meal.recipeId, meal.batchSize))
+}
+
 async function removePlannedMeal(plannedMealId) {
-  const planId = mealPlanStore.currentPlan?.id
+  const planId = builtPlan.value?.id
   if (!planId) return
   await mealPlanStore.removePlannedMeal(planId, plannedMealId)
 }
 
 async function updatePlannedMeal(meal, changes) {
-  const planId = mealPlanStore.currentPlan?.id
+  const planId = builtPlan.value?.id
   if (!planId) return
   await mealPlanStore.updatePlannedMeal(planId, meal, changes)
 }

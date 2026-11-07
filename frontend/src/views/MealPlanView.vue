@@ -111,7 +111,7 @@
 
 <script setup>
 import { ref, onMounted } from 'vue'
-import { useRouter } from 'vue-router'
+import { onBeforeRouteLeave, useRouter } from 'vue-router'
 import { useMealPlanStore } from '@/stores/mealPlans'
 import { useUiStore } from '@/stores/ui'
 import { DEFAULT_BATCH_SIZE } from '@/constants/batchSizes'
@@ -127,6 +127,11 @@ const ui            = useUiStore()
 const browserOpen = ref(false)
 
 onMounted(() => mealPlanStore.fetchActivePlan())
+
+// Opening a recipe from the Add recipe dialog leaves this view; closing first releases the dialog's scroll lock before the recipe scrolls to its top.
+onBeforeRouteLeave(() => {
+  browserOpen.value = false
+})
 
 function startNewPlan() {
   // The builder creates a new active plan, so the backend closes the current one and the shopping list regenerates on next visit.

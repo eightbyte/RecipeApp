@@ -36,6 +36,11 @@ A Recipe Ingredient whose source states no amount, or only one with no real size
 or "a dash". The absence is deliberate data, not an unknown amount.
 _Avoid_: To taste, missing amount, zero amount
 
+**Sizeless Unit**:
+A unit that names no real size, such as "pinch", "dash" or "to taste". A Recipe Ingredient measured
+in one is an Unquantified Ingredient, and its Source Measurement keeps the wording. Count words such
+as "clove" are not Sizeless Units: they have a size, just not one the app can store.
+
 **Servings**:
 The number of people a recipe's stated amounts feed.
 _Avoid_: Yield, portions

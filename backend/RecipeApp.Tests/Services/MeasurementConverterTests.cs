@@ -88,7 +88,7 @@ public class MeasurementConverterTests
 
     [Theory]
     [InlineData("clove")]
-    [InlineData("pinch")]
+    [InlineData("sprig")]
     [InlineData("can")]
     [InlineData("bunch")]
     public void ToCanonical_UnknownUnitsPassThroughForAHumanToCorrect(string unit)

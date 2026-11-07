@@ -81,17 +81,7 @@
               hide-details
               style="max-width: 110px"
             />
-            <!-- Blank while there is no amount, so the row reads as unquantified, keeping the unit for when an amount returns. -->
-            <v-select
-              :model-value="hasAmount(ing.amount) ? ing.unit : null"
-              :items="units"
-              label="Unit"
-              density="compact"
-              hide-details
-              :disabled="!hasAmount(ing.amount)"
-              style="max-width: 100px"
-              @update:model-value="ing.unit = $event"
-            />
+            <MeasurementUnitSelect v-model="ing.unit" :amount="ing.amount" />
             <v-text-field
               v-model="ing.notes"
               label="Notes"
@@ -187,6 +177,7 @@ import { reactive, ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useRecipeStore } from '@/stores/recipes'
 import { MEASUREMENT_UNITS, hasAmount, toPayloadMeasurement } from '@/constants/units'
+import MeasurementUnitSelect from '@/components/MeasurementUnitSelect.vue'
 import { INGREDIENT_CATEGORY_VALUES } from '@/constants/categories'
 
 const router = useRouter()
@@ -257,12 +248,12 @@ async function saveRecipe() {
     return
   }
   // A row with no amount saves as an Unquantified Ingredient, so only an amount without a unit blocks saving.
-  const missingUnit = form.ingredients.find(ing => hasAmount(ing.amount) && !ing.unit)
-  if (missingUnit) {
-    const sourceNote = missingUnit.sourceUnit
-      ? ` The source said "${missingUnit.sourceUnit}", which this app can't store.`
+  const amountWithoutUnit = form.ingredients.find(ing => hasAmount(ing.amount) && !ing.unit)
+  if (amountWithoutUnit) {
+    const sourceNote = amountWithoutUnit.sourceUnit
+      ? ` The source said "${amountWithoutUnit.sourceUnit}", which this app can't store.`
       : ''
-    submitError.value = `Pick a unit for "${missingUnit.displayName}", or clear its amount.${sourceNote}`
+    submitError.value = `Pick a unit for "${amountWithoutUnit.displayName}", or clear its amount.${sourceNote}`
     return
   }
 

@@ -56,9 +56,10 @@ paths:
 - `Unit` is null exactly when `Amount` is. Validators reject a half-set pair.
   `RecipeIngredient.ToStoredMeasurement` enforces the invariant at the entity boundary. Every
   persistence path uses it, because service-level callers bypass the endpoint filter.
-- A scraped unit with no real size (`pinch`, `dash`, `handful`, "to taste", …) is stored
-  unquantified, with the stated amount and unit kept as the Source Measurement. Those words live
-  **only** in `Enums/SizelessUnit.cs`. Count words (`clove`, `can`, `sprig`) are not in it.
+- A scraped Sizeless Unit (`pinch`, `dash`, `handful`, "to taste", …) is stored unquantified,
+  with the stated amount and unit kept as the Source Measurement. With no stated amount the
+  Source Measurement is the word alone, shown as "(to taste)". Those words live **only** in
+  `Enums/SizelessUnit.cs`. Count words (`clove`, `can`, `sprig`) are not in it.
 - **Never store zero.** `0` renders as `0 g Salt` and sums into shopping lists.
 - `ShoppingListService` partitions unquantified rows out of consolidation and never sums them. An
   ingredient the plan only ever names yields one amount-less item.

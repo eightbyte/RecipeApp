@@ -2,10 +2,7 @@ using System.Diagnostics.CodeAnalysis;
 
 namespace RecipeApp.API.Enums;
 
-/// <summary>
-/// The one table of units with no real size, such as <c>pinch</c> or "to taste", whose lines a scrape stores as Unquantified
-/// Ingredients because any amount in them would be invented, leaving count words such as <c>clove</c> to a human.
-/// </summary>
+/// <summary>The one table of Sizeless Units, whose scraped lines are stored unquantified because any amount in them would be invented.</summary>
 public static class SizelessUnit
 {
     private static readonly HashSet<string> Spellings = new(StringComparer.OrdinalIgnoreCase)

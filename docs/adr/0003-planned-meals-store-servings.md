@@ -47,8 +47,12 @@ Measured on 2026-11-06 on `develop` at `d5b1bbb`:
 - `ShoppingListItemSource.BatchSize` becomes `ShoppingListItemSource.Servings`.
 - **One migration converts existing rows** to the recipe's Servings × the old multiplier,
   **rounded up** to a whole number. Half of a 5-serving recipe becomes 3; Double of it becomes 10.
-  An unrecognised value counts as Regular, as `BatchSize.Multiplier` does today. Item Sources
-  convert against their recipe's current Servings. After this, no stored data holds a Batch Size.
+  An unrecognised value counts as Regular, as `BatchSize.Multiplier` does today. A result above
+  100 (Double of a recipe with more than 50 Servings) is clamped to 100. Item Sources convert
+  against their recipe's current Servings. After this, no stored data holds a Batch Size.
+- **Item Source Servings is nullable.** A source whose recipe was deleted before the migration has
+  no recipe Servings to convert against, so it migrates to null and shows no count. Generating a
+  list always fills it.
 - **A Planned Meal keeps its own count** when the recipe's Servings is edited later. If 6
   servings of a 4-serving recipe are planned and the recipe is edited to 8, the meal stays at 6 and
   scales by 6 ÷ 8.
@@ -67,8 +71,8 @@ Measured on 2026-11-06 on `develop` at `d5b1bbb`:
 - `ShoppingListService` scales each recipe by planned Servings ÷ recipe Servings. Unquantified
   Ingredients stay partitioned out before any multiplication, as all scaling does.
 - Changing a Planned Meal's Servings makes the list Stale, as changing its Batch Size does now.
-- Each Item Source shows "N servings" in place of the Batch Size chip, and its link opens the
-  recipe at that count.
+- Each Item Source shows an "N servings" chip in place of the Batch Size chip, and its link opens
+  the recipe at that count.
 
 ### Frontend
 
@@ -77,15 +81,18 @@ Measured on 2026-11-06 on `develop` at `d5b1bbb`:
   and the API fills it in.
 - The recipe view's −/+ Servings stepper becomes a shared component. The builder's added-meal row
   replaces the ½×/1×/2× toggle with it: whole numbers, 1 to 100, starting at the meal's Servings.
-- `PlannedMealCard` (Home and Meal Plan) shows "N servings" in place of the chip. "Change batch"
-  becomes "Change servings" and its dialog uses the same stepper.
-- The Past Meal Plan detail view shows "N servings".
+  Each −/+ tap saves, as each toggle choice does today, and the row shows the new count at once so
+  quick taps build on each other.
+- "N servings" is an x-small chip in one neutral colour, where the Batch Size chip was.
+- `PlannedMealCard` (Home and Meal Plan) shows the "N servings" chip. "Change batch" becomes
+  "Change servings" and its dialog uses the same stepper.
+- The Past Meal Plan detail view shows the "N servings" chip.
 - Links to a recipe and to Cooking Mode carry only `servings`. The `batch` query parameter is
   removed from `router/recipeRoutes.js`. An old link that still carries `?batch=` opens at the
   recipe's own Servings.
 - The recipe view and Cooking Mode keep their ½×/1×/2× buttons as shortcuts that set the
   servings stepper. They stay display-only. `constants/batchSizes.js` keeps only what those
-  shortcuts need, and `BatchSizeChip` is deleted.
+  shortcuts need, and `BatchSizeChip` gives way to a Servings chip.
 
 ### Vocabulary
 
@@ -108,23 +115,12 @@ Servings is edited, whereas a stored count stays what the user asked for.
 ## Consequences
 
 - The migration rounds up, so a converted Half can buy slightly more than before (Half of 5 servings
-  becomes 3, scaling by 0.6, not 0.5). Nothing converted ever buys less.
+  becomes 3, scaling by 0.6, not 0.5). Only a clamped Double buys less (below).
 - Editing a recipe's Servings now changes how much its existing Planned Meals buy, in proportion.
   Before, a Batch Size kept buying the same multiple of the recipe.
 - Bookmarked `?batch=` links stop scaling and open at the recipe's own Servings.
 - `.claude/rules/measurements.md`, `CONTEXT.md`, `frontend/CLAUDE.md`, `backend/CLAUDE.md`,
   `CODING_STANDARDS.md` and `README.md` stop describing a Planned Meal's Batch Size.
+- A migrated Double above 100 servings buys less than before, capped at 100.
 - #50 (builder tweaks) landed first using Batch Size. This change switches its added-meal link and
   builder row to Servings.
-
-## Open questions
-
-These need the maintainer's answer before this ADR is accepted.
-
-1. **Double of a recipe with more than 50 Servings** converts to more than 100. Clamp it to 100?
-2. **An Item Source whose recipe was deleted** has no recipe Servings to convert against. Should
-   its Servings be nullable (shown as nothing), or set to a fixed value?
-3. **"N servings" on the card, the Past Meal Plan detail view and the Item Source**: a chip like
-   today's Batch Size chip, or plain caption text?
-4. **The builder row's stepper** saves each −/+ tap as it happens, as the toggle saves each choice
-   today. Or should it wait until the taps stop?

@@ -92,12 +92,47 @@ describe('PlannedMealCard', () => {
     })
   })
 
+  describe('tapping the card', () => {
+    const tapRecipeName = (wrapper, name) =>
+      wrapper.findAll('div').find(el => el.text() === name).trigger('click')
+
+    it('opens the recipe at the Planned Meal’s Batch Size', async () => {
+      const wrapper = mountCard({ recipeId: 'r9', recipeName: 'Soup', batchSize: 'HALF' })
+
+      await tapRecipeName(wrapper, 'Soup')
+
+      const [location] = pushMock.mock.calls[0]
+      expect(location).toMatchObject({ name: 'recipe-detail', params: { id: 'r9' } })
+      // A Half Batch Size of a 4-serving recipe shows 2 servings.
+      expect(servingsFromQuery(location.query, 4)).toBe(2)
+    })
+
+    it('only closes the Meal options menu while it is open', async () => {
+      const wrapper = mountCard({ recipeName: 'Soup' })
+      await wrapper.find('button[aria-label="Meal options"]').trigger('click')
+      await flushPromises()
+
+      await tapRecipeName(wrapper, 'Soup')
+
+      expect(pushMock).not.toHaveBeenCalled()
+    })
+  })
+
   describe('Meal options', () => {
+    it('stay on the card when one that opens a dialog is chosen', async () => {
+      const wrapper = mountCard()
+
+      await chooseMealOption(wrapper, 'Change batch')
+
+      expect(pushMock).not.toHaveBeenCalled()
+    })
+
     it('Start cooking opens Cooking Mode at the Planned Meal’s Batch Size', async () => {
       const wrapper = mountCard({ recipeId: 'r9', batchSize: 'DOUBLE' })
 
       await chooseMealOption(wrapper, 'Start cooking')
 
+      expect(pushMock).toHaveBeenCalledTimes(1)
       const [location] = pushMock.mock.calls[0]
       expect(location).toMatchObject({ name: 'recipe-cooking', params: { id: 'r9' } })
       // A Double Batch Size of a 4-serving recipe cooks 8 servings.

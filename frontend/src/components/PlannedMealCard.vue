@@ -1,5 +1,5 @@
 <template>
-  <v-card>
+  <v-card @click="openRecipe">
     <div class="d-flex align-center pa-3 ga-4">
       <div class="text-center" style="min-width: 48px">
         <template v-if="plannedMeal.scheduledDate">
@@ -27,7 +27,7 @@
         <BatchSizeChip :batch-size="plannedMeal.batchSize" size="x-small" class="mt-1" />
       </div>
 
-      <v-menu>
+      <v-menu v-model="mealOptionsOpen">
         <template #activator="{ props: menuProps }">
           <v-btn
             icon="mdi-dots-vertical"
@@ -89,7 +89,7 @@ import { useMealPlanStore } from '@/stores/mealPlans'
 import { useRecipeStore } from '@/stores/recipes'
 import { useUiStore } from '@/stores/ui'
 import { DEFAULT_BATCH_SIZE } from '@/constants/batchSizes'
-import { cookingRoute } from '@/router/recipeRoutes'
+import { cookingRoute, recipeRoute } from '@/router/recipeRoutes'
 import { formatDateOnly } from '@/utils/dateOnly'
 import BatchSizeChip from '@/components/BatchSizeChip.vue'
 import BatchSizeToggle from '@/components/BatchSizeToggle.vue'
@@ -104,11 +104,18 @@ const mealPlanStore = useMealPlanStore()
 const recipesStore  = useRecipeStore()
 const ui            = useUiStore()
 
+const mealOptionsOpen = ref(false)
 const datePicker      = ref({ open: false, date: null })
 const batchSizePicker = ref({ open: false, batchSize: DEFAULT_BATCH_SIZE })
 
 const isRecentlyCooked = computed(() =>
   recipesStore.isRecentlyCooked({ lastCookedAt: props.plannedMeal.recipeLastCookedAt }))
+
+function openRecipe() {
+  // The menu closes after this click, so a tap that only dismisses it would otherwise also navigate.
+  if (mealOptionsOpen.value) return
+  router.push(recipeRoute(props.plannedMeal.recipeId, props.plannedMeal.batchSize))
+}
 
 function startCooking() {
   router.push(cookingRoute(props.plannedMeal.recipeId, props.plannedMeal.batchSize))

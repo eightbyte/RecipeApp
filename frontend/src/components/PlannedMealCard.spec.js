@@ -92,6 +92,26 @@ describe('PlannedMealCard', () => {
     })
   })
 
+  it('opens the recipe at the Planned Meal’s Batch Size when tapped', async () => {
+    const wrapper = mountCard({ recipeId: 'r9', recipeName: 'Soup', batchSize: 'HALF' })
+
+    await wrapper.findAll('div').find(el => el.text() === 'Soup').trigger('click')
+
+    const [location] = pushMock.mock.calls[0]
+    expect(location).toMatchObject({ name: 'recipe-detail', params: { id: 'r9' } })
+    // A Half Batch Size of a 4-serving recipe shows 2 servings.
+    expect(servingsFromQuery(location.query, 4)).toBe(2)
+  })
+
+  it('stays put when the Meal options menu is opened and used', async () => {
+    api.put.mockResolvedValue({ data: {} })
+    const wrapper = mountCard()
+
+    await chooseMealOption(wrapper, 'Change batch')
+
+    expect(pushMock).not.toHaveBeenCalled()
+  })
+
   describe('Meal options', () => {
     it('Start cooking opens Cooking Mode at the Planned Meal’s Batch Size', async () => {
       const wrapper = mountCard({ recipeId: 'r9', batchSize: 'DOUBLE' })

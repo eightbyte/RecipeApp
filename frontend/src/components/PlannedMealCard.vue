@@ -1,5 +1,5 @@
 <template>
-  <v-card>
+  <v-card @click="openRecipe">
     <div class="d-flex align-center pa-3 ga-4">
       <div class="text-center" style="min-width: 48px">
         <template v-if="plannedMeal.scheduledDate">
@@ -89,7 +89,7 @@ import { useMealPlanStore } from '@/stores/mealPlans'
 import { useRecipeStore } from '@/stores/recipes'
 import { useUiStore } from '@/stores/ui'
 import { DEFAULT_BATCH_SIZE } from '@/constants/batchSizes'
-import { cookingRoute } from '@/router/recipeRoutes'
+import { cookingRoute, recipeRoute } from '@/router/recipeRoutes'
 import { formatDateOnly } from '@/utils/dateOnly'
 import BatchSizeChip from '@/components/BatchSizeChip.vue'
 import BatchSizeToggle from '@/components/BatchSizeToggle.vue'
@@ -109,6 +109,10 @@ const batchSizePicker = ref({ open: false, batchSize: DEFAULT_BATCH_SIZE })
 
 const isRecentlyCooked = computed(() =>
   recipesStore.isRecentlyCooked({ lastCookedAt: props.plannedMeal.recipeLastCookedAt }))
+
+function openRecipe() {
+  router.push(recipeRoute(props.plannedMeal.recipeId, props.plannedMeal.batchSize))
+}
 
 function startCooking() {
   router.push(cookingRoute(props.plannedMeal.recipeId, props.plannedMeal.batchSize))

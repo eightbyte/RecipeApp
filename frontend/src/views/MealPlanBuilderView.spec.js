@@ -208,10 +208,38 @@ describe('MealPlanBuilderView', () => {
 
       await moreServings(wrapper).trigger('click')
       await moreServings(wrapper).trigger('click')
+
+      expect(wrapper.find('[aria-live="polite"]').text()).toBe('5')
+      await flushPromises()
+      expect(api.put.mock.calls.map(([, body]) => body.servings)).toEqual([4, 5])
+    })
+
+    it('saves quick steps one at a time, in the order they were taken', async () => {
+      const { wrapper } = await mountWithPlannedMeal()
+      let finishFirstSave
+      api.put.mockImplementationOnce(() => new Promise(resolve => { finishFirstSave = () => resolve({ data: {} }) }))
+
+      await moreServings(wrapper).trigger('click')
+      await moreServings(wrapper).trigger('click')
+      await flushPromises()
+      expect(api.put).toHaveBeenCalledTimes(1)
+
+      finishFirstSave()
+      await flushPromises()
+      expect(api.put.mock.calls.map(([, body]) => body.servings)).toEqual([4, 5])
+    })
+
+    it('shows the stored Servings once its saves finish', async () => {
+      const { wrapper } = await mountWithPlannedMeal()
+      api.get.mockResolvedValue({ data: makeMealPlanDetail({
+        id: 'plan-1',
+        plannedMeals: [makePlannedMeal({ scheduledDate: '2026-06-03', servings: 7 })],
+      }) })
+
+      await moreServings(wrapper).trigger('click')
       await flushPromises()
 
-      expect(api.put.mock.calls.map(([, body]) => body.servings)).toEqual([4, 5])
-      expect(wrapper.find('[aria-live="polite"]').text()).toBe('5')
+      expect(wrapper.find('[aria-live="polite"]').text()).toBe('7')
     })
 
     it('opens the recipe at the Planned Meal’s Servings when its row is tapped', async () => {

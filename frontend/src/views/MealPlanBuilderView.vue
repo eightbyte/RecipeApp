@@ -202,19 +202,28 @@ async function removePlannedMeal(plannedMealId) {
 
 // Each step saves at once, so a step taken before the plan reloads must build on the one before it.
 const steppedServings = ref({})
+const servingsSaves   = {}
 
 function servingsOf(meal) {
   return steppedServings.value[meal.id] ?? meal.servings
 }
 
-async function stepServings(meal, servings) {
+// One meal's saves run in turn, so the last step taken is the one stored.
+function stepServings(meal, servings) {
   steppedServings.value[meal.id] = servings
-  try {
-    await updatePlannedMeal(meal, { servings })
-  } catch (e) {
+  const save = (servingsSaves[meal.id] ?? Promise.resolve())
+    .catch(() => {})
+    .then(() => updatePlannedMeal(meal, { servings }))
+  servingsSaves[meal.id] = save
+
+  // Once the last save settles, the reloaded plan shows what was stored.
+  const settle = () => {
+    if (servingsSaves[meal.id] !== save) return
+    delete servingsSaves[meal.id]
     delete steppedServings.value[meal.id]
-    throw e
   }
+  save.then(settle, settle)
+  return save
 }
 
 async function updatePlannedMeal(meal, changes) {

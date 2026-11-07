@@ -99,7 +99,7 @@ public static class MealPlanEndpoints
             return updated is null ? Results.NotFound() : Results.Ok(updated);
         })
         .WithValidation<UpdatePlannedMealRequest>()
-        .WithSummary("Update the scheduled date or Batch Size of a Planned Meal");
+        .WithSummary("Update the scheduled date or Servings of a Planned Meal");
 
         // DELETE /meal-plans/{id}/planned-meals/{plannedMealId}
         group.MapDelete("/{id:guid}/planned-meals/{plannedMealId:guid}", async (

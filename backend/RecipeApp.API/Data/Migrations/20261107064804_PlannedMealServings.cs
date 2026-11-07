@@ -13,7 +13,7 @@ namespace RecipeApp.API.Data.Migrations
         private const string ServingsColumn = "Servings";
         private const string RegularBatchSize = "REGULAR";
 
-        // The multipliers are spelled out here so that this conversion never changes with later code.
+        // The multipliers and the 100-serving cap are spelled out here so that this conversion never changes with later code.
         private const string ServingsFromBatchSize = @"
             LEAST(100, CEIL(r.""Servings"" * CASE t.""BatchSize""
                 WHEN 'HALF'   THEN 0.5

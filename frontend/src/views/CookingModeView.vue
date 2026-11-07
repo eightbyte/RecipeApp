@@ -189,7 +189,7 @@ const finishing = ref(false)
 
 // Carried in the query from a Planned Meal or the recipe detail view, so a reload keeps it.
 const servings = computed(() => servingsFromQuery(route.query, recipe.value.servings))
-const batchMultiplier = computed(() => servings.value / recipe.value.servings)
+const servingsMultiplier = computed(() => servings.value / recipe.value.servings)
 
 // Ephemeral, component-local "done" state that is not persisted.
 const doneStepIds = ref(new Set())
@@ -225,13 +225,13 @@ function stepIngredients(step) {
 /** Short-circuits on a null amount, because `null * 2` is `0` in JavaScript and would render an ingredient with no stated quantity as `0`. */
 function formatAmount(baseAmount, unit) {
   if (baseAmount == null) return null
-  return formatMeasurement(baseAmount * batchMultiplier.value, unit)
+  return formatMeasurement(baseAmount * servingsMultiplier.value, unit)
 }
 
 /** The measurement as the source recipe stated it; null when there is nothing to add. */
 function formatSource(ing) {
   return formatSourceMeasurement(
-    ing.sourceAmount, ing.sourceUnit, ing.unit, batchMultiplier.value)
+    ing.sourceAmount, ing.sourceUnit, ing.unit, servingsMultiplier.value)
 }
 
 function toggleStep(step) {

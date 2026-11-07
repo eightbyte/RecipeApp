@@ -292,7 +292,7 @@ public class ShoppingListService(AppDbContext db)
         return items;
     }
 
-    // Multiplying before dividing keeps a whole scaling such as 300 × 2 ÷ 3 exact.
+    /// <summary>An amount scaled to the Planned Meal's Servings, multiplied before dividing so a whole result such as 300 × 2 ÷ 3 stays exact.</summary>
     private static decimal ScaledToPlannedServings(decimal amount, PlannedMeal plannedMeal) =>
         amount * plannedMeal.Servings / plannedMeal.Recipe.Servings;
 

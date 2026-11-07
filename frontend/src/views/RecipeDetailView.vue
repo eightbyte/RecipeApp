@@ -221,17 +221,16 @@ function chooseServings(chosen) {
   router.replace(recipeRoute(recipe.value.id, chosen))
 }
 
-const batchMultiplier = computed(() => servings.value / recipe.value.servings)
+const servingsMultiplier = computed(() => servings.value / recipe.value.servings)
 
 /** The Batch Size shortcut whose multiplier the chosen servings match exactly, or null when none does. */
 const matchingBatchSize = computed({
-  get: () => BATCH_SIZES.find(batchSize => batchSize.multiplier === batchMultiplier.value)?.value ?? null,
+  get: () => BATCH_SIZES.find(batchSize => batchSize.multiplier === servingsMultiplier.value)?.value ?? null,
   set: batchSize => {
     // Tapping the highlighted shortcut again clears the toggle, which leaves the chosen servings as they are.
     if (batchSize) chooseServings(recipe.value.servings * batchSizeMultiplier(batchSize))
   },
 })
-
 
 function reload() {
   store.fetchRecipe(props.id ?? route.params.id)
@@ -242,13 +241,13 @@ onMounted(reload)
 /** Scaling short-circuits on a null amount, because `null * 2` is `0` in JavaScript, and half of nothing is still nothing. */
 function formatAmount(baseAmount, unit) {
   if (baseAmount == null) return null
-  return formatMeasurement(baseAmount * batchMultiplier.value, unit)
+  return formatMeasurement(baseAmount * servingsMultiplier.value, unit)
 }
 
 /** The measurement as the source recipe stated it, shown alongside the canonical amount, or null when the row was hand-entered or nothing was converted. */
 function formatSource(ing) {
   return formatSourceMeasurement(
-    ing.sourceAmount, ing.sourceUnit, ing.unit, batchMultiplier.value)
+    ing.sourceAmount, ing.sourceUnit, ing.unit, servingsMultiplier.value)
 }
 
 function stepIngredients(step) {

@@ -29,6 +29,8 @@ public static class RecipeScrapeEndpoints
 
                 return ex.Error switch
                 {
+                    RecipeScrapeError.ModelServerUnavailable =>
+                        Results.Problem(detail: ex.Message, statusCode: StatusCodes.Status503ServiceUnavailable),
                     RecipeScrapeError.FetchTimeout or
                     RecipeScrapeError.FetchFailed or
                     RecipeScrapeError.FetchNonSuccess or
@@ -41,6 +43,8 @@ public static class RecipeScrapeEndpoints
             }
         })
         .WithValidation<ScrapeRecipeRequest>()
+        .ProducesProblem(StatusCodes.Status422UnprocessableEntity)
+        .ProducesProblem(StatusCodes.Status503ServiceUnavailable)
         .WithSummary("Scrape a recipe from a URL and return a preview for review");
 
         // POST /recipes/scrape/confirm

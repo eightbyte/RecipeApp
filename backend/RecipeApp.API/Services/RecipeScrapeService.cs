@@ -20,6 +20,7 @@ public class RecipeScrapeService(
     IHttpClientFactory httpClientFactory,
     IOptions<RecipeScrapingOptions> options,
     ILlmStructuredClient llm,
+    IModelServerStatusProbe modelServer,
     AppDbContext db,
     IHeadlessRenderer headlessRenderer,
     MeasurementConverter measurementConverter,
@@ -174,6 +175,13 @@ public class RecipeScrapeService(
 
     public async Task<ScrapePreviewResponse> ScrapeAsync(string url, CancellationToken ct = default)
     {
+        // Checked before the fetch, which can take 35 seconds and is wasted when nothing can read the page.
+        var status = await modelServer.GetStatusAsync(ct);
+        if (status.State != ModelServerState.Ready)
+            throw UnavailableError(status.State);
+
+        logger.LogInformation("Scraping {Url} with model {Model}.", url, status.Model ?? "(unnamed)");
+
         var strippedText = await FetchAndStripHtmlAsync(url, ct);
         var extracted    = await ExtractRecipeAsync(strippedText, ct);
         return await NormaliseAsync(extracted, url, ct);
@@ -406,6 +414,10 @@ public class RecipeScrapeService(
             throw new RecipeScrapeException(RecipeScrapeError.LlmTimeout,
                 "Recipe extraction timed out. Please try again.");
         }
+        catch (ModelServerUnavailableException ex)
+        {
+            throw UnavailableError(ex.State);
+        }
         catch (Exception ex) when (ex is not RecipeScrapeException)
         {
             throw new RecipeScrapeException(RecipeScrapeError.LlmFailed,
@@ -418,6 +430,9 @@ public class RecipeScrapeService(
 
         return extracted;
     }
+
+    private static RecipeScrapeException UnavailableError(ModelServerState state) =>
+        new(RecipeScrapeError.ModelServerUnavailable, $"Scraping is unavailable: {state.UnavailableReason()}");
 
     // ── Normalisation with semantic matching ──────────────────────────────────
 
@@ -540,10 +555,14 @@ public class RecipeScrapeService(
 
             var matchSchema = JsonNode.Parse(MatchingSchemaJson)!;
 
+            // Its own budget, because the Model Server queues behind other callers and the client has no timeout.
+            using var matchCts    = new CancellationTokenSource(TimeSpan.FromSeconds(_options.LlmTimeoutSeconds));
+            using var matchLinked = CancellationTokenSource.CreateLinkedTokenSource(ct, matchCts.Token);
+
             try
             {
                 var matchJson = await llm.CompleteStructuredAsync(
-                    systemPrompt, userContent, matchSchema, maxTokens: 2048, ct);
+                    systemPrompt, userContent, matchSchema, maxTokens: 2048, matchLinked.Token);
 
                 var matchResponse = matchJson.Deserialize<MatchingResponse>(LlmJsonOptions);
                 if (matchResponse?.Results != null)
@@ -702,6 +721,9 @@ public enum RecipeScrapeError
     LlmTimeout,
     LlmFailed,
     NoContent,
+
+    /// <summary>The Model Server is offline, loading or rejecting the key, before or during extraction.</summary>
+    ModelServerUnavailable,
 }
 
 public class RecipeScrapeException(RecipeScrapeError error, string message)

@@ -175,9 +175,14 @@ public class SeedRecipeNormaliser(
             // The run itself was cancelled — Ctrl+C, not a bad recipe. Let it unwind.
             throw;
         }
+        catch (ModelServerUnavailableException)
+        {
+            // Every remaining recipe would fail the same way, so the run stops here rather than spending retries.
+            throw;
+        }
         catch (Exception ex)
         {
-            // Covers an unloaded model and a decoding failure alike; the runner's consecutive-failure guard catches the systemic case.
+            // Covers a decoding or server failure; the runner's consecutive-failure guard catches the systemic case.
             throw new SeedNormaliseException(SeedNormaliseFailure.InvalidLlmOutput, ex.Message);
         }
 

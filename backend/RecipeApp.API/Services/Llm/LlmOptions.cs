@@ -4,19 +4,20 @@ public class LlmOptions
 {
     public const string SectionName = "Llm";
 
-    public string Provider { get; init; } = "Local";
-    public LocalLlmOptions Local { get; init; } = new();
+    public ModelServerOptions ModelServer { get; init; } = new();
+    public LlmSamplingOptions Sampling { get; init; } = new();
 }
 
-public class LocalLlmOptions
+/// <summary>Where the Model Server (llama.cpp's <c>llama-server</c>) listens, an empty <see cref="BaseUrl"/> meaning there is none and Scraping is unavailable.</summary>
+public class ModelServerOptions
 {
-    public string ModelPath { get; init; } = string.Empty;
-    public int ContextSize { get; init; } = 8192;
-    public int GpuLayerCount { get; init; } = 999;
-    public string ChatTemplate { get; init; } = "chatml";
-    public string? EmbeddingModelPath { get; init; }
-    public string[] StopStrings { get; init; } = [];
-    public LlmSamplingOptions Sampling { get; init; } = new();
+    public string BaseUrl { get; init; } = string.Empty;
+
+    /// <summary>Sent as a Bearer token when set, and required by the start script for any non-loopback bind.</summary>
+    public string ApiKey { get; init; } = string.Empty;
+
+    /// <summary>How long a status check waits before reporting the Model Server offline.</summary>
+    public int StatusTimeoutSeconds { get; init; } = 3;
 }
 
 /// <summary>

@@ -66,6 +66,8 @@ run.
 | `RECIPEAPP_IMAGE_TAG` | `latest` follows releases. A commit SHA pins or rolls back |
 | `RECIPEAPP_HTTP_PORT` | Host port that `tailscale serve` targets. Default `80` |
 | `RECIPEAPP_BACKUP_KEEP` | How many pre-update dumps the updater keeps. Default `10` |
+| `MODEL_SERVER_URL` | Where the API reaches the [Model Server](#model-server). Default `http://host.docker.internal:9931` |
+| `MODEL_SERVER_API_KEY` | The Model Server's key. Empty for a server on this PC's loopback |
 
 ## CI (`deploy.yml`)
 
@@ -171,6 +173,34 @@ Moving to another machine means migrating from the production stack (a dump and 
 the machine, so the URL changes unless the old machine is renamed or removed and the new one takes its
 Tailscale name. Make the machine share again, and reinstall the PWA on each phone if the URL changed.
 
+## Model Server
+
+Scraping runs on the **Model Server** (llama.cpp's `llama-server`), a separate process started by
+hand with `tools/llm-server/start.ps1` and stopped with `stop.ps1`. Setup, settings and the
+pinned release are in [tools/llm-server/README.md](../tools/llm-server/README.md). Production works
+without it: everything except Import from URL is available, the URL sheet says why, and
+`/health/ready` never checks it, so a stopped server never fails an update.
+
+The API image holds no model and no GPU libraries. One Model Server serves both production and the
+dev API, one request at a time.
+
+**On this PC.** Leave `BindAddress` at `127.0.0.1` and `ApiKey` empty, and leave
+`MODEL_SERVER_URL` and `MODEL_SERVER_API_KEY` at their `.env.example` values. The API container
+reaches the host's loopback through `host.docker.internal`.
+
+**On another tailnet machine** (one with the GPU):
+
+1. On that machine, set `BindAddress` to its Tailscale IP (`tailscale ip -4`) and set an `ApiKey`
+   in `settings.psd1`. The start script refuses a non-loopback bind without a key.
+2. In this PC's `.env`, set `MODEL_SERVER_URL` to `http://<Tailscale IP or MagicDNS name>:9931`
+   and `MODEL_SERVER_API_KEY` to the same key.
+3. Recreate the API container so it reads the new values:
+   `docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d api`.
+
+Traffic is plain HTTP inside the tailnet's WireGuard tunnel. Never expose the Model Server to the
+public internet. A key mismatch shows as `unauthorized` in the URL sheet and in
+`GET /api/v1/model-server/status`.
+
 ## Rollback
 
 1. Find the last good commit SHA (the GitHub Actions run, or the GHCR package page).
@@ -201,12 +231,12 @@ Anything written to the database after that dump is lost.
 | Production mode | `/scalar/v1` on the API returns 404 |
 | Auto-deploy | A merge to `master` is running on the host within about five minutes of the workflow finishing, and the updater log records it |
 | Pre-update dump | An update that changes the API image leaves a new file in `deploy/backups/` that `pg_restore --list` reads. A frontend-only update leaves none |
+| Model Server | With it started, the URL sheet reads ready and a Scrape works. With it stopped, the sheet says so and `/health/ready` still returns 200 |
 
 ## Not covered
 
 - Scheduled or off-machine backups. Losing the host's disk loses the database and the `uploads/`
   images.
 - Uptime monitoring.
-- The local LLM. The API image ships without a model (`Llm:Local:ModelPath` is empty), so recipe
-  scraping from a URL is unavailable in production. Everything else works.
+- Starting the Model Server automatically. It runs only while someone has started it.
 - Authentication. It would be needed before any public exposure.

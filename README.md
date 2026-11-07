@@ -7,7 +7,7 @@ A mobile-first web app for storing recipes, building meal plans, and generating 
 ## Features
 
 - **Recipe management** — create, edit, and browse recipes with ingredient lists and numbered steps. Batch Size scaling (½× / 1× / 2× the whole recipe) is applied at display time only.
-- **Recipe scraping** — paste a URL and a local LLM extracts the name, ingredients, and steps into a preview you can edit before saving. Ingredients are matched against your catalogue automatically.
+- **Recipe scraping** — paste a URL and a local LLM, running in the Model Server, extracts the name, ingredients, and steps into a preview you can edit before saving. Ingredients are matched against your catalogue automatically.
 - **Meal planning** — build a plan from your recipe collection, assign each Planned Meal a date and a Batch Size, and see waste-reduction suggestions (recipes that use up a leftover partial ingredient).
 - **Shopping lists** — generated from the active meal plan, grouped by category in aisle order, with unit consolidation and support for custom (non-recipe) items.
 - **Cooking mode** — full-screen, large-type, step-by-step view with a screen wake-lock so your phone doesn't sleep mid-recipe.
@@ -22,7 +22,7 @@ Food waste *tracking* (as opposed to the reduction suggestions above) is not bui
 | Frontend | Vue 3 (Composition API, `<script setup>`) + Vite + Pinia + Vue Router + Vuetify 3 |
 | Backend | .NET 10 Minimal API |
 | ORM / database | EF Core 10 + Npgsql, PostgreSQL 16 |
-| Recipe scraping | AngleSharp (HTML parsing), Playwright Chromium (render fallback), LLamaSharp (local GGUF model) |
+| Recipe scraping | AngleSharp (HTML parsing), Playwright Chromium (render fallback), llama.cpp `llama-server` (local GGUF model, called over HTTP) |
 | Validation | FluentValidation |
 | Hosting | Docker Compose on a Windows PC, images from GitHub Container Registry, access over Tailscale |
 
@@ -31,7 +31,7 @@ Food waste *tracking* (as opposed to the reduction suggestions above) is not bui
 - [.NET 10 SDK](https://dotnet.microsoft.com/download). `global.json` pins the version.
 - [Node.js](https://nodejs.org/) 24. `frontend/.nvmrc` holds the version, which must match `frontend/Dockerfile`.
 - [Docker Desktop](https://www.docker.com/products/docker-desktop/), for PostgreSQL, the backend tests, and the optional full-container run.
-- Optional, for URL scraping only: a GGUF instruction-tuned chat model (see [LLM model setup](#llm-model-setup)) and, for fast inference, an NVIDIA GPU with CUDA 12 drivers. The app runs without either. Only "Import from URL" is unavailable.
+- Optional, for URL scraping only: a GGUF instruction-tuned chat model and an NVIDIA GPU with CUDA 12 drivers, to run the [Model Server](#model-server). The app runs without either. Only "Import from URL" is unavailable.
 
 ## Running locally (development)
 
@@ -51,14 +51,14 @@ Create `backend/RecipeApp.API/appsettings.Development.json`. It is gitignored. T
     "DefaultConnection": "Host=localhost;Port=5432;Database=recipeapp;Username=recipeapp;Password=devpassword"
   },
   "Llm": {
-    "Local": {
-      "ModelPath": "C:\\path\\to\\your-model.gguf"
+    "ModelServer": {
+      "BaseUrl": "http://localhost:9931"
     }
   }
 }
 ```
 
-Leave `Llm:Local:ModelPath` empty (the default) to run without a model.
+Leave `Llm:ModelServer:BaseUrl` empty (the default) to run without the [Model Server](#model-server).
 
 **3. Run the API**
 
@@ -88,18 +88,18 @@ Open http://localhost:3000. The committed `frontend/.env.development` points it 
 docker compose up -d
 ```
 
-This builds and starts PostgreSQL, the API and the nginx-served frontend. The app is at http://localhost and the API at http://localhost:5000. To enable scraping in this mode, mount a GGUF model into the `api` container and set `Llm__Local__ModelPath` (see [docker-compose.yml](docker-compose.yml)).
+This builds and starts PostgreSQL, the API and the nginx-served frontend. The app is at http://localhost and the API at http://localhost:5000. To enable scraping in this mode, set `Llm__ModelServer__BaseUrl` on the `api` service to `http://host.docker.internal:9931` and start the [Model Server](#model-server).
 
-## LLM model setup
+## Model Server
 
-Recipe scraping needs a local GGUF model. Any capable instruction-tuned chat model works. The project has been tuned against Qwen3.5-9B (Q6_K), and 7B+ parameters are recommended for reliable structured extraction.
+Recipe scraping runs on the **Model Server**: llama.cpp's `llama-server`, a separate process you start when you want to import from a URL and stop when you're done. Any capable instruction-tuned chat model in GGUF format works. The project has been tuned against Qwen3.5-9B (Q6_K), and 7B+ parameters are recommended for reliable structured extraction.
 
 1. Download a `.gguf` model file, for example from Hugging Face.
-2. Set `Llm:Local:ModelPath` to its absolute path in `appsettings.Development.json`.
-3. Set `Llm:Local:ChatTemplate` to the model family: `chatml` (the default; Qwen, Mistral), `llama3` or `gemma`.
-4. Leave `Llm:Local:GpuLayerCount` at `999` to offload every layer to a CUDA GPU, or set it to `0` for CPU-only inference, which is much slower.
+2. Copy `tools/llm-server/settings.example.psd1` to `settings.psd1` and set `ModelPath` to the file's absolute path.
+3. Run `powershell -File tools\llm-server\start.ps1`. The first run downloads the pinned llama.cpp release.
+4. Run `powershell -File tools\llm-server\stop.ps1` when you're done, to free the GPU.
 
-Without a configured model the app starts normally and logs a warning. Every feature except "Import from URL" works. See [Services/Llm/CLAUDE.md](backend/RecipeApp.API/Services/Llm/CLAUDE.md) for the details.
+The URL sheet shows whether the Model Server is ready. Without it every feature except "Import from URL" works. [tools/llm-server/README.md](tools/llm-server/README.md) covers the settings, running it on another machine and running it by hand on another OS.
 
 ## Starter data
 
@@ -143,6 +143,12 @@ npm run test:coverage    # with coverage report
 
 ```powershell
 Invoke-Pester deploy\tests
+```
+
+**Model Server scripts** (Pester 3.4):
+
+```powershell
+Invoke-Pester tools\llm-server\tests
 ```
 
 ## Deployment

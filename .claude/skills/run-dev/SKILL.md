@@ -1,6 +1,6 @@
 ---
 name: run-dev
-description: Run RecipeApp locally on a clone of the dev database, without the GPU, and screenshot routes. Use when starting the API or Vite, checking a change in the real app, or capturing a screenshot.
+description: Run RecipeApp locally on a clone of the dev database and screenshot routes. Use when starting the API or Vite, checking a change in the real app, or capturing a screenshot.
 ---
 
 # Run the dev stack
@@ -33,11 +33,11 @@ other users` means a process still holds a connection to `recipeapp`. Stop it an
 Start it as a background task:
 
 ```powershell
-Set-Location backend/RecipeApp.API; dotnet run --launch-profile http -e "Llm__Local__ModelPath=" -e "ConnectionStrings__DefaultConnection=Host=localhost;Port=5432;Database=recipeapp_run;Username=recipeapp;Password=devpassword"
+Set-Location backend/RecipeApp.API; dotnet run --launch-profile http -e "ConnectionStrings__DefaultConnection=Host=localhost;Port=5432;Database=recipeapp_run;Username=recipeapp;Password=devpassword"
 ```
 
 Done when `curl.exe -s -o NUL -w "%{http_code}" http://localhost:5197/health/ready` prints `200`
-and the log shows `Hosting environment: Development` and `LLM:Local:ModelPath is not configured`.
+and the log shows `Hosting environment: Development`.
 
 Every part of the command is load-bearing:
 
@@ -46,11 +46,12 @@ Every part of the command is load-bearing:
   Production, `appsettings.json` supplies `Password=CHANGE_ME`, and startup dies on
   `28P01: password authentication failed`. `dotnet run --environment` sets an environment
   variable, so it leaves the hosting environment unset.
-- `-e "Llm__Local__ModelPath="` delivers an empty model path, so the GPU stays idle. It has to go
-  through `-e`: PowerShell's `$env:Llm__Local__ModelPath = ""` deletes the variable, and the model
-  path in `appsettings.Development.json` then loads the GPU.
 - The connection string points at the clone. Image uploads still land in the shared
   `backend/RecipeApp.API/uploads/images/`.
+
+The API never touches the GPU. Scraping needs the Model Server (`tools/llm-server/start.ps1`),
+and without it the URL sheet says it isn't running. Don't start or stop the Model Server just to
+check a change: production uses the same instance.
 
 ## 4. Vite
 

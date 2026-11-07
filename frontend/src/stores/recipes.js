@@ -105,6 +105,12 @@ export const useRecipeStore = defineStore('recipes', () => {
     }
   }
 
+  /** The Model Server's `{ state, model }`, read fresh each time because it can start or stop at any moment; throws if the API is unreachable. */
+  async function fetchModelServerStatus() {
+    const { data } = await api.get('/model-server/status')
+    return data
+  }
+
   function clearScrapePreview() {
     scrapePreview.value = null
     scrapeError.value   = null
@@ -124,6 +130,6 @@ export const useRecipeStore = defineStore('recipes', () => {
     createRecipe, updateRecipe, deleteRecipe,
     uploadImage, markCooked, isRecentlyCooked,
     scrapePreview, scrapeError, scrapeLoading, confirmLoading,
-    scrapeRecipe, confirmScrape, clearScrapePreview,
+    scrapeRecipe, confirmScrape, clearScrapePreview, fetchModelServerStatus,
   }
 })

@@ -1,14 +1,20 @@
 using RecipeApp.API.DTOs.Ingredients;
 using RecipeApp.API.DTOs.MealPlans;
+using RecipeApp.API.DTOs.ModelServer;
 using RecipeApp.API.DTOs.Recipes;
 using RecipeApp.API.DTOs.ShoppingLists;
 using RecipeApp.API.Models;
+using RecipeApp.API.Services.Llm;
 
 namespace RecipeApp.API.DTOs;
 
 /// <summary>Static mapping helpers: pure functions from entity to DTO, with no reflection.</summary>
 public static class Mappings
 {
+    // ── Model Server ──────────────────────────────────────────────────────────
+
+    public static ModelServerStatusResponse ToResponse(this ModelServerStatus s) => new(s.State, s.Model);
+
     // ── Ingredient ────────────────────────────────────────────────────────────
 
     public static IngredientResponse ToResponse(this Ingredient i) => new(

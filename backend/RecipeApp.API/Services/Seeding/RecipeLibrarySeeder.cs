@@ -259,9 +259,9 @@ public class RecipeLibrarySeeder(
                     aborted = true;
                     logger.LogError(
                         "Stopping after {Count} consecutive failures in which no answer came back " +
-                        "at all — the model is unavailable rather than the recipes being bad. Check " +
-                        "Llm:Local:ModelPath and re-run; cached output is kept and the run resumes " +
-                        "where it stopped.",
+                        "at all — the model is failing rather than the recipes being bad. Check the " +
+                        "Model Server's log (tools/llm-server/runtime/llama-server.log) and re-run; " +
+                        "cached output is kept and the run resumes where it stopped.",
                         consecutiveSystemicFailures);
                     break;
                 }

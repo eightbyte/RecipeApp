@@ -126,6 +126,12 @@ _Avoid_: Parse, extract, import (for a single page)
 Loading a Recipe Pack whose recipes are already structured, with no review step.
 _Avoid_: Scrape (for a pack), seed (as a user action)
 
+**Model Server**:
+The separate process that hosts the language model used by Scraping and by the MyPlate seed
+pipeline. It runs only while someone has started it. The app works without it, except for those
+two.
+_Avoid_: LLM service, companion app, Ollama, recipe reader
+
 ### Seeding and distribution
 
 **Ingredient Catalogue**:

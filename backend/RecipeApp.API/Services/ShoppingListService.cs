@@ -224,7 +224,6 @@ public class ShoppingListService(AppDbContext db)
         for (var mealOrder = 0; mealOrder < plannedMeals.Count; mealOrder++)
         {
             var plannedMeal = plannedMeals[mealOrder];
-            var multiplier  = BatchSize.Multiplier(plannedMeal.BatchSize);
             foreach (var ri in plannedMeal.Recipe.Ingredients)
             {
                 if (ri.Amount is not { } baseAmount || ri.Unit is not { } unit)
@@ -240,7 +239,7 @@ public class ShoppingListService(AppDbContext db)
                 if (!byIngredient.ContainsKey(ri.IngredientId))
                     byIngredient[ri.IngredientId] = (ri.Ingredient, []);
                 AddContribution(byIngredient[ri.IngredientId].Rows,
-                    new Contribution(plannedMeal, mealOrder, baseAmount * multiplier, unit.Trim()));
+                    new Contribution(plannedMeal, mealOrder, ScaledToPlannedServings(baseAmount, plannedMeal), unit.Trim()));
             }
         }
 
@@ -293,6 +292,10 @@ public class ShoppingListService(AppDbContext db)
         return items;
     }
 
+    /// <summary>An amount scaled to the Planned Meal's Servings, multiplied before dividing so a whole result such as 300 × 2 ÷ 3 stays exact.</summary>
+    private static decimal ScaledToPlannedServings(decimal amount, PlannedMeal plannedMeal) =>
+        amount * plannedMeal.Servings / plannedMeal.Recipe.Servings;
+
     /// <summary>Adds a Planned Meal's use of an Ingredient, folding it into that meal's earlier line in the same unit so the meal is listed once per unit.</summary>
     private static void AddContribution(List<Contribution> rows, Contribution contribution)
     {
@@ -331,7 +334,7 @@ public class ShoppingListService(AppDbContext db)
         Id            = Guid.NewGuid(),
         RecipeId      = plannedMeal.RecipeId,
         RecipeName    = plannedMeal.Recipe.Name,
-        BatchSize     = plannedMeal.BatchSize,
+        Servings      = plannedMeal.Servings,
         ScheduledDate = plannedMeal.ScheduledDate,
         Amount        = amount,
         Unit          = unit,

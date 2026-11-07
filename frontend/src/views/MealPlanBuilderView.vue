@@ -88,12 +88,9 @@
                 style="min-width: 160px; flex: 1"
                 @update:model-value="(scheduledDate) => updatePlannedMeal(meal, { scheduledDate })"
               />
-              <BatchSizeToggle
-                :model-value="meal.batchSize"
-                button-size="small"
-                density="compact"
-                style="height: 40px"
-                @update:model-value="(batchSize) => updatePlannedMeal(meal, { batchSize })"
+              <ServingsStepper
+                :model-value="servingsOf(meal)"
+                @update:model-value="(servings) => stepServings(meal, servings)"
               />
             </div>
           </div>
@@ -121,12 +118,11 @@
 import { computed, ref, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useMealPlanStore } from '@/stores/mealPlans'
-import { DEFAULT_BATCH_SIZE } from '@/constants/batchSizes'
 import { recipeRoute } from '@/router/recipeRoutes'
 import { DISPLAY_LOCALE } from '@/utils/dateOnly'
-import BatchSizeToggle from '@/components/BatchSizeToggle.vue'
 import ErrorState from '@/components/ErrorState.vue'
 import RecipeBrowser from '@/components/RecipeBrowser.vue'
+import ServingsStepper from '@/components/ServingsStepper.vue'
 import SuggestionsPanel from '@/components/SuggestionsPanel.vue'
 
 const PLAN_QUERY_KEY = 'plan'
@@ -185,25 +181,17 @@ async function createPlan() {
 async function addRecipe(recipe) {
   const planId = builtPlan.value?.id
   if (!planId) return
-  await mealPlanStore.addPlannedMeal(planId, {
-    recipeId: recipe.id,
-    scheduledDate: null,
-    batchSize: DEFAULT_BATCH_SIZE,
-  })
+  await mealPlanStore.addPlannedMeal(planId, { recipeId: recipe.id, scheduledDate: null })
 }
 
 async function addSuggestion(suggestion) {
   const planId = builtPlan.value?.id
   if (!planId) return
-  await mealPlanStore.addPlannedMeal(planId, {
-    recipeId: suggestion.recipeId,
-    scheduledDate: null,
-    batchSize: DEFAULT_BATCH_SIZE,
-  })
+  await mealPlanStore.addPlannedMeal(planId, { recipeId: suggestion.recipeId, scheduledDate: null })
 }
 
 function openRecipe(meal) {
-  router.push(recipeRoute(meal.recipeId, meal.batchSize))
+  router.push(recipeRoute(meal.recipeId, servingsOf(meal)))
 }
 
 async function removePlannedMeal(plannedMealId) {
@@ -212,10 +200,36 @@ async function removePlannedMeal(plannedMealId) {
   await mealPlanStore.removePlannedMeal(planId, plannedMealId)
 }
 
+// Each step saves at once, so a step taken before the plan reloads must build on the one before it.
+const steppedServings = ref({})
+const servingsSaves   = {}
+
+function servingsOf(meal) {
+  return steppedServings.value[meal.id] ?? meal.servings
+}
+
+// One meal's saves run in turn, so the last step taken is the one stored.
+function stepServings(meal, servings) {
+  steppedServings.value[meal.id] = servings
+  const save = (servingsSaves[meal.id] ?? Promise.resolve())
+    .catch(() => {})
+    .then(() => updatePlannedMeal(meal, { servings }))
+  servingsSaves[meal.id] = save
+
+  // Once the last save settles, the reloaded plan shows what was stored.
+  const settle = () => {
+    if (servingsSaves[meal.id] !== save) return
+    delete servingsSaves[meal.id]
+    delete steppedServings.value[meal.id]
+  }
+  save.then(settle, settle)
+  return save
+}
+
 async function updatePlannedMeal(meal, changes) {
   const planId = builtPlan.value?.id
   if (!planId) return
-  await mealPlanStore.updatePlannedMeal(planId, meal, changes)
+  await mealPlanStore.updatePlannedMeal(planId, { ...meal, servings: servingsOf(meal) }, changes)
 }
 
 function done() {

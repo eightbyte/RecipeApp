@@ -7,7 +7,7 @@ import { useRecipeStore } from '@/stores/recipes'
 import RecipeDetailView from './RecipeDetailView.vue'
 import { makeRecipeDetail } from '@/test/factories'
 import { reactive } from 'vue'
-import { recipeRoute, recipeRouteAtServings, servingsFromQuery } from '@/router/recipeRoutes'
+import { recipeRoute, servingsFromQuery } from '@/router/recipeRoutes'
 
 // Replacing updates the query in place, as the router does when the view stays mounted.
 const route = reactive({ params: { id: 'r1' }, query: {} })
@@ -178,8 +178,8 @@ describe('RecipeDetailView', () => {
     expect(wrapper.get('#ingredient-ri-1').text()).toContain('100 g')
   })
 
-  it('opens at a Planned Meal’s Batch Size from ?batch=DOUBLE', async () => {
-    route.query = recipeRoute('test-recipe-1', 'DOUBLE').query
+  it('highlights the shortcut a Planned Meal’s servings match', async () => {
+    route.query = recipeRoute('test-recipe-1', 8).query
     const wrapper = await mountView()
     expect(stepperValue(wrapper)).toBe('8')
     expect(servingsChip(wrapper).text()).toBe('8 servings')
@@ -187,8 +187,14 @@ describe('RecipeDetailView', () => {
     expect(wrapper.get('#ingredient-ri-1').text()).toContain('400 g')
   })
 
+  it('ignores a Batch Size left in an old link', async () => {
+    route.query = { batch: 'DOUBLE' }
+    const wrapper = await mountView()
+    expect(stepperValue(wrapper)).toBe('4')
+  })
+
   it('opens at the servings the URL carries', async () => {
-    route.query = recipeRouteAtServings('test-recipe-1', 6).query
+    route.query = recipeRoute('test-recipe-1', 6).query
     const wrapper = await mountView()
     expect(servingsChip(wrapper).text()).toBe('6 servings')
   })
@@ -414,7 +420,7 @@ describe('RecipeDetailView — cooking, loading and error states', () => {
     const wrapper = await mountView()
     const startBtn = wrapper.findAllComponents({ name: 'VBtn' })
       .find(b => b.text().includes('Start cooking'))
-    // A Batch Size link would also read back as 4, so check the link names servings itself.
+    // A link without servings would also read back as 4, so check the link names servings itself.
     expect(startBtn.props('to').query).toEqual({ servings: 4 })
   })
 

@@ -166,7 +166,7 @@ import { useRoute, useRouter } from 'vue-router'
 import { useRecipeStore } from '@/stores/recipes'
 import { formatMeasurement, formatSourceMeasurement } from '@/constants/units'
 import { formatServings } from '@/constants/servings'
-import { recipeRouteAtServings, servingsFromQuery } from '@/router/recipeRoutes'
+import { recipeRoute, servingsFromQuery } from '@/router/recipeRoutes'
 import { useUiStore } from '@/stores/ui'
 import { useWakeLock } from '@/composables/useWakeLock'
 import EmptyState from '@/components/EmptyState.vue'
@@ -189,7 +189,7 @@ const finishing = ref(false)
 
 // Carried in the query from a Planned Meal or the recipe detail view, so a reload keeps it.
 const servings = computed(() => servingsFromQuery(route.query, recipe.value.servings))
-const batchMultiplier = computed(() => servings.value / recipe.value.servings)
+const servingsMultiplier = computed(() => servings.value / recipe.value.servings)
 
 // Ephemeral, component-local "done" state that is not persisted.
 const doneStepIds = ref(new Set())
@@ -225,13 +225,13 @@ function stepIngredients(step) {
 /** Short-circuits on a null amount, because `null * 2` is `0` in JavaScript and would render an ingredient with no stated quantity as `0`. */
 function formatAmount(baseAmount, unit) {
   if (baseAmount == null) return null
-  return formatMeasurement(baseAmount * batchMultiplier.value, unit)
+  return formatMeasurement(baseAmount * servingsMultiplier.value, unit)
 }
 
 /** The measurement as the source recipe stated it; null when there is nothing to add. */
 function formatSource(ing) {
   return formatSourceMeasurement(
-    ing.sourceAmount, ing.sourceUnit, ing.unit, batchMultiplier.value)
+    ing.sourceAmount, ing.sourceUnit, ing.unit, servingsMultiplier.value)
 }
 
 function toggleStep(step) {
@@ -277,7 +277,7 @@ async function finish() {
   try {
     await store.markCooked(recipeId)
     ui.notify({ message: `Marked “${recipe.value?.name}” as cooked`, color: 'success' })
-    router.replace(recipeRouteAtServings(recipeId, servings.value))
+    router.replace(recipeRoute(recipeId, servings.value))
   } catch (e) {
     ui.notify({ message: e?.message ?? 'Could not mark as cooked.', color: 'error' })
   } finally {

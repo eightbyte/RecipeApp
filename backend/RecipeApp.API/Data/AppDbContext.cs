@@ -100,8 +100,6 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
         // ── PlannedMeal ───────────────────────────────────────────────────────
         modelBuilder.Entity<PlannedMeal>(e =>
         {
-            e.Property(plannedMeal => plannedMeal.BatchSize).HasDefaultValue(BatchSize.Regular);
-
             e.HasOne(plannedMeal => plannedMeal.MealPlan)
                 .WithMany(p => p.PlannedMeals)
                 .HasForeignKey(plannedMeal => plannedMeal.MealPlanId)

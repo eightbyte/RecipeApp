@@ -21,7 +21,7 @@ recipes can be imported on top.
 | LLM layer: the Model Server client, status, sampling | `backend/RecipeApp.API/Services/Llm/CLAUDE.md` |
 | Starting, stopping or upgrading the Model Server | `tools/llm-server/README.md` |
 | Self-hosted deployment, CI, updater, rollback | `docs/deployment.md` |
-| Units, amounts, density, Batch Size scaling | `.claude/rules/measurements.md` |
+| Units, amounts, density, Servings scaling | `.claude/rules/measurements.md` |
 | Ingredient categories / aisle order | `.claude/rules/ingredient-categories.md` |
 | Architecture decisions | `docs/adr/` |
 | Past per-phase implementation notes | `docs/history/phase-notes.md` (archive; read only when history matters) |

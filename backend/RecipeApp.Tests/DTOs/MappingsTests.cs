@@ -36,7 +36,7 @@ file static class MealPlanTestHelpers
         RecipeId      = recipe.Id,
         Recipe        = recipe,
         ScheduledDate = scheduledDate,
-        BatchSize     = BatchSize.Regular,
+        Servings      = recipe.Servings,
         DisplayOrder  = displayOrder,
     };
 }
@@ -314,6 +314,7 @@ public class MappingsTests
         recipe.ImageUrl     = "/uploads/pasta.jpg";
         recipe.LastCookedAt = DateTime.UtcNow;
         var plannedMeal = MealPlanTestHelpers.MakePlannedMeal(plan, recipe, new DateOnly(2026, 6, 5));
+        plannedMeal.Servings = 6;
 
         var result = plannedMeal.ToResponse();
 
@@ -321,6 +322,6 @@ public class MappingsTests
         result.RecipeImageUrl.Should().Be("/uploads/pasta.jpg");
         result.RecipeLastCookedAt.Should().Be(recipe.LastCookedAt);
         result.ScheduledDate.Should().Be(new DateOnly(2026, 6, 5));
-        result.BatchSize.Should().Be(BatchSize.Regular);
+        result.Servings.Should().Be(6);
     }
 }

@@ -1,7 +1,7 @@
 # Frontend — Vue 3 SPA
 
 Measurement and category rules live in `.claude/rules/` (repo root). Read them before touching
-amount formatting, Batch Size scaling, unit pickers or category lists.
+amount formatting, Servings scaling, unit pickers or category lists.
 
 Read `CODING_STANDARDS.md` (repo root) before writing or reviewing code: comments, naming, prop types, hard-coded values, Vuetify.
 
@@ -13,7 +13,7 @@ Read `CODING_STANDARDS.md` (repo root) before writing or reviewing code: comment
 | `components/` | Shared components; `layout/` has `AppTopBar`, `AppBottomNav` |
 | `stores/` | Pinia, one file per domain (`recipes`, `ingredients`, `mealPlans`, `shoppingList`, `ui`) |
 | `services/api.js` | The pre-configured Axios instance |
-| `constants/` | `units.js`, `categories.js`, `batchSizes.js`, `recipeSorts.js` — mirrors of the backend enums; `servings.js` mirrors the Servings limits in `RecipeLimits` and formats a servings count; `modelServer.js` mirrors `ModelServerState` and its `UnavailableReason()` wording |
+| `constants/` | `units.js`, `categories.js`, `recipeSorts.js` — mirrors of the backend enums; `batchSizes.js` holds the recipe view's ½×/1×/2× shortcuts onto Servings, which exist only in the frontend; `servings.js` mirrors the Servings limits in `RecipeLimits` and formats a servings count; `modelServer.js` mirrors `ModelServerState` and its `UnavailableReason()` wording |
 | `composables/` | `useWakeLock.js`; `useRecipePages.js` pages a recipe list and holds the shared `SEARCH_DEBOUNCE_MS`; `useHold.js` is the 1-second press-and-hold on pointer events (editing a Custom Item); `useDelayedHide.js` keeps each just-ticked Purchased item shown for 3 seconds on its own timer |
 | `utils/` | `dateOnly.js` formats date-only values; `storage.js` wraps `localStorage` for device-local preferences |
 | `styles/` | `settings.scss` — Vuetify Sass settings |
@@ -37,7 +37,9 @@ each test or in `beforeEach`; a wrapper mounted in `beforeAll` is gone after the
 - **Device-local preferences** (such as the Recipes tab sort) go through `utils/storage.js`, never
   `localStorage` directly, because storage can throw. Each key is named once beside its constants.
 - **Grayscale rule:** add class `grayscale` to a recipe image when `lastCookedAt` is within 7 days.
-- **Planned Meals** on Home and Meal Plan render through `components/PlannedMealCard.vue`.
+- **Planned Meals** on Home and Meal Plan render through `components/PlannedMealCard.vue`. Every
+  count of Servings is stepped with `components/ServingsStepper.vue` and shown on a Planned Meal or
+  Item Source with `components/ServingsChip.vue`.
 - **Date-only values** (`scheduledDate`, `firstScheduledDate`, …) display through `formatDateOnly` from
   `utils/dateOnly.js`, so they show the stored day in every timezone. Timestamps such as `createdAt`
   keep local-time formatting.

@@ -4,7 +4,7 @@ import * as components from 'vuetify/components'
 import * as directives from 'vuetify/directives'
 import { createPinia, setActivePinia } from 'pinia'
 import ShoppingView from './ShoppingView.vue'
-import BatchSizeChip from '@/components/BatchSizeChip.vue'
+import ServingsChip from '@/components/ServingsChip.vue'
 import { makeItemSource, makeShoppingList, makeShoppingListItem } from '@/test/factories'
 import { servingsFromQuery } from '@/router/recipeRoutes'
 import { useUiStore } from '@/stores/ui'
@@ -316,7 +316,7 @@ describe('ShoppingView', () => {
       amount: 270,
       unit: 'ml',
       sources: [
-        makeItemSource({ recipeId: 'pancakes', recipeName: 'Pancakes', amount: 2, unit: 'tbsp', shareAmount: 30, shareUnit: 'ml', scheduledDate: '2026-06-03', batchSize: 'DOUBLE' }),
+        makeItemSource({ recipeId: 'pancakes', recipeName: 'Pancakes', amount: 2, unit: 'tbsp', shareAmount: 30, shareUnit: 'ml', scheduledDate: '2026-06-03', servings: 8 }),
         makeItemSource({ recipeId: 'waffles', recipeName: 'Waffles', amount: 1, unit: 'cup', shareAmount: 240, shareUnit: 'ml' }),
       ],
       ...overrides,
@@ -342,15 +342,24 @@ describe('ShoppingView', () => {
       expect(sourceRows(wrapper)).toHaveLength(0)
     })
 
-    it('shows each source’s Batch Size and its date when it has one', async () => {
+    it('shows each source’s Servings and its date when it has one', async () => {
       const { wrapper } = await mountWith([flour()])
       await row(wrapper, 'Flour').trigger('click')
 
       const [pancakes, waffles] = sourceRows(wrapper)
-      expect(pancakes.findComponent(BatchSizeChip).props('batchSize')).toBe('DOUBLE')
+      expect(pancakes.findComponent(ServingsChip).text()).toBe('8 servings')
       expect(pancakes.text()).toContain('3 Jun')
-      expect(waffles.findComponent(BatchSizeChip).props('batchSize')).toBe('REGULAR')
+      expect(waffles.findComponent(ServingsChip).text()).toBe('4 servings')
       expect(waffles.find('.v-list-item-subtitle').exists()).toBe(false)
+    })
+
+    it('shows no Servings for a source that has none', async () => {
+      const { wrapper } = await mountWith([makeShoppingListItem({
+        id: 'oats', displayName: 'Oats', sources: [makeItemSource({ recipeId: null, recipeName: 'Old porridge', servings: null })],
+      })])
+      await row(wrapper, 'Oats').trigger('click')
+
+      expect(sourceRows(wrapper)[0].findComponent(ServingsChip).exists()).toBe(false)
     })
 
     it('shows an Unquantified source without an amount', async () => {
@@ -396,7 +405,7 @@ describe('ShoppingView', () => {
       expect(sourceRows(wrapper)).toHaveLength(0)
     })
 
-    it('opens a source’s recipe at its Planned Meal’s Batch Size', async () => {
+    it('opens a source’s recipe at its Planned Meal’s Servings', async () => {
       const { wrapper } = await mountWith([flour()])
       await row(wrapper, 'Flour').trigger('click')
 

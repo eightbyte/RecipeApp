@@ -237,7 +237,7 @@ public class ShoppingListEndpointsTests(DatabaseFixture db) : IAsyncLifetime
         var source = json.RootElement.GetProperty("sources").EnumerateArray().Single();
         source.GetProperty("recipeId").GetGuid().Should().Be(recipeId);
         source.GetProperty("recipeName").GetString().Should().Be("Pancakes");
-        source.GetProperty("batchSize").GetString().Should().Be("REGULAR");
+        source.GetProperty("servings").GetInt32().Should().Be(4);
         source.GetProperty("amount").GetDecimal().Should().Be(100m);
         source.GetProperty("unit").GetString().Should().Be("g");
         source.GetProperty("shareAmount").ValueKind.Should().Be(JsonValueKind.Null);

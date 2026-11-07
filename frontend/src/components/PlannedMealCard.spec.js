@@ -55,11 +55,11 @@ describe('PlannedMealCard', () => {
   describe('west of UTC', () => {
     runInTimeZone(WEST_OF_UTC)
 
-    it('shows the recipe name, the scheduled day and month as stored, and the Batch Size', () => {
-      const wrapper = mountCard({ recipeName: 'Soup', scheduledDate: '2026-06-03', batchSize: 'DOUBLE' })
+    it('shows the recipe name, the scheduled day and month as stored, and the Servings', () => {
+      const wrapper = mountCard({ recipeName: 'Soup', scheduledDate: '2026-06-03', servings: 6 })
 
       expect(leafTexts(wrapper)).toEqual(expect.arrayContaining(['Soup', '3', 'Jun']))
-      expect(wrapper.find('[aria-label="Batch 2×"]').exists()).toBe(true)
+      expect(wrapper.findComponent({ name: 'VChip' }).text()).toBe('6 servings')
     })
   })
 
@@ -96,15 +96,14 @@ describe('PlannedMealCard', () => {
     const tapRecipeName = (wrapper, name) =>
       wrapper.findAll('div').find(el => el.text() === name).trigger('click')
 
-    it('opens the recipe at the Planned Meal’s Batch Size', async () => {
-      const wrapper = mountCard({ recipeId: 'r9', recipeName: 'Soup', batchSize: 'HALF' })
+    it('opens the recipe at the Planned Meal’s Servings', async () => {
+      const wrapper = mountCard({ recipeId: 'r9', recipeName: 'Soup', servings: 3 })
 
       await tapRecipeName(wrapper, 'Soup')
 
       const [location] = pushMock.mock.calls[0]
       expect(location).toMatchObject({ name: 'recipe-detail', params: { id: 'r9' } })
-      // A Half Batch Size of a 4-serving recipe shows 2 servings.
-      expect(servingsFromQuery(location.query, 4)).toBe(2)
+      expect(servingsFromQuery(location.query, 4)).toBe(3)
     })
 
     it('only closes the Meal options menu while it is open', async () => {
@@ -122,20 +121,19 @@ describe('PlannedMealCard', () => {
     it('stay on the card when one that opens a dialog is chosen', async () => {
       const wrapper = mountCard()
 
-      await chooseMealOption(wrapper, 'Change batch')
+      await chooseMealOption(wrapper, 'Change servings')
 
       expect(pushMock).not.toHaveBeenCalled()
     })
 
-    it('Start cooking opens Cooking Mode at the Planned Meal’s Batch Size', async () => {
-      const wrapper = mountCard({ recipeId: 'r9', batchSize: 'DOUBLE' })
+    it('Start cooking opens Cooking Mode at the Planned Meal’s Servings', async () => {
+      const wrapper = mountCard({ recipeId: 'r9', servings: 8 })
 
       await chooseMealOption(wrapper, 'Start cooking')
 
       expect(pushMock).toHaveBeenCalledTimes(1)
       const [location] = pushMock.mock.calls[0]
       expect(location).toMatchObject({ name: 'recipe-cooking', params: { id: 'r9' } })
-      // A Double Batch Size of a 4-serving recipe cooks 8 servings.
       expect(servingsFromQuery(location.query, 4)).toBe(8)
     })
 
@@ -184,26 +182,46 @@ describe('PlannedMealCard', () => {
         return page().findAll('button').find(button => button.text() === label).trigger('click')
       }
 
-      it('Change date saves the new date and keeps the Batch Size', async () => {
-        const wrapper = mountCard({ scheduledDate: '2026-06-03', batchSize: 'HALF' })
+      it('Change date saves the new date and keeps the Servings', async () => {
+        const wrapper = mountCard({ scheduledDate: '2026-06-03', servings: 3 })
 
         await chooseMealOption(wrapper, 'Change date')
         await page().find('input[type="date"]').setValue('2026-06-05')
         await clickButton('Save')
         await flushPromises()
 
-        expect(api.put).toHaveBeenCalledWith(plannedMealPath, { scheduledDate: '2026-06-05', batchSize: 'HALF' })
+        expect(api.put).toHaveBeenCalledWith(plannedMealPath, { scheduledDate: '2026-06-05', servings: 3 })
       })
 
-      it('Change batch saves the new Batch Size and keeps the date', async () => {
-        const wrapper = mountCard({ scheduledDate: '2026-06-03', batchSize: 'HALF' })
+      it('Change servings starts at the Planned Meal’s Servings', async () => {
+        const wrapper = mountCard({ servings: 3 })
 
-        await chooseMealOption(wrapper, 'Change batch')
-        await clickButton('2×')
+        await chooseMealOption(wrapper, 'Change servings')
+
+        expect(page().find('.v-dialog [aria-live="polite"]').text()).toBe('3')
+      })
+
+      it('Change servings saves the stepped Servings and keeps the date', async () => {
+        const wrapper = mountCard({ scheduledDate: '2026-06-03', servings: 3 })
+
+        await chooseMealOption(wrapper, 'Change servings')
+        await page().find('.v-dialog button[aria-label="More servings"]').trigger('click')
+        await page().find('.v-dialog button[aria-label="More servings"]').trigger('click')
         await clickButton('Save')
         await flushPromises()
 
-        expect(api.put).toHaveBeenCalledWith(plannedMealPath, { scheduledDate: '2026-06-03', batchSize: 'DOUBLE' })
+        expect(api.put).toHaveBeenCalledWith(plannedMealPath, { scheduledDate: '2026-06-03', servings: 5 })
+      })
+
+      it('Change servings saves nothing when cancelled', async () => {
+        const wrapper = mountCard({ servings: 3 })
+
+        await chooseMealOption(wrapper, 'Change servings')
+        await page().find('.v-dialog button[aria-label="More servings"]').trigger('click')
+        await clickButton('Cancel')
+        await flushPromises()
+
+        expect(api.put).not.toHaveBeenCalled()
       })
 
       it('Remove deletes the Planned Meal from its plan', async () => {

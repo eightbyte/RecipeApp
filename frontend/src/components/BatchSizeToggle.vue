@@ -4,14 +4,12 @@
     aria-label="Batch"
     :mandatory="mandatory"
     color="primary"
-    :class="{ 'd-flex': stretch }"
   >
     <v-btn
       v-for="option in BATCH_SIZES"
       :key="option.value"
       :value="option.value"
       :size="buttonSize"
-      :class="{ 'flex-grow-1': stretch }"
     >
       {{ option.title }}
     </v-btn>
@@ -26,7 +24,6 @@ const batchSize = defineModel({ type: [String, null], required: true })
 
 defineProps({
   buttonSize: { type: String, default: 'default' },
-  stretch:    { type: Boolean, default: false },
   mandatory:  { type: Boolean, default: true },
 })
 </script>

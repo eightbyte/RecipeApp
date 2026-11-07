@@ -56,7 +56,7 @@ export const makePlannedMeal = (overrides = {}) => ({
   recipeImageUrl: null,
   recipeLastCookedAt: null,
   scheduledDate: null,
-  batchSize: 'REGULAR',
+  servings: 4,
   displayOrder: 1,
   ...overrides,
 })
@@ -99,7 +99,7 @@ export const makeShoppingListItem = (overrides = {}) => ({
 export const makeItemSource = (overrides = {}) => ({
   recipeId: 'recipe-1',
   recipeName: 'Pancakes',
-  batchSize: 'REGULAR',
+  servings: 4,
   scheduledDate: null,
   amount: 200,
   unit: 'g',

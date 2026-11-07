@@ -2,7 +2,6 @@ using Microsoft.EntityFrameworkCore;
 using RecipeApp.API.Data;
 using RecipeApp.API.DTOs;
 using RecipeApp.API.DTOs.MealPlans;
-using RecipeApp.API.Enums;
 using RecipeApp.API.Models;
 
 namespace RecipeApp.API.Services;
@@ -144,8 +143,11 @@ public class MealPlanService(AppDbContext db)
         var planExists   = await db.MealPlans.AnyAsync(p => p.Id == planId);
         if (!planExists) return null;
 
-        var recipeExists = await db.Recipes.AnyAsync(r => r.Id == request.RecipeId);
-        if (!recipeExists) return null;
+        var recipeServings = await db.Recipes
+            .Where(r => r.Id == request.RecipeId)
+            .Select(r => (int?)r.Servings)
+            .FirstOrDefaultAsync();
+        if (recipeServings is null) return null;
 
         var maxOrder = await db.PlannedMeals
             .Where(plannedMeal => plannedMeal.MealPlanId == planId)
@@ -157,7 +159,7 @@ public class MealPlanService(AppDbContext db)
             MealPlanId    = planId,
             RecipeId      = request.RecipeId,
             ScheduledDate = request.ScheduledDate,
-            BatchSize     = request.BatchSize ?? BatchSize.Regular,
+            Servings      = request.Servings ?? recipeServings.Value,
             DisplayOrder  = maxOrder + 1,
         };
         db.PlannedMeals.Add(plannedMeal);
@@ -184,7 +186,7 @@ public class MealPlanService(AppDbContext db)
         if (plannedMeal is null) return null;
 
         plannedMeal.ScheduledDate = request.ScheduledDate;
-        plannedMeal.BatchSize     = request.BatchSize;
+        plannedMeal.Servings      = request.Servings;
 
         var plan = await db.MealPlans.FindAsync(planId);
         if (plan is not null) plan.UpdatedAt = DateTime.UtcNow;

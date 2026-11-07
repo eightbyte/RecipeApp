@@ -8,15 +8,15 @@
     <ErrorState
       v-else-if="restoreError"
       :message="restoreError"
-      @retry="restorePlan(route.query[PLAN_QUERY_KEY])"
+      @retry="restorePlan(planInUrl)"
     />
 
     <!-- ── Step 1: Name entry ────────────────────────────────────────── -->
-    <div v-else-if="!mealPlanStore.currentPlan">
+    <div v-else-if="!builtPlan">
       <h2 class="text-h6 font-weight-bold mb-6">New Meal Plan</h2>
 
       <v-alert
-        v-if="mealPlanStore.activePlan"
+        v-if="mealPlanStore.activePlan && !creating"
         type="info"
         variant="tonal"
         density="compact"
@@ -51,16 +51,16 @@
     <div v-else>
       <div class="d-flex align-center justify-space-between mb-6">
         <div>
-          <h2 class="text-h6 font-weight-bold mb-2">{{ mealPlanStore.currentPlan.name }}</h2>
+          <h2 class="text-h6 font-weight-bold mb-2">{{ builtPlan.name }}</h2>
           <div class="text-caption text-medium-emphasis">Active plan — add recipes below</div>
         </div>
         <v-btn color="primary" variant="tonal" @click="done">Done</v-btn>
       </div>
 
       <!-- Added recipes -->
-      <div v-if="mealPlanStore.currentPlan.plannedMeals.length > 0" class="mb-6">
+      <div v-if="builtPlan.plannedMeals.length > 0" class="mb-6">
         <v-card
-          v-for="meal in mealPlanStore.currentPlan.plannedMeals"
+          v-for="meal in builtPlan.plannedMeals"
           :key="meal.id"
           class="mb-2"
           variant="outlined"
@@ -118,7 +118,7 @@
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue'
+import { computed, ref, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useMealPlanStore } from '@/stores/mealPlans'
 import { DEFAULT_BATCH_SIZE } from '@/constants/batchSizes'
@@ -135,6 +135,11 @@ const router        = useRouter()
 const route         = useRoute()
 const mealPlanStore = useMealPlanStore()
 
+// App.vue keys each view by its full path, so the plan in this builder's URL never changes while it is mounted.
+const planInUrl = route.query[PLAN_QUERY_KEY]
+const builtPlan = computed(() =>
+  planInUrl && mealPlanStore.currentPlan?.id === planInUrl ? mealPlanStore.currentPlan : null)
+
 const planName     = ref(`Week of ${new Date().toLocaleDateString(DISPLAY_LOCALE, { day: 'numeric', month: 'long' })}`)
 const nameError    = ref('')
 const creating     = ref(false)
@@ -143,8 +148,7 @@ const restoreError = ref(null)
 
 // Without a plan in the URL, start at the name step rather than at a plan left in the store from a previously viewed plan.
 onMounted(() => {
-  const planId = route.query[PLAN_QUERY_KEY]
-  if (planId) restorePlan(planId)
+  if (planInUrl) restorePlan(planInUrl)
   else mealPlanStore.currentPlan = null
 })
 
@@ -170,15 +174,16 @@ async function createPlan() {
   creating.value  = true
   try {
     const id = await mealPlanStore.createPlan(planName.value.trim())
-    router.replace({ name: 'meal-plan-create', query: { [PLAN_QUERY_KEY]: id } })
-    await mealPlanStore.fetchSuggestions(id)
-  } finally {
+    // On success this builder stays busy on the name step until the one mounted at the new URL replaces it.
+    await router.replace({ name: 'meal-plan-create', query: { [PLAN_QUERY_KEY]: id } })
+  } catch (e) {
     creating.value = false
+    throw e
   }
 }
 
 async function addRecipe(recipe) {
-  const planId = mealPlanStore.currentPlan?.id
+  const planId = builtPlan.value?.id
   if (!planId) return
   await mealPlanStore.addPlannedMeal(planId, {
     recipeId: recipe.id,
@@ -188,7 +193,7 @@ async function addRecipe(recipe) {
 }
 
 async function addSuggestion(suggestion) {
-  const planId = mealPlanStore.currentPlan?.id
+  const planId = builtPlan.value?.id
   if (!planId) return
   await mealPlanStore.addPlannedMeal(planId, {
     recipeId: suggestion.recipeId,
@@ -202,13 +207,13 @@ function openRecipe(meal) {
 }
 
 async function removePlannedMeal(plannedMealId) {
-  const planId = mealPlanStore.currentPlan?.id
+  const planId = builtPlan.value?.id
   if (!planId) return
   await mealPlanStore.removePlannedMeal(planId, plannedMealId)
 }
 
 async function updatePlannedMeal(meal, changes) {
-  const planId = mealPlanStore.currentPlan?.id
+  const planId = builtPlan.value?.id
   if (!planId) return
   await mealPlanStore.updatePlannedMeal(planId, meal, changes)
 }

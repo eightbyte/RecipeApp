@@ -38,7 +38,10 @@ afterEach(() => vi.useRealTimers())
 async function mountView() {
   const { useMealPlanStore } = await import('@/stores/mealPlans')
   const store = useMealPlanStore()
-  vi.spyOn(store, 'createPlan').mockResolvedValue('new-plan-id')
+  vi.spyOn(store, 'createPlan').mockImplementation(async (name) => {
+    store.currentPlan = makeMealPlanDetail({ id: 'new-plan-id', name })
+    return 'new-plan-id'
+  })
   vi.spyOn(store, 'fetchSuggestions').mockResolvedValue(undefined)
 
   const wrapper = mount(MealPlanBuilderView, {
@@ -97,13 +100,15 @@ describe('MealPlanBuilderView', () => {
     expect(replaceMock).toHaveBeenCalledWith({ name: 'meal-plan-create', query: { plan: 'new-plan-id' } })
   })
 
-  it('shows builder phase after plan is created', async () => {
+  // The new URL mounts a fresh builder, so a recipe list shown here would be torn down mid-fetch.
+  it('leaves the recipe list to the builder at the new URL', async () => {
     const { wrapper, store } = await mountView()
-    store.currentPlan = makeMealPlanDetail({ name: 'My Plan' })
-    await wrapper.vm.$nextTick()
 
-    expect(wrapper.text()).toContain('My Plan')
-    expect(wrapper.find('.stub-browser').exists()).toBe(true)
+    await wrapper.findAll('button').find(b => b.text().includes('Create plan')).trigger('click')
+    await flushPromises()
+
+    expect(wrapper.find('.stub-browser').exists()).toBe(false)
+    expect(store.fetchSuggestions).not.toHaveBeenCalled()
   })
 
   it('returns to the plan being built when its id is in the URL', async () => {
@@ -160,16 +165,14 @@ describe('MealPlanBuilderView', () => {
     const plannedMealPath = '/meal-plans/plan-1/planned-meals/planned-meal-1'
 
     async function mountWithPlannedMeal() {
-      const mounted = await mountView()
       const plan = makeMealPlanDetail({
         id: 'plan-1',
         plannedMeals: [makePlannedMeal({ scheduledDate: '2026-06-03', batchSize: 'HALF' })],
       })
+      route.query = { plan: 'plan-1' }
       api.put.mockResolvedValue({ data: {} })
       api.get.mockResolvedValue({ data: plan })
-      mounted.store.currentPlan = plan
-      await mounted.wrapper.vm.$nextTick()
-      return mounted
+      return mountView()
     }
 
     it('keeps the Batch Size when the date changes', async () => {

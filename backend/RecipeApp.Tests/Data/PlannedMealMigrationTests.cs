@@ -2,7 +2,6 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Migrations;
 using RecipeApp.API.Data;
-using RecipeApp.API.Enums;
 using Testcontainers.PostgreSql;
 
 namespace RecipeApp.Tests.Data;
@@ -11,6 +10,7 @@ namespace RecipeApp.Tests.Data;
 public class PlannedMealMigrationTests : IAsyncLifetime
 {
     private const string LastMigrationBeforeRename = "20261012184335_AddSeedLedger";
+    private const string RenameMigration = "20261101201859_RenamePlannedMealAndBatchSize";
 
     private readonly PostgreSqlContainer _container = new PostgreSqlBuilder("postgres:16").Build();
 
@@ -29,9 +29,9 @@ public class PlannedMealMigrationTests : IAsyncLifetime
         var recipeId = Guid.NewGuid();
         var batchSizeByPlannedMealId = new Dictionary<Guid, string>
         {
-            [Guid.NewGuid()] = BatchSize.Half,
-            [Guid.NewGuid()] = BatchSize.Regular,
-            [Guid.NewGuid()] = BatchSize.Double,
+            [Guid.NewGuid()] = "HALF",
+            [Guid.NewGuid()] = "REGULAR",
+            [Guid.NewGuid()] = "DOUBLE",
         };
 
         await using (var beforeRename = CreateDbContext())
@@ -53,16 +53,19 @@ public class PlannedMealMigrationTests : IAsyncLifetime
             }
         }
 
-        await using (var afterRename = CreateDbContext())
-            await afterRename.Database.MigrateAsync();
+        await using var afterRename = CreateDbContext();
+        await afterRename.GetService<IMigrator>().MigrateAsync(RenameMigration);
 
-        await using var read = CreateDbContext();
-        var plannedMeals = await read.PlannedMeals.AsNoTracking().ToListAsync();
+        // Read with SQL, because a later migration replaces the Batch Size the entity no longer has.
+        var plannedMeals = await afterRename.Database.SqlQuery<RenamedPlannedMeal>($@"
+            SELECT ""Id"", ""MealPlanId"", ""RecipeId"", ""BatchSize"" FROM ""PlannedMeals""").ToListAsync();
 
         plannedMeals.ToDictionary(m => m.Id, m => m.BatchSize)
             .Should().BeEquivalentTo(batchSizeByPlannedMealId);
         plannedMeals.Should().OnlyContain(m => m.MealPlanId == planId && m.RecipeId == recipeId);
     }
+
+    private sealed record RenamedPlannedMeal(Guid Id, Guid MealPlanId, Guid RecipeId, string BatchSize);
 
     [Fact]
     public async Task NoKeyOrIndexKeepsTheOldTableName()

@@ -3,6 +3,7 @@ using RecipeApp.Tests.Helpers;
 using RecipeApp.Tests.Infrastructure;
 using System.Net;
 using System.Net.Http.Json;
+using System.Text.Json;
 
 namespace RecipeApp.Tests.Endpoints;
 
@@ -151,12 +152,27 @@ public class MealPlanEndpointsTests(DatabaseFixture db) : IAsyncLifetime
         var plan     = await CreatePlanViaApi("Plan");
 
         var response = await Client.PostAsJsonAsync($"/api/v1/meal-plans/{plan.Id}/planned-meals",
-            new { recipeId, scheduledDate = (string?)null, batchSize = "REGULAR" });
+            new { recipeId, scheduledDate = (string?)null, servings = 6 });
 
         response.StatusCode.Should().Be(HttpStatusCode.Created);
-        var plannedMeal = await response.Content.ReadFromJsonAsync<PlannedMealResponse>();
-        plannedMeal!.RecipeId.Should().Be(recipeId);
-        plannedMeal.BatchSize.Should().Be("REGULAR");
+        using var json = JsonDocument.Parse(await response.Content.ReadAsStringAsync());
+        json.RootElement.GetProperty("recipeId").GetGuid().Should().Be(recipeId);
+        json.RootElement.GetProperty("servings").GetInt32().Should().Be(6);
+    }
+
+    [Theory]
+    [InlineData(0)]
+    [InlineData(101)]
+    public async Task AddRecipe_ServingsOutOfRange_Returns400(int servings)
+    {
+        var ingId    = await SeedIngredientAsync();
+        var recipeId = await SeedRecipeAsync(ingId);
+        var plan     = await CreatePlanViaApi("Plan");
+
+        var response = await Client.PostAsJsonAsync($"/api/v1/meal-plans/{plan.Id}/planned-meals",
+            new { recipeId, servings });
+
+        response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
     }
 
     [Fact]
@@ -194,8 +210,27 @@ public class MealPlanEndpointsTests(DatabaseFixture db) : IAsyncLifetime
         var plannedMeal = await addResponse.Content.ReadFromJsonAsync<PlannedMealResponse>();
 
         var response = await Client.PutAsJsonAsync($"/api/v1/meal-plans/{Guid.NewGuid()}/planned-meals/{plannedMeal!.Id}",
-            new { batchSize = "DOUBLE" });
+            new { servings = 8 });
         response.StatusCode.Should().Be(HttpStatusCode.NotFound);
+    }
+
+    [Fact]
+    public async Task UpdateRecipe_Servings_ReturnsThem()
+    {
+        var ingId    = await SeedIngredientAsync();
+        var recipeId = await SeedRecipeAsync(ingId);
+        var plan     = await CreatePlanViaApi("Plan");
+
+        var addResponse = await Client.PostAsJsonAsync($"/api/v1/meal-plans/{plan.Id}/planned-meals",
+            new { recipeId });
+        var plannedMeal = await addResponse.Content.ReadFromJsonAsync<PlannedMealResponse>();
+
+        var response = await Client.PutAsJsonAsync($"/api/v1/meal-plans/{plan.Id}/planned-meals/{plannedMeal!.Id}",
+            new { scheduledDate = (string?)null, servings = 8 });
+
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        using var json = JsonDocument.Parse(await response.Content.ReadAsStringAsync());
+        json.RootElement.GetProperty("servings").GetInt32().Should().Be(8);
     }
 
     // ── DELETE /meal-plans/{id}/planned-meals/{plannedMealId} ─────────────────

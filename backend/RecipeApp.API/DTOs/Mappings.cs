@@ -117,7 +117,7 @@ public static class Mappings
         plannedMeal.Recipe.ImageUrl,
         plannedMeal.Recipe.LastCookedAt,
         plannedMeal.ScheduledDate,
-        plannedMeal.BatchSize,
+        plannedMeal.Servings,
         plannedMeal.DisplayOrder
     );
 
@@ -143,7 +143,7 @@ public static class Mappings
     public static ShoppingListItemSourceResponse ToResponse(this ShoppingListItemSource s) => new(
         s.RecipeId,
         s.RecipeName,
-        s.BatchSize,
+        s.Servings,
         s.ScheduledDate,
         s.Amount,
         s.Unit,

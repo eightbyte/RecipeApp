@@ -7,6 +7,6 @@ public record PlannedMealResponse(
     string? RecipeImageUrl,
     DateTime? RecipeLastCookedAt,
     DateOnly? ScheduledDate,
-    string BatchSize,
+    int Servings,
     int DisplayOrder
 );

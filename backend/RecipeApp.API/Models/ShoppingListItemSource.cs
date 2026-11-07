@@ -10,7 +10,8 @@ public class ShoppingListItemSource
     public Guid? RecipeId { get; set; }
 
     public string RecipeName { get; set; } = string.Empty;
-    public string BatchSize { get; set; } = Enums.BatchSize.Regular;
+    /// <summary>The Planned Meal's Servings, null only for a source whose recipe was deleted before Servings replaced Batch Size.</summary>
+    public int? Servings { get; set; }
     public DateOnly? ScheduledDate { get; set; }
 
     /// <summary>The contribution in the recipe's own unit, null for an Unquantified Ingredient.</summary>

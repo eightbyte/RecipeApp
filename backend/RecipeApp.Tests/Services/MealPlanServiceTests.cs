@@ -185,25 +185,41 @@ public class MealPlanServiceTests(DatabaseFixture db) : IAsyncLifetime
     }
 
     [Fact]
-    public async Task AddPlannedMealAsync_DefaultsToRegularBatchSize()
+    public async Task AddPlannedMealAsync_WithoutServings_TakesTheRecipesServings()
     {
         await using var ctx = db.CreateDbContext();
         var ing = TestDataBuilder.Ingredient();
         ctx.Ingredients.Add(ing);
         await ctx.SaveChangesAsync();
 
-        var recipe = await new RecipeService(ctx).CreateAsync(TestDataBuilder.CreateRecipeRequest(ing.Id));
+        var recipe = await new RecipeService(ctx).CreateAsync(TestDataBuilder.CreateRecipeRequest(ing.Id, servings: 6));
         var svc    = new MealPlanService(ctx);
         var plan   = await svc.CreateAsync(TestDataBuilder.CreateMealPlanRequest("Plan"));
 
         var plannedMeal = await svc.AddPlannedMealAsync(plan.Id, new API.DTOs.MealPlans.AddPlannedMealRequest(recipe.Id, null, null));
-        plannedMeal!.BatchSize.Should().Be(BatchSize.Regular);
+        plannedMeal!.Servings.Should().Be(6);
+    }
+
+    [Fact]
+    public async Task AddPlannedMealAsync_WithServings_KeepsThem()
+    {
+        await using var ctx = db.CreateDbContext();
+        var ing = TestDataBuilder.Ingredient();
+        ctx.Ingredients.Add(ing);
+        await ctx.SaveChangesAsync();
+
+        var recipe = await new RecipeService(ctx).CreateAsync(TestDataBuilder.CreateRecipeRequest(ing.Id, servings: 6));
+        var svc    = new MealPlanService(ctx);
+        var plan   = await svc.CreateAsync(TestDataBuilder.CreateMealPlanRequest("Plan"));
+
+        var plannedMeal = await svc.AddPlannedMealAsync(plan.Id, TestDataBuilder.AddPlannedMealRequest(recipe.Id, servings: 9));
+        plannedMeal!.Servings.Should().Be(9);
     }
 
     // ── UpdatePlannedMealAsync ────────────────────────────────────────────────
 
     [Fact]
-    public async Task UpdatePlannedMealAsync_UpdatesDateAndBatchSize()
+    public async Task UpdatePlannedMealAsync_UpdatesDateAndServings()
     {
         await using var ctx = db.CreateDbContext();
         var ing = TestDataBuilder.Ingredient();
@@ -216,10 +232,10 @@ public class MealPlanServiceTests(DatabaseFixture db) : IAsyncLifetime
         var plannedMeal    = await svc.AddPlannedMealAsync(plan.Id, TestDataBuilder.AddPlannedMealRequest(recipe.Id));
 
         var date = new DateOnly(2026, 6, 5);
-        var updated = await svc.UpdatePlannedMealAsync(plan.Id, plannedMeal!.Id, new API.DTOs.MealPlans.UpdatePlannedMealRequest(date, BatchSize.Double));
+        var updated = await svc.UpdatePlannedMealAsync(plan.Id, plannedMeal!.Id, new API.DTOs.MealPlans.UpdatePlannedMealRequest(date, 7));
 
         updated!.ScheduledDate.Should().Be(date);
-        updated.BatchSize.Should().Be(BatchSize.Double);
+        updated.Servings.Should().Be(7);
     }
 
     [Fact]
@@ -236,7 +252,7 @@ public class MealPlanServiceTests(DatabaseFixture db) : IAsyncLifetime
         var plannedMeal    = await svc.AddPlannedMealAsync(plan.Id, TestDataBuilder.AddPlannedMealRequest(recipe.Id));
 
         var result = await svc.UpdatePlannedMealAsync(Guid.NewGuid(), plannedMeal!.Id,
-            new API.DTOs.MealPlans.UpdatePlannedMealRequest(null, BatchSize.Regular));
+            new API.DTOs.MealPlans.UpdatePlannedMealRequest(null, 4));
 
         result.Should().BeNull();
     }

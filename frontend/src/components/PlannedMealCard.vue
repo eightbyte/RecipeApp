@@ -27,7 +27,7 @@
         <BatchSizeChip :batch-size="plannedMeal.batchSize" size="x-small" class="mt-1" />
       </div>
 
-      <v-menu>
+      <v-menu v-model="mealOptionsOpen">
         <template #activator="{ props: menuProps }">
           <v-btn
             icon="mdi-dots-vertical"
@@ -104,6 +104,7 @@ const mealPlanStore = useMealPlanStore()
 const recipesStore  = useRecipeStore()
 const ui            = useUiStore()
 
+const mealOptionsOpen = ref(false)
 const datePicker      = ref({ open: false, date: null })
 const batchSizePicker = ref({ open: false, batchSize: DEFAULT_BATCH_SIZE })
 
@@ -111,6 +112,8 @@ const isRecentlyCooked = computed(() =>
   recipesStore.isRecentlyCooked({ lastCookedAt: props.plannedMeal.recipeLastCookedAt }))
 
 function openRecipe() {
+  // The menu closes after this click, so a tap that only dismisses it would otherwise also navigate.
+  if (mealOptionsOpen.value) return
   router.push(recipeRoute(props.plannedMeal.recipeId, props.plannedMeal.batchSize))
 }
 

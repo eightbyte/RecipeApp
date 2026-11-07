@@ -1,6 +1,5 @@
 using FluentValidation;
 using RecipeApp.API.DTOs.MealPlans;
-using RecipeApp.API.Enums;
 
 namespace RecipeApp.API.Validators;
 
@@ -25,10 +24,7 @@ public class AddPlannedMealRequestValidator : AbstractValidator<AddPlannedMealRe
     public AddPlannedMealRequestValidator()
     {
         RuleFor(x => x.RecipeId).NotEmpty();
-        RuleFor(x => x.BatchSize)
-            .Must(batchSize => batchSize != null && BatchSize.IsValid(batchSize))
-            .WithMessage($"BatchSize must be one of: {string.Join(", ", BatchSize.All)}")
-            .When(x => x.BatchSize is not null);
+        RuleFor(x => x.Servings).InclusiveBetween(RecipeLimits.MinServings, RecipeLimits.MaxServings);
     }
 }
 
@@ -36,9 +32,6 @@ public class UpdatePlannedMealRequestValidator : AbstractValidator<UpdatePlanned
 {
     public UpdatePlannedMealRequestValidator()
     {
-        RuleFor(x => x.BatchSize)
-            .NotEmpty()
-            .Must(BatchSize.IsValid)
-            .WithMessage($"BatchSize must be one of: {string.Join(", ", BatchSize.All)}");
+        RuleFor(x => x.Servings).InclusiveBetween(RecipeLimits.MinServings, RecipeLimits.MaxServings);
     }
 }

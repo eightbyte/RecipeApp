@@ -81,14 +81,7 @@
               hide-details
               style="max-width: 110px"
             />
-            <v-select
-              v-model="ing.unit"
-              :items="units"
-              label="Unit"
-              density="compact"
-              hide-details
-              style="max-width: 100px"
-            />
+            <MeasurementUnitSelect v-model="ing.unit" :amount="ing.amount" />
             <v-text-field
               v-model="ing.notes"
               label="Notes"
@@ -183,7 +176,8 @@
 import { reactive, ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useRecipeStore } from '@/stores/recipes'
-import { MEASUREMENT_UNITS, toPayloadMeasurement } from '@/constants/units'
+import { MEASUREMENT_UNITS, hasAmount, toPayloadMeasurement } from '@/constants/units'
+import MeasurementUnitSelect from '@/components/MeasurementUnitSelect.vue'
 import { INGREDIENT_CATEGORY_VALUES } from '@/constants/categories'
 
 const router = useRouter()
@@ -253,9 +247,13 @@ async function saveRecipe() {
     submitError.value = 'At least one ingredient is required.'
     return
   }
-  const missingUnit = form.ingredients.find(ing => !ing.unit)
-  if (missingUnit) {
-    submitError.value = `Pick a unit for "${missingUnit.displayName}" — the source used one this app cannot store.`
+  // A row with no amount saves as an Unquantified Ingredient, so only an amount without a unit blocks saving.
+  const amountWithoutUnit = form.ingredients.find(ing => hasAmount(ing.amount) && !ing.unit)
+  if (amountWithoutUnit) {
+    const sourceNote = amountWithoutUnit.sourceUnit
+      ? ` The source said "${amountWithoutUnit.sourceUnit}", which this app can't store.`
+      : ''
+    submitError.value = `Pick a unit for "${amountWithoutUnit.displayName}", or clear its amount.${sourceNote}`
     return
   }
 

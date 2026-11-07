@@ -100,14 +100,14 @@ public static class TestDataBuilder
         Guid mealPlanId,
         Guid recipeId,
         DateOnly? scheduledDate = null,
-        string batchSize = BatchSize.Regular,
+        int servings = 4,
         int displayOrder = 1) => new()
     {
         Id            = Guid.NewGuid(),
         MealPlanId    = mealPlanId,
         RecipeId      = recipeId,
         ScheduledDate = scheduledDate,
-        BatchSize     = batchSize,
+        Servings      = servings,
         DisplayOrder  = displayOrder,
     };
 
@@ -116,5 +116,5 @@ public static class TestDataBuilder
     public static AddPlannedMealRequest AddPlannedMealRequest(
         Guid recipeId,
         DateOnly? scheduledDate = null,
-        string? batchSize = null) => new(recipeId, scheduledDate, batchSize);
+        int? servings = null) => new(recipeId, scheduledDate, servings);
 }

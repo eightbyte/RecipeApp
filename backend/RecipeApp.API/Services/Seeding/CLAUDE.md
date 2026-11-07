@@ -82,8 +82,12 @@ instead.**
 - `Recipe.Description` = description + page notes (minus MyPlate's `Learn more about` link list)
   + source credit + attribution. `Recipe` has no notes column.
 - `ConfirmAsync` validates nothing, so the persister checks `RecipeLimits` itself.
-- `DeferredLlmStructuredClient` stops persist from loading the model. `LlamaModelHolder` loads
-  weights in its constructor.
+- Persist needs no model, so it runs with the Model Server off. `--normalise`,
+  `--build-catalogue` and a run with no stage flag check the Model Server first (before `--force`
+  clears anything or Stage 1 starts) and exit 1 when it is not ready.
+- A Model Server that goes away mid-run stops the run with exit 1. A recipe in flight is neither
+  recorded as failed nor counted toward `MaxConsecutiveLlmFailures`, so the next `--normalise`
+  resumes at it. A catalogue batch in flight is not recorded as a failed batch.
 - Photos are copied as `myplate-{slug}{ext}` into `ImageStorage:BasePath`.
 
 ## Catalogue (`ingredient-catalogue.json`)

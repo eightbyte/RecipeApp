@@ -111,10 +111,9 @@
 
 <script setup>
 import { ref, onMounted } from 'vue'
-import { useRouter } from 'vue-router'
+import { onBeforeRouteLeave, useRouter } from 'vue-router'
 import { useMealPlanStore } from '@/stores/mealPlans'
 import { useUiStore } from '@/stores/ui'
-import { DEFAULT_BATCH_SIZE } from '@/constants/batchSizes'
 import PlannedMealCard from '@/components/PlannedMealCard.vue'
 import RecipeBrowser from '@/components/RecipeBrowser.vue'
 import EmptyState from '@/components/EmptyState.vue'
@@ -128,6 +127,11 @@ const browserOpen = ref(false)
 
 onMounted(() => mealPlanStore.fetchActivePlan())
 
+// Opening a recipe from the Add recipe dialog leaves this view; closing first releases the dialog's scroll lock before the recipe scrolls to its top.
+onBeforeRouteLeave(() => {
+  browserOpen.value = false
+})
+
 function startNewPlan() {
   // The builder creates a new active plan, so the backend closes the current one and the shopping list regenerates on next visit.
   router.push({ name: 'meal-plan-create' })
@@ -137,11 +141,7 @@ async function onAddRecipe(recipe) {
   if (!mealPlanStore.activePlan) return
   browserOpen.value = false
   try {
-    await mealPlanStore.addPlannedMeal(mealPlanStore.activePlan.id, {
-      recipeId: recipe.id,
-      scheduledDate: null,
-      batchSize: DEFAULT_BATCH_SIZE,
-    })
+    await mealPlanStore.addPlannedMeal(mealPlanStore.activePlan.id, { recipeId: recipe.id, scheduledDate: null })
     ui.notify({ message: `Added “${recipe.name}” to your plan`, color: 'success' })
   } catch (e) {
     ui.notify({ message: e?.message ?? 'Could not add recipe.', color: 'error' })

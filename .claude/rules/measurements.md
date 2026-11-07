@@ -1,9 +1,10 @@
 ---
 paths:
   - "backend/RecipeApp.API/Enums/MeasurementUnit.cs"
-  - "backend/RecipeApp.API/Enums/BatchSize.cs"
+  - "backend/RecipeApp.API/Enums/SizelessUnit.cs"
   - "backend/RecipeApp.API/Services/MeasurementConverter.cs"
   - "backend/RecipeApp.API/Services/MeasurementOptions.cs"
+  - "backend/RecipeApp.API/Services/MealPlanService.cs"
   - "backend/RecipeApp.API/Services/ShoppingListService.cs"
   - "backend/RecipeApp.API/Services/RecipeScrapeService.cs"
   - "backend/RecipeApp.API/Services/RecipeService.cs"
@@ -18,6 +19,7 @@ paths:
   - "frontend/src/constants/servings.js"
   - "frontend/src/router/recipeRoutes.js"
   - "frontend/src/components/BatchSizeToggle.vue"
+  - "frontend/src/components/ServingsStepper.vue"
   - "frontend/src/views/RecipeDetailView.vue"
   - "frontend/src/views/RecipeFormView.vue"
   - "frontend/src/views/CookingModeView.vue"
@@ -55,6 +57,10 @@ paths:
 - `Unit` is null exactly when `Amount` is. Validators reject a half-set pair.
   `RecipeIngredient.ToStoredMeasurement` enforces the invariant at the entity boundary. Every
   persistence path uses it, because service-level callers bypass the endpoint filter.
+- A scraped Sizeless Unit (`pinch`, `dash`, `handful`, "to taste", …) is stored unquantified,
+  with the stated amount and unit kept as the Source Measurement. With no stated amount the
+  Source Measurement is the word alone, shown as "(to taste)". Those words live **only** in
+  `Enums/SizelessUnit.cs`. Count words (`clove`, `can`, `sprig`) are not in it.
 - **Never store zero.** `0` renders as `0 g Salt` and sums into shopping lists.
 - `ShoppingListService` partitions unquantified rows out of consolidation and never sums them. An
   ingredient the plan only ever names yields one amount-less item.
@@ -71,18 +77,17 @@ paths:
 - When an amount is repaired on import, the source fields record the repaired measurement, not the
   discarded misread.
 
-## Batch Size and consolidation
+## Servings scaling and consolidation
 
-- A Batch Size multiplies the whole recipe, never one serving. The values are `HALF` (×0.5),
-  `REGULAR` (×1.0) and `DOUBLE` (×2.0), shown as ½×, 1× and 2×. They live only in
-  `Enums/BatchSize.cs`, mirrored by `frontend/src/constants/batchSizes.js`, and are applied at
-  display or query time only. **Never modify a stored `Amount`.** `SourceAmount` scales the same
-  way.
-- The recipe view and cooking mode can also scale to a chosen number of servings: the multiplier
-  is chosen servings ÷ the recipe's Servings, which can be fractional. It is display-only, never
-  stored, and short-circuits on a null amount like every other scaling.
-- The recipe view reads its scale from the URL, the same `servings`-then-`batch` query as cooking
-  mode (`router/recipeRoutes.js`), and keeps a chosen number of servings there.
+- Every scaling multiplies the whole recipe by servings wanted ÷ the recipe's Servings, at display
+  or query time only. **Never modify a stored `Amount`.** `SourceAmount` scales the same way.
+- A Planned Meal stores its own Servings, an int within `RecipeLimits.MinServings`/`MaxServings`,
+  and starts at the recipe's Servings. `ShoppingListService` scales by that count ÷ the recipe's
+  current Servings, multiplying before dividing so a whole result stays exact.
+- The recipe view and Cooking Mode read the servings wanted from the URL's `servings` query
+  (`router/recipeRoutes.js`), falling back to the recipe's Servings. That count can be fractional.
+- Batch Size is only the recipe view's ½×/1×/2× shortcut onto Servings
+  (`frontend/src/constants/batchSizes.js`). It is never stored or sent to the API.
 - Shopping-list consolidation groups by dimension via `MeasurementUnit.Table`, so `1 tbsp` +
   `15 ml` makes one row. It resolves mass/volume mixes through density, and it presents a
   single-unit group in that unit (`2 cup + 1 cup = 3 cup`).

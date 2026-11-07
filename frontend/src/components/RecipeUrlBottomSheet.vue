@@ -6,6 +6,16 @@
       </v-card-title>
 
       <v-card-text class="px-6 pb-2">
+        <v-alert
+          v-if="unavailableMessage"
+          type="info"
+          variant="tonal"
+          density="compact"
+          class="mb-4"
+        >
+          {{ unavailableMessage }}
+        </v-alert>
+
         <v-text-field
           v-model="url"
           label="Recipe URL"
@@ -37,7 +47,7 @@
           color="primary"
           variant="flat"
           class="flex-grow-1"
-          :disabled="!url || store.scrapeLoading"
+          :disabled="!url || store.scrapeLoading || !!unavailableMessage"
           :loading="store.scrapeLoading"
           @click="handleImport"
         >
@@ -49,9 +59,14 @@
 </template>
 
 <script setup>
-import { ref, watch } from 'vue'
+import { computed, onBeforeUnmount, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { useRecipeStore } from '@/stores/recipes'
+import {
+  MODEL_SERVER_LOADING,
+  MODEL_SERVER_LOADING_RECHECK_MS,
+  MODEL_SERVER_UNAVAILABLE_MESSAGES,
+} from '@/constants/modelServer'
 
 const model = defineModel({ type: Boolean, default: false })
 
@@ -59,15 +74,48 @@ const router = useRouter()
 const store  = useRecipeStore()
 const url    = ref('')
 
+// Null until the status answers, and when the status request itself fails, so the Scrape can report the real error.
+const modelServerState   = ref(null)
+const unavailableMessage = computed(() => MODEL_SERVER_UNAVAILABLE_MESSAGES[modelServerState.value] ?? null)
+
+let recheckTimer = null
+// Bumped on close and on every new check, so an answer that arrives late cannot overwrite a newer one.
+let statusCheck = 0
+
+async function checkModelServer() {
+  const check = ++statusCheck
+  let state
+  try {
+    ({ state } = await store.fetchModelServerStatus())
+  } catch {
+    state = null
+  }
+  if (check !== statusCheck) return
+
+  modelServerState.value = state
+  if (state === MODEL_SERVER_LOADING) recheckTimer = setTimeout(checkModelServer, MODEL_SERVER_LOADING_RECHECK_MS)
+}
+
+function stopCheckingModelServer() {
+  clearTimeout(recheckTimer)
+  recheckTimer = null
+  statusCheck++
+}
+
 watch(model, (open) => {
+  stopCheckingModelServer()
   if (open) {
     url.value = ''
     store.clearScrapePreview()
+    modelServerState.value = null
+    checkModelServer()
   }
-})
+}, { immediate: true })
+
+onBeforeUnmount(stopCheckingModelServer)
 
 async function handleImport() {
-  if (!url.value || store.scrapeLoading) return
+  if (!url.value || store.scrapeLoading || unavailableMessage.value) return
 
   await store.scrapeRecipe(url.value.trim())
 

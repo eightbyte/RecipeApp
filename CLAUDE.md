@@ -18,9 +18,10 @@ recipes can be imported on top.
 | First-run seeding, `import-recipes`, clean-start paths | `backend/CLAUDE.md` |
 | Recipe-pack file format and import rules | `docs/recipe-packs.md` |
 | MyPlate seed-import pipeline and licensing (personal use) | `backend/RecipeApp.API/Services/Seeding/CLAUDE.md` |
-| Local LLM layer | `backend/RecipeApp.API/Services/Llm/CLAUDE.md` |
+| LLM layer: the Model Server client, status, sampling | `backend/RecipeApp.API/Services/Llm/CLAUDE.md` |
+| Starting, stopping or upgrading the Model Server | `tools/llm-server/README.md` |
 | Self-hosted deployment, CI, updater, rollback | `docs/deployment.md` |
-| Units, amounts, density, Batch Size scaling | `.claude/rules/measurements.md` |
+| Units, amounts, density, Servings scaling | `.claude/rules/measurements.md` |
 | Ingredient categories / aisle order | `.claude/rules/ingredient-categories.md` |
 | Architecture decisions | `docs/adr/` |
 | Past per-phase implementation notes | `docs/history/phase-notes.md` (archive; read only when history matters) |
@@ -34,6 +35,7 @@ backend/RecipeApp.API/     .NET 10 Minimal API (Endpoints, Services, Models, DTO
 backend/RecipeApp.Tests/   xunit.v3 + Testcontainers
 frontend/                  Vue 3 SPA (Vite, Pinia, Vuetify)
 docs/                      Deployment, recipe packs, ADRs, history
+tools/llm-server/          Model Server (llama-server) start/stop scripts and their Pester tests
 tools/seed-curator/        Throwaway Node tool used once to curate the MyPlate harvest
 deploy/                    Self-hosted PC updater (update.ps1) and its Task Scheduler installer
 .github/workflows/         deploy.yml: on push to master, test, then push images to GHCR
@@ -46,7 +48,7 @@ global.json                .NET SDK pin, and opts `dotnet test` into Microsoft.T
 
 Vue 3 (`<script setup>`) + Vite · Pinia · Vue Router 4 · Vuetify 3 · Axios
 — .NET 10 Minimal API · EF Core 10 + Npgsql · FluentValidation 12 · PostgreSQL 16 ·
-LLamaSharp 0.27.0 (CUDA12, local GGUF model).
+llama.cpp `llama-server` b12110 as the Model Server (CUDA 12, local GGUF model, called over HTTP).
 
 ## Running locally
 
@@ -54,6 +56,7 @@ LLamaSharp 0.27.0 (CUDA12, local GGUF model).
 docker compose up -d postgres
 cd backend/RecipeApp.API && dotnet run   # http://localhost:5197 (5000 under docker compose); migrates + seeds a fresh DB on start
 cd frontend && npm run dev               # http://localhost:3000
+powershell -File tools\llm-server\start.ps1   # Model Server on :9931, only for Scraping and seed-recipes' model stages
 ```
 
 API docs `/scalar/v1`, health `/health`, readiness `/health/ready`.
@@ -71,6 +74,7 @@ limits.
 cd backend && dotnet test RecipeApp.Tests/RecipeApp.Tests.csproj   # needs Docker running
 cd frontend && npm test && npm run lint
 powershell -NoProfile -Command "Invoke-Pester deploy\tests"        # updater decisions; Pester 3.4 syntax
+powershell -NoProfile -Command "Invoke-Pester tools\llm-server\tests"   # Model Server script decisions
 ```
 
 CI (`.github/workflows/deploy.yml`) reads the SDK version from `global.json` and the Node version

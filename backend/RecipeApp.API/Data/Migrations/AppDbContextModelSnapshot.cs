@@ -112,12 +112,6 @@ namespace RecipeApp.API.Data.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uuid");
 
-                    b.Property<string>("BatchSize")
-                        .IsRequired()
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("text")
-                        .HasDefaultValue("REGULAR");
-
                     b.Property<int>("DisplayOrder")
                         .HasColumnType("integer");
 
@@ -129,6 +123,9 @@ namespace RecipeApp.API.Data.Migrations
 
                     b.Property<DateOnly?>("ScheduledDate")
                         .HasColumnType("date");
+
+                    b.Property<int>("Servings")
+                        .HasColumnType("integer");
 
                     b.HasKey("Id");
 
@@ -369,10 +366,6 @@ namespace RecipeApp.API.Data.Migrations
                         .HasPrecision(10, 3)
                         .HasColumnType("numeric(10,3)");
 
-                    b.Property<string>("BatchSize")
-                        .IsRequired()
-                        .HasColumnType("text");
-
                     b.Property<int>("DisplayOrder")
                         .HasColumnType("integer");
 
@@ -385,6 +378,9 @@ namespace RecipeApp.API.Data.Migrations
 
                     b.Property<DateOnly?>("ScheduledDate")
                         .HasColumnType("date");
+
+                    b.Property<int?>("Servings")
+                        .HasColumnType("integer");
 
                     b.Property<decimal?>("ShareAmount")
                         .HasPrecision(10, 3)

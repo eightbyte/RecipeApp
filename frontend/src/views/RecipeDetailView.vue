@@ -80,7 +80,7 @@
         size="large"
         prepend-icon="mdi-chef-hat"
         class="mb-6"
-        :to="cookingRouteAtServings(recipe.id, servings)"
+        :to="cookingRoute(recipe.id, servings)"
       >
         Start cooking
       </v-btn>
@@ -88,30 +88,7 @@
       <!-- ── Servings selector ─────────────────────────────────────────── -->
       <v-card class="mb-12 pa-3" variant="outlined">
         <div class="d-flex align-center flex-wrap ga-4">
-          <div class="d-flex align-center ga-2">
-            <span class="text-body-2 font-weight-medium">Servings</span>
-            <v-btn
-              icon="mdi-minus"
-              size="small"
-              variant="tonal"
-              aria-label="Fewer servings"
-              :disabled="servings <= MIN_SERVINGS"
-              @click="stepServingsDown"
-            />
-            <span
-              class="servings-stepper-value text-body-1 font-weight-medium text-center"
-              style="min-width: 3ch"
-              aria-live="polite"
-            >{{ formatMeasurement(servings) }}</span>
-            <v-btn
-              icon="mdi-plus"
-              size="small"
-              variant="tonal"
-              aria-label="More servings"
-              :disabled="servings >= MAX_SERVINGS"
-              @click="stepServingsUp"
-            />
-          </div>
+          <ServingsStepper :model-value="servings" @update:model-value="chooseServings" />
           <BatchSizeToggle
             v-model="matchingBatchSize"
             :mandatory="false"
@@ -218,12 +195,13 @@ import { useRoute, useRouter } from 'vue-router'
 import { useRecipeStore } from '@/stores/recipes'
 import { formatMeasurement, formatSourceMeasurement } from '@/constants/units'
 import { BATCH_SIZES, batchSizeMultiplier } from '@/constants/batchSizes'
-import { MIN_SERVINGS, MAX_SERVINGS, formatServings } from '@/constants/servings'
-import { cookingRouteAtServings, recipeRouteAtServings, servingsFromQuery } from '@/router/recipeRoutes'
+import { formatServings } from '@/constants/servings'
+import { cookingRoute, recipeRoute, servingsFromQuery } from '@/router/recipeRoutes'
 import { useUiStore } from '@/stores/ui'
 import BatchSizeToggle from '@/components/BatchSizeToggle.vue'
 import EmptyState from '@/components/EmptyState.vue'
 import ErrorState from '@/components/ErrorState.vue'
+import ServingsStepper from '@/components/ServingsStepper.vue'
 
 const props = defineProps({ id: { type: String, required: true } })
 const route  = useRoute()
@@ -236,31 +214,23 @@ const markingCooked           = ref(false)
 
 const recipe = computed(() => store.currentRecipe)
 
-// Carried in the query so a Planned Meal opens at its Batch Size and a reload or a return from cooking keeps the chosen servings.
+// Carried in the query so a Planned Meal opens at its Servings and a reload or a return from cooking keeps the chosen servings.
 const servings = computed(() => servingsFromQuery(route.query, recipe.value.servings))
 
 function chooseServings(chosen) {
-  router.replace(recipeRouteAtServings(recipe.value.id, chosen))
+  router.replace(recipeRoute(recipe.value.id, chosen))
 }
 
-const batchMultiplier = computed(() => servings.value / recipe.value.servings)
+const servingsMultiplier = computed(() => servings.value / recipe.value.servings)
 
 /** The Batch Size shortcut whose multiplier the chosen servings match exactly, or null when none does. */
 const matchingBatchSize = computed({
-  get: () => BATCH_SIZES.find(batchSize => batchSize.multiplier === batchMultiplier.value)?.value ?? null,
+  get: () => BATCH_SIZES.find(batchSize => batchSize.multiplier === servingsMultiplier.value)?.value ?? null,
   set: batchSize => {
     // Tapping the highlighted shortcut again clears the toggle, which leaves the chosen servings as they are.
     if (batchSize) chooseServings(recipe.value.servings * batchSizeMultiplier(batchSize))
   },
 })
-
-function stepServingsDown() {
-  chooseServings(Math.ceil(servings.value) - 1)
-}
-
-function stepServingsUp() {
-  chooseServings(Math.floor(servings.value) + 1)
-}
 
 function reload() {
   store.fetchRecipe(props.id ?? route.params.id)
@@ -271,13 +241,13 @@ onMounted(reload)
 /** Scaling short-circuits on a null amount, because `null * 2` is `0` in JavaScript, and half of nothing is still nothing. */
 function formatAmount(baseAmount, unit) {
   if (baseAmount == null) return null
-  return formatMeasurement(baseAmount * batchMultiplier.value, unit)
+  return formatMeasurement(baseAmount * servingsMultiplier.value, unit)
 }
 
 /** The measurement as the source recipe stated it, shown alongside the canonical amount, or null when the row was hand-entered or nothing was converted. */
 function formatSource(ing) {
   return formatSourceMeasurement(
-    ing.sourceAmount, ing.sourceUnit, ing.unit, batchMultiplier.value)
+    ing.sourceAmount, ing.sourceUnit, ing.unit, servingsMultiplier.value)
 }
 
 function stepIngredients(step) {

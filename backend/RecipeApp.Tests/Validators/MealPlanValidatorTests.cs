@@ -51,56 +51,53 @@ public class MealPlanValidatorTests
         result.ShouldHaveValidationErrorFor(x => x.RecipeId);
     }
 
-    [Fact]
-    public void AddPlannedMeal_InvalidBatchSize_Fails()
+    [Theory]
+    [InlineData(0)]
+    [InlineData(101)]
+    public void AddPlannedMeal_ServingsOutOfRange_Fails(int servings)
     {
         var validator = new AddPlannedMealRequestValidator();
-        var result = validator.TestValidate(new AddPlannedMealRequest(Guid.NewGuid(), null, "INVALID"));
-        result.ShouldHaveValidationErrorFor(x => x.BatchSize);
+        var result = validator.TestValidate(new AddPlannedMealRequest(Guid.NewGuid(), null, servings));
+        result.ShouldHaveValidationErrorFor(x => x.Servings);
     }
 
     [Fact]
-    public void AddPlannedMeal_NullBatchSize_Passes()
+    public void AddPlannedMeal_NullServings_Passes()
     {
         var validator = new AddPlannedMealRequestValidator();
         var result = validator.TestValidate(new AddPlannedMealRequest(Guid.NewGuid(), null, null));
         result.ShouldNotHaveAnyValidationErrors();
     }
 
-    [Fact]
-    public void AddPlannedMeal_ValidBatchSizes_Pass()
+    [Theory]
+    [InlineData(1)]
+    [InlineData(100)]
+    public void AddPlannedMeal_ServingsInRange_Passes(int servings)
     {
         var validator = new AddPlannedMealRequestValidator();
-        foreach (var batchSize in API.Enums.BatchSize.All)
-        {
-            var result = validator.TestValidate(new AddPlannedMealRequest(Guid.NewGuid(), null, batchSize));
-            result.ShouldNotHaveAnyValidationErrors();
-        }
+        var result = validator.TestValidate(new AddPlannedMealRequest(Guid.NewGuid(), null, servings));
+        result.ShouldNotHaveAnyValidationErrors();
     }
 
     // ── UpdatePlannedMealRequestValidator ──────────────────────────────────
 
-    [Fact]
-    public void UpdatePlannedMeal_EmptyBatchSize_Fails()
+    [Theory]
+    [InlineData(0)]
+    [InlineData(101)]
+    public void UpdatePlannedMeal_ServingsOutOfRange_Fails(int servings)
     {
         var validator = new UpdatePlannedMealRequestValidator();
-        var result = validator.TestValidate(new UpdatePlannedMealRequest(null, ""));
-        result.ShouldHaveValidationErrorFor(x => x.BatchSize);
+        var result = validator.TestValidate(new UpdatePlannedMealRequest(null, servings));
+        result.ShouldHaveValidationErrorFor(x => x.Servings);
     }
 
-    [Fact]
-    public void UpdatePlannedMeal_InvalidBatchSize_Fails()
+    [Theory]
+    [InlineData(1)]
+    [InlineData(100)]
+    public void UpdatePlannedMeal_ValidRequest_Passes(int servings)
     {
         var validator = new UpdatePlannedMealRequestValidator();
-        var result = validator.TestValidate(new UpdatePlannedMealRequest(null, "HUGE"));
-        result.ShouldHaveValidationErrorFor(x => x.BatchSize);
-    }
-
-    [Fact]
-    public void UpdatePlannedMeal_ValidRequest_Passes()
-    {
-        var validator = new UpdatePlannedMealRequestValidator();
-        var result = validator.TestValidate(new UpdatePlannedMealRequest(new DateOnly(2026, 6, 5), "REGULAR"));
+        var result = validator.TestValidate(new UpdatePlannedMealRequest(new DateOnly(2026, 6, 5), servings));
         result.ShouldNotHaveAnyValidationErrors();
     }
 }

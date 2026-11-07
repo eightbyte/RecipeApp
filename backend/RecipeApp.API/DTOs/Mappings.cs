@@ -1,14 +1,20 @@
 using RecipeApp.API.DTOs.Ingredients;
 using RecipeApp.API.DTOs.MealPlans;
+using RecipeApp.API.DTOs.ModelServer;
 using RecipeApp.API.DTOs.Recipes;
 using RecipeApp.API.DTOs.ShoppingLists;
 using RecipeApp.API.Models;
+using RecipeApp.API.Services.Llm;
 
 namespace RecipeApp.API.DTOs;
 
 /// <summary>Static mapping helpers: pure functions from entity to DTO, with no reflection.</summary>
 public static class Mappings
 {
+    // ── Model Server ──────────────────────────────────────────────────────────
+
+    public static ModelServerStatusResponse ToResponse(this ModelServerStatus s) => new(s.State, s.Model);
+
     // ── Ingredient ────────────────────────────────────────────────────────────
 
     public static IngredientResponse ToResponse(this Ingredient i) => new(
@@ -111,7 +117,7 @@ public static class Mappings
         plannedMeal.Recipe.ImageUrl,
         plannedMeal.Recipe.LastCookedAt,
         plannedMeal.ScheduledDate,
-        plannedMeal.BatchSize,
+        plannedMeal.Servings,
         plannedMeal.DisplayOrder
     );
 
@@ -137,7 +143,7 @@ public static class Mappings
     public static ShoppingListItemSourceResponse ToResponse(this ShoppingListItemSource s) => new(
         s.RecipeId,
         s.RecipeName,
-        s.BatchSize,
+        s.Servings,
         s.ScheduledDate,
         s.Amount,
         s.Unit,

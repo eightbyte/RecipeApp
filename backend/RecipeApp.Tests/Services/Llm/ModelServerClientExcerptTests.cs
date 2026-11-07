@@ -4,8 +4,8 @@ using RecipeApp.API.Services.Llm;
 
 namespace RecipeApp.Tests.Services.Llm;
 
-/// <summary>The parts of the local client that can be exercised without weights, which exist because an unparseable decode once discarded the context that mattered.</summary>
-public class LLamaSharpStructuredClientTests
+/// <summary>The excerpt of an unparseable answer, which exists because an unparseable decode once discarded the context that mattered.</summary>
+public class ModelServerClientExcerptTests
 {
     /// <summary>Provokes a real parser failure, so the offsets under test are the parser's own.</summary>
     private static JsonException FailureFor(string json)
@@ -19,7 +19,7 @@ public class LLamaSharpStructuredClientTests
     {
         const string json = """{"amount":1x,"unit":"cup"}""";
 
-        var excerpt = LLamaSharpStructuredClient.Excerpt(json, FailureFor(json));
+        var excerpt = ModelServerClient.Excerpt(json, FailureFor(json));
 
         excerpt.Should().Contain("1x", "the excerpt exists to name the text that broke the parse");
     }
@@ -31,7 +31,7 @@ public class LLamaSharpStructuredClientTests
         var padding = new string('a', 4000);
         var json    = $$"""{"note":"{{padding}}","amount":1x}""";
 
-        var excerpt = LLamaSharpStructuredClient.Excerpt(json, FailureFor(json));
+        var excerpt = ModelServerClient.Excerpt(json, FailureFor(json));
 
         excerpt.Length.Should().BeLessThan(json.Length / 4);
         excerpt.Should().Contain("1x");
@@ -43,7 +43,7 @@ public class LLamaSharpStructuredClientTests
     {
         var json = $$"""{"name":"{{new string('é', 40)}}","amount":1x}""";
 
-        var act = () => LLamaSharpStructuredClient.Excerpt(json, FailureFor(json));
+        var act = () => ModelServerClient.Excerpt(json, FailureFor(json));
 
         act.Should().NotThrow();
     }
@@ -51,7 +51,7 @@ public class LLamaSharpStructuredClientTests
     [Fact]
     public void Excerpt_SaysSoWhenTheModelReturnedNothingAtAll()
     {
-        LLamaSharpStructuredClient.Excerpt(string.Empty, FailureFor("")).Should()
+        ModelServerClient.Excerpt(string.Empty, FailureFor("")).Should()
             .Be("(empty answer)");
     }
 }

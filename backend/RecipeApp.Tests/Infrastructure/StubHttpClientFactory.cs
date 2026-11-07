@@ -6,9 +6,13 @@ namespace RecipeApp.Tests.Infrastructure;
 /// <summary>An <see cref="IHttpClientFactory"/> whose responses are decided per request and recorded, so tests can script per-URL bodies and assert on call counts.</summary>
 public class StubHttpClientFactory : IHttpClientFactory
 {
-    private readonly Func<HttpRequestMessage, HttpResponseMessage> _respond;
+    private readonly Func<HttpRequestMessage, CancellationToken, Task<HttpResponseMessage>> _respond;
 
     public StubHttpClientFactory(Func<HttpRequestMessage, HttpResponseMessage> respond) =>
+        _respond = (request, _) => Task.FromResult(respond(request));
+
+    /// <summary>Answers asynchronously, so a test can hold a request open until the caller gives up on it.</summary>
+    public StubHttpClientFactory(Func<HttpRequestMessage, CancellationToken, Task<HttpResponseMessage>> respond) =>
         _respond = respond;
 
     /// <summary>Absolute URLs requested, in order.</summary>
@@ -34,16 +38,16 @@ public class StubHttpClientFactory : IHttpClientFactory
 
     public HttpClient CreateClient(string name) => new(new StubHandler(this));
 
-    private HttpResponseMessage Handle(HttpRequestMessage request)
+    private Task<HttpResponseMessage> Handle(HttpRequestMessage request, CancellationToken ct)
     {
         RequestedUrls.Add(request.RequestUri!.ToString());
-        return _respond(request);
+        return _respond(request, ct);
     }
 
     private class StubHandler(StubHttpClientFactory owner) : HttpMessageHandler
     {
         protected override Task<HttpResponseMessage> SendAsync(
             HttpRequestMessage request, CancellationToken ct)
-            => Task.FromResult(owner.Handle(request));
+            => owner.Handle(request, ct);
     }
 }

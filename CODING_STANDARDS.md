@@ -31,7 +31,7 @@ the file and folder it lands in. Where a neighbour breaks a rule in this file, t
 ## Values with one home
 
 - Settings that differ by environment live in `appsettings*.json` (backend) or `.env*` (frontend).
-- Lists of options (units, categories, Batch Sizes, recipe sorts) come from the backend `Enums/`
+- Lists of options (units, categories, recipe sorts) come from the backend `Enums/`
   and their mirrors in `frontend/src/constants/`.
 - Recipe length and range limits come from `Validators/RecipeLimits.cs`.
 

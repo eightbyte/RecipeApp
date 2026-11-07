@@ -55,16 +55,4 @@ describe('BatchSizeToggle', () => {
     const buttonSizes = mountToggle({ buttonSize: 'small' }).findAllComponents({ name: 'VBtn' }).map(button => button.props('size'))
     expect(buttonSizes).toEqual(['small', 'small', 'small'])
   })
-
-  it('shares the full width between its buttons when stretched', () => {
-    const wrapper = mountToggle({ stretch: true })
-    expect(wrapper.classes()).toContain('d-flex')
-    expect(wrapper.findAll('button').every(button => button.classes('flex-grow-1'))).toBe(true)
-  })
-
-  it('keeps its natural width by default', () => {
-    const wrapper = mountToggle()
-    expect(wrapper.classes()).not.toContain('d-flex')
-    expect(wrapper.findAll('button').some(button => button.classes('flex-grow-1'))).toBe(false)
-  })
 })

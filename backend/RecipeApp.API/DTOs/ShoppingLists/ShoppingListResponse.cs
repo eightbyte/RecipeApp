@@ -26,7 +26,7 @@ public record ShoppingListItemResponse(
 public record ShoppingListItemSourceResponse(
     Guid? RecipeId,
     string RecipeName,
-    string BatchSize,
+    int? Servings,
     DateOnly? ScheduledDate,
     decimal? Amount,
     string? Unit,

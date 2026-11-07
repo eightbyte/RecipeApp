@@ -56,7 +56,7 @@
 
           <div class="flex-grow-1 ml-1">
             <div class="text-body-2 font-weight-medium">{{ meal.recipeName }}</div>
-            <BatchSizeChip :batch-size="meal.batchSize" size="x-small" class="mt-1" />
+            <ServingsChip :servings="meal.servings" size="x-small" class="mt-1" />
           </div>
         </div>
       </v-card>
@@ -82,9 +82,9 @@
 import { onMounted } from 'vue'
 import { useMealPlanStore } from '@/stores/mealPlans'
 import { formatDateOnly } from '@/utils/dateOnly'
-import BatchSizeChip from '@/components/BatchSizeChip.vue'
 import EmptyState from '@/components/EmptyState.vue'
 import ErrorState from '@/components/ErrorState.vue'
+import ServingsChip from '@/components/ServingsChip.vue'
 
 const props = defineProps({ id: { type: String, required: true } })
 

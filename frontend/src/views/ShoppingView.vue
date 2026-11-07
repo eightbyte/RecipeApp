@@ -147,14 +147,14 @@
                         v-for="(source, sourceIdx) in item.sources"
                         :key="sourceIdx"
                         class="item-source"
-                        :to="source.recipeId ? recipeRoute(source.recipeId, source.batchSize) : undefined"
+                        :to="source.recipeId ? recipeRoute(source.recipeId, source.servings) : undefined"
                       >
                         <v-list-item-title class="text-body-2">{{ formatSourceLine(source) }}</v-list-item-title>
                         <v-list-item-subtitle v-if="source.scheduledDate">
                           {{ formatDateOnly(source.scheduledDate, SOURCE_DATE_FORMAT) }}
                         </v-list-item-subtitle>
-                        <template #append>
-                          <BatchSizeChip :batch-size="source.batchSize" size="x-small" />
+                        <template v-if="source.servings" #append>
+                          <ServingsChip :servings="source.servings" size="x-small" />
                         </template>
                       </v-list-item>
                     </v-list>
@@ -221,10 +221,10 @@ import { useHold } from '@/composables/useHold'
 import { useDelayedHide } from '@/composables/useDelayedHide'
 import { recipeRoute } from '@/router/recipeRoutes'
 import { formatDateOnly } from '@/utils/dateOnly'
-import BatchSizeChip from '@/components/BatchSizeChip.vue'
 import CustomItemSheet from '@/components/CustomItemSheet.vue'
 import EmptyState from '@/components/EmptyState.vue'
 import ErrorState from '@/components/ErrorState.vue'
+import ServingsChip from '@/components/ServingsChip.vue'
 
 const store       = useShoppingListStore()
 const ui          = useUiStore()

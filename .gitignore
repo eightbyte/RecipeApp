@@ -39,6 +39,13 @@ deploy/backups/
 deploy/logs/
 
 # ========================
+# Model Server (tools/llm-server)
+# ========================
+# The downloaded llama.cpp release, PID file and log, and the local settings with the API key.
+tools/llm-server/runtime/
+tools/llm-server/settings.psd1
+
+# ========================
 # OS / IDE
 # ========================
 .DS_Store

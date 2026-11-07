@@ -32,20 +32,24 @@ never scaled or summed.
 _Avoid_: Original amount, raw amount
 
 **Unquantified Ingredient**:
-A Recipe Ingredient whose source states no amount, such as "salt" or "cooking spray". The absence
-is deliberate data, not an unknown amount.
+A Recipe Ingredient whose source states no amount, or only one with no real size such as "a pinch"
+or "a dash". The absence is deliberate data, not an unknown amount.
 _Avoid_: To taste, missing amount, zero amount
 
+**Sizeless Unit**:
+A unit that names no real size, such as "pinch", "dash" or "to taste". A Recipe Ingredient measured
+in one is an Unquantified Ingredient, and its Source Measurement keeps the wording. Count words such
+as "clove" are not Sizeless Units: they have a size, just not one the app can store.
+
 **Servings**:
-The number of people a recipe's stated amounts feed.
+The number of people a recipe's stated amounts feed, or that a Planned Meal is made for. A recipe
+is scaled by the servings wanted ÷ its own Servings.
 _Avoid_: Yield, portions
 
 **Batch Size**:
-How many times the whole recipe is made: a multiple of the recipe, never of one serving. A
-Planned Meal's Batch Size is Half, Regular or Double. The recipe view and cooking mode can show any
-Batch Size, chosen through Servings. Asking for a number of servings is a way of choosing a Batch
-Size, not a separate setting.
-_Avoid_: Portion, portion size, custom servings
+The recipe view's ½×, 1× and 2× shortcut onto Servings: a multiple of the whole recipe, never of
+one serving. It is never stored.
+_Avoid_: Portion, portion size
 
 **Cooked**:
 A recipe that has been marked as made. Cooking is recorded against the recipe, not against a
@@ -62,9 +66,10 @@ A named set of Planned Meals that a shopping list is built from.
 _Avoid_: Menu, schedule
 
 **Planned Meal**:
-One occurrence of a recipe in a Meal Plan, with its own Batch Size and an optional date. The same
+One occurrence of a recipe in a Meal Plan, with its own Servings and an optional date. It starts
+at the recipe's Servings and keeps its own count when the recipe's Servings is edited. The same
 recipe can appear as several Planned Meals. Opening a Planned Meal's recipe from anywhere shows it
-at that Planned Meal's Batch Size.
+at that Planned Meal's Servings.
 _Avoid_: Meal plan recipe, plan entry
 
 **Unscheduled**:
@@ -125,6 +130,12 @@ _Avoid_: Parse, extract, import (for a single page)
 **Import**:
 Loading a Recipe Pack whose recipes are already structured, with no review step.
 _Avoid_: Scrape (for a pack), seed (as a user action)
+
+**Model Server**:
+The separate process that hosts the language model used by Scraping and by the MyPlate seed
+pipeline. It runs only while someone has started it. The app works without it, except for those
+two.
+_Avoid_: LLM service, companion app, Ollama, recipe reader
 
 ### Seeding and distribution
 

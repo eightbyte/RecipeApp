@@ -131,14 +131,7 @@
                 hide-details
                 style="max-width: 100px"
               />
-              <v-select
-                v-model="ing.unit"
-                :items="units"
-                label="Unit"
-                density="compact"
-                hide-details
-                style="max-width: 100px"
-              />
+              <MeasurementUnitSelect v-model="ing.unit" :amount="ing.amount" />
               <v-text-field
                 v-model="ing.notes"
                 label="Notes"
@@ -314,6 +307,7 @@ import { useRoute, useRouter } from 'vue-router'
 import { useRecipeStore }     from '@/stores/recipes'
 import { useIngredientStore } from '@/stores/ingredients'
 import { MEASUREMENT_UNITS, DEFAULT_UNIT, toPayloadMeasurement } from '@/constants/units'
+import MeasurementUnitSelect from '@/components/MeasurementUnitSelect.vue'
 
 const props = defineProps({ id: { type: String, default: null } })
 const route  = useRoute()

@@ -11,7 +11,7 @@
       :key="suggestion.recipeId"
       class="mb-2"
       :ripple="true"
-      @click="handleAdd(suggestion)"
+      @click="openRecipe(suggestion)"
     >
       <div class="d-flex align-center pa-3 ga-4">
         <v-avatar size="48" rounded="lg" color="grey-lighten-3">
@@ -46,6 +46,7 @@
 
 <script setup>
 import { ref } from 'vue'
+import { useRouter } from 'vue-router'
 import RecentlyCookedDialog from '@/components/RecentlyCookedDialog.vue'
 
 defineProps({
@@ -54,7 +55,9 @@ defineProps({
 
 const emit = defineEmits(['add'])
 
-const dialogOpen       = ref(false)
+const router = useRouter()
+
+const dialogOpen      = ref(false)
 const pendingSuggestion = ref(null)
 
 function isRecentlyCooked(suggestion) {
@@ -66,6 +69,10 @@ function isRecentlyCooked(suggestion) {
 function ingredientLabel(suggestion) {
   if (!suggestion.overlappingIngredients?.length) return 'Uses ingredients already in your plan'
   return `Uses your leftover ${suggestion.overlappingIngredients.join(' & ')}`
+}
+
+function openRecipe(suggestion) {
+  router.push({ name: 'recipe-detail', params: { id: suggestion.recipeId } })
 }
 
 function handleAdd(suggestion) {

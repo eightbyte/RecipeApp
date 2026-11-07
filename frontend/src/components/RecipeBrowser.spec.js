@@ -9,10 +9,17 @@ import { InfiniteScrollStub } from '@/test/infiniteScrollStub'
 import { SEARCH_DEBOUNCE_MS } from '@/composables/useRecipePages'
 import { RECIPE_LIST_SORT_STORAGE_KEY } from '@/constants/recipeSorts'
 
+const pushMock = vi.fn()
+
 vi.mock('@/services/api', () => ({
   default: { get: vi.fn(), post: vi.fn() },
   assetUrl: vi.fn((p) => p ?? ''),
 }))
+
+vi.mock('vue-router', async (importActual) => {
+  const actual = await importActual()
+  return { ...actual, useRouter: () => ({ push: pushMock }) }
+})
 
 import api from '@/services/api'
 
@@ -133,12 +140,38 @@ describe('RecipeBrowser', () => {
     }
   })
 
-  it('emits add for a recipe not recently cooked', async () => {
-    api.get.mockResolvedValue(pageResponse([makeRecipe({ id: 'r1', name: 'Soup', lastCookedAt: null })]))
-    const wrapper = await mountBrowser()
+  describe('a recipe row', () => {
+    const addButton = (wrapper) => wrapper.find('.v-list-item .v-btn')
+    const recentlyCookedDialog = (wrapper) => wrapper.findComponent({ name: 'RecentlyCookedDialog' })
 
-    await wrapper.find('.v-list-item').trigger('click')
+    it('"+" adds a recipe not Recently Cooked without opening it', async () => {
+      api.get.mockResolvedValue(pageResponse([makeRecipe({ id: 'r1', lastCookedAt: null })]))
+      const wrapper = await mountBrowser()
 
-    expect(wrapper.emitted('add')).toBeTruthy()
+      await addButton(wrapper).trigger('click')
+
+      expect(wrapper.emitted('add')).toEqual([[expect.objectContaining({ id: 'r1' })]])
+      expect(pushMock).not.toHaveBeenCalled()
+    })
+
+    it('"+" asks before adding a Recently Cooked recipe', async () => {
+      api.get.mockResolvedValue(pageResponse([makeRecipe({ id: 'r1', lastCookedAt: new Date().toISOString() })]))
+      const wrapper = await mountBrowser()
+
+      await addButton(wrapper).trigger('click')
+
+      expect(wrapper.emitted('add')).toBeUndefined()
+      expect(recentlyCookedDialog(wrapper).props('modelValue')).toBe(true)
+    })
+
+    it('opens the recipe when tapped anywhere but "+"', async () => {
+      api.get.mockResolvedValue(pageResponse([makeRecipe({ id: 'r1', name: 'Soup' })]))
+      const wrapper = await mountBrowser()
+
+      await wrapper.find('.v-list-item-title').trigger('click')
+
+      expect(pushMock).toHaveBeenCalledWith({ name: 'recipe-detail', params: { id: 'r1' } })
+      expect(wrapper.emitted('add')).toBeUndefined()
+    })
   })
 })

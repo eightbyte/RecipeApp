@@ -48,7 +48,7 @@
           :key="recipe.id"
           :ripple="true"
           class="rounded mb-1"
-          @click="handleRecipeClick(recipe)"
+          @click="openRecipe(recipe)"
         >
           <template #prepend>
             <v-avatar size="48" rounded="lg" color="grey-lighten-3" class="mr-3">
@@ -68,7 +68,7 @@
           </v-list-item-subtitle>
 
           <template #append>
-            <v-btn icon="mdi-plus" variant="tonal" size="small" color="primary" @click.stop="handleRecipeClick(recipe)" />
+            <v-btn icon="mdi-plus" variant="tonal" size="small" color="primary" @click.stop="handleAdd(recipe)" />
           </template>
         </v-list-item>
       </v-list>
@@ -86,6 +86,7 @@
 
 <script setup>
 import { ref, onMounted } from 'vue'
+import { useRouter } from 'vue-router'
 import { useRecipeStore } from '@/stores/recipes'
 import { useRecipePages } from '@/composables/useRecipePages'
 import RecentlyCookedDialog from '@/components/RecentlyCookedDialog.vue'
@@ -93,6 +94,7 @@ import RecipeInfiniteScroll from '@/components/RecipeInfiniteScroll.vue'
 
 const emit = defineEmits(['add'])
 
+const router       = useRouter()
 const recipesStore = useRecipeStore()
 
 const searchQuery           = ref('')
@@ -111,7 +113,11 @@ const {
 
 onMounted(() => reload())
 
-function handleRecipeClick(recipe) {
+function openRecipe(recipe) {
+  router.push({ name: 'recipe-detail', params: { id: recipe.id } })
+}
+
+function handleAdd(recipe) {
   if (recipesStore.isRecentlyCooked(recipe)) {
     pendingRecipe.value = recipe
     recentlyCoookedDialogOpen.value = true

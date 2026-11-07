@@ -165,6 +165,30 @@ describe('RecipeFormView — edit mode', () => {
     expect(payload.ingredients[0].unit).toBeNull()
   })
 
+  it('shows the Unit field blank and disabled while the amount is empty, and restores it after', async () => {
+    const detail = makeRecipeDetail({ id: 'r1' })
+    detail.ingredients[0].amount = 100
+    detail.ingredients[0].unit   = 'g'
+
+    const wrapper = mountForm({ id: 'r1' })
+    useIngredientStore().ingredients = [makeIngredient()]
+    wrapper.vm.populateForm(detail)
+    await wrapper.vm.$nextTick()
+
+    const unitSelect = () => wrapper.findAllComponents({ name: 'VSelect' })
+      .filter(s => s.props('label') === 'Unit')[0]
+
+    wrapper.vm.form.ingredients[0].amount = ''
+    await wrapper.vm.$nextTick()
+    expect(unitSelect().props('modelValue')).toBeNull()
+    expect(unitSelect().props('disabled')).toBe(true)
+
+    wrapper.vm.form.ingredients[0].amount = 50
+    await wrapper.vm.$nextTick()
+    expect(unitSelect().props('modelValue')).toBe('g')
+    expect(unitSelect().props('disabled')).toBe(false)
+  })
+
   it('round-trips a null amount loaded from the API back as null', async () => {
     const detail = makeRecipeDetail({ id: 'r1' })
     detail.ingredients[0].amount = null

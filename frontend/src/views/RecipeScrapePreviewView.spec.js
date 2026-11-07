@@ -74,6 +74,9 @@ async function mountView(preview = makePreview()) {
   return { wrapper, store }
 }
 
+const saveButton = wrapper =>
+  wrapper.findAllComponents({ name: 'VBtn' }).find(b => b.text().includes('Save Recipe'))
+
 describe('RecipeScrapePreviewView', () => {
   it('renders the recipe name pre-filled', async () => {
     const { wrapper } = await mountView()
@@ -129,6 +132,74 @@ describe('RecipeScrapePreviewView', () => {
 
     expect(confirmSpy).not.toHaveBeenCalled()
     expect(wrapper.text()).toContain('Pick a unit for "Chicken Breast"')
+  })
+
+  it('names the unstorable source unit and offers clearing the amount', async () => {
+    const preview = makePreview()
+    preview.ingredients[0].amount     = 3
+    preview.ingredients[0].unit       = 'cloves'
+    preview.ingredients[0].sourceUnit = 'cloves'
+    const { wrapper } = await mountView(preview)
+
+    await saveButton(wrapper).trigger('click')
+    await flushPromises()
+
+    expect(wrapper.text()).toContain(
+      'Pick a unit for "Chicken Breast", or clear its amount. The source said "cloves", which this app can\'t store.')
+  })
+
+  it('leaves out the source sentence when the source stated no unit', async () => {
+    const preview = makePreview()
+    preview.ingredients[0].unit = null
+    const { wrapper } = await mountView(preview)
+
+    await saveButton(wrapper).trigger('click')
+    await flushPromises()
+
+    expect(wrapper.text()).toContain('Pick a unit for "Chicken Breast", or clear its amount.')
+    expect(wrapper.text()).not.toContain('The source said')
+  })
+
+  it('saves a row with no amount as an Unquantified Ingredient, keeping its source', async () => {
+    const preview = makePreview()
+    preview.ingredients[0].amount       = null
+    preview.ingredients[0].unit         = null
+    preview.ingredients[0].sourceAmount = 1
+    preview.ingredients[0].sourceUnit   = 'pinch'
+    const { wrapper, store } = await mountView(preview)
+    const confirmSpy = vi.spyOn(store, 'confirmScrape').mockResolvedValue('new-id')
+
+    await saveButton(wrapper).trigger('click')
+    await flushPromises()
+
+    const row = confirmSpy.mock.calls[0][0].ingredients[0]
+    expect(row).toMatchObject({ amount: null, unit: null, sourceAmount: 1, sourceUnit: 'pinch' })
+  })
+
+  it('saves a row whose amount was cleared, even though its unit could not be stored', async () => {
+    const preview = makePreview()
+    preview.ingredients[0].unit       = 'cloves'
+    preview.ingredients[0].sourceUnit = 'cloves'
+    const { wrapper, store } = await mountView(preview)
+    const confirmSpy = vi.spyOn(store, 'confirmScrape').mockResolvedValue('new-id')
+
+    wrapper.vm.form.ingredients[0].amount = ''
+    await saveButton(wrapper).trigger('click')
+    await flushPromises()
+
+    expect(confirmSpy).toHaveBeenCalled()
+    expect(confirmSpy.mock.calls[0][0].ingredients[0]).toMatchObject({ amount: null, unit: null })
+  })
+
+  it('shows the Unit field blank and disabled for a row with no amount', async () => {
+    const preview = makePreview()
+    preview.ingredients[0].amount = null
+    const { wrapper } = await mountView(preview)
+
+    const unitSelect = wrapper.findAllComponents({ name: 'VSelect' })
+      .filter(s => s.props('label') === 'Unit')[0]
+    expect(unitSelect.props('modelValue')).toBeNull()
+    expect(unitSelect.props('disabled')).toBe(true)
   })
 
   it('carries the source measurement into the confirm payload', async () => {

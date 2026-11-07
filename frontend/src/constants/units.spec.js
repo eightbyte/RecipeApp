@@ -4,6 +4,7 @@ import {
   DEFAULT_UNIT,
   formatMeasurement,
   formatSourceMeasurement,
+  hasAmount,
   toPayloadMeasurement,
 } from './units'
 
@@ -67,6 +68,10 @@ describe('toPayloadMeasurement', () => {
   it('treats an unparseable amount as no stated quantity', () => {
     expect(toPayloadMeasurement('abc', 'g')).toEqual({ amount: null, unit: null })
   })
+
+  it('treats a field holding only spaces as no stated quantity, never as 0', () => {
+    expect(toPayloadMeasurement('   ', 'g')).toEqual({ amount: null, unit: null })
+  })
 })
 
 describe('formatSourceMeasurement', () => {
@@ -89,8 +94,45 @@ describe('formatSourceMeasurement', () => {
     expect(formatSourceMeasurement(undefined, undefined, 'cup')).toBeNull()
   })
 
-  it('shows nothing when only one half of the pair is present', () => {
+  it('shows nothing when the source stated an amount but no unit', () => {
     expect(formatSourceMeasurement(2, null, 'g')).toBeNull()
-    expect(formatSourceMeasurement(null, 'cups', 'g')).toBeNull()
+  })
+
+  it('shows the wording alone when the source stated a sizeless unit with no amount', () => {
+    expect(formatSourceMeasurement(null, 'to taste', null)).toBe('(to taste)')
+  })
+
+  it('leaves a wording-only source unscaled, because there is no amount to scale', () => {
+    expect(formatSourceMeasurement(null, 'pinch', null, 2)).toBe('(pinch)')
+  })
+
+  it('shows a sizeless source with its amount, scaled by the Batch Size', () => {
+    expect(formatSourceMeasurement(1, 'pinch', null)).toBe('(1 pinch)')
+    expect(formatSourceMeasurement(1, 'pinch', null, 2)).toBe('(2 pinch)')
+  })
+})
+
+describe('hasAmount', () => {
+  it('is true for an entered number, including a numeric string', () => {
+    expect(hasAmount(240)).toBe(true)
+    expect(hasAmount('2.5')).toBe(true)
+  })
+
+  it('is true for zero, because zero is a quantity', () => {
+    expect(hasAmount(0)).toBe(true)
+  })
+
+  it('is false for an empty field', () => {
+    expect(hasAmount('')).toBe(false)
+    expect(hasAmount(null)).toBe(false)
+    expect(hasAmount(undefined)).toBe(false)
+  })
+
+  it('is false for a field holding only spaces, which would otherwise read as 0', () => {
+    expect(hasAmount('   ')).toBe(false)
+  })
+
+  it('is false for an unparseable amount', () => {
+    expect(hasAmount('abc')).toBe(false)
   })
 })

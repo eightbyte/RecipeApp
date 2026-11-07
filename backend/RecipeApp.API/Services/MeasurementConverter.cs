@@ -49,7 +49,7 @@ public class MeasurementConverter(IOptions<MeasurementOptions> options)
 
     // ── Stage A ───────────────────────────────────────────────────────────────
 
-    /// <summary>Converts a customary measurement to metric and canonicalises the unit spelling, passing through unchanged any unit that does neither, such as <c>clove</c> or <c>pinch</c>.</summary>
+    /// <summary>Converts a customary measurement to metric and canonicalises the unit spelling, passing through unchanged any unit that does neither, such as <c>clove</c> or <c>sprig</c>.</summary>
     public static (decimal Amount, string Unit) ToCanonical(double rawAmount, string unit)
     {
         var trimmed = unit?.Trim() ?? string.Empty;

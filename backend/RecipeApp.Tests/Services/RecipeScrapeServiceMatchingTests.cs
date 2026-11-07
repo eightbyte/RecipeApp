@@ -53,6 +53,11 @@ public class RecipeScrapeServiceMatchingTests(DatabaseFixture db) : IAsyncLifeti
     /// <summary>A one-ingredient recipe stating a specific measurement, as a source page would.</summary>
     private static RecipeApp.API.Services.RecipeScrapeService.ExtractedRecipe MakeRecipeMeasured(
         string name, string display, double amount, string unit) =>
+        MakeRecipeStated(name, display, amount, unit);
+
+    /// <summary>A one-ingredient recipe as the model read it, where either half of the measurement may be missing.</summary>
+    private static RecipeApp.API.Services.RecipeScrapeService.ExtractedRecipe MakeRecipeStated(
+        string name, string display, double? amount, string? unit) =>
         new(
             Name: "Test Recipe",
             Description: null,
@@ -391,5 +396,58 @@ public class RecipeScrapeServiceMatchingTests(DatabaseFixture db) : IAsyncLifeti
         var ing = preview.Ingredients.Single();
         ing.Unit.Should().Be("cloves");
         ing.SourceUnit.Should().Be("cloves");
+    }
+
+    [Fact]
+    public async Task NormaliseAsync_ASizelessUnit_IsUnquantifiedButKeepsItsSource()
+    {
+        await using var ctx = db.CreateDbContext();
+        ctx.Ingredients.Add(TestDataBuilder.Ingredient("salt", "Salt", IngredientCategory.BakingSpices));
+        await ctx.SaveChangesAsync();
+
+        var svc     = BuildService();
+        var preview = await svc.NormaliseAsync(
+            MakeRecipeMeasured("salt", "Salt", 1.0, "pinch"), "https://x", default);
+
+        var ing = preview.Ingredients.Single();
+        ing.Amount.Should().BeNull();
+        ing.Unit.Should().BeNull();
+        ing.SourceAmount.Should().Be(1m);
+        ing.SourceUnit.Should().Be("pinch");
+    }
+
+    [Fact]
+    public async Task NormaliseAsync_ASizelessUnitWithNoAmount_KeepsItsWordingAsTheSource()
+    {
+        await using var ctx = db.CreateDbContext();
+        ctx.Ingredients.Add(TestDataBuilder.Ingredient("salt", "Salt", IngredientCategory.BakingSpices));
+        await ctx.SaveChangesAsync();
+
+        var svc     = BuildService();
+        var preview = await svc.NormaliseAsync(
+            MakeRecipeStated("salt", "Salt", amount: null, unit: "to taste"), "https://x", default);
+
+        var ing = preview.Ingredients.Single();
+        ing.Amount.Should().BeNull();
+        ing.Unit.Should().BeNull();
+        ing.SourceAmount.Should().BeNull();
+        ing.SourceUnit.Should().Be("to taste");
+    }
+
+    [Fact]
+    public async Task NormaliseAsync_AStorableUnitWithNoAmount_RecordsNoSource()
+    {
+        // Only a sizeless word carries meaning without a number, so a stray "g" beside a missing amount is dropped.
+        await using var ctx = db.CreateDbContext();
+        ctx.Ingredients.Add(TestDataBuilder.Ingredient("salt", "Salt", IngredientCategory.BakingSpices));
+        await ctx.SaveChangesAsync();
+
+        var svc     = BuildService();
+        var preview = await svc.NormaliseAsync(
+            MakeRecipeStated("salt", "Salt", amount: null, unit: "g"), "https://x", default);
+
+        var ing = preview.Ingredients.Single();
+        ing.SourceAmount.Should().BeNull();
+        ing.SourceUnit.Should().BeNull();
     }
 }

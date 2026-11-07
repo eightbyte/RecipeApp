@@ -125,6 +125,24 @@ describe('MealPlanBuilderView', () => {
     const { wrapper } = await mountView()
 
     expect(wrapper.text()).toContain('Create plan')
+    expect(replaceMock).toHaveBeenCalledWith({ name: 'meal-plan-create' })
+  })
+
+  it('shows an error with a retry when the plan in the URL fails to load', async () => {
+    route.query = { plan: 'plan-1' }
+    api.get
+      .mockRejectedValueOnce({ status: 500, message: 'Server unavailable' })
+      .mockResolvedValue({ data: makeMealPlanDetail({ id: 'plan-1', name: 'Week of 6 November' }) })
+
+    const { wrapper } = await mountView()
+
+    expect(wrapper.text()).toContain('Server unavailable')
+    expect(wrapper.text()).not.toContain('Create plan')
+
+    await wrapper.findAll('button').find(b => b.text().includes('Try again')).trigger('click')
+    await flushPromises()
+
+    expect(wrapper.find('h2').text()).toBe('Week of 6 November')
   })
 
   it('resets a stale currentPlan to start at name entry', async () => {

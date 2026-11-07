@@ -57,7 +57,7 @@ const emit = defineEmits(['add'])
 
 const router = useRouter()
 
-const dialogOpen      = ref(false)
+const dialogOpen        = ref(false)
 const pendingSuggestion = ref(null)
 
 function isRecentlyCooked(suggestion) {

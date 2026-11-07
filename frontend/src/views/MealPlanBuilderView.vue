@@ -5,6 +5,12 @@
       <v-progress-circular indeterminate color="primary" />
     </div>
 
+    <ErrorState
+      v-else-if="restoreError"
+      :message="restoreError"
+      @retry="restorePlan(route.query[PLAN_QUERY_KEY])"
+    />
+
     <!-- ── Step 1: Name entry ────────────────────────────────────────── -->
     <div v-else-if="!mealPlanStore.currentPlan">
       <h2 class="text-h6 font-weight-bold mb-6">New Meal Plan</h2>
@@ -119,6 +125,7 @@ import { DEFAULT_BATCH_SIZE } from '@/constants/batchSizes'
 import { recipeRoute } from '@/router/recipeRoutes'
 import { DISPLAY_LOCALE } from '@/utils/dateOnly'
 import BatchSizeToggle from '@/components/BatchSizeToggle.vue'
+import ErrorState from '@/components/ErrorState.vue'
 import RecipeBrowser from '@/components/RecipeBrowser.vue'
 import SuggestionsPanel from '@/components/SuggestionsPanel.vue'
 
@@ -128,26 +135,31 @@ const router        = useRouter()
 const route         = useRoute()
 const mealPlanStore = useMealPlanStore()
 
-const planName  = ref(`Week of ${new Date().toLocaleDateString(DISPLAY_LOCALE, { day: 'numeric', month: 'long' })}`)
-const nameError = ref('')
-const creating  = ref(false)
-const restoring = ref(false)
+const planName     = ref(`Week of ${new Date().toLocaleDateString(DISPLAY_LOCALE, { day: 'numeric', month: 'long' })}`)
+const nameError    = ref('')
+const creating     = ref(false)
+const restoring    = ref(false)
+const restoreError = ref(null)
 
 // Without a plan in the URL, start at the name step rather than at a plan left in the store from a previously viewed plan.
-onMounted(async () => {
+onMounted(() => {
   const planId = route.query[PLAN_QUERY_KEY]
-  if (!planId) {
-    mealPlanStore.currentPlan = null
-    return
-  }
-  restoring.value = true
+  if (planId) restorePlan(planId)
+  else mealPlanStore.currentPlan = null
+})
+
+async function restorePlan(planId) {
+  restoring.value    = true
+  restoreError.value = null
   try {
     await mealPlanStore.fetchPlan(planId)
     if (mealPlanStore.currentPlan) await mealPlanStore.fetchSuggestions(planId)
+    else if (mealPlanStore.error) restoreError.value = mealPlanStore.error
+    else router.replace({ name: 'meal-plan-create' })
   } finally {
     restoring.value = false
   }
-})
+}
 
 async function createPlan() {
   if (!planName.value.trim()) {

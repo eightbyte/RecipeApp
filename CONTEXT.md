@@ -32,8 +32,8 @@ never scaled or summed.
 _Avoid_: Original amount, raw amount
 
 **Unquantified Ingredient**:
-A Recipe Ingredient whose source states no amount, such as "salt" or "cooking spray". The absence
-is deliberate data, not an unknown amount.
+A Recipe Ingredient whose source states no amount, or only one with no real size such as "a pinch"
+or "a dash". The absence is deliberate data, not an unknown amount.
 _Avoid_: To taste, missing amount, zero amount
 
 **Servings**:

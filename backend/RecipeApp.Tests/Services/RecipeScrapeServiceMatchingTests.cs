@@ -392,4 +392,22 @@ public class RecipeScrapeServiceMatchingTests(DatabaseFixture db) : IAsyncLifeti
         ing.Unit.Should().Be("cloves");
         ing.SourceUnit.Should().Be("cloves");
     }
+
+    [Fact]
+    public async Task NormaliseAsync_ASizelessUnit_IsUnquantifiedButKeepsItsSource()
+    {
+        await using var ctx = db.CreateDbContext();
+        ctx.Ingredients.Add(TestDataBuilder.Ingredient("salt", "Salt", IngredientCategory.BakingSpices));
+        await ctx.SaveChangesAsync();
+
+        var svc     = BuildService();
+        var preview = await svc.NormaliseAsync(
+            MakeRecipeMeasured("salt", "Salt", 1.0, "pinch"), "https://x", default);
+
+        var ing = preview.Ingredients.Single();
+        ing.Amount.Should().BeNull();
+        ing.Unit.Should().BeNull();
+        ing.SourceAmount.Should().Be(1m);
+        ing.SourceUnit.Should().Be("pinch");
+    }
 }

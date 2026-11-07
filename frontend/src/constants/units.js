@@ -11,12 +11,16 @@ export function formatMeasurement(amount, unit) {
   return unit ? `${rounded} ${unit}` : `${rounded}`
 }
 
+/** True when a form's amount field holds a number, so an empty or unreadable field counts as no amount, the way `toPayloadMeasurement` sends it. */
+export function hasAmount(amount) {
+  return amount !== '' && amount != null && !Number.isNaN(Number(amount))
+}
+
 /** The `{ amount, unit }` pair to send to the API for one ingredient row, where an empty amount becomes a null amount and unit and is never coerced to `0`. */
 export function toPayloadMeasurement(amount, unit) {
-  const parsed = amount === '' || amount == null ? Number.NaN : Number(amount)
-  return Number.isNaN(parsed)
-    ? { amount: null, unit: null }
-    : { amount: parsed, unit: unit ?? null }
+  return hasAmount(amount)
+    ? { amount: Number(amount), unit: unit ?? null }
+    : { amount: null, unit: null }
 }
 
 /** Secondary text showing the measurement as an imported source stated it, scaled by the Batch Size multiplier, or null when there is nothing worth showing. */

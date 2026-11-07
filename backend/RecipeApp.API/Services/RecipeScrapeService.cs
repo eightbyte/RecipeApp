@@ -483,7 +483,7 @@ public class RecipeScrapeService(
             var ing            = extracted.Ingredients[i];
             var normalisedName = ing.Name.Trim().ToLowerInvariant();
 
-            // Stage A: record the source measurement verbatim first so a conversion can be audited, and record nothing for an unquantified line.
+            // Stage A: record the source measurement verbatim first so a conversion can be audited, keep no measurement for a sizeless unit, and record nothing for an unquantified line.
             decimal? amount       = null;
             string?  unit         = null;
             decimal? sourceAmount = null;
@@ -491,7 +491,8 @@ public class RecipeScrapeService(
 
             if (ing.Amount is { } statedAmount)
             {
-                (amount, unit) = MeasurementConverter.ToCanonical(statedAmount, ing.Unit ?? string.Empty);
+                if (!SizelessUnit.IsSizeless(ing.Unit))
+                    (amount, unit) = MeasurementConverter.ToCanonical(statedAmount, ing.Unit ?? string.Empty);
                 sourceAmount   = Math.Round((decimal)statedAmount, 3);
                 sourceUnit     = ing.Unit?.Trim();
             }

@@ -131,13 +131,16 @@
                 hide-details
                 style="max-width: 100px"
               />
+              <!-- Blank while there is no amount, so the row reads as unquantified, keeping the unit for when an amount returns. -->
               <v-select
-                v-model="ing.unit"
+                :model-value="hasAmount(ing.amount) ? ing.unit : null"
                 :items="units"
                 label="Unit"
                 density="compact"
                 hide-details
+                :disabled="!hasAmount(ing.amount)"
                 style="max-width: 100px"
+                @update:model-value="ing.unit = $event"
               />
               <v-text-field
                 v-model="ing.notes"
@@ -313,7 +316,7 @@ import { ref, reactive, computed, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useRecipeStore }     from '@/stores/recipes'
 import { useIngredientStore } from '@/stores/ingredients'
-import { MEASUREMENT_UNITS, DEFAULT_UNIT, toPayloadMeasurement } from '@/constants/units'
+import { MEASUREMENT_UNITS, DEFAULT_UNIT, hasAmount, toPayloadMeasurement } from '@/constants/units'
 
 const props = defineProps({ id: { type: String, default: null } })
 const route  = useRoute()

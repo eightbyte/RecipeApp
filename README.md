@@ -6,9 +6,9 @@ A mobile-first web app for storing recipes, building meal plans, and generating 
 
 ## Features
 
-- **Recipe management** — create, edit, and browse recipes with ingredient lists and numbered steps. Batch Size scaling (½× / 1× / 2× the whole recipe) is applied at display time only.
+- **Recipe management** — create, edit, and browse recipes with ingredient lists and numbered steps. Scale a recipe to any number of servings, with ½× / 1× / 2× shortcuts, at display time only.
 - **Recipe scraping** — paste a URL and a local LLM, running in the Model Server, extracts the name, ingredients, and steps into a preview you can edit before saving. Ingredients are matched against your catalogue automatically.
-- **Meal planning** — build a plan from your recipe collection, assign each Planned Meal a date and a Batch Size, and see waste-reduction suggestions (recipes that use up a leftover partial ingredient).
+- **Meal planning** — build a plan from your recipe collection, assign each Planned Meal a date and a number of servings, and see waste-reduction suggestions (recipes that use up a leftover partial ingredient).
 - **Shopping lists** — generated from the active meal plan, grouped by category in aisle order, with unit consolidation and support for custom (non-recipe) items.
 - **Cooking mode** — full-screen, large-type, step-by-step view with a screen wake-lock so your phone doesn't sleep mid-recipe.
 - **PWA** — installable, with offline caching of recipes you've already viewed.

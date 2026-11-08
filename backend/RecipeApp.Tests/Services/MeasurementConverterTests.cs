@@ -262,6 +262,38 @@ public class MeasurementConverterTests
             new StoredMeasurement(2m, MeasurementUnit.Piece, null, null));
     }
 
+    // ── Sized packages ────────────────────────────────────────────────────────
+
+    [Theory]
+    [InlineData(1.0, "(6 oz) pkg",          6.0,  "oz",    "pkg")]
+    [InlineData(0.5, "(16 oz) pkg",         8.0,  "oz",    "pkg")]
+    [InlineData(2.0, "(15-ounce) can",     30.0,  "ounce", "can")]
+    [InlineData(1.0, "( 1.5 lb ) bag",      1.5,  "lb",    "bag")]
+    [InlineData(1.0, "(6oz) package",       6.0,  "oz",    "package")]
+    [InlineData(1.0, "(400 g) can",       400.0,  "g",     "can")]
+    [InlineData(3.0, "(12 fl oz) bottles", 36.0,  "fl oz", "bottles")]
+    [InlineData(1.0, "(6 oz)",              6.0,  "oz",    null)]
+    public void ReadSizedPackage_ReadsTheTotalInTheStatedSize(
+        double count, string unit, double total, string sizeUnit, string? container)
+    {
+        MeasurementConverter.ReadSizedPackage(count, unit).Should().Be(
+            new SizedPackage((decimal)total, sizeUnit, container));
+    }
+
+    [Theory]
+    [InlineData("pkg")]
+    [InlineData("(6) pkg")]          // no unit inside the brackets
+    [InlineData("(6 cloves) pkg")]   // a count, not a size
+    [InlineData("(2 pcs) pkg")]
+    [InlineData("(6 oz")]
+    [InlineData("6 oz pkg")]
+    [InlineData("")]
+    public void ReadSizedPackage_AnyOtherUnit_IsNull(string unit)
+    {
+        MeasurementConverter.ReadSizedPackage(1.0, unit).Should().BeNull();
+    }
+
+    // ── Shared helper ─────────────────────────────────────────────────────────
 
     [Fact]
     public void MillilitresToGrams_MultipliesByDensity()

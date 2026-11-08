@@ -1,3 +1,5 @@
+using System.Globalization;
+using System.Text.RegularExpressions;
 using Microsoft.Extensions.Options;
 using RecipeApp.API.Enums;
 
@@ -6,6 +8,9 @@ namespace RecipeApp.API.Services;
 /// <summary>A recipe ingredient row's Measurement and Source Measurement, as stored.</summary>
 public readonly record struct StoredMeasurement(
     decimal? Amount, string? Unit, decimal? SourceAmount, string? SourceUnit);
+
+/// <summary>What a run of sized packages holds in all, in the unit the size was stated in, and the package word if one was given.</summary>
+public readonly record struct SizedPackage(decimal Total, string SizeUnit, string? Container);
 
 /// <summary>
 /// All unit arithmetic for imports and hand entry: Stage A converts customary units to metric without ingredient context, and
@@ -107,6 +112,31 @@ public class MeasurementConverter(IOptions<MeasurementOptions> options)
         if (entryUnit is null) return null;
 
         return ToCanonical((double)givenAmount, sourceUnit) == (storedAmount, unit.Trim()) ? entryUnit : null;
+    }
+
+    // ── Sized packages ────────────────────────────────────────────────────────
+
+    /// <summary>A unit stating its package's size in brackets, as a page writes "1 (6 oz) pkg".</summary>
+    private static readonly Regex SizedPackageUnit = new(
+        @"^\(\s*(?<size>\d+(?:\.\d+)?)\s*-?\s*(?<unit>[^()]+?)\s*\)\s*(?<container>[^()]*?)\s*$",
+        RegexOptions.Compiled);
+
+    /// <summary>
+    /// Reads a unit such as <c>(6 oz) pkg</c> as the total it holds for <paramref name="count"/> packages, in the stated size's
+    /// unit, or null when the brackets state no weight or volume.
+    /// </summary>
+    public static SizedPackage? ReadSizedPackage(double count, string unit)
+    {
+        var match = SizedPackageUnit.Match(unit.Trim());
+        if (!match.Success) return null;
+
+        var sizeUnit = match.Groups["unit"].Value;
+        if (MeasurementUnit.DimensionOf(ToCanonical(1, sizeUnit).Unit) is not (UnitDimension.Mass or UnitDimension.Volume))
+            return null;
+
+        var size      = decimal.Parse(match.Groups["size"].Value, CultureInfo.InvariantCulture);
+        var container = match.Groups["container"].Value;
+        return new SizedPackage(Round((decimal)count * size), sizeUnit, container.Length == 0 ? null : container);
     }
 
     // ── Stage B ───────────────────────────────────────────────────────────────

@@ -83,11 +83,17 @@ paths:
   with the stated amount and unit kept as the Source Measurement. With no stated amount the
   Source Measurement is the word alone, shown as "(to taste)". Those words live **only** in
   `Enums/SizelessUnit.cs`.
-- A scraped Count Word (`clove`, `sprig`, `slice`, …) is stored as `pcs`, with its wording kept as the
-  Source Measurement. A size word (`small`, `large`, …) in the unit slot is a missing unit: the row
-  becomes `pcs` and the word moves into its notes. Count Words and size words live **only** in
-  `Enums/CountWords.cs`. Words with a real size (`can`, `stick`, `jar`, `bunch`, …) are in neither
-  table, so the scrape preview still asks for a unit.
+- A scraped Count Word (`clove`, `sprig`, `slice`, `bunch`, …) is stored as `pcs`, with its wording kept
+  as the Source Measurement, including a size word leading it (`½ small bunch`). `stick` is a Count Word
+  except for butter and margarine, whose stick has a real size. A size word (`small`, `large`, …) alone
+  in the unit slot is a missing unit: the row becomes `pcs` and the word moves into its notes. Count
+  Words and size words live **only** in `Enums/CountWords.cs`. Words with a real size (`can`, `jar`,
+  `pkg`, …) are in neither table, so the scrape preview still asks for a unit.
+- A scraped package with a stated size (`1 (6 oz) pkg`, `½ (16 oz) pkg`) is stored as the total it holds
+  (`170.097 g`, `226.796 g`). The total in the stated unit (`6 oz`, `8 oz`) is the Source Measurement, and
+  the package count (`1 pkg`, `½ pkg`) leads the notes. The model sometimes moves the size into the notes
+  (`pkg` + `6 oz` or `(6 oz)`), and that reads the same way. `MeasurementConverter.ReadSizedPackage` parses
+  the size.
 - Frontend: `pcs` is never displayed (`formatMeasurement` drops it), and a `pcs` row with a Source
   Measurement stating the same count shows the source alone (`formatIngredientMeasurement`), as "(2 cloves) Garlic". The
   Unit picker still offers `pcs`, and shows it as the placeholder once cleared.

@@ -429,6 +429,106 @@ public class RecipeScrapeServiceMatchingTests(DatabaseFixture db) : IAsyncLifeti
         ing.SourceUnit.Should().Be("cloves");
     }
 
+    [Theory]
+    [InlineData("celery",      "Celery",      1.0, "stick",       null)]
+    [InlineData("green onion", "Green Onion", 0.5, "small bunch", "scallions")]
+    public async Task NormaliseAsync_StickOrBunch_IsACountThatKeepsItsWording(
+        string name, string display, double amount, string unit, string? notes)
+    {
+        var svc     = BuildService();
+        var preview = await svc.NormaliseAsync(
+            MakeRecipeStated(name, display, amount, unit, notes), "https://x", default);
+
+        preview.Ingredients.Single().Should().BeEquivalentTo(new
+        {
+            Amount = (decimal)amount, Unit = MeasurementUnit.Piece,
+            SourceAmount = (decimal)amount, SourceUnit = unit, Notes = notes,
+        });
+    }
+
+    [Fact]
+    public async Task NormaliseAsync_AStickOfButter_StillAsksForAUnit()
+    {
+        var svc     = BuildService();
+        var preview = await svc.NormaliseAsync(
+            MakeRecipeStated("butter", "Butter", 1.0, "stick"), "https://x", default);
+
+        preview.Ingredients.Single().Unit.Should().Be("stick");
+    }
+
+    [Theory]
+    [InlineData(1.0, "(6 oz) pkg",  170.097, 6.0, "1 pkg")]
+    [InlineData(0.5, "(16 oz) pkg", 226.796, 8.0, "½ pkg")]
+    public async Task NormaliseAsync_ASizedPackage_IsItsTotalWeightWithThePackageInNotes(
+        double count, string unit, double grams, double ounces, string note)
+    {
+        var svc     = BuildService();
+        var preview = await svc.NormaliseAsync(
+            MakeRecipeStated("blueberry", "Blueberries", count, unit), "https://x", default);
+
+        preview.Ingredients.Single().Should().BeEquivalentTo(new
+        {
+            Amount = (decimal)grams, Unit = MeasurementUnit.Gram,
+            SourceAmount = (decimal)ounces, SourceUnit = "oz", Notes = note,
+        });
+    }
+
+    [Theory]
+    [InlineData(1.0, "pkg", "(6 oz)",          170.097, 6.0, "1 pkg")]
+    [InlineData(0.5, "pkg", "(16 oz)",         226.796, 8.0, "½ pkg")]
+    [InlineData(1.0, "pkg", "(6 oz), rinsed",  170.097, 6.0, "1 pkg, rinsed")]
+    [InlineData(1.0, "pkg", "6 oz",            170.097, 6.0, "1 pkg")]
+    [InlineData(0.5, "pkg", "16 oz",           226.796, 8.0, "½ pkg")]
+    [InlineData(1.0, "pkg", "6-oz, rinsed",    170.097, 6.0, "1 pkg, rinsed")]
+    public async Task NormaliseAsync_APackageWhoseSizeTheModelPutInTheNotes_IsReadTheSameWay(
+        double count, string unit, string notes, double grams, double ounces, string expectedNotes)
+    {
+        // The model sometimes splits "1 (6 oz) pkg" into a unit of "pkg" and notes of "(6 oz)".
+        var svc     = BuildService();
+        var preview = await svc.NormaliseAsync(
+            MakeRecipeStated("blueberry", "Blueberries", count, unit, notes), "https://x", default);
+
+        preview.Ingredients.Single().Should().BeEquivalentTo(new
+        {
+            Amount = (decimal)grams, Unit = MeasurementUnit.Gram,
+            SourceAmount = (decimal)ounces, SourceUnit = "oz", Notes = expectedNotes,
+        });
+    }
+
+    [Fact]
+    public async Task NormaliseAsync_BracketedNotesThatStateNoSize_LeaveThePackageAskingForAUnit()
+    {
+        var svc     = BuildService();
+        var preview = await svc.NormaliseAsync(
+            MakeRecipeStated("blueberry", "Blueberries", 1.0, "pkg", "(any brand)"), "https://x", default);
+
+        preview.Ingredients.Single().Should().BeEquivalentTo(new { Unit = "pkg", Notes = "(any brand)" });
+    }
+
+    [Fact]
+    public async Task NormaliseAsync_ASizeInTheNotesOfARealUnit_IsLeftAlone()
+    {
+        var svc     = BuildService();
+        var preview = await svc.NormaliseAsync(
+            MakeRecipeStated("milk", "Milk", 1.0, "cup", "8 oz"), "https://x", default);
+
+        preview.Ingredients.Single().Should().BeEquivalentTo(new { Amount = 1m, Unit = "cup", Notes = "8 oz" });
+    }
+
+    [Fact]
+    public async Task NormaliseAsync_ASizedPackage_LeadsTheNotesItJoins()
+    {
+        var svc     = BuildService();
+        var preview = await svc.NormaliseAsync(
+            MakeRecipeStated("tomato", "Tomatoes", 2.0, "(15 ounce) cans", "diced"), "https://x", default);
+
+        preview.Ingredients.Single().Should().BeEquivalentTo(new
+        {
+            Amount = 850.485m, Unit = MeasurementUnit.Gram,
+            SourceAmount = 30m, SourceUnit = "ounce", Notes = "2 cans, diced",
+        });
+    }
+
     [Fact]
     public async Task NormaliseAsync_ASizeWord_IsACountWithTheWordInNotes()
     {

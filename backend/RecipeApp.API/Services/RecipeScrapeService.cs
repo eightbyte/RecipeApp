@@ -1,3 +1,4 @@
+using System.Globalization;
 using System.Text.Json;
 using System.Text.Json.Nodes;
 using System.Text.Json.Serialization;
@@ -649,11 +650,61 @@ public class RecipeScrapeService(
         if (SizelessUnit.IsSizeless(statedUnit))
             return (null, null, sourceAmount, sourceUnit, notes);
 
-        if (CountWords.IsCountWord(statedUnit))
+        if (CountWords.IsCountWord(statedUnit, ing.Name))
             return (sourceAmount, MeasurementUnit.Piece, sourceAmount, sourceUnit, notes);
+
+        // "½ (16 oz) pkg" is stored as the 8 oz it holds, with "½ pkg" kept in the notes.
+        if (ReadSizedPackage(statedAmount, sourceUnit, notes) is { } sized)
+        {
+            var (package, otherNotes) = sized;
+            var (total, totalUnit) = MeasurementConverter.ToCanonical((double)package.Total, package.SizeUnit);
+            var packageNotes = package.Container is null
+                ? otherNotes
+                : WithLeadingNote(otherNotes, $"{FormatCount(sourceAmount)} {package.Container}");
+            return (total, totalUnit, package.Total, package.SizeUnit, packageNotes);
+        }
 
         var (amount, unit) = MeasurementConverter.ToCanonical(statedAmount, statedUnit);
         return (amount, unit, sourceAmount, sourceUnit, notes);
+    }
+
+    /// <summary>A size leading a row's notes, bracketed or not, where the model sometimes puts the "6 oz" of "1 (6 oz) pkg".</summary>
+    private static readonly Regex LeadingSizeNote = new(
+        @"^\s*(?:\((?<size>[^()]*)\)|(?<size>\d+(?:\.\d+)?\s*-?\s*[a-zA-Z][a-zA-Z .]*?))\s*(?:,\s*(?<rest>.*))?$",
+        RegexOptions.Compiled);
+
+    /// <summary>Reads a sized package from the unit alone or from a package word whose size leads the notes, returning the notes left once that size is taken out.</summary>
+    private static (SizedPackage Package, string? Notes)? ReadSizedPackage(double count, string unit, string? notes)
+    {
+        if (MeasurementConverter.ReadSizedPackage(count, unit) is { } package) return (package, notes);
+
+        // A real unit such as "cup" is never a package, whatever its notes say.
+        if (MeasurementUnit.DimensionOf(MeasurementConverter.ToCanonical(1, unit).Unit) is not null) return null;
+
+        var leading = notes is null ? null : LeadingSizeNote.Match(notes);
+        if (leading is not { Success: true }) return null;
+
+        var combined = $"({leading.Groups["size"].Value}) {unit}";
+        if (MeasurementConverter.ReadSizedPackage(count, combined) is not { } split) return null;
+
+        var rest = leading.Groups["rest"].Value.Trim();
+        return (split, rest.Length == 0 ? null : rest);
+    }
+
+    /// <summary>Writes a count of packages as a cook would, with a common fraction as its glyph.</summary>
+    private static string FormatCount(decimal count)
+    {
+        var whole    = Math.Truncate(count);
+        var fraction = (count - whole) switch
+        {
+            0.25m => "¼",
+            0.5m  => "½",
+            0.75m => "¾",
+            0m    => "",
+            _     => null,
+        };
+        if (fraction is null) return count.ToString("0.###", CultureInfo.InvariantCulture);
+        return whole == 0 && fraction.Length > 0 ? fraction : $"{whole:0}{fraction}";
     }
 
     /// <summary>Puts a word at the front of a row's notes, unless the notes already say it.</summary>

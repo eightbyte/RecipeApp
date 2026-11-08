@@ -18,7 +18,7 @@ public record RecipeStepRequest(
 
 /// <param name="SourceAmount">Amount as originally stated by an imported source, null for hand-entered rows and round-tripped by the recipe form to keep provenance.</param>
 /// <param name="Amount">Null when the ingredient has no stated quantity, and null exactly when <paramref name="Unit"/> is.</param>
-/// <param name="Unit">Null when <paramref name="Amount"/> is null; otherwise a canonical storable unit.</param>
+/// <param name="Unit">Null when <paramref name="Amount"/> is null; otherwise a canonical storable unit, or an entry-only unit converted on save with this measurement kept as the source.</param>
 public record RecipeIngredientRequest(
     Guid IngredientId,
     decimal? Amount,

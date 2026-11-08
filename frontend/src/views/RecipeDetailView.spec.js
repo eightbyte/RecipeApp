@@ -147,6 +147,30 @@ describe('RecipeDetailView', () => {
     expect(wrapper.text()).toContain('(2 cups)')
   })
 
+  it('shows a row entered in oz like an imported one, with the typed measurement beside the grams', async () => {
+    const wrapper = await mountView({
+      ingredients: [{
+        id: 'ri-1',
+        ingredientId: 'test-ingredient-1',
+        ingredientName: 'feta cheese',
+        ingredientDisplayName: 'Feta',
+        category: 'DAIRY',
+        amount: 113.398,
+        unit: 'g',
+        sourceAmount: 4,
+        sourceUnit: 'oz',
+        entryUnit: 'oz',
+        notes: null,
+        displayOrder: 0,
+      }],
+    })
+
+    const row = wrapper.get('#ingredient-ri-1').text()
+    expect(row).toContain('113.4 g')
+    expect(row).toContain('(4 oz)')
+    expect(row).toContain('Feta')
+  })
+
   it('scales the source measurement with the chosen servings', async () => {
     const wrapper = await mountView({
       ingredients: [{

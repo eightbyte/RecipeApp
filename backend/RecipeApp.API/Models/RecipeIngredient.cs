@@ -13,10 +13,10 @@ public class RecipeIngredient
     /// <summary>Canonical storable unit (see <see cref="Enums.MeasurementUnit"/>), null exactly when <see cref="Amount"/> is null, and <c>pcs</c> for an amount stated with no unit.</summary>
     public string? Unit { get; set; }
 
-    /// <summary>Amount exactly as stated by the source recipe, before conversion. Null for hand-entered rows.</summary>
+    /// <summary>Amount exactly as stated by the source recipe, before conversion, or as typed in an entry-only unit. Null for other hand-entered rows.</summary>
     public decimal? SourceAmount { get; set; }
 
-    /// <summary>Unit exactly as stated by the source recipe (e.g. "cups", "ounce"). Null for hand-entered rows.</summary>
+    /// <summary>Unit exactly as stated by the source recipe (e.g. "cups", "ounce"), or the entry-only unit it was typed in. Null for other hand-entered rows.</summary>
     public string? SourceUnit { get; set; }
 
     /// <summary>Optional prep note shown with the ingredient (e.g. "finely chopped").</summary>

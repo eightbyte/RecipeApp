@@ -45,6 +45,11 @@ counts things, such as "clove", is a Count Word instead.
 A word in a unit's place that only counts things, such as "clove" or "sprig". It is stored as `pcs`,
 with the wording kept as the Source Measurement.
 
+**Entry-only Unit**:
+A customary unit the Unit picker offers, such as `oz`, `lb` or `pint`, that is converted to `g` or
+`ml` on save and never stored. The measurement as typed is kept as the Source Measurement.
+_Avoid_: Extended unit, imperial unit
+
 **Servings**:
 The number of people a recipe's stated amounts feed, or that a Planned Meal is made for. A recipe
 is scaled by the servings wanted ÷ its own Servings.

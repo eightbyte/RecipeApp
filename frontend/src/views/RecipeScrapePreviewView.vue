@@ -81,7 +81,12 @@
               hide-details
               style="max-width: 110px"
             />
-            <MeasurementUnitSelect v-model="ing.unit" :amount="ing.amount" :requires-unit="!!ing.unstorableUnit" />
+            <MeasurementUnitSelect
+              :model-value="ing.unit"
+              :amount="ing.amount"
+              :requires-unit="!!ing.unstorableUnit"
+              @update:model-value="setIngredientUnit(ing, $event)"
+            />
             <v-text-field
               v-model="ing.notes"
               label="Notes"
@@ -176,7 +181,7 @@
 import { reactive, ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useRecipeStore } from '@/stores/recipes'
-import { MEASUREMENT_UNITS, hasAmount, toPayloadMeasurement } from '@/constants/units'
+import { MEASUREMENT_UNITS, hasAmount, setIngredientUnit, toPayloadMeasurement } from '@/constants/units'
 import MeasurementUnitSelect from '@/components/MeasurementUnitSelect.vue'
 import { INGREDIENT_CATEGORY_VALUES } from '@/constants/categories'
 

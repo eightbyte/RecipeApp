@@ -31,16 +31,14 @@ public class CountWordsTests
     [InlineData("  sprig  ")]   // nor surrounding whitespace
     public void IsCountWord_MatchesWordsThatOnlyCount(string unit)
     {
-        CountWords.IsCountWord(unit).Should().BeTrue();
+        CountWords.IsCountWord(unit, "garlic").Should().BeTrue();
     }
 
     [Theory]
     [InlineData("can")]         // a real size that pcs would lose
     [InlineData("cans")]
-    [InlineData("stick")]
     [InlineData("jar")]
     [InlineData("package")]
-    [InlineData("bunch")]
     [InlineData("bag")]
     [InlineData("bottle")]
     [InlineData("box")]
@@ -51,7 +49,32 @@ public class CountWordsTests
     [InlineData(null)]
     public void IsCountWord_RejectsEverythingElse(string? unit)
     {
-        CountWords.IsCountWord(unit).Should().BeFalse();
+        CountWords.IsCountWord(unit, "garlic").Should().BeFalse();
+    }
+
+    [Theory]
+    [InlineData("bunch",       "green onion")]
+    [InlineData("bunches",     "parsley")]
+    [InlineData("small bunch", "green onion")]   // a size word may lead a count word
+    [InlineData("Large Bunch", "parsley")]
+    [InlineData("stick",       "celery")]
+    [InlineData("sticks",      "cinnamon")]
+    [InlineData("small stick", "celery")]
+    public void IsCountWord_MatchesBunchAndStick(string unit, string ingredient)
+    {
+        CountWords.IsCountWord(unit, ingredient).Should().BeTrue();
+    }
+
+    [Theory]
+    [InlineData("stick",       "butter")]         // a stick of butter has a real size
+    [InlineData("sticks",      "unsalted butter")]
+    [InlineData("stick",       "margarine")]
+    [InlineData("small",       "green onion")]    // a size word alone is not a count word
+    [InlineData("small can",   "tomato")]         // a size word leading a sized unit
+    [InlineData("large large", "egg")]
+    public void IsCountWord_RejectsButterSticksAndSizeWordsAlone(string unit, string ingredient)
+    {
+        CountWords.IsCountWord(unit, ingredient).Should().BeFalse();
     }
 
     [Theory]

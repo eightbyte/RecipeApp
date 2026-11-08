@@ -403,6 +403,117 @@ public class RecipesEndpointTests(DatabaseFixture db) : IAsyncLifetime
         response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
     }
 
+    // ── Entry-only units ──────────────────────────────────────────────────────
+
+    private static CreateRecipeRequest OneRowRecipe(
+        Guid ingredientId, decimal amount, string? unit, decimal? sourceAmount = null, string? sourceUnit = null) => new(
+            "Feta Salad", null, null, 4,
+            [new RecipeIngredientRequest(ingredientId, amount, unit, null, 0, sourceAmount, sourceUnit)],
+            [new RecipeStepRequest(1, "Toss.", [0])]);
+
+    private static UpdateRecipeRequest AsUpdate(CreateRecipeRequest request) =>
+        new(request.Name, request.Description, request.SourceUrl, request.Servings, request.Ingredients, request.Steps);
+
+    /// <summary>The request the recipe form sends for a row it reopened, in its entry-only unit when it has one.</summary>
+    private static UpdateRecipeRequest AsReopenedByTheForm(RecipeDetailResponse recipe, Guid ingredientId)
+    {
+        var row = recipe.Ingredients.Single();
+        var request = row.EntryUnit is { } entryUnit
+            ? OneRowRecipe(ingredientId, row.SourceAmount!.Value, entryUnit, row.SourceAmount, row.SourceUnit)
+            : OneRowRecipe(ingredientId, row.Amount!.Value, row.Unit, row.SourceAmount, row.SourceUnit);
+        return AsUpdate(request);
+    }
+
+    [Theory]
+    [InlineData(4, "oz",    113.398, "g")]
+    [InlineData(1, "lb",    453.592, "g")]
+    [InlineData(8, "fl oz", 236.588, "ml")]
+    [InlineData(1, "pint",  473.176, "ml")]
+    [InlineData(1, "quart", 946.353, "ml")]
+    public async Task Create_EntryOnlyUnit_StoresTheConversionWithTheTypedSource(
+        int typedAmount, string typedUnit, double storedAmount, string storedUnit)
+    {
+        var ingId = await SeedIngredientAsync("feta cheese");
+
+        var response = await Client.PostAsJsonAsync("/api/v1/recipes", OneRowRecipe(ingId, typedAmount, typedUnit));
+        response.StatusCode.Should().Be(HttpStatusCode.Created);
+
+        var created = (await response.Content.ReadFromJsonAsync<RecipeDetailResponse>())!;
+        var fetched = (await Client.GetFromJsonAsync<RecipeDetailResponse>($"/api/v1/recipes/{created.Id}"))!;
+        fetched.Ingredients.Single().Should().BeEquivalentTo(new
+        {
+            Amount       = (decimal)storedAmount,
+            Unit         = storedUnit,
+            SourceAmount = (decimal)typedAmount,
+            SourceUnit   = typedUnit,
+            EntryUnit    = typedUnit,
+        });
+    }
+
+    [Fact]
+    public async Task Update_EntryOnlyRowReopenedAndSavedUnchanged_KeepsTheStoredValues()
+    {
+        var ingId   = await SeedIngredientAsync("feta cheese");
+        var created = await (await Client.PostAsJsonAsync("/api/v1/recipes", OneRowRecipe(ingId, 4m, "oz")))
+            .Content.ReadFromJsonAsync<RecipeDetailResponse>();
+
+        var response = await Client.PutAsJsonAsync($"/api/v1/recipes/{created!.Id}", AsReopenedByTheForm(created, ingId));
+
+        var updated = (await response.Content.ReadFromJsonAsync<RecipeDetailResponse>())!;
+        updated.Ingredients.Single().Should().BeEquivalentTo(new
+        {
+            Amount = 113.398m, Unit = "g", SourceAmount = 4m, SourceUnit = "oz", EntryUnit = "oz",
+        });
+    }
+
+    [Fact]
+    public async Task Update_ImportedOuncesRowReopenedAndSavedUnchanged_KeepsItsSpelling()
+    {
+        var ingId   = await SeedIngredientAsync("feta cheese");
+        var created = await (await Client.PostAsJsonAsync("/api/v1/recipes",
+                OneRowRecipe(ingId, 113.398m, "g", sourceAmount: 4m, sourceUnit: "ounces")))
+            .Content.ReadFromJsonAsync<RecipeDetailResponse>();
+        created!.Ingredients.Single().EntryUnit.Should().Be("oz");
+
+        var response = await Client.PutAsJsonAsync($"/api/v1/recipes/{created.Id}", AsReopenedByTheForm(created, ingId));
+
+        var updated = (await response.Content.ReadFromJsonAsync<RecipeDetailResponse>())!;
+        updated.Ingredients.Single().Should().BeEquivalentTo(new
+        {
+            Amount = 113.398m, Unit = "g", SourceAmount = 4m, SourceUnit = "ounces",
+        });
+    }
+
+    [Fact]
+    public async Task Get_RowEditedByHandAfterImport_HasNoEntryUnit()
+    {
+        var ingId   = await SeedIngredientAsync("feta cheese");
+        var created = await (await Client.PostAsJsonAsync("/api/v1/recipes",
+                OneRowRecipe(ingId, 150m, "g", sourceAmount: 4m, sourceUnit: "oz")))
+            .Content.ReadFromJsonAsync<RecipeDetailResponse>();
+
+        created!.Ingredients.Single().EntryUnit.Should().BeNull();
+    }
+
+    [Fact]
+    public async Task Update_EntryOnlyRowChangedToGrams_ClearsTheSourceMeasurement()
+    {
+        var ingId   = await SeedIngredientAsync("feta cheese");
+        var created = await (await Client.PostAsJsonAsync("/api/v1/recipes", OneRowRecipe(ingId, 4m, "oz")))
+            .Content.ReadFromJsonAsync<RecipeDetailResponse>();
+
+        // The form drops the source when a row moves from an entry-only unit to a storable one.
+        var response = await Client.PutAsJsonAsync($"/api/v1/recipes/{created!.Id}",
+            AsUpdate(OneRowRecipe(ingId, 100m, "g")));
+
+        var updated = (await response.Content.ReadFromJsonAsync<RecipeDetailResponse>())!;
+        updated.Ingredients.Single().Should().BeEquivalentTo(new
+        {
+            Amount = 100m, Unit = "g", SourceAmount = (decimal?)null, SourceUnit = (string?)null,
+            EntryUnit = (string?)null,
+        });
+    }
+
     // ── Update ────────────────────────────────────────────────────────────────
 
     [Fact]

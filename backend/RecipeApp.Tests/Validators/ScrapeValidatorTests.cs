@@ -122,13 +122,27 @@ public class ScrapeValidatorTests
         MeasurementUnit.All.Select(u => new object[] { u });
 
     [Theory]
+    [InlineData("oz")]
+    [InlineData("lb")]
+    [InlineData("fl oz")]
+    [InlineData("pint")]
+    [InlineData("quart")]
+    public void Ingredient_EachEntryOnlyUnit_HasNoErrorOnUnit(string unit)
+    {
+        var result = _ingredientValidator.TestValidate(Ingredient() with { Unit = unit });
+        result.ShouldNotHaveValidationErrorFor(x => x.Unit);
+    }
+
+    [Theory]
     [InlineData("")]
     [InlineData("cups")]        // a known alias — lenient enough for TryCanonicalise, not for storage
     [InlineData("Tbsp")]        // right unit, wrong case
     [InlineData("ML")]
     [InlineData("clove")]       // no fixed size; cannot be canonicalised at all
     [InlineData("pinch")]
-    [InlineData("oz")]
+    [InlineData("ounces")]      // an entry-only unit is accepted only in its canonical spelling
+    [InlineData("OZ")]
+    [InlineData("gallon")]      // Stage A converts it, but the picker does not offer it
     public void Ingredient_NonCanonicalUnit_HasErrorOnUnit(string unit)
     {
         // The whitelist is strict because canonicalisation happens upstream, so an uncanonicalised unit reaching the validator is a bug to surface.

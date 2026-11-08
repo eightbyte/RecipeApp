@@ -131,7 +131,11 @@
                 hide-details
                 style="max-width: 100px"
               />
-              <MeasurementUnitSelect v-model="ing.unit" :amount="ing.amount" />
+              <MeasurementUnitSelect
+                :model-value="ing.unit"
+                :amount="ing.amount"
+                @update:model-value="setIngredientUnit(ing, $event)"
+              />
               <v-text-field
                 v-model="ing.notes"
                 label="Notes"
@@ -306,7 +310,9 @@ import { ref, reactive, computed, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useRecipeStore }     from '@/stores/recipes'
 import { useIngredientStore } from '@/stores/ingredients'
-import { MEASUREMENT_UNITS, DEFAULT_UNIT, toPayloadMeasurement } from '@/constants/units'
+import {
+  MEASUREMENT_UNITS, DEFAULT_UNIT, setIngredientUnit, toFormMeasurement, toPayloadMeasurement,
+} from '@/constants/units'
 import MeasurementUnitSelect from '@/components/MeasurementUnitSelect.vue'
 
 const props = defineProps({ id: { type: String, default: null } })
@@ -371,8 +377,7 @@ function populateForm(recipe) {
 
   form.ingredients = ingredients.map(i => ({
     ingredientId: i.ingredientId,
-    amount:       i.amount,
-    unit:         i.unit,
+    ...toFormMeasurement(i),
     notes:        i.notes ?? '',
     // Provenance is carried through untouched, because UpdateAsync recreates every ingredient row and dropping it would destroy an import's history.
     sourceAmount: i.sourceAmount ?? null,

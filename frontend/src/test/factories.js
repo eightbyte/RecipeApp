@@ -139,6 +139,7 @@ export const makeRecipeDetail = (overrides = {}) => ({
       unit: 'g',
       sourceAmount: null,
       sourceUnit: null,
+      entryUnit: null,
       notes: null,
       displayOrder: 0,
     },

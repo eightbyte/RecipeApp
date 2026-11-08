@@ -174,6 +174,125 @@ public class MeasurementConverterTests
         amount.Should().BeApproximately(gramsPerCup, 0.05m);
     }
 
+    // ── Entry-only units ──────────────────────────────────────────────────────
+
+    [Theory]
+    [InlineData(4,  "oz",    113.398, "g")]
+    [InlineData(1,  "lb",    453.592, "g")]
+    [InlineData(8,  "fl oz", 236.588, "ml")]
+    [InlineData(1,  "pint",  473.176, "ml")]
+    [InlineData(1,  "quart", 946.353, "ml")]
+    public void ToStored_EntryOnlyUnit_ConvertsAndKeepsTheTypedMeasurementAsTheSource(
+        double typedAmount, string typedUnit, double storedAmount, string storedUnit)
+    {
+        MeasurementConverter.ToStored((decimal)typedAmount, typedUnit, null, null).Should().Be(
+            new StoredMeasurement((decimal)storedAmount, storedUnit, (decimal)typedAmount, typedUnit));
+    }
+
+    [Theory]
+    [InlineData("ounces")]
+    [InlineData("Ounce")]
+    [InlineData("oz")]
+    public void ToStored_SourceStatingTheSameQuantity_KeepsItsSpelling(string sourceUnit)
+    {
+        MeasurementConverter.ToStored(4m, "oz", 4m, sourceUnit).Should().Be(
+            new StoredMeasurement(113.398m, "g", 4m, sourceUnit));
+    }
+
+    [Theory]
+    [InlineData(4,  "pounds")]
+    [InlineData(5,  "ounces")]
+    [InlineData(4,  "cups")]
+    public void ToStored_SourceStatingAnotherQuantity_IsReplacedByTheTypedMeasurement(
+        double sourceAmount, string sourceUnit)
+    {
+        MeasurementConverter.ToStored(4m, "oz", (decimal)sourceAmount, sourceUnit).Should().Be(
+            new StoredMeasurement(113.398m, "g", 4m, "oz"));
+    }
+
+    [Theory]
+    [InlineData("oz")]
+    [InlineData("ounces")]
+    public void ToStored_RetypedAsTheSameQuantityInAnotherUnit_TakesTheTypedMeasurementAsTheSource(string sourceUnit)
+    {
+        // 16 oz and 1 lb are both 453.592 g, but the user's edit must still show.
+        MeasurementConverter.ToStored(1m, "lb", 16m, sourceUnit).Should().Be(
+            new StoredMeasurement(453.592m, "g", 1m, "lb"));
+    }
+
+    [Fact]
+    public void ToStored_StorableUnit_CarriesTheSourceThrough()
+    {
+        MeasurementConverter.ToStored(120m, "g", 1m, "cup").Should().Be(
+            new StoredMeasurement(120m, "g", 1m, "cup"));
+    }
+
+    [Theory]
+    [InlineData(113.398, "g",  4,  "oz",              "oz")]
+    [InlineData(113.398, "g",  4,  "ounces",          "oz")]
+    [InlineData(453.592, "g",  1,  "pound",           "lb")]
+    [InlineData(177.441, "ml", 6,  "us fluid ounces", "fl oz")]
+    [InlineData(473.176, "ml", 1,  "pints",           "pint")]
+    [InlineData(946.353, "ml", 1,  "qt",              "quart")]
+    public void EntryUnitOf_SourceThatStillConvertsToTheStoredMeasurement_IsItsEntryOnlyUnit(
+        double amount, string unit, double sourceAmount, string sourceUnit, string expected)
+    {
+        MeasurementConverter.EntryUnitOf((decimal)amount, unit, (decimal)sourceAmount, sourceUnit)
+            .Should().Be(expected);
+    }
+
+    [Theory]
+    [InlineData(150.0,   "g",   4.0,  "oz")]       // edited by hand after import
+    [InlineData(113.398, "g",   null, "oz")]
+    [InlineData(113.398, "g",   4.0,  null)]
+    [InlineData(120.0,   "g",   1.0,  "cup")]      // a storable source
+    [InlineData(3.785,   "L",   1.0,  "gallon")]   // converts, but is not offered by the picker
+    [InlineData(2.0,     "pcs", 2.0,  "cloves")]
+    public void EntryUnitOf_AnyOtherRow_IsNull(
+        double amount, string unit, double? sourceAmount, string? sourceUnit)
+    {
+        MeasurementConverter.EntryUnitOf((decimal)amount, unit, (decimal?)sourceAmount, sourceUnit)
+            .Should().BeNull();
+    }
+
+    [Fact]
+    public void ToStored_AmountWithNoUnit_IsACountWithNoSource()
+    {
+        MeasurementConverter.ToStored(2m, null, null, null).Should().Be(
+            new StoredMeasurement(2m, MeasurementUnit.Piece, null, null));
+    }
+
+    // ── Sized packages ────────────────────────────────────────────────────────
+
+    [Theory]
+    [InlineData(1.0, "(6 oz) pkg",          6.0,  "oz",    "pkg")]
+    [InlineData(0.5, "(16 oz) pkg",         8.0,  "oz",    "pkg")]
+    [InlineData(2.0, "(15-ounce) can",     30.0,  "ounce", "can")]
+    [InlineData(1.0, "( 1.5 lb ) bag",      1.5,  "lb",    "bag")]
+    [InlineData(1.0, "(6oz) package",       6.0,  "oz",    "package")]
+    [InlineData(1.0, "(400 g) can",       400.0,  "g",     "can")]
+    [InlineData(3.0, "(12 fl oz) bottles", 36.0,  "fl oz", "bottles")]
+    [InlineData(1.0, "(6 oz)",              6.0,  "oz",    null)]
+    public void ReadSizedPackage_ReadsTheTotalInTheStatedSize(
+        double count, string unit, double total, string sizeUnit, string? container)
+    {
+        MeasurementConverter.ReadSizedPackage(count, unit).Should().Be(
+            new SizedPackage((decimal)total, sizeUnit, container));
+    }
+
+    [Theory]
+    [InlineData("pkg")]
+    [InlineData("(6) pkg")]          // no unit inside the brackets
+    [InlineData("(6 cloves) pkg")]   // a count, not a size
+    [InlineData("(2 pcs) pkg")]
+    [InlineData("(6 oz")]
+    [InlineData("6 oz pkg")]
+    [InlineData("")]
+    public void ReadSizedPackage_AnyOtherUnit_IsNull(string unit)
+    {
+        MeasurementConverter.ReadSizedPackage(1.0, unit).Should().BeNull();
+    }
+
     // ── Shared helper ─────────────────────────────────────────────────────────
 
     [Fact]

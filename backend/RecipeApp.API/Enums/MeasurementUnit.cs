@@ -38,6 +38,25 @@ public static class MeasurementUnit
             [Piece]      = (UnitDimension.Count,  1m),
         };
 
+    public const string Ounce      = "oz";
+    public const string Pound      = "lb";
+    public const string FluidOunce = "fl oz";
+    public const string Pint       = "pint";
+    public const string Quart      = "quart";
+
+    /// <summary>Entry-only units: the Unit picker offers them, and every persistence path converts them to <c>g</c> or <c>ml</c> on save, so none is ever stored.</summary>
+    public static readonly IReadOnlyList<string> EntryOnly = [Ounce, Pound, FluidOunce, Pint, Quart];
+
+    /// <summary>Strict: true only for an entry-only unit in its canonical spelling.</summary>
+    public static bool IsEntryOnly([NotNullWhen(true)] string? unit) =>
+        unit is not null && EntryOnly.Contains(unit.Trim());
+
+    /// <summary>True for every unit a request may carry, which is a storable unit or an entry-only one, both in canonical spelling.</summary>
+    public static bool IsAccepted([NotNullWhen(true)] string? unit) => IsValid(unit) || IsEntryOnly(unit);
+
+    /// <summary>Every unit a request may carry, for validation messages.</summary>
+    public static readonly IReadOnlyList<string> Accepted = [.. All, .. EntryOnly];
+
     /// <summary>Units whose stored form may be resolved by ingredient context on import.</summary>
     public static readonly IReadOnlyList<string> ImportResolvable = [Cup];
 

@@ -9,7 +9,7 @@
     <v-main>
       <router-view v-slot="{ Component, route: r }">
         <transition name="fade" mode="out-in">
-          <component :is="Component" :key="r.fullPath" />
+          <component :is="Component" :key="viewKey(r)" />
         </transition>
       </router-view>
     </v-main>
@@ -25,6 +25,7 @@
 
 <script setup>
 import { useRoute } from 'vue-router'
+import { viewKey } from '@/router/navigation'
 import AppTopBar    from '@/components/layout/AppTopBar.vue'
 import AppBottomNav from '@/components/layout/AppBottomNav.vue'
 import AppSnackbar  from '@/components/AppSnackbar.vue'

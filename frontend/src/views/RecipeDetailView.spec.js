@@ -207,6 +207,19 @@ describe('RecipeDetailView', () => {
     expect(location.query).toEqual({ servings: 5 })
   })
 
+  it('rescales in place on a servings query change without refetching the recipe', async () => {
+    // The recipe-detail route stays mounted while only its query changes, so the view must follow the URL itself.
+    const wrapper = await mountView()
+    expect(store.fetchRecipe).toHaveBeenCalledTimes(1)
+
+    route.query = recipeRoute('test-recipe-1', 6).query
+    await flushPromises()
+
+    expect(servingsChip(wrapper).text()).toBe('6 servings')
+    expect(wrapper.get('#ingredient-ri-1').text()).toContain('300 g')
+    expect(store.fetchRecipe).toHaveBeenCalledTimes(1)
+  })
+
   it('keeps a shortcut’s servings on the URL', async () => {
     const wrapper = await mountView()
     await clickButton(wrapper, '½×')

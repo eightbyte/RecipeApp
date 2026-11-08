@@ -7,7 +7,6 @@ public class RecordingLogger<T> : ILogger<T>
 {
     public record Entry(LogLevel Level, string Message);
 
-    /// <summary>Every entry logged, in order.</summary>
     public List<Entry> Entries { get; } = [];
 
     public IDisposable? BeginScope<TState>(TState state) where TState : notnull => null;

@@ -13,10 +13,7 @@ export function assetUrl(path) {
   return `${_apiHost}${path}`
 }
 
-/**
- * Readable text for an error response body. An RFC 7807 `detail` comes first. A validation problem carries only
- * `title` and an `errors` map of field to messages, so it reads as the title then each distinct message.
- */
+/** A validation problem carries no `detail`, only `title` and an `errors` map, so its reason has to be built from those. */
 export function problemMessage(data, fallback) {
   if (data?.detail) return data.detail
 

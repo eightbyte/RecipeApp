@@ -14,7 +14,9 @@ public class RecipeScrapeServiceStepIndexTests(DatabaseFixture db) : IAsyncLifet
     public ValueTask InitializeAsync() => db.TruncateAllAsync();
     public ValueTask DisposeAsync() => ValueTask.CompletedTask;
 
-    private const string Url = "https://example.com/salsa-chicken";
+    // ── Helpers ───────────────────────────────────────────────────────────────
+
+    private const string Url ="https://example.com/salsa-chicken";
 
     /// <summary>A page with enough visible text that the scrape never reaches for the headless renderer.</summary>
     private const string RecipePage = """
@@ -75,6 +77,8 @@ public class RecipeScrapeServiceStepIndexTests(DatabaseFixture db) : IAsyncLifet
 
     private IEnumerable<string> Warnings =>
         _logger.Entries.Where(e => e.Level == LogLevel.Warning).Select(e => e.Message);
+
+    // ── Tests ─────────────────────────────────────────────────────────────────
 
     [Fact]
     public async Task Scrape_DropsStepIndexesPastEitherEndOfTheIngredients_KeepingTheRestInOrder()

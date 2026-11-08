@@ -131,7 +131,7 @@ const router        = useRouter()
 const route         = useRoute()
 const mealPlanStore = useMealPlanStore()
 
-// App.vue keys each view by its full path, so the plan in this builder's URL never changes while it is mounted.
+// This route lacks `meta.keepOnQueryChange`, so App.vue keys it by its full path and the plan in its URL never changes while it is mounted.
 const planInUrl = route.query[PLAN_QUERY_KEY]
 const builtPlan = computed(() =>
   planInUrl && mealPlanStore.currentPlan?.id === planInUrl ? mealPlanStore.currentPlan : null)

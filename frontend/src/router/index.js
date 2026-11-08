@@ -1,4 +1,5 @@
 import { createRouter, createWebHistory } from 'vue-router'
+import { scrollPosition } from './navigation'
 
 const routes = [
   {
@@ -23,7 +24,8 @@ const routes = [
     path: '/recipes/:id',
     name: 'recipe-detail',
     component: () => import('@/views/RecipeDetailView.vue'),
-    meta: { title: 'Recipe' },
+    // Stepping the Servings changes only the query, which rescales the amounts in place.
+    meta: { title: 'Recipe', keepOnQueryChange: true },
     props: true,
   },
   {
@@ -83,7 +85,7 @@ const routes = [
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
   routes,
-  scrollBehavior: () => ({ top: 0 }),
+  scrollBehavior: scrollPosition,
 })
 
 router.afterEach((to) => {

@@ -115,9 +115,9 @@
                 >
                   <!-- Absent for an ingredient whose source stated no quantity -->
                   <span
-                    v-if="formatAmount(ing.amount, ing.unit)"
+                    v-if="formatAmount(ing)"
                     class="font-weight-medium mr-1"
-                  >{{ formatAmount(ing.amount, ing.unit) }}</span>
+                  >{{ formatAmount(ing) }}</span>
                   <span v-if="formatSource(ing)" class="text-caption mr-1">{{ formatSource(ing) }}</span>
                   {{ ing.ingredientDisplayName }}
                 </v-chip>
@@ -164,7 +164,7 @@
 import { ref, computed, onMounted, nextTick } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useRecipeStore } from '@/stores/recipes'
-import { formatMeasurement, formatSourceMeasurement } from '@/constants/units'
+import { formatIngredientMeasurement } from '@/constants/units'
 import { formatServings } from '@/constants/servings'
 import { recipeRoute, servingsFromQuery } from '@/router/recipeRoutes'
 import { useUiStore } from '@/stores/ui'
@@ -222,16 +222,14 @@ function stepIngredients(step) {
     .filter(Boolean)
 }
 
-/** Short-circuits on a null amount, because `null * 2` is `0` in JavaScript and would render an ingredient with no stated quantity as `0`. */
-function formatAmount(baseAmount, unit) {
-  if (baseAmount == null) return null
-  return formatMeasurement(baseAmount * servingsMultiplier.value, unit)
+/** The chip's stored amount at the chosen servings, or null when it states no quantity or its source says the same count. */
+function formatAmount(ing) {
+  return formatIngredientMeasurement(ing, servingsMultiplier.value).amount
 }
 
 /** The measurement as the source recipe stated it; null when there is nothing to add. */
 function formatSource(ing) {
-  return formatSourceMeasurement(
-    ing.sourceAmount, ing.sourceUnit, ing.unit, servingsMultiplier.value)
+  return formatIngredientMeasurement(ing, servingsMultiplier.value).source
 }
 
 function toggleStep(step) {

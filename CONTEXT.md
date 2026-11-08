@@ -38,8 +38,12 @@ _Avoid_: To taste, missing amount, zero amount
 
 **Sizeless Unit**:
 A unit that names no real size, such as "pinch", "dash" or "to taste". A Recipe Ingredient measured
-in one is an Unquantified Ingredient, and its Source Measurement keeps the wording. Count words such
-as "clove" are not Sizeless Units: they have a size, just not one the app can store.
+in one is an Unquantified Ingredient, and its Source Measurement keeps the wording. A word that only
+counts things, such as "clove", is a Count Word instead.
+
+**Count Word**:
+A word in a unit's place that only counts things, such as "clove" or "sprig". It is stored as `pcs`,
+with the wording kept as the Source Measurement.
 
 **Servings**:
 The number of people a recipe's stated amounts feed, or that a Planned Meal is made for. A recipe

@@ -137,6 +137,8 @@ public class RecipeScrapeService(
         "Extract the complete recipe from the web page text provided by the user. " +
         "If any information is missing or ambiguous, make a reasonable best-guess rather than omitting it. " +
         "Never invent a quantity: if an ingredient line states no amount, emit null for both amount and unit. " +
+        "For a counted ingredient with no unit (e.g. '2 eggs'), emit the amount and a null unit, " +
+        "and put a size word such as 'large' in notes rather than in unit. " +
         "Respond with a single JSON object conforming to the schema and nothing else.";
 
     // ── Ingredient category heuristic ─────────────────────────────────────────
@@ -483,23 +485,7 @@ public class RecipeScrapeService(
             var ing            = extracted.Ingredients[i];
             var normalisedName = ing.Name.Trim().ToLowerInvariant();
 
-            // Stage A: record the source measurement verbatim first so a conversion can be audited, because a sizeless unit stores no measurement of its own.
-            decimal? amount       = null;
-            string?  unit         = null;
-            decimal? sourceAmount = null;
-            string?  sourceUnit   = null;
-
-            if (ing.Amount is { } statedAmount)
-            {
-                if (!SizelessUnit.IsSizeless(ing.Unit))
-                    (amount, unit) = MeasurementConverter.ToCanonical(statedAmount, ing.Unit ?? string.Empty);
-                sourceAmount   = Math.Round((decimal)statedAmount, 3);
-                sourceUnit     = ing.Unit?.Trim();
-            }
-            else if (SizelessUnit.IsSizeless(ing.Unit))
-            {
-                sourceUnit = ing.Unit.Trim();
-            }
+            var (amount, unit, sourceAmount, sourceUnit, notes) = ReadStatedMeasurement(ing);
 
             var row = new ScrapePreviewIngredientResponse(
                 IngredientId:      null,
@@ -509,7 +495,7 @@ public class RecipeScrapeService(
                 Unit:              unit,
                 SourceAmount:      sourceAmount,
                 SourceUnit:        sourceUnit,
-                Notes:             string.IsNullOrWhiteSpace(ing.Notes) ? null : ing.Notes,
+                Notes:             notes,
                 IsNew:             true,
                 SuggestedCategory: CategoriseIngredient(normalisedName),
                 DisplayOrder:      i);
@@ -630,6 +616,54 @@ public class RecipeScrapeService(
             Ingredients: previewIngredients,
             Steps:       previewSteps
         );
+    }
+
+    /// <summary>
+    /// Stage A for one scraped line, which converts its measurement and records the source verbatim so a conversion can be
+    /// audited, storing a Sizeless Unit unquantified, a Count Word or missing unit as <c>pcs</c>, and a size word in the notes.
+    /// </summary>
+    private static (decimal? Amount, string? Unit, decimal? SourceAmount, string? SourceUnit, string? Notes)
+        ReadStatedMeasurement(ExtractedIngredient ing)
+    {
+        var notes      = string.IsNullOrWhiteSpace(ing.Notes) ? null : ing.Notes;
+        var statedUnit = ing.Unit;
+
+        if (CountWords.IsSizeWord(statedUnit))
+        {
+            notes      = WithLeadingNote(notes, statedUnit.Trim());
+            statedUnit = null;
+        }
+
+        if (ing.Amount is not { } statedAmount)
+            return SizelessUnit.IsSizeless(statedUnit)
+                ? (null, null, null, statedUnit.Trim(), notes)
+                : (null, null, null, null, notes);
+
+        // Nothing is lost by storing a bare amount as pcs, so it records no Source Measurement.
+        if (string.IsNullOrWhiteSpace(statedUnit))
+            return (Math.Round((decimal)statedAmount, 3), MeasurementUnit.Piece, null, null, notes);
+
+        var sourceAmount = Math.Round((decimal)statedAmount, 3);
+        var sourceUnit   = statedUnit.Trim();
+
+        if (SizelessUnit.IsSizeless(statedUnit))
+            return (null, null, sourceAmount, sourceUnit, notes);
+
+        if (CountWords.IsCountWord(statedUnit))
+            return (sourceAmount, MeasurementUnit.Piece, sourceAmount, sourceUnit, notes);
+
+        var (amount, unit) = MeasurementConverter.ToCanonical(statedAmount, statedUnit);
+        return (amount, unit, sourceAmount, sourceUnit, notes);
+    }
+
+    /// <summary>Puts a word at the front of a row's notes, unless the notes already say it.</summary>
+    private static string WithLeadingNote(string? notes, string word)
+    {
+        if (notes is null) return word;
+
+        var alreadySaid = Regex.IsMatch(
+            notes, $@"(?<![\w-]){Regex.Escape(word)}(?![\w-])", RegexOptions.IgnoreCase);
+        return alreadySaid ? notes : $"{word}, {notes}";
     }
 
     // ── Helpers ───────────────────────────────────────────────────────────────

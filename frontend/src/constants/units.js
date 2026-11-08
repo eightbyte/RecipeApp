@@ -4,11 +4,23 @@ export const MEASUREMENT_UNITS = ['g', 'kg', 'ml', 'L', 'pcs', 'tsp', 'tbsp', 'c
 /** Default unit for a freshly added ingredient row. */
 export const DEFAULT_UNIT = 'g'
 
-/** Formats an amount and unit for display, trimming float noise from scaling, and returns `null` when there is no amount to show. */
+/** The unit a count is stored in, mirroring `MeasurementUnit.Piece`, which an amount saved with no unit becomes and which is never displayed. */
+export const COUNT_UNIT = 'pcs'
+
+/** Formats an amount and unit for display, trimming float noise from scaling and hiding `pcs`, and returns `null` when there is no amount to show. */
 export function formatMeasurement(amount, unit) {
   if (amount == null) return null
   const rounded = Math.round(amount * 100) / 100
-  return unit ? `${rounded} ${unit}` : `${rounded}`
+  return unit && unit !== COUNT_UNIT ? `${rounded} ${unit}` : `${rounded}`
+}
+
+/** The scaled display parts of one recipe ingredient row, its stored `amount` and its `source` measurement, where a count its source states as the same number shows the source alone. */
+export function formatIngredientMeasurement(ing, multiplier = 1) {
+  const source = formatSourceMeasurement(ing.sourceAmount, ing.sourceUnit, ing.unit, multiplier)
+  const sourceSaysTheCount = ing.unit === COUNT_UNIT && source && ing.amount === ing.sourceAmount
+  // Short-circuits on a null amount, because `null * 2` is `0` in JavaScript.
+  if (ing.amount == null || sourceSaysTheCount) return { amount: null, source }
+  return { amount: formatMeasurement(ing.amount * multiplier, ing.unit), source }
 }
 
 /** True when a form's amount field holds a number, so an empty, blank or unreadable field counts as no amount, because `Number('  ')` is `0`. */

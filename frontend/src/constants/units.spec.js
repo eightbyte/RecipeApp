@@ -2,6 +2,7 @@ import { describe, it, expect } from 'vitest'
 import {
   MEASUREMENT_UNITS,
   DEFAULT_UNIT,
+  formatIngredientMeasurement,
   formatMeasurement,
   formatSourceMeasurement,
   hasAmount,
@@ -39,6 +40,10 @@ describe('formatMeasurement', () => {
     // "salt" is stored with a null amount and unit, so it shows as its name alone and not "0 g Salt".
     expect(formatMeasurement(null, null)).toBeNull()
     expect(formatMeasurement(undefined, undefined)).toBeNull()
+  })
+
+  it('hides pcs, so a count reads as "2 Eggs"', () => {
+    expect(formatMeasurement(2, 'pcs')).toBe('2')
   })
 
   it('still renders a zero amount, because zero is a quantity', () => {
@@ -109,6 +114,37 @@ describe('formatSourceMeasurement', () => {
   it('shows a sizeless source with its amount, scaled by the Batch Size', () => {
     expect(formatSourceMeasurement(1, 'pinch', null)).toBe('(1 pinch)')
     expect(formatSourceMeasurement(1, 'pinch', null, 2)).toBe('(2 pinch)')
+  })
+})
+
+describe('formatIngredientMeasurement', () => {
+  const row = overrides => ({ amount: 2, unit: 'pcs', sourceAmount: null, sourceUnit: null, ...overrides })
+
+  it('shows a count without its unit', () => {
+    expect(formatIngredientMeasurement(row())).toEqual({ amount: '2', source: null })
+  })
+
+  it('shows a counted row by its Count Word alone, scaled with servings', () => {
+    // "(2 cloves) Garlic", not "2 (2 cloves) Garlic".
+    const cloves = row({ sourceAmount: 2, sourceUnit: 'cloves' })
+    expect(formatIngredientMeasurement(cloves)).toEqual({ amount: null, source: '(2 cloves)' })
+    expect(formatIngredientMeasurement(cloves, 2)).toEqual({ amount: null, source: '(4 cloves)' })
+  })
+
+  it('shows both when a counted row was edited away from its source', () => {
+    // "2 cloves" changed to 3: hiding the stored 3 would show a count that is not the one summed.
+    const edited = row({ amount: 3, sourceAmount: 2, sourceUnit: 'cloves' })
+    expect(formatIngredientMeasurement(edited)).toEqual({ amount: '3', source: '(2 cloves)' })
+  })
+
+  it('shows a converted row by its stored amount and its source', () => {
+    const flour = row({ amount: 120, unit: 'g', sourceAmount: 1, sourceUnit: 'cup' })
+    expect(formatIngredientMeasurement(flour, 2)).toEqual({ amount: '240 g', source: '(2 cup)' })
+  })
+
+  it('shows nothing for an unquantified row, never 0', () => {
+    expect(formatIngredientMeasurement(row({ amount: null, unit: null }), 2))
+      .toEqual({ amount: null, source: null })
   })
 })
 

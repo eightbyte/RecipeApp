@@ -165,6 +165,32 @@ describe('RecipeFormView — edit mode', () => {
     expect(payload.ingredients[0].unit).toBeNull()
   })
 
+  it('saves an amount whose Unit was cleared, which the API stores as pcs', async () => {
+    const wrapper = mountForm({ id: 'r1' })
+    const recipeStore = useRecipeStore()
+    useIngredientStore().ingredients = [makeIngredient()]
+    wrapper.vm.populateForm(makeRecipeDetail({ id: 'r1' }))
+    await wrapper.vm.$nextTick()
+
+    const unitSelect = wrapper.findAllComponents({ name: 'VSelect' }).filter(s => s.props('label') === 'Unit')[0]
+    unitSelect.vm.$emit('update:modelValue', null)
+    await wrapper.vm.$nextTick()
+    expect(unitSelect.props('placeholder')).toBe('pcs')
+
+    vi.spyOn(recipeStore, 'updateRecipe').mockResolvedValue(makeRecipeDetail({ id: 'r1' }))
+    wrapper.vm.formRef = { validate: vi.fn().mockResolvedValue({ valid: true }) }
+    await wrapper.vm.submit()
+
+    const [, payload] = recipeStore.updateRecipe.mock.calls[0]
+    expect(payload.ingredients[0]).toMatchObject({ amount: 200, unit: null })
+  })
+
+  it('starts a new row in grams', async () => {
+    const wrapper = mountForm()
+    wrapper.vm.addIngredient()
+    expect(wrapper.vm.form.ingredients.at(-1).unit).toBe('g')
+  })
+
   it('shows the Unit field blank and disabled while the amount is empty, and restores it after', async () => {
     const detail = makeRecipeDetail({ id: 'r1' })
     detail.ingredients[0].amount = 100

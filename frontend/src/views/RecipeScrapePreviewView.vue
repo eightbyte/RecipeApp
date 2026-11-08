@@ -81,7 +81,7 @@
               hide-details
               style="max-width: 110px"
             />
-            <MeasurementUnitSelect v-model="ing.unit" :amount="ing.amount" />
+            <MeasurementUnitSelect v-model="ing.unit" :amount="ing.amount" :requires-unit="!!ing.unstorableUnit" />
             <v-text-field
               v-model="ing.notes"
               label="Notes"
@@ -212,8 +212,9 @@ onMounted(() => {
     name:          ing.name,
     displayName:   ing.displayName,
     amount:        ing.amount,
-    // A scraped unit outside the storable set shows unselected and has to be picked before the recipe can be saved.
+    // A scraped unit outside the storable set, such as "can", shows unselected and has to be picked before the recipe can be saved.
     unit:          units.includes(ing.unit) ? ing.unit : null,
+    unstorableUnit: ing.unit && !units.includes(ing.unit) ? ing.unit : null,
     sourceAmount:  ing.sourceAmount ?? null,
     sourceUnit:    ing.sourceUnit ?? null,
     notes:         ing.notes ?? '',
@@ -228,6 +229,11 @@ onMounted(() => {
     ingredientIndexes: [...s.ingredientIndexes],
   }))
 })
+
+/** True while a row states an amount, has no unit, and arrived with one the app cannot store, such as "can". */
+function mustPickUnit(ing) {
+  return hasAmount(ing.amount) && !ing.unit && !!ing.unstorableUnit
+}
 
 function toggleStepIngredient(stepIdx, ingIdx) {
   const step = form.steps[stepIdx]
@@ -247,13 +253,11 @@ async function saveRecipe() {
     submitError.value = 'At least one ingredient is required.'
     return
   }
-  // A row with no amount saves as an Unquantified Ingredient, so only an amount without a unit blocks saving.
-  const amountWithoutUnit = form.ingredients.find(ing => hasAmount(ing.amount) && !ing.unit)
-  if (amountWithoutUnit) {
-    const sourceNote = amountWithoutUnit.sourceUnit
-      ? ` The source said "${amountWithoutUnit.sourceUnit}", which this app can't store.`
-      : ''
-    submitError.value = `Pick a unit for "${amountWithoutUnit.displayName}", or clear its amount.${sourceNote}`
+  // An amount with no unit saves as a count, except where the source's unit has a size pcs would lose.
+  const unitToPick = form.ingredients.find(ing => mustPickUnit(ing))
+  if (unitToPick) {
+    submitError.value = `Pick a unit for "${unitToPick.displayName}", or clear its amount. ` +
+      `The source said "${unitToPick.unstorableUnit}", which this app can't store.`
     return
   }
 

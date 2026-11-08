@@ -30,7 +30,7 @@ public record RecipePackRecipe(
 
 /// <summary>One ingredient row, where <paramref name="Amount"/> and <paramref name="Unit"/> are required even when null so an unquantified row says so.</summary>
 /// <param name="Ingredient">A catalogue entry's name or alias.</param>
-/// <param name="Unit">A canonical <see cref="Enums.MeasurementUnit"/>, null exactly when <paramref name="Amount"/> is.</param>
+/// <param name="Unit">A canonical <see cref="Enums.MeasurementUnit"/>, null when <paramref name="Amount"/> is, and null beside an amount for a count, which loads as <c>pcs</c>.</param>
 public record RecipePackIngredient(
     string Ingredient,
     decimal? Amount,

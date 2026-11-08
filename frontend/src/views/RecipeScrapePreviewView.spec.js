@@ -301,6 +301,22 @@ describe('RecipeScrapePreviewView', () => {
     )
   })
 
+  it('shows the reason a save was rejected in the error alert', async () => {
+    const { wrapper, store } = await mountView()
+    // The shape the api interceptor rejects with.
+    vi.spyOn(store, 'confirmScrape').mockRejectedValue({
+      status: 400,
+      message: 'One or more validation errors occurred. Name is required.',
+    })
+
+    const saveBtn = wrapper.findAllComponents({ name: 'VBtn' }).find(b => b.text().includes('Save Recipe'))
+    await saveBtn.trigger('click')
+    await flushPromises()
+
+    expect(wrapper.findComponent({ name: 'VAlert' }).text())
+      .toContain('One or more validation errors occurred. Name is required.')
+  })
+
   it('shows loading state while confirmLoading is true', async () => {
     const { wrapper, store } = await mountView()
     store.confirmLoading = true

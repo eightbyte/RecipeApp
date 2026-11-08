@@ -606,7 +606,8 @@ public class RecipeScrapeService(
 
         var previewSteps = extracted.Steps
             .OrderBy(s => s.StepNumber)
-            .Select(s => new ScrapePreviewStepResponse(s.StepNumber, s.Instruction, s.IngredientIndexes))
+            .Select(s => new ScrapePreviewStepResponse(
+                s.StepNumber, s.Instruction, KeepIngredientIndexesInRange(s, previewIngredients.Count, url)))
             .ToList();
 
         return new ScrapePreviewResponse(
@@ -617,6 +618,23 @@ public class RecipeScrapeService(
             Ingredients: previewIngredients,
             Steps:       previewSteps
         );
+    }
+
+    /// <summary>
+    /// The step's links to real ingredients, once each and in the model's order. The model can number past the end of the
+    /// list, and the confirm validator rejects such a link, so a preview carrying one could never be saved.
+    /// </summary>
+    private List<int> KeepIngredientIndexesInRange(ExtractedStep step, int ingredientCount, string url)
+    {
+        var kept    = step.IngredientIndexes.Where(i => i >= 0 && i < ingredientCount).Distinct().ToList();
+        var dropped = step.IngredientIndexes.Where(i => i < 0 || i >= ingredientCount).Distinct().ToList();
+
+        if (dropped.Count > 0)
+            logger.LogWarning(
+                "Scrape of {Url} linked step {StepNumber} to ingredient indexes {DroppedIndexes} outside 0–{LastIndex}; dropped them.",
+                url, step.StepNumber, string.Join(", ", dropped), ingredientCount - 1);
+
+        return kept;
     }
 
     /// <summary>

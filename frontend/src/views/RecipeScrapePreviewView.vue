@@ -295,7 +295,7 @@ async function saveRecipe() {
     store.clearScrapePreview()
     router.push({ name: 'recipe-detail', params: { id: newId } })
   } catch (e) {
-    submitError.value = e.response?.data?.detail ?? e.message ?? 'Something went wrong. Please try again.'
+    submitError.value = e.message ?? 'Something went wrong. Please try again.'
   }
 }
 </script>

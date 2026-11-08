@@ -71,7 +71,7 @@ paths:
   `Enums/CountWords.cs`. Words with a real size (`can`, `stick`, `jar`, `bunch`, …) are in neither
   table, so the scrape preview still asks for a unit.
 - Frontend: `pcs` is never displayed (`formatMeasurement` drops it), and a `pcs` row with a Source
-  Measurement shows the source alone (`formatIngredientMeasurement`), as "(2 cloves) Garlic". The
+  Measurement stating the same count shows the source alone (`formatIngredientMeasurement`), as "(2 cloves) Garlic". The
   Unit picker still offers `pcs`, and shows it as the placeholder once cleared.
 - **Never store zero.** `0` renders as `0 g Salt` and sums into shopping lists.
 - `ShoppingListService` partitions unquantified rows out of consolidation and never sums them. An

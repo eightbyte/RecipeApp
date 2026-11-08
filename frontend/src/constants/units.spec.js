@@ -131,6 +131,12 @@ describe('formatIngredientMeasurement', () => {
     expect(formatIngredientMeasurement(cloves, 2)).toEqual({ amount: null, source: '(4 cloves)' })
   })
 
+  it('shows both when a counted row was edited away from its source', () => {
+    // "2 cloves" changed to 3: hiding the stored 3 would show a count that is not the one summed.
+    const edited = row({ amount: 3, sourceAmount: 2, sourceUnit: 'cloves' })
+    expect(formatIngredientMeasurement(edited)).toEqual({ amount: '3', source: '(2 cloves)' })
+  })
+
   it('shows a converted row by its stored amount and its source', () => {
     const flour = row({ amount: 120, unit: 'g', sourceAmount: 1, sourceUnit: 'cup' })
     expect(formatIngredientMeasurement(flour, 2)).toEqual({ amount: '240 g', source: '(2 cup)' })

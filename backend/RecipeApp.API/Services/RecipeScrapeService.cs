@@ -619,9 +619,8 @@ public class RecipeScrapeService(
     }
 
     /// <summary>
-    /// Stage A for one scraped line: converts its measurement and records the source verbatim so a conversion can be audited.
-    /// A Sizeless Unit stores no measurement of its own, a Count Word or a missing unit is a count of <c>pcs</c>, and a size
-    /// word in the unit's place moves into the notes, leaving the line a count.
+    /// Stage A for one scraped line, which converts its measurement and records the source verbatim so a conversion can be
+    /// audited, storing a Sizeless Unit unquantified, a Count Word or missing unit as <c>pcs</c>, and a size word in the notes.
     /// </summary>
     private static (decimal? Amount, string? Unit, decimal? SourceAmount, string? SourceUnit, string? Notes)
         ReadStatedMeasurement(ExtractedIngredient ing)

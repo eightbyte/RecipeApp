@@ -31,12 +31,34 @@ describe('MeasurementUnitSelect', () => {
     const field = select(mountSelect({ amount: '' }))
     expect(field.props('modelValue')).toBeNull()
     expect(field.props('disabled')).toBe(true)
+    expect(field.props('placeholder')).toBeUndefined()
   })
 
   it('brings the unit back when an amount is entered again', async () => {
     const wrapper = mountSelect({ amount: null })
     await wrapper.setProps({ amount: 2 })
     expect(select(wrapper).props('modelValue')).toBe('g')
+  })
+
+  it('can be cleared, and then reads as a count', async () => {
+    // An amount with no unit saves as pcs.
+    const wrapper = mountSelect({ modelValue: null })
+    const field   = select(wrapper)
+    expect(field.props('clearable')).toBe(true)
+    expect(field.props('placeholder')).toBe('pcs')
+    expect(field.props('persistentPlaceholder')).toBe(true)
+  })
+
+  it('offers no count placeholder while a unit must be picked', () => {
+    // "1 can tomatoes": pcs would lose the can's size, so the empty field must not suggest it.
+    const field = select(mountSelect({ modelValue: null, requiresUnit: true }))
+    expect(field.props('placeholder')).toBeUndefined()
+  })
+
+  it('reports a cleared unit as null', async () => {
+    const wrapper = mountSelect()
+    select(wrapper).vm.$emit('update:modelValue', null)
+    expect(wrapper.emitted('update:modelValue')).toEqual([[null]])
   })
 
   it('reports the unit that is picked', async () => {

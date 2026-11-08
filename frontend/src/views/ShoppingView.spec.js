@@ -379,6 +379,17 @@ describe('ShoppingView', () => {
       expect(sourceRows(wrapper)[0].find('.v-list-item-title').text()).toBe('Porridge · 200 g')
     })
 
+    it('shows a count and its sources without the unit', async () => {
+      const { wrapper } = await mountWith([makeShoppingListItem({
+        id: 'eggs', displayName: 'Eggs', amount: 6, unit: 'pcs',
+        sources: [makeItemSource({ recipeName: 'Omelette', amount: 6, unit: 'pcs' })],
+      })])
+      expect(row(wrapper, 'Eggs').text()).not.toContain('pcs')
+
+      await row(wrapper, 'Eggs').trigger('click')
+      expect(sourceRows(wrapper)[0].find('.v-list-item-title').text()).toBe('Omelette · 6')
+    })
+
     it('keeps several rows open at once', async () => {
       const { wrapper } = await mountWith([
         flour(),

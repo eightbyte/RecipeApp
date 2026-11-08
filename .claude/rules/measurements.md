@@ -2,6 +2,7 @@
 paths:
   - "backend/RecipeApp.API/Enums/MeasurementUnit.cs"
   - "backend/RecipeApp.API/Enums/SizelessUnit.cs"
+  - "backend/RecipeApp.API/Enums/CountWords.cs"
   - "backend/RecipeApp.API/Services/MeasurementConverter.cs"
   - "backend/RecipeApp.API/Services/MeasurementOptions.cs"
   - "backend/RecipeApp.API/Services/MealPlanService.cs"
@@ -19,6 +20,7 @@ paths:
   - "frontend/src/constants/servings.js"
   - "frontend/src/router/recipeRoutes.js"
   - "frontend/src/components/BatchSizeToggle.vue"
+  - "frontend/src/components/MeasurementUnitSelect.vue"
   - "frontend/src/components/ServingsStepper.vue"
   - "frontend/src/views/RecipeDetailView.vue"
   - "frontend/src/views/RecipeFormView.vue"
@@ -54,13 +56,23 @@ paths:
 
 - **`RecipeIngredient.Amount == null` means "the source states no quantity"** (`salt`, `raisins`,
   `nonstick cooking spray`). This is a real property of home cooking, not a parse defect.
-- `Unit` is null exactly when `Amount` is. Validators reject a half-set pair.
-  `RecipeIngredient.ToStoredMeasurement` enforces the invariant at the entity boundary. Every
-  persistence path uses it, because service-level callers bypass the endpoint filter.
+- `Unit` is null exactly when `Amount` is. Validators reject a unit with no amount.
+  **An amount with no unit means `pcs`**: validators accept it and
+  `RecipeIngredient.ToStoredMeasurement` stores it as `pcs`, which also enforces the invariant at the
+  entity boundary. Every persistence path uses it, because service-level callers bypass the
+  endpoint filter. A missing unit records no Source Measurement, because nothing is lost.
 - A scraped Sizeless Unit (`pinch`, `dash`, `handful`, "to taste", …) is stored unquantified,
   with the stated amount and unit kept as the Source Measurement. With no stated amount the
   Source Measurement is the word alone, shown as "(to taste)". Those words live **only** in
-  `Enums/SizelessUnit.cs`. Count words (`clove`, `can`, `sprig`) are not in it.
+  `Enums/SizelessUnit.cs`.
+- A scraped Count Word (`clove`, `sprig`, `slice`, …) is stored as `pcs`, with its wording kept as the
+  Source Measurement. A size word (`small`, `large`, …) in the unit slot is a missing unit: the row
+  becomes `pcs` and the word moves into its notes. Count Words and size words live **only** in
+  `Enums/CountWords.cs`. Words with a real size (`can`, `stick`, `jar`, `bunch`, …) are in neither
+  table, so the scrape preview still asks for a unit.
+- Frontend: `pcs` is never displayed (`formatMeasurement` drops it), and a `pcs` row with a Source
+  Measurement shows the source alone (`formatIngredientMeasurement`), as "(2 cloves) Garlic". The
+  Unit picker still offers `pcs`, and shows it as the placeholder once cleared.
 - **Never store zero.** `0` renders as `0 g Salt` and sums into shopping lists.
 - `ShoppingListService` partitions unquantified rows out of consolidation and never sums them. An
   ingredient the plan only ever names yields one amount-less item.

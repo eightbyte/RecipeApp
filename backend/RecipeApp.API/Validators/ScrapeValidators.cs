@@ -46,17 +46,16 @@ public class ScrapeConfirmIngredientRequestValidator : AbstractValidator<ScrapeC
             .WithMessage($"Category must be one of: {string.Join(", ", IngredientCategory.All)}")
             .When(x => !string.IsNullOrWhiteSpace(x.Category));
 
-        // Amount and Unit are null together or set together, as in RecipeIngredientRequestValidator.
+        // A unit needs an amount, and an amount with no unit is a count stored as pcs, as in RecipeIngredientRequestValidator.
         RuleFor(x => x.Amount)
             .GreaterThan(0)
             .When(x => x.Amount.HasValue)
             .WithMessage("Amount must be greater than zero, or null when no quantity is stated.");
 
         RuleFor(x => x.Unit)
-            .NotEmpty()
             .Must(MeasurementUnit.IsValid)
-            .WithMessage($"Unit must be one of: {string.Join(", ", MeasurementUnit.All)}")
-            .When(x => x.Amount.HasValue);
+            .WithMessage($"Unit must be one of: {string.Join(", ", MeasurementUnit.All)}, or null for a count")
+            .When(x => x.Amount.HasValue && x.Unit is not null);
 
         RuleFor(x => x.Unit)
             .Null()

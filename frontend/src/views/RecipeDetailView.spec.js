@@ -317,7 +317,33 @@ describe('RecipeDetailView', () => {
 
     // Assert the row is exactly the name, because scaling a null amount by the multiplier yields 0 in JavaScript and "0 g" alone would pass against that bug.
     expect(wrapper.get('#ingredient-ri-1').text().trim()).toBe('Salt')
-    expect(wrapper.vm.formatAmount(null, null)).toBeNull()
+  })
+
+  const countRow = overrides => ({
+    id: 'ri-1',
+    ingredientId: 'test-ingredient-1',
+    ingredientName: 'egg',
+    ingredientDisplayName: 'Eggs',
+    category: 'DAIRY',
+    amount: 2,
+    unit: 'pcs',
+    sourceAmount: null,
+    sourceUnit: null,
+    notes: null,
+    displayOrder: 0,
+    ...overrides,
+  })
+
+  it('shows a count without its unit', async () => {
+    const wrapper = await mountView({ ingredients: [countRow()] })
+    expect(wrapper.get('#ingredient-ri-1').text().replace(/\s+/g, ' ').trim()).toBe('2 Eggs')
+  })
+
+  it('shows a counted row by its Count Word alone', async () => {
+    const wrapper = await mountView({
+      ingredients: [countRow({ ingredientDisplayName: 'Garlic', sourceAmount: 2, sourceUnit: 'cloves' })],
+    })
+    expect(wrapper.get('#ingredient-ri-1').text().replace(/\s+/g, ' ').trim()).toBe('(2 cloves) Garlic')
   })
 
   it('leaves an unquantified ingredient blank at a chosen number of servings', async () => {

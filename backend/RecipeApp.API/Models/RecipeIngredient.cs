@@ -10,7 +10,7 @@ public class RecipeIngredient
     /// <summary>Amount at the Regular Batch Size in metric units, where null means the source states no quantity; never zero, which would sum into shopping lists.</summary>
     public decimal? Amount { get; set; }
 
-    /// <summary>Canonical storable unit (see <see cref="Enums.MeasurementUnit"/>), null exactly when <see cref="Amount"/> is null.</summary>
+    /// <summary>Canonical storable unit (see <see cref="Enums.MeasurementUnit"/>), null exactly when <see cref="Amount"/> is null, and <c>pcs</c> for an amount stated with no unit.</summary>
     public string? Unit { get; set; }
 
     /// <summary>Amount exactly as stated by the source recipe, before conversion. Null for hand-entered rows.</summary>
@@ -30,7 +30,9 @@ public class RecipeIngredient
     public Ingredient Ingredient { get; set; } = null!;
     public ICollection<RecipeStepIngredient> StepIngredients { get; set; } = [];
 
-    /// <summary>Pairs an amount with its unit for storage, dropping the unit whenever the amount is null but never coercing the converse, which the validators reject loudly.</summary>
+    /// <summary>Pairs an amount with its unit for storage, dropping the unit whenever the amount is null and storing an amount with no unit as a count of <c>pcs</c>.</summary>
     public static (decimal? Amount, string? Unit) ToStoredMeasurement(decimal? amount, string? unit) =>
-        amount.HasValue ? (amount, unit?.Trim()) : (null, null);
+        amount.HasValue
+            ? (amount, string.IsNullOrWhiteSpace(unit) ? Enums.MeasurementUnit.Piece : unit.Trim())
+            : (null, null);
 }

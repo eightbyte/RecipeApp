@@ -167,12 +167,22 @@ public class ScrapeValidatorTests
     }
 
     [Fact]
-    public void Ingredient_AmountWithNullUnit_HasErrorOnUnit()
+    public void Ingredient_AmountWithNullUnit_HasNoErrors()
+    {
+        // "2 eggs" is a count, which is stored as pcs.
+        var result = _ingredientValidator.TestValidate(
+            Ingredient() with { Amount = 2m, Unit = null });
+
+        result.ShouldNotHaveAnyValidationErrors();
+    }
+
+    [Fact]
+    public void Ingredient_ZeroAmountWithNullUnit_HasErrorOnAmount()
     {
         var result = _ingredientValidator.TestValidate(
-            Ingredient() with { Amount = 100m, Unit = null });
+            Ingredient() with { Amount = 0m, Unit = null });
 
-        result.ShouldHaveValidationErrorFor(x => x.Unit);
+        result.ShouldHaveValidationErrorFor(x => x.Amount);
     }
 
     // ── ScrapeConfirmIngredientRequestValidator: provenance bounds ───────────────────

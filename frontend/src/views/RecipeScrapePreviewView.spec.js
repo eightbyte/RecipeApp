@@ -111,17 +111,19 @@ describe('RecipeScrapePreviewView', () => {
   it('leaves an unstorable scraped unit unselected so it has to be picked', async () => {
     // The backend passes an unrecognised unit through verbatim for a human to correct.
     const preview = makePreview()
-    preview.ingredients[0].unit = 'clove'
+    preview.ingredients[0].unit = 'can'
     const { wrapper } = await mountView(preview)
 
     const unitSelects = wrapper.findAllComponents({ name: 'VSelect' })
       .filter(s => s.props('label') === 'Unit')
     expect(unitSelects[0].props('modelValue')).toBe(null)
+    expect(unitSelects[0].props('placeholder')).toBeUndefined()
+    expect(unitSelects[1].props('placeholder')).toBe('pcs')
   })
 
   it('blocks saving until every unstorable unit has been picked', async () => {
     const preview = makePreview()
-    preview.ingredients[0].unit = 'clove'
+    preview.ingredients[0].unit = 'can'
     const { wrapper, store } = await mountView(preview)
     const confirmSpy = vi.spyOn(store, 'confirmScrape').mockResolvedValue('new-id')
 
@@ -136,28 +138,54 @@ describe('RecipeScrapePreviewView', () => {
 
   it('names the unstorable source unit and offers clearing the amount', async () => {
     const preview = makePreview()
-    preview.ingredients[0].amount     = 3
-    preview.ingredients[0].unit       = 'cloves'
-    preview.ingredients[0].sourceUnit = 'cloves'
+    preview.ingredients[0].amount     = 1
+    preview.ingredients[0].unit       = 'can'
+    preview.ingredients[0].sourceUnit = 'can'
     const { wrapper } = await mountView(preview)
 
     await saveButton(wrapper).trigger('click')
     await flushPromises()
 
     expect(wrapper.text()).toContain(
-      'Pick a unit for "Chicken Breast", or clear its amount. The source said "cloves", which this app can\'t store.')
+      'Pick a unit for "Chicken Breast", or clear its amount. The source said "can", which this app can\'t store.')
   })
 
-  it('leaves out the source sentence when the source stated no unit', async () => {
+  it('saves an unstorable unit once one has been picked', async () => {
+    const preview = makePreview()
+    preview.ingredients[0].unit = 'can'
+    const { wrapper, store } = await mountView(preview)
+    const confirmSpy = vi.spyOn(store, 'confirmScrape').mockResolvedValue('new-id')
+
+    wrapper.vm.form.ingredients[0].unit = 'g'
+    await saveButton(wrapper).trigger('click')
+    await flushPromises()
+
+    expect(confirmSpy.mock.calls[0][0].ingredients[0]).toMatchObject({ amount: 300, unit: 'g' })
+  })
+
+  it('saves an amount whose unit was cleared as a count', async () => {
+    // The API stores an amount with no unit as pcs.
+    const { wrapper, store } = await mountView()
+    const confirmSpy = vi.spyOn(store, 'confirmScrape').mockResolvedValue('new-id')
+
+    wrapper.vm.form.ingredients[0].unit = null
+    await saveButton(wrapper).trigger('click')
+    await flushPromises()
+
+    expect(confirmSpy).toHaveBeenCalled()
+    expect(confirmSpy.mock.calls[0][0].ingredients[0]).toMatchObject({ amount: 300, unit: null })
+  })
+
+  it('saves a scraped amount that arrived with no unit', async () => {
     const preview = makePreview()
     preview.ingredients[0].unit = null
-    const { wrapper } = await mountView(preview)
+    const { wrapper, store } = await mountView(preview)
+    const confirmSpy = vi.spyOn(store, 'confirmScrape').mockResolvedValue('new-id')
 
     await saveButton(wrapper).trigger('click')
     await flushPromises()
 
-    expect(wrapper.text()).toContain('Pick a unit for "Chicken Breast", or clear its amount.')
-    expect(wrapper.text()).not.toContain('The source said')
+    expect(confirmSpy).toHaveBeenCalled()
   })
 
   it('saves a row with no amount as an Unquantified Ingredient, keeping its source', async () => {
@@ -178,8 +206,8 @@ describe('RecipeScrapePreviewView', () => {
 
   it('saves a row whose amount was cleared, even though its unit could not be stored', async () => {
     const preview = makePreview()
-    preview.ingredients[0].unit       = 'cloves'
-    preview.ingredients[0].sourceUnit = 'cloves'
+    preview.ingredients[0].unit       = 'can'
+    preview.ingredients[0].sourceUnit = 'can'
     const { wrapper, store } = await mountView(preview)
     const confirmSpy = vi.spyOn(store, 'confirmScrape').mockResolvedValue('new-id')
 

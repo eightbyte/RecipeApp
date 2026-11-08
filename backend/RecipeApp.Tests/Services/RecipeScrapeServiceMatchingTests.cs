@@ -57,7 +57,7 @@ public class RecipeScrapeServiceMatchingTests(DatabaseFixture db) : IAsyncLifeti
 
     /// <summary>A one-ingredient recipe as the model read it, where either half of the measurement may be missing.</summary>
     private static RecipeApp.API.Services.RecipeScrapeService.ExtractedRecipe MakeRecipeStated(
-        string name, string display, double? amount, string? unit) =>
+        string name, string display, double? amount, string? unit, string? notes = null) =>
         new(
             Name: "Test Recipe",
             Description: null,
@@ -65,7 +65,7 @@ public class RecipeScrapeServiceMatchingTests(DatabaseFixture db) : IAsyncLifeti
             Ingredients:
             [
                 new RecipeApp.API.Services.RecipeScrapeService.ExtractedIngredient(
-                    name, display, amount, unit, null)
+                    name, display, amount, unit, notes)
             ],
             Steps:
             [
@@ -384,18 +384,84 @@ public class RecipeScrapeServiceMatchingTests(DatabaseFixture db) : IAsyncLifeti
     [Fact]
     public async Task NormaliseAsync_DoesNotThrowOnAnUnrecognisedUnit()
     {
-        // The interactive preview lets a human fix "clove" before confirming, so failing the whole scrape over one unit would be a regression.
+        // The interactive preview lets a human fix "can" before confirming, so failing the whole scrape over one unit would be a regression.
         await using var ctx = db.CreateDbContext();
-        ctx.Ingredients.Add(TestDataBuilder.Ingredient("garlic", "Garlic", IngredientCategory.Produce));
+        ctx.Ingredients.Add(TestDataBuilder.Ingredient("tomato", "Tomato", IngredientCategory.Canned));
         await ctx.SaveChangesAsync();
 
         var svc     = BuildService();
         var preview = await svc.NormaliseAsync(
-            MakeRecipeMeasured("garlic", "Garlic", 3.0, "cloves"), "https://x", default);
+            MakeRecipeMeasured("tomato", "Tomato", 1.0, "can"), "https://x", default);
 
         var ing = preview.Ingredients.Single();
-        ing.Unit.Should().Be("cloves");
+        ing.Unit.Should().Be("can");
+        ing.SourceUnit.Should().Be("can");
+    }
+
+    // ── Counts ────────────────────────────────────────────────────────────────
+
+    [Fact]
+    public async Task NormaliseAsync_AnAmountWithNoUnit_IsACountWithNoSource()
+    {
+        // "2 eggs": nothing is lost by storing pcs, so there is no Source Measurement to keep.
+        var svc     = BuildService();
+        var preview = await svc.NormaliseAsync(
+            MakeRecipeStated("egg", "Egg", amount: 2.0, unit: null), "https://x", default);
+
+        var ing = preview.Ingredients.Single();
+        ing.Amount.Should().Be(2m);
+        ing.Unit.Should().Be(MeasurementUnit.Piece);
+        ing.SourceAmount.Should().BeNull();
+        ing.SourceUnit.Should().BeNull();
+    }
+
+    [Fact]
+    public async Task NormaliseAsync_ACountWord_IsACountThatKeepsItsWording()
+    {
+        var svc     = BuildService();
+        var preview = await svc.NormaliseAsync(
+            MakeRecipeStated("garlic", "Garlic", amount: 2.0, unit: "cloves"), "https://x", default);
+
+        var ing = preview.Ingredients.Single();
+        ing.Amount.Should().Be(2m);
+        ing.Unit.Should().Be(MeasurementUnit.Piece);
+        ing.SourceAmount.Should().Be(2m);
         ing.SourceUnit.Should().Be("cloves");
+    }
+
+    [Fact]
+    public async Task NormaliseAsync_ASizeWord_IsACountWithTheWordInNotes()
+    {
+        var svc     = BuildService();
+        var preview = await svc.NormaliseAsync(
+            MakeRecipeStated("egg", "Egg", amount: 2.0, unit: "large"), "https://x", default);
+
+        var ing = preview.Ingredients.Single();
+        ing.Amount.Should().Be(2m);
+        ing.Unit.Should().Be(MeasurementUnit.Piece);
+        ing.Notes.Should().Be("large");
+        ing.SourceAmount.Should().BeNull();
+        ing.SourceUnit.Should().BeNull();
+    }
+
+    [Fact]
+    public async Task NormaliseAsync_ASizeWord_LeadsTheNotesItJoins()
+    {
+        var svc     = BuildService();
+        var preview = await svc.NormaliseAsync(
+            MakeRecipeStated("egg", "Egg", amount: 2.0, unit: "Large", notes: "beaten"), "https://x", default);
+
+        preview.Ingredients.Single().Notes.Should().Be("Large, beaten");
+    }
+
+    [Fact]
+    public async Task NormaliseAsync_ASizeWordAlreadyInTheNotes_IsNotRepeated()
+    {
+        var svc     = BuildService();
+        var preview = await svc.NormaliseAsync(
+            MakeRecipeStated("egg", "Egg", amount: 2.0, unit: "large", notes: "large, beaten"), "https://x", default);
+
+        preview.Ingredients.Single().Notes.Should().Be("large, beaten");
     }
 
     [Fact]

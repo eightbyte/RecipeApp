@@ -222,7 +222,33 @@ describe('CookingModeView', () => {
     })
     await flushPromises()
 
-    expect(w.vm.formatAmount(null, null)).toBeNull()
     expect(w.get('.cooking-step .v-chip').text().trim()).toBe('Salt')
+  })
+
+  async function mountWithChip(ingredient) {
+    store.currentRecipe = threeStepRecipe({
+      ingredients: [{ id: 'ri-1', ingredientId: 'i1', ingredientName: 'x', category: 'DAIRY', notes: null, displayOrder: 0, ...ingredient }],
+      steps: [{ id: 's1', stepNumber: 1, instruction: 'Cook', recipeIngredientIds: ['ri-1'] }],
+    })
+    store.loading = false
+    store.error = null
+    vi.spyOn(store, 'fetchRecipe').mockResolvedValue(store.currentRecipe)
+
+    const w = mount(CookingModeView, {
+      props: { id: 'r1' },
+      global: { plugins: [vuetify, pinia], stubs: { teleport: true } },
+    })
+    await flushPromises()
+    return w.get('.cooking-step .v-chip').text().replace(/\s+/g, ' ').trim()
+  }
+
+  it('shows a count chip without its unit', async () => {
+    expect(await mountWithChip({ ingredientDisplayName: 'Eggs', amount: 2, unit: 'pcs', sourceAmount: null, sourceUnit: null }))
+      .toBe('2 Eggs')
+  })
+
+  it('shows a counted chip by its Count Word alone', async () => {
+    expect(await mountWithChip({ ingredientDisplayName: 'Garlic', amount: 2, unit: 'pcs', sourceAmount: 2, sourceUnit: 'cloves' }))
+      .toBe('(2 cloves) Garlic')
   })
 })

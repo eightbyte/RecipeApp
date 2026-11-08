@@ -113,8 +113,8 @@
               </template>
               <v-list-item-title>
                 <!-- Absent for an ingredient whose source stated no quantity -->
-                <span v-if="formatAmount(ing.amount, ing.unit)" class="font-weight-medium">
-                  {{ formatAmount(ing.amount, ing.unit) }}
+                <span v-if="formatAmount(ing)" class="font-weight-medium">
+                  {{ formatAmount(ing) }}
                 </span>
                 <span
                   v-if="formatSource(ing)"
@@ -193,7 +193,7 @@
 import { ref, computed, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useRecipeStore } from '@/stores/recipes'
-import { formatMeasurement, formatSourceMeasurement } from '@/constants/units'
+import { formatIngredientMeasurement } from '@/constants/units'
 import { BATCH_SIZES, batchSizeMultiplier } from '@/constants/batchSizes'
 import { formatServings } from '@/constants/servings'
 import { cookingRoute, recipeRoute, servingsFromQuery } from '@/router/recipeRoutes'
@@ -238,16 +238,14 @@ function reload() {
 
 onMounted(reload)
 
-/** Scaling short-circuits on a null amount, because `null * 2` is `0` in JavaScript, and half of nothing is still nothing. */
-function formatAmount(baseAmount, unit) {
-  if (baseAmount == null) return null
-  return formatMeasurement(baseAmount * servingsMultiplier.value, unit)
+/** The row's stored amount at the chosen servings, or null when it states no quantity or its source says the same count. */
+function formatAmount(ing) {
+  return formatIngredientMeasurement(ing, servingsMultiplier.value).amount
 }
 
-/** The measurement as the source recipe stated it, shown alongside the canonical amount, or null when the row was hand-entered or nothing was converted. */
+/** The measurement as the source recipe stated it, or null when the row was hand-entered or nothing was converted. */
 function formatSource(ing) {
-  return formatSourceMeasurement(
-    ing.sourceAmount, ing.sourceUnit, ing.unit, servingsMultiplier.value)
+  return formatIngredientMeasurement(ing, servingsMultiplier.value).source
 }
 
 function stepIngredients(step) {

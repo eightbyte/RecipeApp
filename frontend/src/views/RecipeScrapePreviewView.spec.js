@@ -5,7 +5,7 @@ import * as directives from 'vuetify/directives'
 import { createPinia, setActivePinia } from 'pinia'
 import { useRecipeStore } from '@/stores/recipes'
 import RecipeScrapePreviewView from './RecipeScrapePreviewView.vue'
-import { MEASUREMENT_UNITS } from '@/constants/units'
+import { UNIT_PICKER_ITEMS } from '@/constants/units'
 
 vi.mock('@/services/api', () => ({
   default: { get: vi.fn(), post: vi.fn(), put: vi.fn(), delete: vi.fn() },
@@ -99,13 +99,46 @@ describe('RecipeScrapePreviewView', () => {
     expect(categorySelects.length).toBe(1)
   })
 
-  it('renders the unit as a select over the storable units, one per ingredient', async () => {
+  it('renders the unit as a select over the grouped picker units, one per ingredient', async () => {
     const { wrapper } = await mountView()
     const unitSelects = wrapper.findAllComponents({ name: 'VSelect' })
       .filter(s => s.props('label') === 'Unit')
 
     expect(unitSelects.length).toBe(2)
-    expect(unitSelects[0].props('items')).toEqual(MEASUREMENT_UNITS)
+    expect(unitSelects[0].props('items')).toEqual(UNIT_PICKER_ITEMS)
+  })
+
+  it('sends a unit picked as oz for the API to convert', async () => {
+    const { wrapper, store } = await mountView()
+    const confirmSpy = vi.spyOn(store, 'confirmScrape').mockResolvedValue('new-id')
+
+    wrapper.vm.form.ingredients[0].amount = 4
+    wrapper.findAllComponents({ name: 'VSelect' })
+      .filter(s => s.props('label') === 'Unit')[0]
+      .vm.$emit('update:modelValue', 'oz')
+    await saveButton(wrapper).trigger('click')
+    await flushPromises()
+
+    expect(confirmSpy.mock.calls[0][0].ingredients[0]).toMatchObject({ amount: 4, unit: 'oz' })
+  })
+
+  it('keeps the scraped source on a row passed through oz and back to a storable unit', async () => {
+    const preview = makePreview()
+    Object.assign(preview.ingredients[0], { amount: 113.398, sourceAmount: 4, sourceUnit: 'ounces' })
+    const { wrapper, store } = await mountView(preview)
+    const confirmSpy = vi.spyOn(store, 'confirmScrape').mockResolvedValue('new-id')
+    const unitSelect = () => wrapper.findAllComponents({ name: 'VSelect' })
+      .filter(s => s.props('label') === 'Unit')[0]
+
+    unitSelect().vm.$emit('update:modelValue', 'oz')
+    await wrapper.vm.$nextTick()
+    unitSelect().vm.$emit('update:modelValue', 'g')
+    await saveButton(wrapper).trigger('click')
+    await flushPromises()
+
+    expect(confirmSpy.mock.calls[0][0].ingredients[0]).toMatchObject({
+      amount: 113.398, unit: 'g', sourceAmount: 4, sourceUnit: 'ounces',
+    })
   })
 
   it('leaves an unstorable scraped unit unselected so it has to be picked', async () => {

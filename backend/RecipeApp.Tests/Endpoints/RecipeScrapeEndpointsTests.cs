@@ -163,6 +163,32 @@ public class RecipeScrapeEndpointsTests(DatabaseFixture db) : IAsyncLifetime
     }
 
     [Fact]
+    public async Task Confirm_EntryOnlyUnitPickedInThePreview_StoresTheConversionWithTheTypedSource()
+    {
+        await using var ctx = db.CreateDbContext();
+        var feta = TestDataBuilder.Ingredient("feta cheese", "Feta Cheese", IngredientCategory.Dairy);
+        ctx.Ingredients.Add(feta);
+        await ctx.SaveChangesAsync();
+
+        // The preview's scraped source is replaced by what the user picked.
+        var template = BuildConfirmRequest(ingredientId: feta.Id);
+        var request  = template with
+        {
+            Ingredients = [template.Ingredients[0] with
+                { Amount = 4m, Unit = "oz", SourceAmount = 100m, SourceUnit = "g" }],
+        };
+
+        var response = await db.CreateClient().PostAsJsonAsync("/api/v1/recipes/scrape/confirm", request);
+
+        response.StatusCode.Should().Be(HttpStatusCode.Created);
+        var body = await response.Content.ReadFromJsonAsync<RecipeDetailResponse>();
+        body!.Ingredients.Single().Should().BeEquivalentTo(new
+        {
+            Amount = 113.398m, Unit = "g", SourceAmount = 4m, SourceUnit = "oz", EntryUnit = "oz",
+        });
+    }
+
+    [Fact]
     public async Task Confirm_EmptyName_Returns400()
     {
         var client  = db.CreateClient();

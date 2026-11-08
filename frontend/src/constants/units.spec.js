@@ -7,6 +7,10 @@ import {
   formatSourceMeasurement,
   hasAmount,
   toPayloadMeasurement,
+  ENTRY_ONLY_UNITS,
+  UNIT_PICKER_ITEMS,
+  toFormMeasurement,
+  setIngredientUnit,
 } from './units'
 
 describe('MEASUREMENT_UNITS', () => {
@@ -21,6 +25,68 @@ describe('MEASUREMENT_UNITS', () => {
 
   it('offers a default that is itself storable', () => {
     expect(MEASUREMENT_UNITS).toContain(DEFAULT_UNIT)
+  })
+})
+
+describe('ENTRY_ONLY_UNITS', () => {
+  it('mirrors MeasurementUnit.EntryOnly on the backend, in the same order', () => {
+    expect(ENTRY_ONLY_UNITS).toEqual(['oz', 'lb', 'fl oz', 'pint', 'quart'])
+  })
+
+  it('is never storable', () => {
+    expect(ENTRY_ONLY_UNITS.filter(u => MEASUREMENT_UNITS.includes(u))).toEqual([])
+  })
+})
+
+describe('UNIT_PICKER_ITEMS', () => {
+  it('groups every unit the picker offers under Weight, Volume and Count', () => {
+    expect(UNIT_PICKER_ITEMS).toEqual([
+      { type: 'subheader', title: 'Weight' }, 'g', 'kg', 'oz', 'lb',
+      { type: 'subheader', title: 'Volume' }, 'ml', 'L', 'tsp', 'tbsp', 'cup', 'fl oz', 'pint', 'quart',
+      { type: 'subheader', title: 'Count' }, 'pcs',
+    ])
+  })
+
+  it('offers every storable and entry-only unit exactly once', () => {
+    const offered = UNIT_PICKER_ITEMS.filter(item => typeof item === 'string')
+    expect([...offered].sort()).toEqual([...MEASUREMENT_UNITS, ...ENTRY_ONLY_UNITS].sort())
+  })
+})
+
+describe('toFormMeasurement', () => {
+  it('reopens a row in its entry-only unit at the source amount', () => {
+    expect(toFormMeasurement({ amount: 113.398, unit: 'g', sourceAmount: 4, sourceUnit: 'ounces', entryUnit: 'oz' }))
+      .toEqual({ amount: 4, unit: 'oz', entryUnit: 'oz' })
+  })
+
+  it('reopens any other row as stored', () => {
+    expect(toFormMeasurement({ amount: 150, unit: 'g', sourceAmount: 4, sourceUnit: 'oz', entryUnit: null }))
+      .toEqual({ amount: 150, unit: 'g', entryUnit: null })
+    expect(toFormMeasurement({ amount: null, unit: null, sourceAmount: null, sourceUnit: 'to taste' }))
+      .toEqual({ amount: null, unit: null, entryUnit: null })
+  })
+})
+
+describe('setIngredientUnit', () => {
+  const reopenedInOz = () => ({ amount: 4, unit: 'oz', sourceAmount: 4, sourceUnit: 'ounces', entryUnit: 'oz' })
+
+  it.each(['g', 'cup', null])('clears the source when a row opened in oz moves to %s', unit => {
+    const ing = reopenedInOz()
+    setIngredientUnit(ing, unit)
+    expect(ing).toEqual({ amount: 4, unit, sourceAmount: null, sourceUnit: null, entryUnit: null })
+  })
+
+  it('keeps the source when a row opened in oz moves to another entry-only unit', () => {
+    const ing = reopenedInOz()
+    setIngredientUnit(ing, 'lb')
+    expect(ing).toEqual({ ...reopenedInOz(), unit: 'lb' })
+  })
+
+  it('keeps a scraped or imported source on a row passing through oz and back', () => {
+    const ing = { amount: 113.398, unit: 'g', sourceAmount: 4, sourceUnit: 'oz', entryUnit: null }
+    setIngredientUnit(ing, 'oz')
+    setIngredientUnit(ing, 'g')
+    expect(ing).toEqual({ amount: 113.398, unit: 'g', sourceAmount: 4, sourceUnit: 'oz', entryUnit: null })
   })
 })
 

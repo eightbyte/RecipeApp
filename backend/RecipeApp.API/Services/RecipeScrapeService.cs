@@ -227,16 +227,16 @@ public class RecipeScrapeService(
         for (int i = 0; i < orderedIngredients.Count; i++)
         {
             var ing = orderedIngredients[i];
-            var (amount, unit) = RecipeIngredient.ToStoredMeasurement(ing.Amount, ing.Unit);
+            var stored = MeasurementConverter.ToStored(ing.Amount, ing.Unit, ing.SourceAmount, ing.SourceUnit);
             var ri = new RecipeIngredient
             {
                 Id           = Guid.NewGuid(),
                 RecipeId     = recipe.Id,
                 IngredientId = resolvedIngredientIds[i],
-                Amount       = amount,
-                Unit         = unit,
-                SourceAmount = ing.SourceAmount,
-                SourceUnit   = ing.SourceUnit?.Trim(),
+                Amount       = stored.Amount,
+                Unit         = stored.Unit,
+                SourceAmount = stored.SourceAmount,
+                SourceUnit   = stored.SourceUnit,
                 Notes        = ing.Notes?.Trim(),
                 DisplayOrder = ing.DisplayOrder,
             };

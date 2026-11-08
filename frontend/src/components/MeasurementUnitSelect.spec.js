@@ -1,9 +1,9 @@
-import { mount } from '@vue/test-utils'
+import { flushPromises, mount } from '@vue/test-utils'
 import { createVuetify } from 'vuetify'
 import * as components from 'vuetify/components'
 import * as directives from 'vuetify/directives'
 import MeasurementUnitSelect from './MeasurementUnitSelect.vue'
-import { MEASUREMENT_UNITS } from '@/constants/units'
+import { UNIT_PICKER_ITEMS } from '@/constants/units'
 
 const vuetify = createVuetify({ components, directives })
 
@@ -17,8 +17,23 @@ function mountSelect(props = {}) {
 const select = wrapper => wrapper.findComponent({ name: 'VSelect' })
 
 describe('MeasurementUnitSelect', () => {
-  it('offers the storable units', () => {
-    expect(select(mountSelect()).props('items')).toEqual(MEASUREMENT_UNITS)
+  it('offers every storable and entry-only unit, grouped under Weight, Volume and Count', () => {
+    expect(select(mountSelect()).props('items')).toEqual(UNIT_PICKER_ITEMS)
+  })
+
+  it('renders each group under its subheader when opened', async () => {
+    const wrapper = mount(MeasurementUnitSelect, {
+      props: { modelValue: 'g', amount: 100 },
+      global: { plugins: [vuetify] },
+      attachTo: document.body,
+    })
+    await wrapper.find('.v-field').trigger('mousedown')
+    await flushPromises()
+    const texts      = selector => [...document.querySelectorAll(selector)].map(el => el.textContent.trim())
+    const subheaders = texts('.v-list-subheader')
+    const options    = texts('.v-list-item')
+    expect(subheaders).toEqual(['Weight', 'Volume', 'Count'])
+    expect(options).toEqual(['g', 'kg', 'oz', 'lb', 'ml', 'L', 'tsp', 'tbsp', 'cup', 'fl oz', 'pint', 'quart', 'pcs'])
   })
 
   it('shows the unit and can be changed while there is an amount', () => {

@@ -17,8 +17,8 @@ public class RecipeIngredientRequestValidator : AbstractValidator<RecipeIngredie
             .WithMessage("Amount must be greater than zero, or null when no quantity is stated.");
 
         RuleFor(x => x.Unit)
-            .Must(MeasurementUnit.IsValid)
-            .WithMessage($"Unit must be one of: {string.Join(", ", MeasurementUnit.All)}, or null for a count")
+            .Must(MeasurementUnit.IsAccepted)
+            .WithMessage($"Unit must be one of: {string.Join(", ", MeasurementUnit.Accepted)}, or null for a count")
             .When(x => x.Amount.HasValue && x.Unit is not null);
 
         RuleFor(x => x.Unit)

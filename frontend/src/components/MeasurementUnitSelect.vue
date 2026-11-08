@@ -1,7 +1,7 @@
 <template>
   <v-select
     :model-value="hasAmount(amount) ? unit : null"
-    :items="MEASUREMENT_UNITS"
+    :items="UNIT_PICKER_ITEMS"
     label="Unit"
     density="compact"
     hide-details
@@ -16,7 +16,7 @@
 
 <script setup>
 import { computed } from 'vue'
-import { MEASUREMENT_UNITS, COUNT_UNIT, hasAmount } from '@/constants/units'
+import { UNIT_PICKER_ITEMS, COUNT_UNIT, hasAmount } from '@/constants/units'
 
 // Kept while the amount is empty and only shown blank, so the picked unit returns with an amount.
 const unit = defineModel({ type: [String, null], default: null })

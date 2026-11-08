@@ -215,6 +215,74 @@ describe('RecipeFormView — edit mode', () => {
     expect(unitSelect().props('disabled')).toBe(false)
   })
 
+  describe('entry-only units', () => {
+    const importedFeta = () => makeRecipeDetail({
+      id: 'r1',
+      ingredients: [{
+        ...makeRecipeDetail().ingredients[0],
+        amount: 113.398, unit: 'g', sourceAmount: 4, sourceUnit: 'ounces', entryUnit: 'oz',
+      }],
+    })
+
+    async function mountEditing(detail) {
+      const wrapper = mountForm({ id: 'r1' })
+      useIngredientStore().ingredients = [makeIngredient()]
+      wrapper.vm.populateForm(detail)
+      await wrapper.vm.$nextTick()
+      return wrapper
+    }
+
+    const unitSelect = wrapper => wrapper.findAllComponents({ name: 'VSelect' })
+      .filter(s => s.props('label') === 'Unit')[0]
+
+    async function submittedRow(wrapper) {
+      const recipeStore = useRecipeStore()
+      vi.spyOn(recipeStore, 'updateRecipe').mockResolvedValue(makeRecipeDetail({ id: 'r1' }))
+      wrapper.vm.formRef = { validate: vi.fn().mockResolvedValue({ valid: true }) }
+      await wrapper.vm.submit()
+      return recipeStore.updateRecipe.mock.calls[0][1].ingredients[0]
+    }
+
+    it('reopens a row in the entry-only unit its source states, not the stored grams', async () => {
+      const wrapper = await mountEditing(importedFeta())
+      expect(unitSelect(wrapper).props('modelValue')).toBe('oz')
+      expect(wrapper.vm.form.ingredients[0].amount).toBe(4)
+    })
+
+    it('saves a reopened row unchanged as typed, keeping its source for the API to match', async () => {
+      const wrapper = await mountEditing(importedFeta())
+      expect(await submittedRow(wrapper)).toMatchObject({
+        amount: 4, unit: 'oz', sourceAmount: 4, sourceUnit: 'ounces',
+      })
+    })
+
+    it('reopens a row with no entry unit as stored', async () => {
+      const detail = importedFeta()
+      detail.ingredients[0] = { ...detail.ingredients[0], amount: 150, entryUnit: null }
+      const wrapper = await mountEditing(detail)
+      expect(wrapper.vm.form.ingredients[0]).toMatchObject({ amount: 150, unit: 'g' })
+    })
+
+    it('clears the source when the row is changed to a storable unit', async () => {
+      const wrapper = await mountEditing(importedFeta())
+      unitSelect(wrapper).vm.$emit('update:modelValue', 'g')
+      await wrapper.vm.$nextTick()
+      expect(await submittedRow(wrapper)).toMatchObject({
+        amount: 4, unit: 'g', sourceAmount: null, sourceUnit: null,
+      })
+    })
+
+    it('sends a unit picked as oz for the API to convert', async () => {
+      const wrapper = await mountEditing(makeRecipeDetail({ id: 'r1' }))
+      wrapper.vm.form.ingredients[0].amount = 4
+      unitSelect(wrapper).vm.$emit('update:modelValue', 'oz')
+      await wrapper.vm.$nextTick()
+      expect(await submittedRow(wrapper)).toMatchObject({
+        amount: 4, unit: 'oz', sourceAmount: null, sourceUnit: null,
+      })
+    })
+  })
+
   it('round-trips a null amount loaded from the API back as null', async () => {
     const detail = makeRecipeDetail({ id: 'r1' })
     detail.ingredients[0].amount = null

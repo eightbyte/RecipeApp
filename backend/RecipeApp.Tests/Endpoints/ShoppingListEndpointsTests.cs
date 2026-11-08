@@ -74,6 +74,31 @@ public class ShoppingListEndpointsTests(DatabaseFixture db) : IAsyncLifetime
     }
 
     [Fact]
+    public async Task GetActive_RowEnteredInOunces_SumsWithAnotherRecipesGrams()
+    {
+        var fetaId = await SeedIngredientAsync("feta cheese", "Feta Cheese");
+        var plan   = await CreatePlanViaApi();
+
+        foreach (var (amount, unit) in new[] { (4m, "oz"), (100m, "g") })
+        {
+            var template = TestDataBuilder.CreateRecipeRequest(fetaId, $"Feta in {unit}");
+            var request  = template with
+            {
+                Ingredients = [template.Ingredients[0] with { Amount = amount, Unit = unit }],
+            };
+            var response = await Client.PostAsJsonAsync("/api/v1/recipes", request);
+            response.EnsureSuccessStatusCode();
+            var recipe = await response.Content.ReadFromJsonAsync<API.DTOs.Recipes.RecipeDetailResponse>();
+            await AddRecipeToPlanAsync(plan.Id, recipe!.Id);
+        }
+
+        var list = await Client.GetFromJsonAsync<ShoppingListResponse>("/api/v1/shopping-lists/active");
+
+        list!.Items.Should().ContainSingle(i => i.IngredientId == fetaId)
+            .Which.Should().BeEquivalentTo(new { Amount = 213.398m, Unit = "g", NeedsReview = false });
+    }
+
+    [Fact]
     public async Task GetActive_ListsEachGeneratedItemsSources()
     {
         var ingId    = await SeedIngredientAsync();

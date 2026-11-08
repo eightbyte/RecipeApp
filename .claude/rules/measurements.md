@@ -36,10 +36,28 @@ paths:
 - The storable unit set lives **only** in `Enums/MeasurementUnit.cs`, mirrored by
   `frontend/src/constants/units.js`. The set is `g`, `kg`, `ml`, `L`, `pcs`, `tsp`, `tbsp`, `cup`.
   Never hard-code a unit array. Consume these files.
-- `MeasurementUnit.IsValid` is **strict** (canonical spelling only) and is what validators use.
+- `MeasurementUnit.IsValid` is **strict** (canonical spelling only). Validators use
+  `IsAccepted`, which is `IsValid` plus the Entry-only Units, just as strict.
   `MeasurementUnit.TryCanonicalise` is **lenient** (`teaspoons`, `ML`, `cups`). Every path that
   receives a unit from outside calls it *before* validating. `AcceptedSpellings` exposes the
   lenient table. Derive LLM prompts from it rather than listing spellings by hand.
+
+## Entry-only Units
+
+- The Unit picker also offers the Entry-only Units `oz`, `lb`, `fl oz`, `pint` and `quart`. They live
+  **only** in `MeasurementUnit.EntryOnly`, mirrored by `ENTRY_ONLY_UNITS` in `units.js`, and are
+  **never stored**. `oz` is always weight. `fl oz` is the separate volume option.
+- Validators accept them through `MeasurementUnit.IsAccepted`. Every persistence path (recipe
+  create/update, so recipe packs too, and scrape confirm) stores a row through
+  `MeasurementConverter.ToStored`. That converts an Entry-only Unit by Stage A to `g`/`ml` and keeps the
+  typed measurement as the Source Measurement. A given source stating the same quantity in another
+  spelling (`4 ounces` for a typed `4 oz`) is kept instead, so a reopened row saves unchanged.
+- **The recipe form reopens a row in an Entry-only Unit only through the response's `entryUnit`**
+  (`MeasurementConverter.EntryUnitOf`). It is set only while the source still converts to the
+  stored amount, so a row edited by hand after import is never reverted to its source.
+- Frontend: the picker's items are `UNIT_PICKER_ITEMS`, derived from the two unit mirrors. Change a
+  form row's unit only through `setIngredientUnit`. It drops the Source Measurement only for a row
+  opened in an Entry-only Unit, so a scraped or imported source survives a pass through `oz`.
 
 ## Conversion
 
@@ -82,8 +100,8 @@ paths:
 
 ## Provenance
 
-- **Never destroy the input.** Imported rows record `RecipeIngredient.SourceAmount`/`SourceUnit`
-  verbatim. These fields are provenance only: never summed and never used in consolidation.
+- **Never destroy the input.** Imported rows, and rows typed in an Entry-only Unit, record
+  `RecipeIngredient.SourceAmount`/`SourceUnit` verbatim. These fields are provenance only: never summed and never used in consolidation.
   Every persistence path (scrape confirm, recipe create/update) must carry them through, and the
   frontend round-trips them through the recipe form.
 - When an amount is repaired on import, the source fields record the repaired measurement, not the

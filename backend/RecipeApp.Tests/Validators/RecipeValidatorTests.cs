@@ -44,8 +44,21 @@ public class RecipeValidatorTests
     public void Ingredient_InvalidUnit_HasErrorOnUnit()
     {
         var result = _ingredientValidator.TestValidate(
-            new RecipeIngredientRequest(Guid.NewGuid(), 100m, "oz", null, 0));
+            new RecipeIngredientRequest(Guid.NewGuid(), 100m, "gallon", null, 0));
         result.ShouldHaveValidationErrorFor(x => x.Unit);
+    }
+
+    [Theory]
+    [InlineData("oz")]
+    [InlineData("lb")]
+    [InlineData("fl oz")]
+    [InlineData("pint")]
+    [InlineData("quart")]
+    public void Ingredient_EachEntryOnlyUnit_HasNoError(string unit)
+    {
+        var result = _ingredientValidator.TestValidate(
+            new RecipeIngredientRequest(Guid.NewGuid(), 4m, unit, null, 0));
+        result.ShouldNotHaveValidationErrorFor(x => x.Unit);
     }
 
     [Theory]

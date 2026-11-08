@@ -1,6 +1,50 @@
 /** The storable measurement units, mirroring `MeasurementUnit.All` on the backend in the same order. */
 export const MEASUREMENT_UNITS = ['g', 'kg', 'ml', 'L', 'pcs', 'tsp', 'tbsp', 'cup']
 
+/** The entry-only units, mirroring `MeasurementUnit.EntryOnly` on the backend in the same order, which the API converts to `g` or `ml` on save so none is ever stored. */
+export const ENTRY_ONLY_UNITS = ['oz', 'lb', 'fl oz', 'pint', 'quart']
+
+/** Each unit's dimension, mirroring `MeasurementUnit.Table` for the storable units and the metric unit each entry-only unit converts to. */
+const UNIT_DIMENSIONS = {
+  g: 'Mass', kg: 'Mass', oz: 'Mass', lb: 'Mass',
+  ml: 'Volume', L: 'Volume', tsp: 'Volume', tbsp: 'Volume', cup: 'Volume',
+  'fl oz': 'Volume', pint: 'Volume', quart: 'Volume',
+  pcs: 'Count',
+}
+
+const PICKER_GROUPS = [
+  { title: 'Weight', dimension: 'Mass' },
+  { title: 'Volume', dimension: 'Volume' },
+  { title: 'Count',  dimension: 'Count' },
+]
+
+/** The Unit picker's items, every storable then entry-only unit under its dimension's subheader. */
+export const UNIT_PICKER_ITEMS = PICKER_GROUPS.flatMap(({ title, dimension }) => [
+  { type: 'subheader', title },
+  ...[...MEASUREMENT_UNITS, ...ENTRY_ONLY_UNITS].filter(unit => UNIT_DIMENSIONS[unit] === dimension),
+])
+
+function isEntryOnlyUnit(unit) {
+  return ENTRY_ONLY_UNITS.includes(unit)
+}
+
+/** The `{ amount, unit, entryUnit }` the recipe form opens a row with, at its source amount in the entry-only unit the API names when there is one. */
+export function toFormMeasurement(ing) {
+  return ing.entryUnit
+    ? { amount: ing.sourceAmount, unit: ing.entryUnit, entryUnit: ing.entryUnit }
+    : { amount: ing.amount, unit: ing.unit, entryUnit: null }
+}
+
+/** Sets a form row's unit, dropping the Source Measurement once a row opened in an entry-only unit moves to a storable one, because it is then entered by hand. */
+export function setIngredientUnit(ing, unit) {
+  if (ing.entryUnit && !isEntryOnlyUnit(unit)) {
+    ing.sourceAmount = null
+    ing.sourceUnit   = null
+    ing.entryUnit    = null
+  }
+  ing.unit = unit
+}
+
 /** Default unit for a freshly added ingredient row. */
 export const DEFAULT_UNIT = 'g'
 

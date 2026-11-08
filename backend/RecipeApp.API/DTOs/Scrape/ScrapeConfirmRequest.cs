@@ -10,7 +10,7 @@ public record ScrapeConfirmRequest(
 );
 
 /// <param name="Amount">Null when the source line stated no quantity.</param>
-/// <param name="Unit">Null exactly when <paramref name="Amount"/> is null.</param>
+/// <param name="Unit">Null exactly when <paramref name="Amount"/> is null; an entry-only unit is converted on save with this measurement kept as the source.</param>
 public record ScrapeConfirmIngredientRequest(
     Guid? IngredientId,
     string? NewIngredientName,

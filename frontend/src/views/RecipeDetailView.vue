@@ -147,18 +147,18 @@
           <!-- Ingredient chips for this step -->
           <div
             v-if="stepIngredients(step).length"
-            class="px-6 pb-4 d-flex flex-wrap ga-2"
+            class="step-ingredients px-6 pb-4 d-flex flex-column align-center ga-2"
           >
-            <v-chip
+            <StepIngredientChip
               v-for="ing in stepIngredients(step)"
               :key="ing.id"
-              size="x-small"
+              :recipe-ingredient="ing"
+              :servings-multiplier="servingsMultiplier"
+              size="small"
               color="secondary"
               variant="tonal"
               @click="highlightIngredient(ing.id)"
-            >
-              {{ ing.ingredientDisplayName }}
-            </v-chip>
+            />
           </div>
         </v-card>
       </div>
@@ -202,6 +202,7 @@ import BatchSizeToggle from '@/components/BatchSizeToggle.vue'
 import EmptyState from '@/components/EmptyState.vue'
 import ErrorState from '@/components/ErrorState.vue'
 import ServingsStepper from '@/components/ServingsStepper.vue'
+import StepIngredientChip from '@/components/StepIngredientChip.vue'
 
 const props = defineProps({ id: { type: String, required: true } })
 const route  = useRoute()

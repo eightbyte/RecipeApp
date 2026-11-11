@@ -277,6 +277,19 @@ public class RecipeScrapeServiceStepAmountTests(DatabaseFixture db) : IAsyncLife
         preview.Steps.Select(s => s.Instruction).Should().Equal("Step 1.", "Step 2.");
     }
 
+    [Fact]
+    public async Task ReaderLinesTheModelCopiedIntoAnInstruction_AreLeftOut()
+    {
+        var extraction = Extraction(ChickpeasOilAndSalt);
+        extraction["steps"]![0]!["instruction"] =
+            $"Toss the chickpeas. {RecipeJsonLdExtractor.StepLinesHeading} - ½ tsp salt";
+        var svc = BuildService(extraction, new MealimeSiteReader());
+
+        var preview = await svc.ScrapeAsync(MealimePageFixture.Url);
+
+        preview.Steps[0].Instruction.Should().Be("Toss the chickpeas.");
+    }
+
     private async Task SeedIngredientAsync(string name, decimal? gramsPerMillilitre)
     {
         await using var ctx = db.CreateDbContext();

@@ -130,14 +130,29 @@ public static class RecipeJsonLdExtractor
             if (isSection) continue;
 
             stepNumber++;
-            if (stepLines is null || !stepLines.TryGetValue(stepNumber, out var lines)) continue;
-
-            sb.AppendLine($"   {StepLinesHeading}");
-            foreach (var line in lines)
-                sb.AppendLine($"   - {line}");
+            if (stepLines is not null && stepLines.TryGetValue(stepNumber, out var lines))
+                AppendStepLines(sb, StepLinesHeading, lines, indent: "   ");
         }
 
         return sb.ToString();
+    }
+
+    /// <summary>A Site Reader's lines for a page with no JSON-LD to place them in, as a section to follow the page text.</summary>
+    public static string BuildStepLinesSection(IReadOnlyDictionary<int, IReadOnlyList<string>>? stepLines)
+    {
+        if (stepLines is null || stepLines.Count == 0) return string.Empty;
+
+        var sb = new StringBuilder("\n\n");
+        foreach (var (stepNumber, lines) in stepLines.OrderBy(s => s.Key))
+            AppendStepLines(sb, $"Step {stepNumber}: {StepLinesHeading}", lines, indent: "");
+        return sb.ToString();
+    }
+
+    private static void AppendStepLines(StringBuilder sb, string heading, IReadOnlyList<string> lines, string indent)
+    {
+        sb.AppendLine($"{indent}{heading}");
+        foreach (var line in lines)
+            sb.AppendLine($"{indent}- {line}");
     }
 
     private static List<string> ExtractIngredients(JsonNode? node)

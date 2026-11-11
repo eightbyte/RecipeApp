@@ -1,5 +1,4 @@
 using System.Globalization;
-using System.Text;
 using System.Text.Json;
 using System.Text.Json.Nodes;
 using System.Text.Json.Serialization;
@@ -119,10 +118,10 @@ public class RecipeScrapeService(
         var schema = JsonNode.Parse(recipeSchemaJson)!;
         var step   = schema["properties"]!["steps"]!["items"]!;
 
-        step["properties"]!["stated_amounts"] = JsonNode.Parse("""
+        step["properties"]!["stated_amounts"] = JsonNode.Parse($$"""
             {
               "type": "array",
-              "description": "Every amount this step states for an ingredient, in its own text or in the lines under its 'Amounts for this step:' heading. Empty when it states none.",
+              "description": "Every amount this step states for an ingredient, in its own text or in the lines under its '{{RecipeJsonLdExtractor.StepLinesHeading}}' heading. Empty when it states none.",
               "items": {
                 "type": "object",
                 "properties": {
@@ -180,7 +179,7 @@ public class RecipeScrapeService(
         "For a counted ingredient with no unit (e.g. '2 eggs'), emit the amount and a null unit, " +
         "and put a size word such as 'large' in notes rather than in unit. " +
         "For each step, list in stated_amounts every amount the step states for an ingredient, whether in the step's own text " +
-        "(e.g. 'drizzle with 2 tbsp oil') or in the lines under its 'Amounts for this step:' heading. " +
+        $"(e.g. 'drizzle with 2 tbsp oil') or in the lines under its '{RecipeJsonLdExtractor.StepLinesHeading}' heading. " +
         "Wording with no amount (e.g. 'a drizzle of oil', 'season with salt') states none, so leave it out. " +
         "A step's instruction is its own text only, without the lines under that heading. " +
         "Respond with a single JSON object conforming to the schema and nothing else.";
@@ -403,8 +402,10 @@ public class RecipeScrapeService(
         var jsonLdText = RecipeJsonLdExtractor.TryBuildRecipeText(doc, stepLines);
         if (jsonLdText is not null) return (jsonLdText, true);
 
-        var strippedText = StripBodyText(doc) + StepLinesSection(stepLines);
-        return (strippedText, strippedText.Length >= _options.MinStaticContentLength);
+        // Judged on the page's own text, because a reader's lines alone do not make a thin static fetch readable.
+        var strippedText = StripBodyText(doc);
+        return (strippedText + RecipeJsonLdExtractor.BuildStepLinesSection(stepLines),
+            strippedText.Length >= _options.MinStaticContentLength);
     }
 
     /// <summary>The extra lines per step from the Site Reader for the URL's host, or null when no reader handles it or the reader fails, which never fails the scrape.</summary>
@@ -428,21 +429,6 @@ public class RecipeScrapeService(
             logger.LogWarning(ex, "{Reader} failed on {Url}; scraping without it.", reader.GetType().Name, url);
             return null;
         }
-    }
-
-    /// <summary>A Site Reader's lines for a page with no JSON-LD to place them in, as a section after the page text.</summary>
-    private static string StepLinesSection(IReadOnlyDictionary<int, IReadOnlyList<string>>? stepLines)
-    {
-        if (stepLines is null || stepLines.Count == 0) return string.Empty;
-
-        var sb = new StringBuilder("\n\n");
-        foreach (var (stepNumber, lines) in stepLines.OrderBy(s => s.Key))
-        {
-            sb.AppendLine($"Step {stepNumber}: {RecipeJsonLdExtractor.StepLinesHeading}");
-            foreach (var line in lines)
-                sb.AppendLine($"- {line}");
-        }
-        return sb.ToString();
     }
 
     public static async Task<string> StripHtmlAsync(string html)
@@ -704,7 +690,7 @@ public class RecipeScrapeService(
         var previewSteps = extracted.Steps
             .OrderBy(s => s.StepNumber)
             .Select(s => new ScrapePreviewStepResponse(
-                s.StepNumber, s.Instruction, DistinctIngredientIndexesInRange(s, previewIngredients.Count, url)))
+                s.StepNumber, WithoutStepLines(s.Instruction), DistinctIngredientIndexesInRange(s, previewIngredients.Count, url)))
             .ToList();
 
         return new ScrapePreviewResponse(
@@ -736,6 +722,13 @@ public class RecipeScrapeService(
                 url, step.StepNumber, string.Join(", ", dropped), ingredientCount - 1);
 
         return kept;
+    }
+
+    /// <summary>A step's instruction without any Site Reader lines the model copied into it, because saved text does not scale with Servings.</summary>
+    private static string WithoutStepLines(string instruction)
+    {
+        var heading = instruction.IndexOf(RecipeJsonLdExtractor.StepLinesHeading, StringComparison.OrdinalIgnoreCase);
+        return heading < 0 ? instruction : instruction[..heading].TrimEnd();
     }
 
     // ── Amounts from steps ────────────────────────────────────────────────────
@@ -781,7 +774,7 @@ public class RecipeScrapeService(
     {
         if (row.Amount is not null || row.SourceAmount is not null || row.SourceUnit is not null) return row;
 
-        var listed = row with
+        var withStepAmounts = row with
         {
             StepAmounts = mentions.Select(m => new ScrapePreviewStepAmountResponse(m.Amount, m.Unit)).ToList(),
         };
@@ -792,20 +785,20 @@ public class RecipeScrapeService(
                 // Read like a stated line, so a Count Word, an Entry-only Unit or a cup is stored as one would be.
                 var (amount, unit, sourceAmount, sourceUnit, notes) =
                     ReadStatedMeasurement(ing with { Amount = (double)shared.Amount, Unit = shared.Unit });
-                return listed with
+                return withStepAmounts with
                 {
                     Amount = amount, Unit = unit, SourceAmount = sourceAmount, SourceUnit = sourceUnit, Notes = notes,
                     AmountFromSteps = true,
                 };
 
             case StepAmountTotal.Converted converted:
-                return listed with { Amount = converted.Amount, Unit = converted.Unit, AmountFromSteps = true };
+                return withStepAmounts with { Amount = converted.Amount, Unit = converted.Unit, AmountFromSteps = true };
 
             case StepAmountTotal.Sizeless sizeless:
-                return listed with { SourceAmount = sizeless.SourceAmount, SourceUnit = sizeless.Word, AmountFromSteps = true };
+                return withStepAmounts with { SourceAmount = sizeless.SourceAmount, SourceUnit = sizeless.Word, AmountFromSteps = true };
 
             case StepAmountTotal.NotAddedUp:
-                return listed;
+                return withStepAmounts;
 
             default:
                 return row;

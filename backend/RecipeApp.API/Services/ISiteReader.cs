@@ -2,10 +2,7 @@ using AngleSharp.Dom;
 
 namespace RecipeApp.API.Services;
 
-/// <summary>
-/// A Site Reader: a reader for one site's own page data, adding detail its JSON-LD leaves out. The scrape picks one by the
-/// URL's host, and a reader never replaces what the JSON-LD gives or calls the model.
-/// </summary>
+/// <summary>A reader for one site's own page data, chosen by the URL's host, that adds detail the JSON-LD leaves out without replacing any of it.</summary>
 public interface ISiteReader
 {
     /// <summary>The hosts this reader handles, such as <c>www.mealime.com</c>, matched ignoring case.</summary>

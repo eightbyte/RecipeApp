@@ -275,7 +275,6 @@
 
       <!-- ── Actions ─────────────────────────────────────────────── -->
       <div class="d-flex ga-4">
-        <!-- Replaces the preview, so back never reopens the abandoned page. -->
         <v-btn variant="outlined" :to="{ name: 'recipes' }" replace>Cancel</v-btn>
         <v-btn
           color="primary"
@@ -526,7 +525,6 @@ async function saveRecipe() {
     store.clearScrapePreview()
     if (photoSkipped)
       ui.notify({ message: 'Saved without the photo. You can add one on the Edit page.', color: 'warning' })
-    // Replaced, not pushed, so back from the new recipe skips the finished preview.
     router.replace({ name: 'recipe-detail', params: { id } })
   } catch (e) {
     submitError.value = e.message ?? 'Something went wrong. Please try again.'

@@ -25,16 +25,16 @@ catalogue.push(
   makeIngredient({ id: 'starch-id',   name: 'cornstarch',     displayName: 'Cornstarch',     category: 'BAKING_SPICES' }),
 )
 
-const router = vi.hoisted(() => ({ push: vi.fn(), replace: vi.fn() }))
+const mockRouter = vi.hoisted(() => ({ push: vi.fn(), replace: vi.fn() }))
 
 vi.mock('vue-router', () => ({
-  useRouter: () => router,
+  useRouter: () => mockRouter,
   RouterLink: { template: '<a><slot /></a>' },
 }))
 
 beforeEach(() => {
-  router.push.mockReset()
-  router.replace.mockReset()
+  mockRouter.push.mockReset()
+  mockRouter.replace.mockReset()
 })
 
 const vuetify = createVuetify({ components, directives })
@@ -552,8 +552,8 @@ describe('RecipeScrapePreviewView', () => {
   it('replaces itself with the Recipes list when there is no preview to show', async () => {
     const { wrapper } = await mountView(null)
 
-    expect(router.replace).toHaveBeenCalledWith({ name: 'recipes' })
-    expect(router.push).not.toHaveBeenCalled()
+    expect(mockRouter.replace).toHaveBeenCalledWith({ name: 'recipes' })
+    expect(mockRouter.push).not.toHaveBeenCalled()
     expect(wrapper.text()).not.toContain('No preview available')
   })
 
@@ -579,8 +579,8 @@ describe('RecipeScrapePreviewView', () => {
       await saveButton(wrapper).trigger('click')
       await flushPromises()
 
-      expect(router.replace).toHaveBeenCalledWith({ name: 'recipe-detail', params: { id: 'new-id' } })
-      expect(router.push).not.toHaveBeenCalled()
+      expect(mockRouter.replace).toHaveBeenCalledWith({ name: 'recipe-detail', params: { id: 'new-id' } })
+      expect(mockRouter.push).not.toHaveBeenCalled()
     })
 
     it('cancels to the Recipes list in place of the preview', async () => {

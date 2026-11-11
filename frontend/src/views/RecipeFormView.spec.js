@@ -14,10 +14,25 @@ vi.mock('@/services/api', () => ({
   assetUrl: vi.fn((p) => p ?? ''),
 }))
 
-const mockRouter = { push: vi.fn(), replace: vi.fn() }
+const mockRouter = vi.hoisted(() => ({
+  push: vi.fn(), replace: vi.fn(), back: vi.fn(),
+  // The browser history entry the form was opened on, whose `back` is the page before it.
+  options: { history: { state: {} } },
+}))
 
 vi.mock('vue-router', async (importActual) => {
   const actual = await importActual()
+  const page = { template: '<div />' }
+  // A real router resolves the page before the form, so its route name and id are read as the app reads them.
+  const { resolve } = actual.createRouter({
+    history: actual.createMemoryHistory(),
+    routes: [
+      { path: '/recipes',          name: 'recipes',       component: page },
+      { path: '/recipes/:id',      name: 'recipe-detail', component: page },
+      { path: '/recipes/:id/edit', name: 'recipe-edit',   component: page },
+    ],
+  })
+  mockRouter.resolve = resolve
   return {
     ...actual,
     useRoute: () => ({ params: {} }),
@@ -34,6 +49,8 @@ beforeEach(() => {
   setActivePinia(pinia)
   mockRouter.push.mockReset()
   mockRouter.replace.mockReset()
+  mockRouter.back.mockReset()
+  mockRouter.options.history.state = {}
 })
 
 function mountForm(props = {}) {
@@ -538,17 +555,6 @@ describe('RecipeFormView — leaving the page', () => {
     expect(mockRouter.push).not.toHaveBeenCalled()
   })
 
-  it('replaces the edit form with the saved recipe, so back skips the finished form', async () => {
-    const wrapper = await mountFilled({ id: 'r1' })
-    vi.spyOn(useRecipeStore(), 'updateRecipe').mockResolvedValue(makeRecipeDetail({ id: 'r1' }))
-
-    await wrapper.vm.submit()
-    await flushPromises()
-
-    expect(mockRouter.replace).toHaveBeenCalledWith({ name: 'recipe-detail', params: { id: 'r1' } })
-    expect(mockRouter.push).not.toHaveBeenCalled()
-  })
-
   it('cancels a new recipe to the Recipes list in place of the form', () => {
     const cancel = cancelButton(mountForm())
 
@@ -556,10 +562,55 @@ describe('RecipeFormView — leaving the page', () => {
     expect(cancel.props('replace')).toBe(true)
   })
 
-  it('cancels an edit back to the recipe in place of the form', () => {
-    const cancel = cancelButton(mountForm({ id: 'r1' }))
+  describe('an edit', () => {
+    async function saveEdit() {
+      const wrapper = await mountFilled({ id: 'r1' })
+      vi.spyOn(useRecipeStore(), 'updateRecipe').mockResolvedValue(makeRecipeDetail({ id: 'r1' }))
+      await wrapper.vm.submit()
+      await flushPromises()
+    }
 
-    expect(cancel.props('to')).toMatchObject({ name: 'recipe-detail' })
-    expect(cancel.props('replace')).toBe(true)
+    async function cancelEdit() {
+      await cancelButton(mountForm({ id: 'r1' })).trigger('click')
+    }
+
+    const openedFrom = back => { mockRouter.options.history.state = { back } }
+
+    it('goes back to the recipe it was opened from on save, leaving one copy of the recipe in history', async () => {
+      openedFrom('/recipes/r1?servings=2')
+
+      await saveEdit()
+
+      expect(mockRouter.back).toHaveBeenCalledTimes(1)
+      expect(mockRouter.replace).not.toHaveBeenCalled()
+      expect(mockRouter.push).not.toHaveBeenCalled()
+    })
+
+    it('goes back to the recipe it was opened from on Cancel', async () => {
+      openedFrom('/recipes/r1')
+
+      await cancelEdit()
+
+      expect(mockRouter.back).toHaveBeenCalledTimes(1)
+      expect(mockRouter.replace).not.toHaveBeenCalled()
+    })
+
+    it('replaces itself with the recipe on save when opened directly, so back never leaves the app', async () => {
+      openedFrom(null)
+
+      await saveEdit()
+
+      expect(mockRouter.replace).toHaveBeenCalledWith({ name: 'recipe-detail', params: { id: 'r1' } })
+      expect(mockRouter.back).not.toHaveBeenCalled()
+    })
+
+    it('replaces itself with the recipe on Cancel when the page before is another recipe', async () => {
+      openedFrom('/recipes/r2')
+
+      await cancelEdit()
+
+      expect(mockRouter.replace).toHaveBeenCalledWith({ name: 'recipe-detail', params: { id: 'r1' } })
+      expect(mockRouter.back).not.toHaveBeenCalled()
+    })
   })
 })

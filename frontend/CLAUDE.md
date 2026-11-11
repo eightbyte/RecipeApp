@@ -51,6 +51,10 @@ each test or in `beforeEach`; a wrapper mounted in `beforeAll` is gone after the
   view only) stays mounted and keeps its scroll position while only its query changes, so it must
   read the query reactively. Both rules live in `router/navigation.js`. Link to a scaled recipe
   view or Cooking Mode, and read their scale, only through `router/recipeRoutes.js`.
+- **Leaving a finished page:** a page whose work is saved or cancelled (the Scrape preview, the
+  recipe form) leaves by `router.replace` or the `v-btn` `replace` prop, so back never reopens it.
+  The edit form goes `router.back()` instead when the page before it is its own recipe, so history
+  holds one copy of that recipe.
 - **Loading/empty/error states:** use `EmptyState`, `ErrorState`, and the global snackbar
   (`stores/ui.js` + `AppSnackbar`). Store fetches treat a 404 as "not found" (empty state), not
   as an error.

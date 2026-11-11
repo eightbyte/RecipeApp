@@ -32,6 +32,9 @@ vi.mock('vue-router', () => ({
 
 const vuetify = createVuetify({ components, directives })
 
+/** What confirmScrape resolves with for a save that kept its photo or had none. */
+const SAVED = { id: 'new-id', photoSkipped: false }
+
 const makePreview = (overrides = {}) => ({
   name:        'Chicken Stir Fry',
   description: 'Quick weeknight dinner',
@@ -143,7 +146,7 @@ describe('RecipeScrapePreviewView', () => {
       amount: 453.592, unit: 'g', sourceAmount: 1, sourceUnit: 'pound', entryUnit: 'lb',
     })
     const { wrapper, store } = await mountView(preview)
-    const confirmSpy = vi.spyOn(store, 'confirmScrape').mockResolvedValue('new-id')
+    const confirmSpy = vi.spyOn(store, 'confirmScrape').mockResolvedValue(SAVED)
 
     await saveButton(wrapper).trigger('click')
     await flushPromises()
@@ -203,7 +206,7 @@ describe('RecipeScrapePreviewView', () => {
         amount: 1, unit: 'tsp', amountFromSteps: true, stepAmounts: [{ amount: 1, unit: 'tsp' }],
       })
       const { wrapper, store } = await mountView(preview)
-      const confirmSpy = vi.spyOn(store, 'confirmScrape').mockResolvedValue('new-id')
+      const confirmSpy = vi.spyOn(store, 'confirmScrape').mockResolvedValue(SAVED)
 
       await saveButton(wrapper).trigger('click')
       await flushPromises()
@@ -220,7 +223,7 @@ describe('RecipeScrapePreviewView', () => {
       amount: 236.588, unit: 'ml', sourceAmount: 1, sourceUnit: 'cup', entryUnit: null,
     })
     const { wrapper, store } = await mountView(preview)
-    const confirmSpy = vi.spyOn(store, 'confirmScrape').mockResolvedValue('new-id')
+    const confirmSpy = vi.spyOn(store, 'confirmScrape').mockResolvedValue(SAVED)
 
     await saveButton(wrapper).trigger('click')
     await flushPromises()
@@ -239,7 +242,7 @@ describe('RecipeScrapePreviewView', () => {
 
   it('sends a unit picked as oz for the API to convert', async () => {
     const { wrapper, store } = await mountView()
-    const confirmSpy = vi.spyOn(store, 'confirmScrape').mockResolvedValue('new-id')
+    const confirmSpy = vi.spyOn(store, 'confirmScrape').mockResolvedValue(SAVED)
 
     wrapper.vm.form.ingredients[0].amount = 4
     wrapper.findAllComponents({ name: 'VSelect' })
@@ -255,7 +258,7 @@ describe('RecipeScrapePreviewView', () => {
     const preview = makePreview()
     Object.assign(preview.ingredients[0], { amount: 113.398, sourceAmount: 4, sourceUnit: 'ounces' })
     const { wrapper, store } = await mountView(preview)
-    const confirmSpy = vi.spyOn(store, 'confirmScrape').mockResolvedValue('new-id')
+    const confirmSpy = vi.spyOn(store, 'confirmScrape').mockResolvedValue(SAVED)
     const unitSelect = () => wrapper.findAllComponents({ name: 'VSelect' })
       .filter(s => s.props('label') === 'Unit')[0]
 
@@ -310,7 +313,7 @@ describe('RecipeScrapePreviewView', () => {
 
     it('lists every problem on one Save, and does not save', async () => {
       const { wrapper, store } = await mountView(withCans())
-      const confirmSpy = vi.spyOn(store, 'confirmScrape').mockResolvedValue('new-id')
+      const confirmSpy = vi.spyOn(store, 'confirmScrape').mockResolvedValue(SAVED)
       wrapper.vm.form.name = ''
 
       await saveButton(wrapper).trigger('click')
@@ -444,7 +447,7 @@ describe('RecipeScrapePreviewView', () => {
     const preview = makePreview()
     preview.ingredients[0].unit = 'can'
     const { wrapper, store } = await mountView(preview)
-    const confirmSpy = vi.spyOn(store, 'confirmScrape').mockResolvedValue('new-id')
+    const confirmSpy = vi.spyOn(store, 'confirmScrape').mockResolvedValue(SAVED)
 
     wrapper.vm.form.ingredients[0].unit = 'g'
     await saveButton(wrapper).trigger('click')
@@ -456,7 +459,7 @@ describe('RecipeScrapePreviewView', () => {
   it('saves an amount whose unit was cleared as a count', async () => {
     // The API stores an amount with no unit as pcs.
     const { wrapper, store } = await mountView()
-    const confirmSpy = vi.spyOn(store, 'confirmScrape').mockResolvedValue('new-id')
+    const confirmSpy = vi.spyOn(store, 'confirmScrape').mockResolvedValue(SAVED)
 
     wrapper.vm.form.ingredients[0].unit = null
     await saveButton(wrapper).trigger('click')
@@ -470,7 +473,7 @@ describe('RecipeScrapePreviewView', () => {
     const preview = makePreview()
     preview.ingredients[0].unit = null
     const { wrapper, store } = await mountView(preview)
-    const confirmSpy = vi.spyOn(store, 'confirmScrape').mockResolvedValue('new-id')
+    const confirmSpy = vi.spyOn(store, 'confirmScrape').mockResolvedValue(SAVED)
 
     await saveButton(wrapper).trigger('click')
     await flushPromises()
@@ -485,7 +488,7 @@ describe('RecipeScrapePreviewView', () => {
     preview.ingredients[0].sourceAmount = 1
     preview.ingredients[0].sourceUnit   = 'pinch'
     const { wrapper, store } = await mountView(preview)
-    const confirmSpy = vi.spyOn(store, 'confirmScrape').mockResolvedValue('new-id')
+    const confirmSpy = vi.spyOn(store, 'confirmScrape').mockResolvedValue(SAVED)
 
     await saveButton(wrapper).trigger('click')
     await flushPromises()
@@ -499,7 +502,7 @@ describe('RecipeScrapePreviewView', () => {
     preview.ingredients[0].unit       = 'can'
     preview.ingredients[0].sourceUnit = 'can'
     const { wrapper, store } = await mountView(preview)
-    const confirmSpy = vi.spyOn(store, 'confirmScrape').mockResolvedValue('new-id')
+    const confirmSpy = vi.spyOn(store, 'confirmScrape').mockResolvedValue(SAVED)
 
     wrapper.vm.form.ingredients[0].amount = ''
     await saveButton(wrapper).trigger('click')
@@ -527,7 +530,7 @@ describe('RecipeScrapePreviewView', () => {
     preview.ingredients[0].sourceAmount = 2
     preview.ingredients[0].sourceUnit   = 'cups'
     const { wrapper, store } = await mountView(preview)
-    const confirmSpy = vi.spyOn(store, 'confirmScrape').mockResolvedValue('new-id')
+    const confirmSpy = vi.spyOn(store, 'confirmScrape').mockResolvedValue(SAVED)
 
     const buttons = wrapper.findAllComponents({ name: 'VBtn' })
     const saveBtn = buttons.find(b => b.text().includes('Save Recipe'))
@@ -546,7 +549,7 @@ describe('RecipeScrapePreviewView', () => {
 
   it('Save Recipe button calls confirmScrape', async () => {
     const { wrapper, store } = await mountView()
-    vi.spyOn(store, 'confirmScrape').mockResolvedValue('new-id')
+    vi.spyOn(store, 'confirmScrape').mockResolvedValue(SAVED)
 
     const buttons = wrapper.findAllComponents({ name: 'VBtn' })
     const saveBtn = buttons.find(b => b.text().includes('Save Recipe'))
@@ -601,7 +604,7 @@ describe('RecipeScrapePreviewView — editing ingredients and steps', () => {
     .findAllComponents({ name: 'VChip' })
 
   async function save(wrapper, store) {
-    const confirmSpy = vi.spyOn(store, 'confirmScrape').mockResolvedValue('new-id')
+    const confirmSpy = vi.spyOn(store, 'confirmScrape').mockResolvedValue(SAVED)
     await saveButton(wrapper).trigger('click')
     await flushPromises()
     return confirmSpy.mock.calls[0]?.[0]
@@ -829,6 +832,74 @@ describe('RecipeScrapePreviewView — editing ingredients and steps', () => {
     await buttonLabelled(wrapper, 'Remove ingredient 1')[0].trigger('click')
 
     wrapper.unmount()
+
+    expect(useUiStore().snackbar.show).toBe(false)
+  })
+})
+
+describe('RecipeScrapePreviewView — photo', () => {
+  const PHOTO = 'https://cdn.example.com/stir-fry.jpg'
+
+  const photo = wrapper => wrapper.find('[data-test="preview-photo"]')
+  const removePhotoButton = wrapper => wrapper.findAllComponents({ name: 'VBtn' })
+    .find(b => b.attributes('aria-label') === 'Remove photo')
+
+  async function save(wrapper, store, result = SAVED) {
+    const confirmSpy = vi.spyOn(store, 'confirmScrape').mockResolvedValue(result)
+    await saveButton(wrapper).trigger('click')
+    await flushPromises()
+    return confirmSpy.mock.calls[0]?.[0]
+  }
+
+  it('shows the photo straight from the source site without a referrer', async () => {
+    const { wrapper } = await mountView(makePreview({ imageUrl: PHOTO }))
+
+    const img = wrapper.findComponent({ name: 'VImg' })
+    expect(photo(wrapper).exists()).toBe(true)
+    expect(img.props('src')).toBe(PHOTO)
+    expect(img.props('referrerpolicy')).toBe('no-referrer')
+  })
+
+  it('shows nothing when the page had no photo', async () => {
+    const { wrapper } = await mountView(makePreview({ imageUrl: null }))
+
+    expect(photo(wrapper).exists()).toBe(false)
+    expect(removePhotoButton(wrapper)).toBeUndefined()
+  })
+
+  it('sends the photo with the recipe', async () => {
+    const { wrapper, store } = await mountView(makePreview({ imageUrl: PHOTO }))
+
+    const payload = await save(wrapper, store)
+
+    expect(payload.imageUrl).toBe(PHOTO)
+  })
+
+  it('Remove hides the photo and leaves it out of the save', async () => {
+    const { wrapper, store } = await mountView(makePreview({ imageUrl: PHOTO }))
+
+    await removePhotoButton(wrapper).trigger('click')
+    expect(photo(wrapper).exists()).toBe(false)
+
+    const payload = await save(wrapper, store)
+    expect(payload).not.toHaveProperty('imageUrl')
+  })
+
+  it('tells the user when the recipe saved without its photo', async () => {
+    const { wrapper, store } = await mountView(makePreview({ imageUrl: PHOTO }))
+
+    await save(wrapper, store, { id: 'new-id', photoSkipped: true })
+
+    expect(useUiStore().snackbar).toMatchObject({
+      show:    true,
+      message: 'Saved without the photo. You can add one on the Edit page.',
+    })
+  })
+
+  it('raises no snackbar when the photo saved', async () => {
+    const { wrapper, store } = await mountView(makePreview({ imageUrl: PHOTO }))
+
+    await save(wrapper, store)
 
     expect(useUiStore().snackbar.show).toBe(false)
   })

@@ -12,7 +12,8 @@ public class ImageService(IConfiguration config, IWebHostEnvironment env)
     private static readonly string[] AllowedContentTypes =
         ["image/jpeg", "image/png", "image/webp"];
 
-    private long MaxBytes =>
+    /// <summary>The largest image storage accepts, from <c>ImageStorage:MaxFileSizeMb</c>.</summary>
+    public long MaxBytes =>
         config.GetValue("ImageStorage:MaxFileSizeMb", 10) * 1024L * 1024L;
 
     private string UploadRoot =>
@@ -63,6 +64,42 @@ public class ImageService(IConfiguration config, IWebHostEnvironment env)
         await file.CopyToAsync(stream);
 
         return PublicPathPrefix + fileName;
+    }
+
+    /// <summary>Stores downloaded bytes under the upload rules, judging the type by the bytes alone because a remote server's content type is not proof.</summary>
+    /// <returns>The public URL, or null when the bytes are not a jpg, png or webp within <see cref="MaxBytes"/>.</returns>
+    public async Task<string?> SaveDownloadAsync(byte[] content, CancellationToken ct = default)
+    {
+        if (content.Length > MaxBytes) return null;
+        if (DetectExtension(content) is not { } ext || !AllowedExtensions.Contains(ext)) return null;
+
+        Directory.CreateDirectory(UploadRoot);
+        var fileName = $"{Guid.NewGuid()}{ext}";
+        await File.WriteAllBytesAsync(Path.Combine(UploadRoot, fileName), content, ct);
+
+        return PublicPathPrefix + fileName;
+    }
+
+    private static readonly byte[] PngSignature = [0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A];
+
+    /// <summary>The file extension implied by a payload's own magic bytes, or null if unrecognised.</summary>
+    public static string? DetectExtension(ReadOnlySpan<byte> content)
+    {
+        if (content.Length >= 3 && content[0] == 0xFF && content[1] == 0xD8 && content[2] == 0xFF)
+            return ".jpg";
+
+        if (content.Length >= 8 && content[..8].SequenceEqual(PngSignature))
+            return ".png";
+
+        if (content.Length >= 12
+            && content[..4].SequenceEqual("RIFF"u8)
+            && content[8..12].SequenceEqual("WEBP"u8))
+            return ".webp";
+
+        if (content.Length >= 6 && content[..4].SequenceEqual("GIF8"u8))
+            return ".gif";
+
+        return null;
     }
 
     /// <summary>Copies an image already on disk into storage under a caller-chosen name, overwriting any file of that name, so re-imports replace their own photo.</summary>

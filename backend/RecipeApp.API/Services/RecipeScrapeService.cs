@@ -26,6 +26,7 @@ public class RecipeScrapeService(
     IHeadlessRenderer headlessRenderer,
     MeasurementConverter measurementConverter,
     IEnumerable<ISiteReader> siteReaders,
+    ImageService images,
     ILogger<RecipeScrapeService> logger) : IRecipeScrapeService
 {
     private readonly RecipeScrapingOptions _options = options.Value;
@@ -227,12 +228,98 @@ public class RecipeScrapeService(
 
         logger.LogInformation("Scraping {Url} with model {Model}.", url, status.Model ?? "(unnamed)");
 
-        var strippedText = await FetchAndStripHtmlAsync(url, ct);
-        var extracted    = await ExtractRecipeAsync(strippedText, ct);
-        return await NormaliseAsync(extracted, url, ct);
+        var page      = await FetchPageAsync(url, ct);
+        var extracted = await ExtractRecipeAsync(page.Text, ct);
+        return await NormaliseAsync(extracted, url, ct) with { ImageUrl = page.ImageUrl };
     }
 
-    public async Task<RecipeDetailResponse> ConfirmAsync(ScrapeConfirmRequest request, CancellationToken ct = default)
+    public async Task<ScrapeConfirmResponse> ConfirmAsync(ScrapeConfirmRequest request, CancellationToken ct = default)
+    {
+        // Downloaded only now, so an abandoned preview leaves no file behind.
+        var imageUrl = request.ImageUrl is null ? null : await StorePhotoAsync(request.ImageUrl, ct);
+
+        Guid recipeId;
+        try
+        {
+            recipeId = await AddRecipeAsync(request, imageUrl, ct);
+        }
+        catch
+        {
+            images.Delete(imageUrl);
+            throw;
+        }
+
+        var full = await db.Recipes
+            .Include(r => r.Ingredients).ThenInclude(ri => ri.Ingredient)
+            .Include(r => r.Ingredients).ThenInclude(ri => ri.StepIngredients)
+            .Include(r => r.Steps).ThenInclude(rs => rs.StepIngredients)
+            .AsNoTracking()
+            .FirstAsync(r => r.Id == recipeId, ct);
+
+        return new ScrapeConfirmResponse(full.ToDetail(), PhotoSkipped: request.ImageUrl is not null && imageUrl is null);
+    }
+
+    /// <summary>Downloads the photo and stores it under the upload rules, where any failure means no photo rather than a failed save.</summary>
+    /// <returns>The stored photo's public URL, or null when it was skipped.</returns>
+    private async Task<string?> StorePhotoAsync(string url, CancellationToken ct)
+    {
+        var client = httpClientFactory.CreateClient("RecipeScraper");
+
+        using var fetchCts  = new CancellationTokenSource(TimeSpan.FromSeconds(_options.ImageFetchTimeoutSeconds));
+        using var linkedCts = CancellationTokenSource.CreateLinkedTokenSource(ct, fetchCts.Token);
+
+        try
+        {
+            // Leaves out avif, which storage refuses, so a negotiating image CDN serves a format it accepts.
+            using var request = new HttpRequestMessage(HttpMethod.Get, url);
+            request.Headers.Accept.ParseAdd("image/webp,image/jpeg,image/png,image/*;q=0.8");
+
+            using var response = await client.SendAsync(request, HttpCompletionOption.ResponseHeadersRead, linkedCts.Token);
+            if (!response.IsSuccessStatusCode)
+                return SkipPhoto(url, $"HTTP {(int)response.StatusCode}");
+
+            var content = await ReadUpToAsync(response.Content, images.MaxBytes, linkedCts.Token);
+            if (content is null)
+                return SkipPhoto(url, $"larger than {images.MaxBytes / 1024 / 1024} MB");
+
+            return await images.SaveDownloadAsync(content, ct)
+                ?? SkipPhoto(url, "not a jpg, png or webp image");
+        }
+        catch (OperationCanceledException) when (fetchCts.IsCancellationRequested && !ct.IsCancellationRequested)
+        {
+            return SkipPhoto(url, $"no response within {_options.ImageFetchTimeoutSeconds} s");
+        }
+        // An IOException is a connection dropped mid-body or a failed file write, neither of which may fail the save.
+        catch (Exception ex) when (ex is HttpRequestException or IOException)
+        {
+            return SkipPhoto(url, ex.Message);
+        }
+    }
+
+    private string? SkipPhoto(string url, string reason)
+    {
+        logger.LogWarning("Saving the recipe without its photo {Url}: {Reason}.", url, reason);
+        return null;
+    }
+
+    /// <summary>The whole body, or null as soon as it passes <paramref name="maxBytes"/>, so an oversized photo is never held in memory.</summary>
+    private static async Task<byte[]?> ReadUpToAsync(HttpContent content, long maxBytes, CancellationToken ct)
+    {
+        if (content.Headers.ContentLength > maxBytes) return null;
+
+        await using var stream = await content.ReadAsStreamAsync(ct);
+        using var buffer = new MemoryStream();
+        var chunk = new byte[81_920];
+        int read;
+        while ((read = await stream.ReadAsync(chunk, ct)) > 0)
+        {
+            buffer.Write(chunk, 0, read);
+            if (buffer.Length > maxBytes) return null;
+        }
+        return buffer.ToArray();
+    }
+
+    private async Task<Guid> AddRecipeAsync(ScrapeConfirmRequest request, string? imageUrl, CancellationToken ct)
     {
         var resolvedIngredientIds = new List<Guid>();
         foreach (var ing in request.Ingredients.OrderBy(i => i.DisplayOrder))
@@ -259,6 +346,7 @@ public class RecipeScrapeService(
             Name        = request.Name.Trim(),
             Description = request.Description?.Trim(),
             SourceUrl   = request.SourceUrl.Trim(),
+            ImageUrl    = imageUrl,
             Servings    = request.Servings,
             CreatedAt   = DateTime.UtcNow,
             UpdatedAt   = DateTime.UtcNow,
@@ -310,43 +398,35 @@ public class RecipeScrapeService(
         }
 
         await db.SaveChangesAsync(ct);
-
-        var full = await db.Recipes
-            .Include(r => r.Ingredients).ThenInclude(ri => ri.Ingredient)
-            .Include(r => r.Ingredients).ThenInclude(ri => ri.StepIngredients)
-            .Include(r => r.Steps).ThenInclude(rs => rs.StepIngredients)
-            .AsNoTracking()
-            .FirstAsync(r => r.Id == recipe.Id, ct);
-
-        return full.ToDetail();
+        return recipe.Id;
     }
 
     // ── HTML fetching and stripping ───────────────────────────────────────────
 
-    public async Task<string> FetchAndStripHtmlAsync(string url, CancellationToken ct)
+    /// <summary>The page's recipe text, with the photo from the same document as the text, or from the other document when that one has none.</summary>
+    public async Task<FetchedPage> FetchPageAsync(string url, CancellationToken ct)
     {
         var html = await FetchHtmlAsync(url, ct);
-        var (text, sufficient) = await ExtractCandidateTextAsync(html, url);
-        if (sufficient) return text;
-
-        if (!_options.EnableHeadlessFallback) return text;
+        var fetched = await ExtractCandidateAsync(html, url);
+        if (fetched.Sufficient || !_options.EnableHeadlessFallback) return fetched.Page;
 
         try
         {
             var renderedHtml = await headlessRenderer.RenderAsync(
                 url, TimeSpan.FromSeconds(_options.HeadlessRenderTimeoutSeconds), ct);
-            var (renderedText, renderedSufficient) = await ExtractCandidateTextAsync(renderedHtml, url);
+            var rendered = await ExtractCandidateAsync(renderedHtml, url);
 
             // Prefer the rendered result if it cleared the bar or is simply more substantial than the static fetch.
-            if (renderedSufficient || renderedText.Length > text.Length)
-                return renderedText;
+            return rendered.Sufficient || rendered.Page.Text.Length > fetched.Page.Text.Length
+                ? rendered.Page with { ImageUrl = rendered.Page.ImageUrl ?? fetched.Page.ImageUrl }
+                : fetched.Page with { ImageUrl = fetched.Page.ImageUrl ?? rendered.Page.ImageUrl };
         }
         catch (Exception ex) when (ex is not OperationCanceledException)
         {
             logger.LogWarning(ex, "Headless render fallback failed for {Url}; using static fetch result.", url);
         }
 
-        return text;
+        return fetched.Page;
     }
 
     private async Task<string> FetchHtmlAsync(string url, CancellationToken ct)
@@ -391,20 +471,21 @@ public class RecipeScrapeService(
     }
 
     /// <summary>Tries JSON-LD recipe markup first, falling back to stripped visible body text, and reports whether the result is sufficient for the caller to stop trying.</summary>
-    private async Task<(string Text, bool Sufficient)> ExtractCandidateTextAsync(string html, string url)
+    private async Task<(FetchedPage Page, bool Sufficient)> ExtractCandidateAsync(string html, string url)
     {
         var parser = new HtmlParser();
         var doc    = await parser.ParseDocumentAsync(html);
 
-        // Read before stripping, because stripping removes the scripts a site keeps its page data in.
+        // Read before stripping, because stripping removes the scripts and meta tags they come from.
         var stepLines = ReadStepLines(doc, url);
+        var imageUrl  = Uri.TryCreate(url, UriKind.Absolute, out var pageUrl) ? RecipePhotoLocator.TryFind(doc, pageUrl) : null;
 
         var jsonLdText = RecipeJsonLdExtractor.TryBuildRecipeText(doc, stepLines);
-        if (jsonLdText is not null) return (jsonLdText, true);
+        if (jsonLdText is not null) return (new FetchedPage(jsonLdText, imageUrl), true);
 
         // Judged on the page's own text, because a reader's lines alone do not make a thin static fetch readable.
         var strippedText = StripBodyText(doc);
-        return (strippedText + RecipeJsonLdExtractor.BuildStepLinesSection(stepLines),
+        return (new FetchedPage(strippedText + RecipeJsonLdExtractor.BuildStepLinesSection(stepLines), imageUrl),
             strippedText.Length >= _options.MinStaticContentLength);
     }
 
@@ -994,6 +1075,10 @@ public class RecipeScrapeService(
         [property: JsonPropertyName("suggested_default_unit")]  string? SuggestedDefaultUnit
     );
 }
+
+/// <param name="Text">The recipe text the model reads.</param>
+/// <param name="ImageUrl">The page's photo as an absolute http(s) URL, or null when it offers none.</param>
+public record FetchedPage(string Text, string? ImageUrl);
 
 // ── Exception types ───────────────────────────────────────────────────────────
 

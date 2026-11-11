@@ -5,6 +5,9 @@ public class RecipeScrapingOptions
     public const string SectionName = "RecipeScraping";
 
     public int HtmlFetchTimeoutSeconds { get; init; } = 15;
+
+    /// <summary>How long confirm waits for the recipe's photo before saving the recipe without it.</summary>
+    public int ImageFetchTimeoutSeconds { get; init; } = 15;
     public int LlmTimeoutSeconds { get; init; } = 120;
     public int MaxHtmlCharacters { get; init; } = 30_000;
     public double MatchConfidenceThreshold { get; init; } = 0.8;

@@ -12,4 +12,6 @@ public static class RecipeLimits
     public const int MaxServings          = 100;
     public const int IngredientNotesMaxLength = 500;
     public const int StepInstructionMaxLength = 2000;
+    /// <summary>Caps the remote photo URL a scrape confirm downloads, not the stored path, which the server names itself.</summary>
+    public const int ImageUrlMaxLength        = 2048;
 }

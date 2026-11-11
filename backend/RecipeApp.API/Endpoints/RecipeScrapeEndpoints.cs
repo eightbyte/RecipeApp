@@ -54,9 +54,10 @@ public static class RecipeScrapeEndpoints
             CancellationToken ct) =>
         {
             var created = await svc.ConfirmAsync(request, ct);
-            return Results.Created($"/api/v1/recipes/{created.Id}", created);
+            return Results.Created($"/api/v1/recipes/{created.Recipe.Id}", created);
         })
         .WithValidation<ScrapeConfirmRequest>()
+        .Produces<ScrapeConfirmResponse>(StatusCodes.Status201Created)
         .WithSummary("Confirm a scraped recipe preview and save it to the database");
 
         return routes;

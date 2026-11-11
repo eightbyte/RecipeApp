@@ -13,7 +13,7 @@ public class ScrapeRecipeRequestValidator : AbstractValidator<ScrapeRecipeReques
             .Must(BeValidHttpUrl).WithMessage("A valid http or https URL is required.");
     }
 
-    private static bool BeValidHttpUrl(string? url)
+    internal static bool BeValidHttpUrl(string? url)
     {
         if (string.IsNullOrWhiteSpace(url)) return false;
         return Uri.TryCreate(url, UriKind.Absolute, out var uri) &&
@@ -76,6 +76,12 @@ public class ScrapeConfirmRequestValidator : AbstractValidator<ScrapeConfirmRequ
         RuleFor(x => x.Description).MaximumLength(RecipeLimits.DescriptionMaxLength).When(x => x.Description is not null);
         RuleFor(x => x.Servings).InclusiveBetween(RecipeLimits.MinServings, RecipeLimits.MaxServings);
         RuleFor(x => x.SourceUrl).NotEmpty();
+
+        // The server downloads this URL, so anything but an absolute http(s) URL is refused before it is fetched.
+        RuleFor(x => x.ImageUrl)
+            .Must(ScrapeRecipeRequestValidator.BeValidHttpUrl).WithMessage("ImageUrl must be an absolute http or https URL.")
+            .MaximumLength(RecipeLimits.ImageUrlMaxLength)
+            .When(x => x.ImageUrl is not null);
         RuleFor(x => x.Ingredients).NotEmpty().WithMessage("At least one ingredient is required.");
         RuleForEach(x => x.Ingredients).SetValidator(new ScrapeConfirmIngredientRequestValidator());
 

@@ -1,12 +1,14 @@
 namespace RecipeApp.API.DTOs.Scrape;
 
+/// <param name="ImageUrl">The source page's photo, which the preview loads straight from the source site; null when the page offers none.</param>
 public record ScrapePreviewResponse(
     string Name,
     string? Description,
     int Servings,
     string SourceUrl,
     List<ScrapePreviewIngredientResponse> Ingredients,
-    List<ScrapePreviewStepResponse> Steps
+    List<ScrapePreviewStepResponse> Steps,
+    string? ImageUrl = null
 );
 
 /// <param name="Amount">Null when the source line stated no quantity, so the preview shows an empty field rather than a fabricated number.</param>

@@ -424,6 +424,49 @@ public class ScrapeValidatorTests
         result.ShouldNotHaveValidationErrorFor("Steps[0].Instruction");
     }
 
+    // ── Photo ─────────────────────────────────────────────────────────────────
+
+    [Theory]
+    [InlineData(null)]
+    [InlineData("https://cdn.example.com/chili.jpg")]
+    [InlineData("http://cdn.example.com/chili.jpg?w=1200")]
+    public void Confirm_NoPhotoOrAnHttpPhoto_HasNoErrors(string? imageUrl) =>
+        _confirmValidator.TestValidate(ConfirmRequest() with { ImageUrl = imageUrl })
+            .ShouldNotHaveAnyValidationErrors();
+
+    [Theory]
+    [InlineData("")]
+    [InlineData("/img/chili.jpg")]
+    [InlineData("data:image/png;base64,iVBORw0KGgo=")]
+    [InlineData("file:///C:/photos/chili.jpg")]
+    [InlineData("ftp://cdn.example.com/chili.jpg")]
+    public void Confirm_PhotoNotAnAbsoluteHttpUrl_HasErrorOnImageUrl(string imageUrl)
+    {
+        // The server downloads whatever it is handed, so the scheme gate is a boundary check.
+        _confirmValidator.TestValidate(ConfirmRequest() with { ImageUrl = imageUrl })
+            .ShouldHaveValidationErrorFor(x => x.ImageUrl);
+    }
+
+    [Fact]
+    public void Confirm_PhotoAtTheLengthLimit_HasNoErrors()
+    {
+        var prefix = "https://cdn.example.com/";
+        var url    = prefix + new string('a', RecipeLimits.ImageUrlMaxLength - prefix.Length);
+
+        _confirmValidator.TestValidate(ConfirmRequest() with { ImageUrl = url })
+            .ShouldNotHaveAnyValidationErrors();
+    }
+
+    [Fact]
+    public void Confirm_PhotoOverTheLengthLimit_HasErrorOnImageUrl()
+    {
+        var prefix = "https://cdn.example.com/";
+        var url    = prefix + new string('a', RecipeLimits.ImageUrlMaxLength - prefix.Length + 1);
+
+        _confirmValidator.TestValidate(ConfirmRequest() with { ImageUrl = url })
+            .ShouldHaveValidationErrorFor(x => x.ImageUrl);
+    }
+
     // ── Builders ──────────────────────────────────────────────────────────────
 
     /// <summary>A valid new-ingredient row: no IngredientId, so the create branch applies.</summary>

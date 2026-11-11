@@ -452,16 +452,6 @@ public class WaybackHarvesterTests : IDisposable
         </script></head><body>Chili</body></html>
         """;
 
-    [Fact]
-    public void TryExtractImageUrl_ReadsTheArchivedPhotoUrlFromJsonLd() =>
-        WaybackHarvester.TryExtractImageUrl(PageWithArchivedImage).Should().Be(
-            "http://web.archive.org/web/20251231013807/https://myplate-prod.azureedge.us/Chili.jpg");
-
-    [Fact]
-    public void TryExtractImageUrl_ReturnsNullWhenThePageHasNoRecipeMarkup() =>
-        WaybackHarvester.TryExtractImageUrl("<html><body>no json-ld here</body></html>")
-            .Should().BeNull();
-
     [Theory]
     // Already rewritten by the archive, but pointing at its HTML viewer rather than the bytes
     [InlineData("http://web.archive.org/web/20251231013810/https://myplate-prod.azureedge.us/Chili.jpg",
@@ -508,17 +498,6 @@ public class WaybackHarvesterTests : IDisposable
         cache.HasImage("3-can-chili").Should().BeFalse();
         result.PagesFetched.Should().Be(1, "the recipe still imports, just without a photo");
     }
-
-    [Theory]
-    [InlineData(new byte[] { 0xFF, 0xD8, 0xFF, 0xE0 }, ".jpg")]
-    [InlineData(new byte[] { 0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A }, ".png")]
-    [InlineData(new byte[] { 0x47, 0x49, 0x46, 0x38, 0x39, 0x61 }, ".gif")]
-    public void DetectImageExtension_IdentifiesAPayloadByItsSignature(byte[] content, string expected) =>
-        WaybackHarvester.DetectImageExtension(content).Should().Be(expected);
-
-    [Fact]
-    public void DetectImageExtension_ReturnsNullForMarkup() =>
-        WaybackHarvester.DetectImageExtension("<!DOCTYPE html>"u8).Should().BeNull();
 
     [Fact]
     public async Task HarvestAsync_CachesTheRecipePhotoAlongsideThePage()

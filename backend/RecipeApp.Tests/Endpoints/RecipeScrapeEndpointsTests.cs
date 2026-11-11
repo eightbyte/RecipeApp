@@ -46,10 +46,13 @@ public class RecipeScrapeEndpointsTests(DatabaseFixture db) : IAsyncLifetime
                 Unit:              "g",
                 SourceAmount:      500m,
                 SourceUnit:        "g",
+                EntryUnit:         null,
                 Notes:             null,
                 IsNew:             true,
                 SuggestedCategory: IngredientCategory.MeatSeafood,
-                DisplayOrder:      0)
+                DisplayOrder:      0,
+                AmountFromSteps:   false,
+                StepAmounts:       [])
         ],
         Steps:
         [
@@ -138,10 +141,10 @@ public class RecipeScrapeEndpointsTests(DatabaseFixture db) : IAsyncLifetime
         response.StatusCode.Should().Be(HttpStatusCode.Created);
         response.Headers.Location.Should().NotBeNull();
 
-        var body = await response.Content.ReadFromJsonAsync<RecipeDetailResponse>();
-        body!.Name.Should().Be("Bolognese");
-        body.Ingredients.Should().HaveCount(1);
-        body.Ingredients[0].IngredientDisplayName.Should().Be("Beef Mince");
+        var body = await response.Content.ReadFromJsonAsync<ScrapeConfirmResponse>();
+        body!.Recipe.Name.Should().Be("Bolognese");
+        body.Recipe.Ingredients.Should().HaveCount(1);
+        body.Recipe.Ingredients[0].IngredientDisplayName.Should().Be("Beef Mince");
     }
 
     [Fact]
@@ -158,8 +161,34 @@ public class RecipeScrapeEndpointsTests(DatabaseFixture db) : IAsyncLifetime
         var response = await client.PostAsJsonAsync("/api/v1/recipes/scrape/confirm", request);
 
         response.StatusCode.Should().Be(HttpStatusCode.Created);
-        var body = await response.Content.ReadFromJsonAsync<RecipeDetailResponse>();
-        body!.Ingredients[0].IngredientId.Should().Be(ingredient.Id);
+        var body = await response.Content.ReadFromJsonAsync<ScrapeConfirmResponse>();
+        body!.Recipe.Ingredients[0].IngredientId.Should().Be(ingredient.Id);
+    }
+
+    [Fact]
+    public async Task Confirm_EntryOnlyUnitPickedInThePreview_StoresTheConversionWithTheTypedSource()
+    {
+        await using var ctx = db.CreateDbContext();
+        var feta = TestDataBuilder.Ingredient("feta cheese", "Feta Cheese", IngredientCategory.Dairy);
+        ctx.Ingredients.Add(feta);
+        await ctx.SaveChangesAsync();
+
+        // The preview's scraped source is replaced by what the user picked.
+        var template = BuildConfirmRequest(ingredientId: feta.Id);
+        var request  = template with
+        {
+            Ingredients = [template.Ingredients[0] with
+                { Amount = 4m, Unit = "oz", SourceAmount = 100m, SourceUnit = "g" }],
+        };
+
+        var response = await db.CreateClient().PostAsJsonAsync("/api/v1/recipes/scrape/confirm", request);
+
+        response.StatusCode.Should().Be(HttpStatusCode.Created);
+        var body = await response.Content.ReadFromJsonAsync<ScrapeConfirmResponse>();
+        body!.Recipe.Ingredients.Single().Should().BeEquivalentTo(new
+        {
+            Amount = 113.398m, Unit = "g", SourceAmount = 4m, SourceUnit = "oz", EntryUnit = "oz",
+        });
     }
 
     [Fact]
@@ -240,7 +269,7 @@ internal class FakeRecipeScrapeService(
         return Task.FromResult(preview!);
     }
 
-    public Task<RecipeDetailResponse> ConfirmAsync(
+    public Task<ScrapeConfirmResponse> ConfirmAsync(
         ScrapeConfirmRequest request, CancellationToken ct = default)
         => throw new NotImplementedException("Use real service for confirm tests.");
 }

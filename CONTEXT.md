@@ -38,8 +38,17 @@ _Avoid_: To taste, missing amount, zero amount
 
 **Sizeless Unit**:
 A unit that names no real size, such as "pinch", "dash" or "to taste". A Recipe Ingredient measured
-in one is an Unquantified Ingredient, and its Source Measurement keeps the wording. Count words such
-as "clove" are not Sizeless Units: they have a size, just not one the app can store.
+in one is an Unquantified Ingredient, and its Source Measurement keeps the wording. A word that only
+counts things, such as "clove", is a Count Word instead.
+
+**Count Word**:
+A word in a unit's place that only counts things, such as "clove" or "sprig". It is stored as `pcs`,
+with the wording kept as the Source Measurement.
+
+**Entry-only Unit**:
+A customary unit the Unit picker offers, such as `oz`, `lb` or `pint`, that is converted to `g` or
+`ml` on save and never stored. The measurement as typed is kept as the Source Measurement.
+_Avoid_: Extended unit, imperial unit
 
 **Servings**:
 The number of people a recipe's stated amounts feed, or that a Planned Meal is made for. A recipe
@@ -50,6 +59,11 @@ _Avoid_: Yield, portions
 The recipe view's ½×, 1× and 2× shortcut onto Servings: a multiple of the whole recipe, never of
 one serving. It is never stored.
 _Avoid_: Portion, portion size
+
+**Photo**:
+The image of a recipe's prepared dish, stored with the recipe and shown with it. A Photo is one
+kind of image; an image that does not show the finished dish is not a Photo.
+_Avoid_: Picture, thumbnail, image (when the Photo is meant)
 
 **Cooked**:
 A recipe that has been marked as made. Cooking is recorded against the recipe, not against a
@@ -126,6 +140,10 @@ _Avoid_: Bought, done
 Turning one external source, such as a web page, into a draft recipe that the user reviews and
 confirms before it is saved.
 _Avoid_: Parse, extract, import (for a single page)
+
+**Site Reader**:
+A reader for one site's own page data, adding detail its JSON-LD leaves out.
+_Avoid_: Adapter, plugin, template, scraper
 
 **Import**:
 Loading a Recipe Pack whose recipes are already structured, with no review step.

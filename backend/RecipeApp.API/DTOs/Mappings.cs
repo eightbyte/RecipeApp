@@ -4,6 +4,7 @@ using RecipeApp.API.DTOs.ModelServer;
 using RecipeApp.API.DTOs.Recipes;
 using RecipeApp.API.DTOs.ShoppingLists;
 using RecipeApp.API.Models;
+using RecipeApp.API.Services;
 using RecipeApp.API.Services.Llm;
 
 namespace RecipeApp.API.DTOs;
@@ -72,6 +73,7 @@ public static class Mappings
         ri.Unit,
         ri.SourceAmount,
         ri.SourceUnit,
+        MeasurementConverter.EntryUnitOf(ri.Amount, ri.Unit, ri.SourceAmount, ri.SourceUnit),
         ri.Notes,
         ri.DisplayOrder
     );

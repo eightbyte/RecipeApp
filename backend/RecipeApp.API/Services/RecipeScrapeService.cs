@@ -1,3 +1,4 @@
+using System.Globalization;
 using System.Text.Json;
 using System.Text.Json.Nodes;
 using System.Text.Json.Serialization;
@@ -24,6 +25,8 @@ public class RecipeScrapeService(
     AppDbContext db,
     IHeadlessRenderer headlessRenderer,
     MeasurementConverter measurementConverter,
+    IEnumerable<ISiteReader> siteReaders,
+    ImageService images,
     ILogger<RecipeScrapeService> logger) : IRecipeScrapeService
 {
     private readonly RecipeScrapingOptions _options = options.Value;
@@ -108,6 +111,43 @@ public class RecipeScrapeService(
         }
         """;
 
+    /// <summary>The scrape's own schema: <c>RecipeSchemaJson</c> plus the amounts each step states, kept apart so the seed normaliser's output is unchanged.</summary>
+    internal static readonly string ScrapeSchemaJson = WithStatedAmounts(RecipeSchemaJson);
+
+    private static string WithStatedAmounts(string recipeSchemaJson)
+    {
+        var schema = JsonNode.Parse(recipeSchemaJson)!;
+        var step   = schema["properties"]!["steps"]!["items"]!;
+
+        step["properties"]!["stated_amounts"] = JsonNode.Parse($$"""
+            {
+              "type": "array",
+              "description": "Every amount this step states for an ingredient, in its own text or in the lines under its '{{RecipeJsonLdExtractor.StepLinesHeading}}' heading. Empty when it states none.",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "ingredient_index": {
+                    "type": "integer",
+                    "description": "0-based index into the ingredients array of the ingredient the amount is for."
+                  },
+                  "amount": {
+                    "type": ["number", "null"],
+                    "description": "Numeric quantity exactly as the step states it. Null when the step names a unit with no number (e.g. 'a pinch')."
+                  },
+                  "unit": {
+                    "type": ["string", "null"],
+                    "description": "Unit as the step states it; do not convert. Null for a plain count (e.g. '2 eggs')."
+                  }
+                },
+                "required": ["ingredient_index", "amount", "unit"]
+              }
+            }
+            """);
+        step["required"]!.AsArray().Add("stated_amounts");
+
+        return schema.ToJsonString();
+    }
+
     // Semantic matching schema for unmatched scraped ingredients
     private const string MatchingSchemaJson = """
         {
@@ -137,6 +177,12 @@ public class RecipeScrapeService(
         "Extract the complete recipe from the web page text provided by the user. " +
         "If any information is missing or ambiguous, make a reasonable best-guess rather than omitting it. " +
         "Never invent a quantity: if an ingredient line states no amount, emit null for both amount and unit. " +
+        "For a counted ingredient with no unit (e.g. '2 eggs'), emit the amount and a null unit, " +
+        "and put a size word such as 'large' in notes rather than in unit. " +
+        "For each step, list in stated_amounts every amount the step states for an ingredient, whether in the step's own text " +
+        $"(e.g. 'drizzle with 2 tbsp oil') or in the lines under its '{RecipeJsonLdExtractor.StepLinesHeading}' heading. " +
+        "Wording with no amount (e.g. 'a drizzle of oil', 'season with salt') states none, so leave it out. " +
+        "A step's instruction is its own text only, without the lines under that heading. " +
         "Respond with a single JSON object conforming to the schema and nothing else.";
 
     // ── Ingredient category heuristic ─────────────────────────────────────────
@@ -182,12 +228,98 @@ public class RecipeScrapeService(
 
         logger.LogInformation("Scraping {Url} with model {Model}.", url, status.Model ?? "(unnamed)");
 
-        var strippedText = await FetchAndStripHtmlAsync(url, ct);
-        var extracted    = await ExtractRecipeAsync(strippedText, ct);
-        return await NormaliseAsync(extracted, url, ct);
+        var page      = await FetchPageAsync(url, ct);
+        var extracted = await ExtractRecipeAsync(page.Text, ct);
+        return await NormaliseAsync(extracted, url, ct) with { ImageUrl = page.ImageUrl };
     }
 
-    public async Task<RecipeDetailResponse> ConfirmAsync(ScrapeConfirmRequest request, CancellationToken ct = default)
+    public async Task<ScrapeConfirmResponse> ConfirmAsync(ScrapeConfirmRequest request, CancellationToken ct = default)
+    {
+        // Downloaded only now, so an abandoned preview leaves no file behind.
+        var imageUrl = request.ImageUrl is null ? null : await StorePhotoAsync(request.ImageUrl, ct);
+
+        Guid recipeId;
+        try
+        {
+            recipeId = await AddRecipeAsync(request, imageUrl, ct);
+        }
+        catch
+        {
+            images.Delete(imageUrl);
+            throw;
+        }
+
+        var full = await db.Recipes
+            .Include(r => r.Ingredients).ThenInclude(ri => ri.Ingredient)
+            .Include(r => r.Ingredients).ThenInclude(ri => ri.StepIngredients)
+            .Include(r => r.Steps).ThenInclude(rs => rs.StepIngredients)
+            .AsNoTracking()
+            .FirstAsync(r => r.Id == recipeId, ct);
+
+        return new ScrapeConfirmResponse(full.ToDetail(), PhotoSkipped: request.ImageUrl is not null && imageUrl is null);
+    }
+
+    /// <summary>Downloads the photo and stores it under the upload rules, where any failure means no photo rather than a failed save.</summary>
+    /// <returns>The stored photo's public URL, or null when it was skipped.</returns>
+    private async Task<string?> StorePhotoAsync(string url, CancellationToken ct)
+    {
+        var client = httpClientFactory.CreateClient("RecipeScraper");
+
+        using var fetchCts  = new CancellationTokenSource(TimeSpan.FromSeconds(_options.ImageFetchTimeoutSeconds));
+        using var linkedCts = CancellationTokenSource.CreateLinkedTokenSource(ct, fetchCts.Token);
+
+        try
+        {
+            // Leaves out avif, which storage refuses, so a negotiating image CDN serves a format it accepts.
+            using var request = new HttpRequestMessage(HttpMethod.Get, url);
+            request.Headers.Accept.ParseAdd("image/webp,image/jpeg,image/png,image/*;q=0.8");
+
+            using var response = await client.SendAsync(request, HttpCompletionOption.ResponseHeadersRead, linkedCts.Token);
+            if (!response.IsSuccessStatusCode)
+                return SkipPhoto(url, $"HTTP {(int)response.StatusCode}");
+
+            var content = await ReadUpToAsync(response.Content, images.MaxBytes, linkedCts.Token);
+            if (content is null)
+                return SkipPhoto(url, $"larger than {images.MaxBytes / 1024 / 1024} MB");
+
+            return await images.SaveDownloadAsync(content, ct)
+                ?? SkipPhoto(url, "not a jpg, png or webp image");
+        }
+        catch (OperationCanceledException) when (fetchCts.IsCancellationRequested && !ct.IsCancellationRequested)
+        {
+            return SkipPhoto(url, $"no response within {_options.ImageFetchTimeoutSeconds} s");
+        }
+        // An IOException is a connection dropped mid-body or a failed file write, neither of which may fail the save.
+        catch (Exception ex) when (ex is HttpRequestException or IOException)
+        {
+            return SkipPhoto(url, ex.Message);
+        }
+    }
+
+    private string? SkipPhoto(string url, string reason)
+    {
+        logger.LogWarning("Saving the recipe without its photo {Url}: {Reason}.", url, reason);
+        return null;
+    }
+
+    /// <summary>The whole body, or null as soon as it passes <paramref name="maxBytes"/>, so an oversized photo is never held in memory.</summary>
+    private static async Task<byte[]?> ReadUpToAsync(HttpContent content, long maxBytes, CancellationToken ct)
+    {
+        if (content.Headers.ContentLength > maxBytes) return null;
+
+        await using var stream = await content.ReadAsStreamAsync(ct);
+        using var buffer = new MemoryStream();
+        var chunk = new byte[81_920];
+        int read;
+        while ((read = await stream.ReadAsync(chunk, ct)) > 0)
+        {
+            buffer.Write(chunk, 0, read);
+            if (buffer.Length > maxBytes) return null;
+        }
+        return buffer.ToArray();
+    }
+
+    private async Task<Guid> AddRecipeAsync(ScrapeConfirmRequest request, string? imageUrl, CancellationToken ct)
     {
         var resolvedIngredientIds = new List<Guid>();
         foreach (var ing in request.Ingredients.OrderBy(i => i.DisplayOrder))
@@ -214,6 +346,7 @@ public class RecipeScrapeService(
             Name        = request.Name.Trim(),
             Description = request.Description?.Trim(),
             SourceUrl   = request.SourceUrl.Trim(),
+            ImageUrl    = imageUrl,
             Servings    = request.Servings,
             CreatedAt   = DateTime.UtcNow,
             UpdatedAt   = DateTime.UtcNow,
@@ -225,16 +358,16 @@ public class RecipeScrapeService(
         for (int i = 0; i < orderedIngredients.Count; i++)
         {
             var ing = orderedIngredients[i];
-            var (amount, unit) = RecipeIngredient.ToStoredMeasurement(ing.Amount, ing.Unit);
+            var stored = MeasurementConverter.ToStored(ing.Amount, ing.Unit, ing.SourceAmount, ing.SourceUnit);
             var ri = new RecipeIngredient
             {
                 Id           = Guid.NewGuid(),
                 RecipeId     = recipe.Id,
                 IngredientId = resolvedIngredientIds[i],
-                Amount       = amount,
-                Unit         = unit,
-                SourceAmount = ing.SourceAmount,
-                SourceUnit   = ing.SourceUnit?.Trim(),
+                Amount       = stored.Amount,
+                Unit         = stored.Unit,
+                SourceAmount = stored.SourceAmount,
+                SourceUnit   = stored.SourceUnit,
                 Notes        = ing.Notes?.Trim(),
                 DisplayOrder = ing.DisplayOrder,
             };
@@ -265,43 +398,35 @@ public class RecipeScrapeService(
         }
 
         await db.SaveChangesAsync(ct);
-
-        var full = await db.Recipes
-            .Include(r => r.Ingredients).ThenInclude(ri => ri.Ingredient)
-            .Include(r => r.Ingredients).ThenInclude(ri => ri.StepIngredients)
-            .Include(r => r.Steps).ThenInclude(rs => rs.StepIngredients)
-            .AsNoTracking()
-            .FirstAsync(r => r.Id == recipe.Id, ct);
-
-        return full.ToDetail();
+        return recipe.Id;
     }
 
     // ── HTML fetching and stripping ───────────────────────────────────────────
 
-    public async Task<string> FetchAndStripHtmlAsync(string url, CancellationToken ct)
+    /// <summary>The page's recipe text, with the photo from the same document as the text, or from the other document when that one has none.</summary>
+    public async Task<FetchedPage> FetchPageAsync(string url, CancellationToken ct)
     {
         var html = await FetchHtmlAsync(url, ct);
-        var (text, sufficient) = await ExtractCandidateTextAsync(html);
-        if (sufficient) return text;
-
-        if (!_options.EnableHeadlessFallback) return text;
+        var fetched = await ExtractCandidateAsync(html, url);
+        if (fetched.Sufficient || !_options.EnableHeadlessFallback) return fetched.Page;
 
         try
         {
             var renderedHtml = await headlessRenderer.RenderAsync(
                 url, TimeSpan.FromSeconds(_options.HeadlessRenderTimeoutSeconds), ct);
-            var (renderedText, renderedSufficient) = await ExtractCandidateTextAsync(renderedHtml);
+            var rendered = await ExtractCandidateAsync(renderedHtml, url);
 
             // Prefer the rendered result if it cleared the bar or is simply more substantial than the static fetch.
-            if (renderedSufficient || renderedText.Length > text.Length)
-                return renderedText;
+            return rendered.Sufficient || rendered.Page.Text.Length > fetched.Page.Text.Length
+                ? rendered.Page with { ImageUrl = rendered.Page.ImageUrl ?? fetched.Page.ImageUrl }
+                : fetched.Page with { ImageUrl = fetched.Page.ImageUrl ?? rendered.Page.ImageUrl };
         }
         catch (Exception ex) when (ex is not OperationCanceledException)
         {
             logger.LogWarning(ex, "Headless render fallback failed for {Url}; using static fetch result.", url);
         }
 
-        return text;
+        return fetched.Page;
     }
 
     private async Task<string> FetchHtmlAsync(string url, CancellationToken ct)
@@ -346,16 +471,45 @@ public class RecipeScrapeService(
     }
 
     /// <summary>Tries JSON-LD recipe markup first, falling back to stripped visible body text, and reports whether the result is sufficient for the caller to stop trying.</summary>
-    private async Task<(string Text, bool Sufficient)> ExtractCandidateTextAsync(string html)
+    private async Task<(FetchedPage Page, bool Sufficient)> ExtractCandidateAsync(string html, string url)
     {
         var parser = new HtmlParser();
         var doc    = await parser.ParseDocumentAsync(html);
 
-        var jsonLdText = RecipeJsonLdExtractor.TryBuildRecipeText(doc);
-        if (jsonLdText is not null) return (jsonLdText, true);
+        // Read before stripping, because stripping removes the scripts and meta tags they come from.
+        var stepLines = ReadStepLines(doc, url);
+        var imageUrl  = Uri.TryCreate(url, UriKind.Absolute, out var pageUrl) ? RecipePhotoLocator.TryFind(doc, pageUrl) : null;
 
+        var jsonLdText = RecipeJsonLdExtractor.TryBuildRecipeText(doc, stepLines);
+        if (jsonLdText is not null) return (new FetchedPage(jsonLdText, imageUrl), true);
+
+        // Judged on the page's own text, because a reader's lines alone do not make a thin static fetch readable.
         var strippedText = StripBodyText(doc);
-        return (strippedText, strippedText.Length >= _options.MinStaticContentLength);
+        return (new FetchedPage(strippedText + RecipeJsonLdExtractor.BuildStepLinesSection(stepLines), imageUrl),
+            strippedText.Length >= _options.MinStaticContentLength);
+    }
+
+    /// <summary>The extra lines per step from the Site Reader for the URL's host, or null when no reader handles it or the reader fails, which never fails the scrape.</summary>
+    private IReadOnlyDictionary<int, IReadOnlyList<string>>? ReadStepLines(IDocument doc, string url)
+    {
+        if (!Uri.TryCreate(url, UriKind.Absolute, out var uri)) return null;
+
+        var reader = siteReaders.FirstOrDefault(r => r.Hosts.Contains(uri.Host, StringComparer.OrdinalIgnoreCase));
+        if (reader is null) return null;
+
+        try
+        {
+            var lines = reader.ReadStepLines(doc);
+            if (lines is null)
+                logger.LogWarning("{Reader} found no page data in the shape it expects on {Url}; scraping without it.",
+                    reader.GetType().Name, url);
+            return lines;
+        }
+        catch (Exception ex)
+        {
+            logger.LogWarning(ex, "{Reader} failed on {Url}; scraping without it.", reader.GetType().Name, url);
+            return null;
+        }
     }
 
     public static async Task<string> StripHtmlAsync(string html)
@@ -399,7 +553,7 @@ public class RecipeScrapeService(
             strippedText = strippedText[.._options.MaxHtmlCharacters];
 
         var userMessage = $"Extract the recipe from the following web page text:\n\n---\n{strippedText}\n---";
-        var schema      = JsonNode.Parse(RecipeSchemaJson)!;
+        var schema      = JsonNode.Parse(ScrapeSchemaJson)!;
 
         using var llmCts    = new CancellationTokenSource(TimeSpan.FromSeconds(_options.LlmTimeoutSeconds));
         using var linkedCts = CancellationTokenSource.CreateLinkedTokenSource(ct, llmCts.Token);
@@ -463,14 +617,17 @@ public class RecipeScrapeService(
             .Where(i => i.GramsPerMillilitre.HasValue)
             .ToDictionary(i => i.Id, i => i.GramsPerMillilitre);
 
+        decimal? DensityOf(Guid? ingredientId) =>
+            ingredientId is { } id && densityById.TryGetValue(id, out var density) ? density : null;
+
         // Stage B: resolve an import-resolvable unit against the matched ingredient's density, leaving an unmatched or unquantified row as stated.
-        ScrapePreviewIngredientResponse ResolveAgainstCatalogue(ScrapePreviewIngredientResponse row, Guid ingredientId)
+        ScrapePreviewIngredientResponse ResolveAgainstCatalogue(ScrapePreviewIngredientResponse row)
         {
+            if (row.IngredientId is null) return row;
             if (row.Amount is not { } statedAmount || row.Unit is not { } statedUnit) return row;
 
-            densityById.TryGetValue(ingredientId, out var density);
             var (resolvedAmount, resolvedUnit) =
-                measurementConverter.ResolveForImport(statedAmount, statedUnit, density);
+                measurementConverter.ResolveForImport(statedAmount, statedUnit, DensityOf(row.IngredientId));
             return row with { Amount = resolvedAmount, Unit = resolvedUnit };
         }
 
@@ -483,23 +640,7 @@ public class RecipeScrapeService(
             var ing            = extracted.Ingredients[i];
             var normalisedName = ing.Name.Trim().ToLowerInvariant();
 
-            // Stage A: record the source measurement verbatim first so a conversion can be audited, because a sizeless unit stores no measurement of its own.
-            decimal? amount       = null;
-            string?  unit         = null;
-            decimal? sourceAmount = null;
-            string?  sourceUnit   = null;
-
-            if (ing.Amount is { } statedAmount)
-            {
-                if (!SizelessUnit.IsSizeless(ing.Unit))
-                    (amount, unit) = MeasurementConverter.ToCanonical(statedAmount, ing.Unit ?? string.Empty);
-                sourceAmount   = Math.Round((decimal)statedAmount, 3);
-                sourceUnit     = ing.Unit?.Trim();
-            }
-            else if (SizelessUnit.IsSizeless(ing.Unit))
-            {
-                sourceUnit = ing.Unit.Trim();
-            }
+            var (amount, unit, sourceAmount, sourceUnit, notes) = ReadStatedMeasurement(ing);
 
             var row = new ScrapePreviewIngredientResponse(
                 IngredientId:      null,
@@ -509,10 +650,13 @@ public class RecipeScrapeService(
                 Unit:              unit,
                 SourceAmount:      sourceAmount,
                 SourceUnit:        sourceUnit,
-                Notes:             string.IsNullOrWhiteSpace(ing.Notes) ? null : ing.Notes,
+                EntryUnit:         null,
+                Notes:             notes,
                 IsNew:             true,
                 SuggestedCategory: CategoriseIngredient(normalisedName),
-                DisplayOrder:      i);
+                DisplayOrder:      i,
+                AmountFromSteps:   false,
+                StepAmounts:       []);
 
             if (exactLookup.TryGetValue(normalisedName, out var existingId))
             {
@@ -522,7 +666,6 @@ public class RecipeScrapeService(
                     IsNew             = false,
                     SuggestedCategory = IngredientCategory.Other,
                 };
-                row = ResolveAgainstCatalogue(row, existingId);
             }
             else
             {
@@ -587,14 +730,12 @@ public class RecipeScrapeService(
                         {
                             // Matched to existing catalogue entry
                             var matchedId = candidates[result.CandidateIndex.Value].ing.Id;
-                            previewIngredients[origIdx] = ResolveAgainstCatalogue(
-                                prevIngred with
-                                {
-                                    IngredientId      = matchedId,
-                                    IsNew             = false,
-                                    SuggestedCategory = IngredientCategory.Other,
-                                },
-                                matchedId);
+                            previewIngredients[origIdx] = prevIngred with
+                            {
+                                IngredientId      = matchedId,
+                                IsNew             = false,
+                                SuggestedCategory = IngredientCategory.Other,
+                            };
                         }
                         else
                         {
@@ -617,9 +758,20 @@ public class RecipeScrapeService(
             }
         }
 
+        // Filled once matching is done, because adding a volume to a mass needs the matched Ingredient's density, and before Stage B so a filled cup resolves too.
+        var stepAmounts = StepAmountsByIngredient(extracted, url);
+        for (int i = 0; i < previewIngredients.Count; i++)
+        {
+            var row = previewIngredients[i];
+            if (stepAmounts.TryGetValue(i, out var mentions))
+                row = FillFromSteps(row, extracted.Ingredients[i], mentions, DensityOf(row.IngredientId));
+            previewIngredients[i] = ResolveAgainstCatalogue(row);
+        }
+
         var previewSteps = extracted.Steps
             .OrderBy(s => s.StepNumber)
-            .Select(s => new ScrapePreviewStepResponse(s.StepNumber, s.Instruction, s.IngredientIndexes))
+            .Select(s => new ScrapePreviewStepResponse(
+                s.StepNumber, WithoutStepLines(s.Instruction), DistinctIngredientIndexesInRange(s, previewIngredients.Count, url)))
             .ToList();
 
         return new ScrapePreviewResponse(
@@ -627,9 +779,209 @@ public class RecipeScrapeService(
             Description: string.IsNullOrWhiteSpace(extracted.Description) ? null : extracted.Description.Trim(),
             Servings:    extracted.Servings > 0 ? extracted.Servings : 4,
             SourceUrl:   url,
-            Ingredients: previewIngredients,
+            // Named once every row is final, because matching can resolve a row's measurement against a density.
+            Ingredients: previewIngredients
+                .Select(row => row with
+                {
+                    EntryUnit = MeasurementConverter.EntryUnitOf(row.Amount, row.Unit, row.SourceAmount, row.SourceUnit),
+                })
+                .ToList(),
             Steps:       previewSteps
         );
+    }
+
+    /// <summary>The model can number past the end of the ingredients, and the confirm validator rejects such a link, so a preview carrying one could never be saved.</summary>
+    private List<int> DistinctIngredientIndexesInRange(ExtractedStep step, int ingredientCount, string url)
+    {
+        var byRange = step.IngredientIndexes.Distinct().ToLookup(i => i >= 0 && i < ingredientCount);
+        var kept    = byRange[true].ToList();
+        var dropped = byRange[false].ToList();
+
+        if (dropped.Count > 0)
+            logger.LogWarning(
+                "Scrape of {Url} linked step {StepNumber} to ingredient indexes {DroppedIndexes} outside 0–{LastIndex}; dropped them.",
+                url, step.StepNumber, string.Join(", ", dropped), ingredientCount - 1);
+
+        return kept;
+    }
+
+    /// <summary>A step's instruction without any Site Reader lines the model copied into it, because saved text does not scale with Servings.</summary>
+    private static string WithoutStepLines(string instruction)
+    {
+        var heading = instruction.IndexOf(RecipeJsonLdExtractor.StepLinesHeading, StringComparison.OrdinalIgnoreCase);
+        return heading < 0 ? instruction : instruction[..heading].TrimEnd();
+    }
+
+    // ── Amounts from steps ────────────────────────────────────────────────────
+
+    /// <summary>The amounts every step states, in step order, keyed by the index of the ingredient each is for, keeping only those that state something.</summary>
+    private Dictionary<int, List<StepAmount>> StepAmountsByIngredient(ExtractedRecipe extracted, string url)
+    {
+        var byIngredient = new Dictionary<int, List<StepAmount>>();
+        foreach (var step in extracted.Steps.OrderBy(s => s.StepNumber))
+        {
+            var dropped = new List<int>();
+            foreach (var stated in step.StatedAmounts ?? [])
+            {
+                if (stated.IngredientIndex < 0 || stated.IngredientIndex >= extracted.Ingredients.Count)
+                {
+                    dropped.Add(stated.IngredientIndex);
+                    continue;
+                }
+
+                var amount = stated.Amount is > 0 ? Math.Round((decimal)stated.Amount.Value, 3) : (decimal?)null;
+                var unit   = string.IsNullOrWhiteSpace(stated.Unit) ? null : stated.Unit.Trim();
+                if (amount is null && !SizelessUnit.IsSizeless(unit)) continue;
+
+                if (!byIngredient.TryGetValue(stated.IngredientIndex, out var mentions))
+                    byIngredient[stated.IngredientIndex] = mentions = [];
+                mentions.Add(new StepAmount(amount, unit));
+            }
+
+            if (dropped.Count > 0)
+                logger.LogWarning(
+                    "Scrape of {Url} gave step {StepNumber} amounts for ingredient indexes {DroppedIndexes} outside 0–{LastIndex}; dropped them.",
+                    url, step.StepNumber, string.Join(", ", dropped), extracted.Ingredients.Count - 1);
+        }
+        return byIngredient;
+    }
+
+    /// <summary>
+    /// Fills a row whose list line states nothing, not even a Sizeless Unit, from the total of its step amounts, leaving it
+    /// empty but listing the amounts when they cannot be added up; a row whose line states anything keeps it.
+    /// </summary>
+    private static ScrapePreviewIngredientResponse FillFromSteps(
+        ScrapePreviewIngredientResponse row, ExtractedIngredient ing, List<StepAmount> mentions, decimal? density)
+    {
+        if (row.Amount is not null || row.SourceAmount is not null || row.SourceUnit is not null) return row;
+
+        var withStepAmounts = row with
+        {
+            StepAmounts = mentions.Select(m => new ScrapePreviewStepAmountResponse(m.Amount, m.Unit)).ToList(),
+        };
+
+        switch (StepAmountTotaller.Total(mentions, row.Name, density))
+        {
+            case StepAmountTotal.InSharedUnit shared:
+                // Read like a stated line, so a Count Word, an Entry-only Unit or a cup is stored as one would be.
+                var (amount, unit, sourceAmount, sourceUnit, notes) =
+                    ReadStatedMeasurement(ing with { Amount = (double)shared.Amount, Unit = shared.Unit });
+                return withStepAmounts with
+                {
+                    Amount = amount, Unit = unit, SourceAmount = sourceAmount, SourceUnit = sourceUnit, Notes = notes,
+                    AmountFromSteps = true,
+                };
+
+            case StepAmountTotal.Converted converted:
+                return withStepAmounts with { Amount = converted.Amount, Unit = converted.Unit, AmountFromSteps = true };
+
+            case StepAmountTotal.Sizeless sizeless:
+                return withStepAmounts with { SourceAmount = sizeless.SourceAmount, SourceUnit = sizeless.Word, AmountFromSteps = true };
+
+            case StepAmountTotal.NotAddedUp:
+                return withStepAmounts;
+
+            default:
+                return row;
+        }
+    }
+
+    /// <summary>
+    /// Stage A for one scraped line, which converts its measurement and records the source verbatim so a conversion can be
+    /// audited, storing a Sizeless Unit unquantified, a Count Word or missing unit as <c>pcs</c>, and a size word in the notes.
+    /// </summary>
+    private static (decimal? Amount, string? Unit, decimal? SourceAmount, string? SourceUnit, string? Notes)
+        ReadStatedMeasurement(ExtractedIngredient ing)
+    {
+        var notes      = string.IsNullOrWhiteSpace(ing.Notes) ? null : ing.Notes;
+        var statedUnit = ing.Unit;
+
+        if (CountWords.IsSizeWord(statedUnit))
+        {
+            notes      = WithLeadingNote(notes, statedUnit.Trim());
+            statedUnit = null;
+        }
+
+        if (ing.Amount is not { } statedAmount)
+            return SizelessUnit.IsSizeless(statedUnit)
+                ? (null, null, null, statedUnit.Trim(), notes)
+                : (null, null, null, null, notes);
+
+        // Nothing is lost by storing a bare amount as pcs, so it records no Source Measurement.
+        if (string.IsNullOrWhiteSpace(statedUnit))
+            return (Math.Round((decimal)statedAmount, 3), MeasurementUnit.Piece, null, null, notes);
+
+        var sourceAmount = Math.Round((decimal)statedAmount, 3);
+        var sourceUnit   = statedUnit.Trim();
+
+        if (SizelessUnit.IsSizeless(statedUnit))
+            return (null, null, sourceAmount, sourceUnit, notes);
+
+        if (CountWords.IsCountWord(statedUnit, ing.Name))
+            return (sourceAmount, MeasurementUnit.Piece, sourceAmount, sourceUnit, notes);
+
+        // "½ (16 oz) pkg" is stored as the 8 oz it holds, with "½ pkg" kept in the notes.
+        if (ReadSizedPackage(statedAmount, sourceUnit, notes) is { } sized)
+        {
+            var (package, otherNotes) = sized;
+            var (total, totalUnit) = MeasurementConverter.ToCanonical((double)package.Total, package.SizeUnit);
+            var packageNotes = package.Container is null
+                ? otherNotes
+                : WithLeadingNote(otherNotes, $"{FormatCount(sourceAmount)} {package.Container}");
+            return (total, totalUnit, package.Total, package.SizeUnit, packageNotes);
+        }
+
+        var (amount, unit) = MeasurementConverter.ToCanonical(statedAmount, statedUnit);
+        return (amount, unit, sourceAmount, sourceUnit, notes);
+    }
+
+    /// <summary>A size leading a row's notes, bracketed or not, where the model sometimes puts the "6 oz" of "1 (6 oz) pkg".</summary>
+    private static readonly Regex LeadingSizeNote = new(
+        @"^\s*(?:\((?<size>[^()]*)\)|(?<size>\d+(?:\.\d+)?\s*-?\s*[a-zA-Z][a-zA-Z .]*?))\s*(?:,\s*(?<rest>.*))?$",
+        RegexOptions.Compiled);
+
+    /// <summary>Reads a sized package from the unit alone or from a package word whose size leads the notes, returning the notes left once that size is taken out.</summary>
+    private static (SizedPackage Package, string? Notes)? ReadSizedPackage(double count, string unit, string? notes)
+    {
+        if (MeasurementConverter.ReadSizedPackage(count, unit) is { } package) return (package, notes);
+
+        // A real unit such as "cup" is never a package, whatever its notes say.
+        if (MeasurementUnit.DimensionOf(MeasurementConverter.ToCanonical(1, unit).Unit) is not null) return null;
+
+        var leading = notes is null ? null : LeadingSizeNote.Match(notes);
+        if (leading is not { Success: true }) return null;
+
+        var combined = $"({leading.Groups["size"].Value}) {unit}";
+        if (MeasurementConverter.ReadSizedPackage(count, combined) is not { } split) return null;
+
+        var rest = leading.Groups["rest"].Value.Trim();
+        return (split, rest.Length == 0 ? null : rest);
+    }
+
+    /// <summary>Writes a count of packages as a cook would, with a common fraction as its glyph.</summary>
+    private static string FormatCount(decimal count)
+    {
+        var whole    = Math.Truncate(count);
+        var fraction = (count - whole) switch
+        {
+            0.25m => "¼",
+            0.5m  => "½",
+            0.75m => "¾",
+            0m    => "",
+            _     => null,
+        };
+        if (fraction is null) return count.ToString("0.###", CultureInfo.InvariantCulture);
+        return whole == 0 && fraction.Length > 0 ? fraction : $"{whole:0}{fraction}";
+    }
+
+    /// <summary>Puts a word at the front of a row's notes, unless the notes already say it.</summary>
+    private static string WithLeadingNote(string? notes, string word)
+    {
+        if (notes is null) return word;
+
+        var alreadySaid = Regex.IsMatch(
+            notes, $@"(?<![\w-]){Regex.Escape(word)}(?![\w-])", RegexOptions.IgnoreCase);
+        return alreadySaid ? notes : $"{word}, {notes}";
     }
 
     // ── Helpers ───────────────────────────────────────────────────────────────
@@ -699,10 +1051,18 @@ public class RecipeScrapeService(
         string? Notes
     );
 
+    /// <param name="StatedAmounts">The amounts the step states, which only the scrape's schema asks for, so null from the seed normaliser.</param>
     internal record ExtractedStep(
         [property: JsonPropertyName("step_number")]       int StepNumber,
         string Instruction,
-        [property: JsonPropertyName("ingredient_indexes")] List<int> IngredientIndexes
+        [property: JsonPropertyName("ingredient_indexes")] List<int> IngredientIndexes,
+        [property: JsonPropertyName("stated_amounts")]     List<ExtractedStepAmount>? StatedAmounts = null
+    );
+
+    internal record ExtractedStepAmount(
+        [property: JsonPropertyName("ingredient_index")] int IngredientIndex,
+        double? Amount,
+        string? Unit
     );
 
     internal record MatchingResponse(List<MatchResult> Results);
@@ -715,6 +1075,10 @@ public class RecipeScrapeService(
         [property: JsonPropertyName("suggested_default_unit")]  string? SuggestedDefaultUnit
     );
 }
+
+/// <param name="Text">The recipe text the model reads.</param>
+/// <param name="ImageUrl">The page's photo as an absolute http(s) URL, or null when it offers none.</param>
+public record FetchedPage(string Text, string? ImageUrl);
 
 // ── Exception types ───────────────────────────────────────────────────────────
 

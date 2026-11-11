@@ -14,8 +14,8 @@ Read `CODING_STANDARDS.md` (repo root) before writing or reviewing code: comment
 | `DTOs/<Area>/` | Request/response DTOs. `DTOs/Mappings.cs` holds all mapping |
 | `Validators/` | One FluentValidation validator per request DTO. `RecipeLimits.cs` holds the shared length and range limits |
 | `Models/` | EF entities, one per file |
-| `Enums/` | `MeasurementUnit`, `SizelessUnit`, `IngredientCategory`, `RecipeSort`, `SortDirection` (the single source of truth for each) |
-| `Services/` | Business logic; `Llm/` Model Server client, `Seeding/` MyPlate import pipeline, `RecipePacks/` recipe-pack import |
+| `Enums/` | `MeasurementUnit`, `SizelessUnit`, `CountWords`, `IngredientCategory`, `RecipeSort`, `SortDirection` (the single source of truth for each) |
+| `Services/` | Business logic; Site Readers (`ISiteReader`, one class per site such as `MealimeSiteReader`, registered in `Program.cs`) beside `RecipeJsonLdExtractor`; `Llm/` Model Server client, `Seeding/` MyPlate import pipeline, `RecipePacks/` recipe-pack import |
 | `Data/` | `AppDbContext`, migrations, `FirstRunSeeder` and its ledger keys, catalogue/density seeders |
 | `seed-data/` | `ingredient-catalogue.json` and `sample-recipes.json` (committed, shipped artefacts) and the `myplate/` cache (personal use; only `manifest.json` committed) |
 
@@ -32,7 +32,8 @@ Read `CODING_STANDARDS.md` (repo root) before writing or reviewing code: comment
   **Never add `FluentValidation.AspNetCore`.** It is deprecated and only ever hooked MVC.
 - **Service-level writes bypass validation.** `RecipeScrapeService.ConfirmAsync` validates nothing. Any
   caller that is not an endpoint must check against `RecipeLimits`, or it can persist a recipe the
-  UI then cannot save.
+  UI then cannot save. It also downloads any `ImageUrl` it is handed, so such a caller must pass only
+  an absolute http(s) URL, or none.
 - **Migrations:** `dotnet ef migrations add <Name> --output-dir Data/Migrations`.
 - **Timestamps:** `DateTime.UtcNow` and `TIMESTAMPTZ` only. Never local time.
 - Hard deletes. No soft deletes in v1.

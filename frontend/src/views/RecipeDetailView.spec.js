@@ -147,6 +147,30 @@ describe('RecipeDetailView', () => {
     expect(wrapper.text()).toContain('(2 cups)')
   })
 
+  it('shows a row entered in oz like an imported one, with the typed measurement beside the grams', async () => {
+    const wrapper = await mountView({
+      ingredients: [{
+        id: 'ri-1',
+        ingredientId: 'test-ingredient-1',
+        ingredientName: 'feta cheese',
+        ingredientDisplayName: 'Feta',
+        category: 'DAIRY',
+        amount: 113.398,
+        unit: 'g',
+        sourceAmount: 4,
+        sourceUnit: 'oz',
+        entryUnit: 'oz',
+        notes: null,
+        displayOrder: 0,
+      }],
+    })
+
+    const row = wrapper.get('#ingredient-ri-1').text()
+    expect(row).toContain('113.4 g')
+    expect(row).toContain('(4 oz)')
+    expect(row).toContain('Feta')
+  })
+
   it('scales the source measurement with the chosen servings', async () => {
     const wrapper = await mountView({
       ingredients: [{
@@ -205,6 +229,19 @@ describe('RecipeDetailView', () => {
     const location = replaceMock.mock.lastCall[0]
     expect(location).toMatchObject({ name: 'recipe-detail', params: { id: 'test-recipe-1' } })
     expect(location.query).toEqual({ servings: 5 })
+  })
+
+  it('rescales in place on a servings query change without refetching the recipe', async () => {
+    // The recipe-detail route stays mounted while only its query changes, so the view must follow the URL itself.
+    const wrapper = await mountView()
+    expect(store.fetchRecipe).toHaveBeenCalledTimes(1)
+
+    route.query = recipeRoute('test-recipe-1', 6).query
+    await flushPromises()
+
+    expect(servingsChip(wrapper).text()).toBe('6 servings')
+    expect(wrapper.get('#ingredient-ri-1').text()).toContain('300 g')
+    expect(store.fetchRecipe).toHaveBeenCalledTimes(1)
   })
 
   it('keeps a shortcut’s servings on the URL', async () => {
@@ -304,7 +341,33 @@ describe('RecipeDetailView', () => {
 
     // Assert the row is exactly the name, because scaling a null amount by the multiplier yields 0 in JavaScript and "0 g" alone would pass against that bug.
     expect(wrapper.get('#ingredient-ri-1').text().trim()).toBe('Salt')
-    expect(wrapper.vm.formatAmount(null, null)).toBeNull()
+  })
+
+  const countRow = overrides => ({
+    id: 'ri-1',
+    ingredientId: 'test-ingredient-1',
+    ingredientName: 'egg',
+    ingredientDisplayName: 'Eggs',
+    category: 'DAIRY',
+    amount: 2,
+    unit: 'pcs',
+    sourceAmount: null,
+    sourceUnit: null,
+    notes: null,
+    displayOrder: 0,
+    ...overrides,
+  })
+
+  it('shows a count without its unit', async () => {
+    const wrapper = await mountView({ ingredients: [countRow()] })
+    expect(wrapper.get('#ingredient-ri-1').text().replace(/\s+/g, ' ').trim()).toBe('2 Eggs')
+  })
+
+  it('shows a counted row by its Count Word alone', async () => {
+    const wrapper = await mountView({
+      ingredients: [countRow({ ingredientDisplayName: 'Garlic', sourceAmount: 2, sourceUnit: 'cloves' })],
+    })
+    expect(wrapper.get('#ingredient-ri-1').text().replace(/\s+/g, ' ').trim()).toBe('(2 cloves) Garlic')
   })
 
   it('leaves an unquantified ingredient blank at a chosen number of servings', async () => {

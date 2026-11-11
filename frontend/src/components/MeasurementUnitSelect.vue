@@ -1,10 +1,13 @@
 <template>
   <v-select
     :model-value="hasAmount(amount) ? unit : null"
-    :items="MEASUREMENT_UNITS"
+    :items="UNIT_PICKER_ITEMS"
     label="Unit"
     density="compact"
-    hide-details
+    hide-details="auto"
+    :error-messages="errorMessages"
+    :placeholder="countPlaceholder"
+    :persistent-placeholder="!!countPlaceholder"
     :disabled="!hasAmount(amount)"
     style="max-width: 100px"
     @update:model-value="unit = $event"
@@ -12,12 +15,20 @@
 </template>
 
 <script setup>
-import { MEASUREMENT_UNITS, hasAmount } from '@/constants/units'
+import { computed } from 'vue'
+import { UNIT_PICKER_ITEMS, COUNT_UNIT, hasAmount } from '@/constants/units'
 
 // Kept while the amount is empty and only shown blank, so the picked unit returns with an amount.
 const unit = defineModel({ type: [String, null], default: null })
 
-defineProps({
+const props = defineProps({
   amount: { type: [Number, String, null], default: null },
+  // Set when an empty unit cannot stand for a count, such as a scraped "can" whose size pcs would lose.
+  requiresUnit: { type: Boolean, default: false },
+  errorMessages: { type: Array, default: () => [] },
 })
+
+// An amount with no unit saves as a count, so the empty field says so, unless a unit has to be picked.
+const countPlaceholder = computed(() =>
+  hasAmount(props.amount) && !props.requiresUnit ? COUNT_UNIT : undefined)
 </script>

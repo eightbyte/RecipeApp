@@ -1,5 +1,6 @@
 using FluentAssertions;
 using RecipeApp.API.DTOs.Recipes;
+using RecipeApp.API.Enums;
 using RecipeApp.API.Services;
 using RecipeApp.Tests.Helpers;
 using RecipeApp.Tests.Infrastructure;
@@ -260,9 +261,9 @@ public class RecipeServiceTests(DatabaseFixture db) : IAsyncLifetime
     }
 
     [Fact]
-    public async Task CreateAsync_AmountWithNoUnit_KeepsTheAmount()
+    public async Task CreateAsync_AmountWithNoUnit_IsStoredAsACount()
     {
-        // The converse is deliberately not coerced, because an amount the caller stated is real data that the validators reject loudly.
+        // "2 eggs" is a count, which is stored as pcs.
         await using var ctx = db.CreateDbContext();
         var ing = TestDataBuilder.Ingredient();
         ctx.Ingredients.Add(ing);
@@ -271,10 +272,12 @@ public class RecipeServiceTests(DatabaseFixture db) : IAsyncLifetime
         var svc = new RecipeService(ctx);
         var result = await svc.CreateAsync(new CreateRecipeRequest(
             "Unitless Recipe", null, null, 4,
-            [new RecipeIngredientRequest(ing.Id, 100m, null, null, 0)],
+            [new RecipeIngredientRequest(ing.Id, 2m, null, null, 0)],
             [new RecipeStepRequest(1, "Cook", [])]));
 
-        result.Ingredients.Single().Amount.Should().Be(100m);
+        var stored = result.Ingredients.Single();
+        stored.Amount.Should().Be(2m);
+        stored.Unit.Should().Be(MeasurementUnit.Piece);
     }
 
     [Fact]

@@ -58,6 +58,37 @@ describe('AppSnackbar', () => {
     w.unmount()
   })
 
+  describe('action button', () => {
+    // v-snackbar teleports its content to <body>; mount attached so we can read it.
+    const mountAttached = () => mount(AppSnackbar, {
+      attachTo: document.body,
+      global: { plugins: [vuetify, pinia] },
+    })
+    const buttonTexts = () => [...document.querySelectorAll('.v-snackbar .v-btn')].map(b => b.textContent.trim())
+
+    it('runs the action and closes', async () => {
+      mountAttached()
+      const ui = useUiStore()
+      const onClick = vi.fn()
+      ui.notify({ message: 'Ingredient removed', action: { label: 'Undo', onClick } })
+      await flushPromises()
+
+      const undo = [...document.querySelectorAll('.v-snackbar .v-btn')].find(b => b.textContent.trim() === 'Undo')
+      undo.click()
+
+      expect(onClick).toHaveBeenCalledTimes(1)
+      expect(ui.snackbar.show).toBe(false)
+    })
+
+    it('is absent from a plain notification', async () => {
+      mountAttached()
+      useUiStore().notify({ message: 'Saved' })
+      await flushPromises()
+
+      expect(buttonTexts()).toEqual([''])
+    })
+  })
+
   it('dismisses via the ui store when toggled off', async () => {
     const w = mountSnackbar()
     const ui = useUiStore()

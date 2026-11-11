@@ -13,6 +13,16 @@ export function assetUrl(path) {
   return `${_apiHost}${path}`
 }
 
+/** A validation problem carries no `detail`, only `title` and an `errors` map, so its reason has to be built from those. */
+export function problemMessage(data, fallback) {
+  if (data?.detail) return data.detail
+
+  const messages = [...new Set(Object.values(data?.errors ?? {}).flat())]
+  if (messages.length > 0) return [data.title, ...messages].filter(Boolean).join(' ')
+
+  return data?.message ?? fallback
+}
+
 const api = axios.create({
   baseURL: import.meta.env.VITE_API_BASE_URL ?? '/api/v1',
   headers: {
@@ -35,7 +45,7 @@ api.interceptors.response.use(
   (response) => response,
   (error) => {
     const status = error.response?.status
-    const message = error.response?.data?.detail ?? error.response?.data?.message ?? error.message ?? 'Unknown error'
+    const message = problemMessage(error.response?.data, error.message ?? 'Unknown error')
 
     // Surface a simple error object so callers don't have to dig into Axios internals
     return Promise.reject({ status, message, timedOut: error.code === AxiosError.ETIMEDOUT, original: error })

@@ -219,6 +219,27 @@ public class RecipePackImporterTests(DatabaseFixture db) : IAsyncLifetime
         result.Errors.Should().ContainSingle().Which.Should().Contain("Amount");
     }
 
+    [Fact]
+    public async Task AnAmountWithNoUnitLoadsAsACount()
+    {
+        var result = await ImportAsync(Pack(Recipe("Onions", [Row("onion", 2, null)])));
+
+        result.Succeeded.Should().BeTrue();
+        var row = (await LoadRecipesAsync()).Single().Ingredients.Single();
+        row.Amount.Should().Be(2);
+        row.Unit.Should().Be(MeasurementUnit.Piece);
+    }
+
+    [Fact]
+    public async Task AnEntryOnlyUnitLoadsConvertedWithItsStatedSource()
+    {
+        var result = await ImportAsync(Pack(Recipe("Rice", [Row("rice", 1, "lb")])));
+
+        result.Succeeded.Should().BeTrue();
+        var row = (await LoadRecipesAsync()).Single().Ingredients.Single();
+        row.Should().BeEquivalentTo(new { Amount = 453.592m, Unit = "g", SourceAmount = 1m, SourceUnit = "lb" });
+    }
+
     // ── Unknown ingredients ───────────────────────────────────────────────────
 
     [Fact]

@@ -29,7 +29,7 @@ public class SizelessUnitTests
     }
 
     [Theory]
-    [InlineData("clove")]       // count words await their own decision
+    [InlineData("clove")]       // a Count Word, see CountWords
     [InlineData("cloves")]
     [InlineData("can")]
     [InlineData("sprig")]

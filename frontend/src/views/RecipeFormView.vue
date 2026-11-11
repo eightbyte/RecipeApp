@@ -1,21 +1,24 @@
 <template>
-  <v-container class="pa-4" max-width="600">
+  <v-container ref="containerRef" class="pa-2 pa-sm-4" max-width="600">
     <h1 class="text-h6 font-weight-bold mb-6">
       {{ isEdit ? 'Edit Recipe' : 'New Recipe' }}
     </h1>
 
-    <v-form ref="formRef" @submit.prevent="submit">
+    <RecipeProblemsBanner :problems="validation.shownProblems.value" />
+
+    <v-form @submit.prevent="submit">
 
       <!-- ── Basic info ──────────────────────────────────────────────── -->
-      <v-card class="mb-6 pa-4">
+      <v-card class="mb-6 pa-3 pa-sm-4">
         <div class="text-subtitle-2 text-medium-emphasis mb-4">Basic Info</div>
 
         <v-text-field
           v-model="form.name"
           label="Recipe name"
-          :rules="[v => !!v || 'Name is required']"
+          :error-messages="validation.messagesFor('recipe', null, 'name')"
           required
           class="mb-2"
+          @update:focused="validation.leaveOnBlur($event, 'name')"
         />
 
         <v-textarea
@@ -23,7 +26,9 @@
           label="Description (optional)"
           rows="2"
           auto-grow
+          :error-messages="validation.messagesFor('recipe', null, 'description')"
           class="mb-2"
+          @update:focused="validation.leaveOnBlur($event, 'description')"
         />
 
         <div class="d-flex ga-4">
@@ -31,10 +36,11 @@
             v-model.number="form.servings"
             label="Servings"
             type="number"
-            min="1"
-            max="100"
-            :rules="[v => v > 0 || 'Must be at least 1']"
+            :min="MIN_SERVINGS"
+            :max="MAX_SERVINGS"
+            :error-messages="validation.messagesFor('recipe', null, 'servings')"
             style="max-width: 120px"
+            @update:focused="validation.leaveOnBlur($event, 'servings')"
           />
           <v-text-field
             v-model="form.sourceUrl"
@@ -45,7 +51,7 @@
       </v-card>
 
       <!-- ── Image ────────────────────────────────────────────────────── -->
-      <v-card class="mb-6 pa-4">
+      <v-card class="mb-6 pa-3 pa-sm-4">
         <div class="text-subtitle-2 text-medium-emphasis mb-4">Photo</div>
 
         <v-img
@@ -70,7 +76,7 @@
       </v-card>
 
       <!-- ── Ingredients ────────────────────────────────────────────── -->
-      <v-card class="mb-6 pa-4">
+      <v-card class="mb-6 pa-3 pa-sm-4">
         <div class="d-flex align-center justify-space-between mb-4">
           <div class="text-subtitle-2 text-medium-emphasis">Ingredients</div>
           <v-btn
@@ -86,7 +92,7 @@
 
         <div
           v-for="(ing, idx) in form.ingredients"
-          :key="idx"
+          :key="rowKey(ing)"
           class="d-flex ga-2 align-start mb-4"
         >
           <!-- Drag handle future: just a number for now -->
@@ -103,11 +109,13 @@
               item-value="id"
               label="Ingredient"
               density="compact"
-              hide-details
+              hide-details="auto"
+              :error-messages="validation.messagesFor('ingredient', idx, 'ingredient')"
               class="mb-1"
               :loading="ingredientStore.loading"
               @update:search="onIngredientSearch"
               @update:model-value="onIngredientSelected(idx, $event)"
+              @update:focused="validation.leaveOnBlur($event, 'ingredient', ing)"
             >
               <template #no-data>
                 <div class="pa-2 text-caption text-medium-emphasis">
@@ -120,7 +128,7 @@
               </template>
             </v-autocomplete>
 
-            <div class="d-flex ga-2">
+            <div class="d-flex flex-wrap flex-sm-nowrap ga-2">
               <v-text-field
                 v-model.number="ing.amount"
                 label="Amount"
@@ -128,17 +136,27 @@
                 min="0"
                 step="0.5"
                 density="compact"
-                hide-details
-                style="max-width: 100px"
+                hide-details="auto"
+                :error-messages="validation.messagesFor('ingredient', idx, 'amount')"
+                :style="rowLayout.amount"
+                @update:focused="validation.leaveOnBlur($event, 'amount', ing)"
               />
-              <MeasurementUnitSelect v-model="ing.unit" :amount="ing.amount" />
+              <MeasurementUnitSelect
+                :model-value="ing.unit"
+                :amount="ing.amount"
+                :style="rowLayout.unit"
+                @update:model-value="setIngredientUnit(ing, $event)"
+                @update:focused="validation.leaveOnBlur($event, 'unit', ing)"
+              />
               <v-text-field
                 v-model="ing.notes"
                 label="Notes"
                 density="compact"
-                hide-details
+                hide-details="auto"
+                :error-messages="validation.messagesFor('ingredient', idx, 'notes')"
                 placeholder="e.g. diced"
-                class="flex-grow-1"
+                :class="rowLayout.notesClass"
+                @update:focused="validation.leaveOnBlur($event, 'notes', ing)"
               />
             </div>
           </div>
@@ -149,6 +167,7 @@
             variant="text"
             color="error"
             class="mt-1"
+            :aria-label="`Remove ingredient ${idx + 1}`"
             @click="removeIngredient(idx)"
           />
         </div>
@@ -159,7 +178,7 @@
       </v-card>
 
       <!-- ── Steps ─────────────────────────────────────────────────── -->
-      <v-card class="mb-6 pa-4">
+      <v-card class="mb-6 pa-3 pa-sm-4">
         <div class="d-flex align-center justify-space-between mb-4">
           <div class="text-subtitle-2 text-medium-emphasis">Steps</div>
           <v-btn
@@ -175,7 +194,7 @@
 
         <div
           v-for="(step, sIdx) in form.steps"
-          :key="sIdx"
+          :key="rowKey(step)"
           class="mb-6"
         >
           <div class="d-flex align-start ga-2">
@@ -190,8 +209,10 @@
                 rows="2"
                 auto-grow
                 density="compact"
-                hide-details
+                hide-details="auto"
+                :error-messages="validation.messagesFor('step', sIdx, 'instruction')"
                 class="mb-2"
+                @update:focused="validation.leaveOnBlur($event, 'instruction', step)"
               />
 
               <!-- Ingredient chips for this step -->
@@ -221,6 +242,7 @@
               size="small"
               variant="text"
               color="error"
+              :aria-label="`Remove step ${sIdx + 1}`"
               @click="removeStep(sIdx)"
             />
           </div>
@@ -238,12 +260,8 @@
       </v-alert>
 
       <div class="d-flex ga-4">
-        <v-btn
-          variant="outlined"
-          :to="isEdit ? { name: 'recipe-detail', params: { id: route.params.id } } : { name: 'recipes' }"
-        >
-          Cancel
-        </v-btn>
+        <v-btn v-if="isEdit" variant="outlined" @click="returnToRecipe(recipeId)">Cancel</v-btn>
+        <v-btn v-else variant="outlined" :to="{ name: 'recipes' }" replace>Cancel</v-btn>
         <v-btn
           type="submit"
           color="primary"
@@ -306,8 +324,16 @@ import { ref, reactive, computed, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useRecipeStore }     from '@/stores/recipes'
 import { useIngredientStore } from '@/stores/ingredients'
-import { MEASUREMENT_UNITS, DEFAULT_UNIT, toPayloadMeasurement } from '@/constants/units'
+import {
+  MEASUREMENT_UNITS, DEFAULT_UNIT, setIngredientUnit, toFormMeasurement, toPayloadMeasurement,
+} from '@/constants/units'
+import { MIN_SERVINGS, MAX_SERVINGS } from '@/constants/recipeLimits'
 import MeasurementUnitSelect from '@/components/MeasurementUnitSelect.vue'
+import RecipeProblemsBanner from '@/components/RecipeProblemsBanner.vue'
+import { useIngredientRowLayout } from '@/composables/useIngredientRowLayout'
+import { useRecipeValidation } from '@/composables/useRecipeValidation'
+import { useRemovalUndo } from '@/composables/useRemovalUndo'
+import { rowKey } from '@/utils/recipeRows'
 
 const props = defineProps({ id: { type: String, default: null } })
 const route  = useRoute()
@@ -316,12 +342,15 @@ const router = useRouter()
 const recipeStore     = useRecipeStore()
 const ingredientStore = useIngredientStore()
 
-const isEdit = computed(() => !!(props.id || route.params.id))
+const recipeId = computed(() => props.id ?? route.params.id)
+const isEdit   = computed(() => !!recipeId.value)
 
 const units = MEASUREMENT_UNITS
 
+const rowLayout = useIngredientRowLayout({ amountWidth: '100px' })
+
 // ── Form state ─────────────────────────────────────────────────────────────
-const formRef    = ref(null)
+const containerRef = ref(null)
 const saving     = ref(false)
 const submitError = ref(null)
 const imageFile  = ref(null)
@@ -335,6 +364,9 @@ const form = reactive({
   ingredients: [],  // { ingredientId, amount, unit, notes }
   steps:       [],  // { instruction, ingredientIndexes: number[] }
 })
+
+const validation = useRecipeValidation(form)
+const { removeIngredient, removeStep } = useRemovalUndo(form)
 
 // ── Create ingredient dialog ────────────────────────────────────────────────
 const createIngDialog   = ref(false)
@@ -353,8 +385,7 @@ onMounted(async () => {
   await ingredientStore.fetchCategories()
 
   if (isEdit.value) {
-    const id = props.id ?? route.params.id
-    const recipe = await recipeStore.fetchRecipe(id)
+    const recipe = await recipeStore.fetchRecipe(recipeId.value)
     if (recipe) populateForm(recipe)
   }
 })
@@ -371,8 +402,7 @@ function populateForm(recipe) {
 
   form.ingredients = ingredients.map(i => ({
     ingredientId: i.ingredientId,
-    amount:       i.amount,
-    unit:         i.unit,
+    ...toFormMeasurement(i),
     notes:        i.notes ?? '',
     // Provenance is carried through untouched, because UpdateAsync recreates every ingredient row and dropping it would destroy an import's history.
     sourceAmount: i.sourceAmount ?? null,
@@ -385,29 +415,23 @@ function populateForm(recipe) {
       .map(riId => ingredients.findIndex(i => i.id === riId))
       .filter(idx => idx !== -1),
   }))
+
+  validation.markArrived()
 }
 
 // ── Ingredient management ───────────────────────────────────────────────────
 function addIngredient() {
-  // Hand-entered rows have no source measurement — the unit chosen here IS the source.
-  form.ingredients.push({
+  // Hand-entered rows have no Source Measurement, because what is typed here is the measurement itself.
+  const row = {
     ingredientId: null,
     amount:       1,
     unit:         DEFAULT_UNIT,
     notes:        '',
     sourceAmount: null,
     sourceUnit:   null,
-  })
-}
-
-function removeIngredient(idx) {
-  form.ingredients.splice(idx, 1)
-  // Fix up step indexes
-  form.steps.forEach(step => {
-    step.ingredientIndexes = step.ingredientIndexes
-      .filter(i => i !== idx)
-      .map(i => (i > idx ? i - 1 : i))
-  })
+  }
+  form.ingredients.push(row)
+  validation.markFresh(row)
 }
 
 let ingSearchTimer = null
@@ -457,11 +481,9 @@ async function confirmCreateIngredient() {
 
 // ── Step management ─────────────────────────────────────────────────────────
 function addStep() {
-  form.steps.push({ instruction: '', ingredientIndexes: [] })
-}
-
-function removeStep(idx) {
-  form.steps.splice(idx, 1)
+  const step = { instruction: '', ingredientIndexes: [] }
+  form.steps.push(step)
+  validation.markFresh(step)
 }
 
 function toggleStepIngredient(stepIdx, ingIdx) {
@@ -482,16 +504,10 @@ function onImageChange(files) {
 
 // ── Submit ──────────────────────────────────────────────────────────────────
 async function submit() {
-  const { valid } = await formRef.value.validate()
-  if (!valid) return
-
-  if (!form.ingredients.length) {
-    submitError.value = 'Add at least one ingredient.'
-    return
-  }
+  submitError.value = null
+  if (!await validation.attemptSave(containerRef.value?.$el)) return
 
   saving.value = true
-  submitError.value = null
 
   try {
     const payload = {
@@ -517,8 +533,7 @@ async function submit() {
 
     let saved
     if (isEdit.value) {
-      const id = props.id ?? route.params.id
-      saved = await recipeStore.updateRecipe(id, payload)
+      saved = await recipeStore.updateRecipe(recipeId.value, payload)
     } else {
       saved = await recipeStore.createRecipe(payload)
     }
@@ -529,11 +544,20 @@ async function submit() {
       if (file) await recipeStore.uploadImage(saved.id, file)
     }
 
-    router.push({ name: 'recipe-detail', params: { id: saved.id } })
+    if (isEdit.value) returnToRecipe(saved.id)
+    else router.replace({ name: 'recipe-detail', params: { id: saved.id } })
   } catch (e) {
     submitError.value = e.message ?? 'Something went wrong. Please try again.'
   } finally {
     saving.value = false
   }
+}
+
+/** Leaves the edit form for its recipe: back when the recipe is the page before, so history keeps one copy of it, and otherwise in place of the form. */
+function returnToRecipe(id) {
+  const back     = router.options.history.state.back
+  const previous = back && router.resolve(back)
+  if (previous?.name === 'recipe-detail' && previous.params.id === id) router.back()
+  else router.replace({ name: 'recipe-detail', params: { id } })
 }
 </script>

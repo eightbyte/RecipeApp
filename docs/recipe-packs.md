@@ -40,9 +40,11 @@ A **recipe pack** is a JSON file of recipes in one fixed format that any source 
   links every row in that recipe that resolved to the same ingredient. A step that names an
   ingredient the recipe does not list is an error. Step numbers come from array order.
 - Units are canonical `MeasurementUnit` values (`g`, `kg`, `ml`, `L`, `pcs`, `tsp`, `tbsp`, `cup`).
-  `amount` and `unit` are both null or both set, and zero is never used. See
-  `.claude/rules/measurements.md`.
-- `SourceAmount` and `SourceUnit` are left null, because a pack states its amounts directly.
+  A `unit` needs an `amount`. An `amount` with a null `unit` is a count and loads as `pcs`. Zero is
+  never used. See `.claude/rules/measurements.md`.
+- A `unit` may also be an Entry-only Unit (`oz`, `lb`, `fl oz`, `pint`, `quart`). It loads converted
+  to `g` or `ml`, with the stated amount and unit kept as its Source Measurement.
+- Otherwise `SourceAmount` and `SourceUnit` are left null, because a pack states its amounts directly.
 
 ## Import rules
 

@@ -122,13 +122,27 @@ public class ScrapeValidatorTests
         MeasurementUnit.All.Select(u => new object[] { u });
 
     [Theory]
+    [InlineData("oz")]
+    [InlineData("lb")]
+    [InlineData("fl oz")]
+    [InlineData("pint")]
+    [InlineData("quart")]
+    public void Ingredient_EachEntryOnlyUnit_HasNoErrorOnUnit(string unit)
+    {
+        var result = _ingredientValidator.TestValidate(Ingredient() with { Unit = unit });
+        result.ShouldNotHaveValidationErrorFor(x => x.Unit);
+    }
+
+    [Theory]
     [InlineData("")]
     [InlineData("cups")]        // a known alias — lenient enough for TryCanonicalise, not for storage
     [InlineData("Tbsp")]        // right unit, wrong case
     [InlineData("ML")]
     [InlineData("clove")]       // no fixed size; cannot be canonicalised at all
     [InlineData("pinch")]
-    [InlineData("oz")]
+    [InlineData("ounces")]      // an entry-only unit is accepted only in its canonical spelling
+    [InlineData("OZ")]
+    [InlineData("gallon")]      // Stage A converts it, but the picker does not offer it
     public void Ingredient_NonCanonicalUnit_HasErrorOnUnit(string unit)
     {
         // The whitelist is strict because canonicalisation happens upstream, so an uncanonicalised unit reaching the validator is a bug to surface.
@@ -167,12 +181,22 @@ public class ScrapeValidatorTests
     }
 
     [Fact]
-    public void Ingredient_AmountWithNullUnit_HasErrorOnUnit()
+    public void Ingredient_AmountWithNullUnit_HasNoErrors()
+    {
+        // "2 eggs" is a count, which is stored as pcs.
+        var result = _ingredientValidator.TestValidate(
+            Ingredient() with { Amount = 2m, Unit = null });
+
+        result.ShouldNotHaveAnyValidationErrors();
+    }
+
+    [Fact]
+    public void Ingredient_ZeroAmountWithNullUnit_HasErrorOnAmount()
     {
         var result = _ingredientValidator.TestValidate(
-            Ingredient() with { Amount = 100m, Unit = null });
+            Ingredient() with { Amount = 0m, Unit = null });
 
-        result.ShouldHaveValidationErrorFor(x => x.Unit);
+        result.ShouldHaveValidationErrorFor(x => x.Amount);
     }
 
     // ── ScrapeConfirmIngredientRequestValidator: provenance bounds ───────────────────
@@ -222,9 +246,17 @@ public class ScrapeValidatorTests
     }
 
     [Fact]
-    public void Ingredient_OverlongNotes_HasErrorOnNotes()
+    public void Ingredient_NotesAtTheRecipeLimit_HasNoErrorOnNotes()
     {
-        var result = _ingredientValidator.TestValidate(Ingredient() with { Notes = new string('x', 201) });
+        // Edit allows 500, so a scrape must too, or the preview would refuse notes the recipe form accepts.
+        var result = _ingredientValidator.TestValidate(Ingredient() with { Notes = new string('x', 500) });
+        result.ShouldNotHaveValidationErrorFor(x => x.Notes);
+    }
+
+    [Fact]
+    public void Ingredient_NotesOverTheRecipeLimit_HasErrorOnNotes()
+    {
+        var result = _ingredientValidator.TestValidate(Ingredient() with { Notes = new string('x', 501) });
         result.ShouldHaveValidationErrorFor(x => x.Notes);
     }
 
@@ -242,6 +274,53 @@ public class ScrapeValidatorTests
     {
         var result = _confirmValidator.TestValidate(ConfirmRequest() with { Name = "" });
         result.ShouldHaveValidationErrorFor(x => x.Name);
+    }
+
+    [Fact]
+    public void Confirm_NameOverTheRecipeLimit_HasErrorOnName()
+    {
+        var result = _confirmValidator.TestValidate(ConfirmRequest() with { Name = new string('x', 201) });
+        result.ShouldHaveValidationErrorFor(x => x.Name);
+    }
+
+    [Fact]
+    public void Confirm_DescriptionAtTheRecipeLimit_HasNoErrorOnDescription()
+    {
+        var result = _confirmValidator.TestValidate(ConfirmRequest() with { Description = new string('x', 2000) });
+        result.ShouldNotHaveValidationErrorFor(x => x.Description);
+    }
+
+    [Fact]
+    public void Confirm_DescriptionOverTheRecipeLimit_HasErrorOnDescription()
+    {
+        // A scrape that saved a description Edit refuses would leave a recipe that can never be saved again.
+        var result = _confirmValidator.TestValidate(ConfirmRequest() with { Description = new string('x', 2001) });
+        result.ShouldHaveValidationErrorFor(x => x.Description);
+    }
+
+    [Fact]
+    public void Confirm_NoDescription_HasNoErrorOnDescription()
+    {
+        var result = _confirmValidator.TestValidate(ConfirmRequest() with { Description = null });
+        result.ShouldNotHaveValidationErrorFor(x => x.Description);
+    }
+
+    [Fact]
+    public void Confirm_StepInstructionAtTheRecipeLimit_HasNoErrorOnThatStep()
+    {
+        var result = _confirmValidator.TestValidate(
+            ConfirmRequest() with { Steps = [new ScrapeConfirmStepRequest(1, new string('x', 2000), [0])] });
+
+        result.ShouldNotHaveValidationErrorFor("Steps[0].Instruction");
+    }
+
+    [Fact]
+    public void Confirm_StepInstructionOverTheRecipeLimit_HasErrorOnThatStep()
+    {
+        var result = _confirmValidator.TestValidate(
+            ConfirmRequest() with { Steps = [new ScrapeConfirmStepRequest(1, new string('x', 2001), [0])] });
+
+        result.ShouldHaveValidationErrorFor("Steps[0].Instruction");
     }
 
     [Fact]
@@ -343,6 +422,49 @@ public class ScrapeValidatorTests
 
         result.ShouldHaveValidationErrorFor("Steps[1].Instruction");
         result.ShouldNotHaveValidationErrorFor("Steps[0].Instruction");
+    }
+
+    // ── Photo ─────────────────────────────────────────────────────────────────
+
+    [Theory]
+    [InlineData(null)]
+    [InlineData("https://cdn.example.com/chili.jpg")]
+    [InlineData("http://cdn.example.com/chili.jpg?w=1200")]
+    public void Confirm_NoPhotoOrAnHttpPhoto_HasNoErrors(string? imageUrl) =>
+        _confirmValidator.TestValidate(ConfirmRequest() with { ImageUrl = imageUrl })
+            .ShouldNotHaveAnyValidationErrors();
+
+    [Theory]
+    [InlineData("")]
+    [InlineData("/img/chili.jpg")]
+    [InlineData("data:image/png;base64,iVBORw0KGgo=")]
+    [InlineData("file:///C:/photos/chili.jpg")]
+    [InlineData("ftp://cdn.example.com/chili.jpg")]
+    public void Confirm_PhotoNotAnAbsoluteHttpUrl_HasErrorOnImageUrl(string imageUrl)
+    {
+        // The server downloads whatever it is handed, so the scheme gate is a boundary check.
+        _confirmValidator.TestValidate(ConfirmRequest() with { ImageUrl = imageUrl })
+            .ShouldHaveValidationErrorFor(x => x.ImageUrl);
+    }
+
+    [Fact]
+    public void Confirm_PhotoAtTheLengthLimit_HasNoErrors()
+    {
+        var prefix = "https://cdn.example.com/";
+        var url    = prefix + new string('a', RecipeLimits.ImageUrlMaxLength - prefix.Length);
+
+        _confirmValidator.TestValidate(ConfirmRequest() with { ImageUrl = url })
+            .ShouldNotHaveAnyValidationErrors();
+    }
+
+    [Fact]
+    public void Confirm_PhotoOverTheLengthLimit_HasErrorOnImageUrl()
+    {
+        var prefix = "https://cdn.example.com/";
+        var url    = prefix + new string('a', RecipeLimits.ImageUrlMaxLength - prefix.Length + 1);
+
+        _confirmValidator.TestValidate(ConfirmRequest() with { ImageUrl = url })
+            .ShouldHaveValidationErrorFor(x => x.ImageUrl);
     }
 
     // ── Builders ──────────────────────────────────────────────────────────────

@@ -1,9 +1,9 @@
-import { mount } from '@vue/test-utils'
+import { flushPromises, mount } from '@vue/test-utils'
 import { createVuetify } from 'vuetify'
 import * as components from 'vuetify/components'
 import * as directives from 'vuetify/directives'
 import MeasurementUnitSelect from './MeasurementUnitSelect.vue'
-import { MEASUREMENT_UNITS } from '@/constants/units'
+import { UNIT_PICKER_ITEMS } from '@/constants/units'
 
 const vuetify = createVuetify({ components, directives })
 
@@ -17,8 +17,23 @@ function mountSelect(props = {}) {
 const select = wrapper => wrapper.findComponent({ name: 'VSelect' })
 
 describe('MeasurementUnitSelect', () => {
-  it('offers the storable units', () => {
-    expect(select(mountSelect()).props('items')).toEqual(MEASUREMENT_UNITS)
+  it('offers every storable and entry-only unit, grouped under Weight, Volume and Count', () => {
+    expect(select(mountSelect()).props('items')).toEqual(UNIT_PICKER_ITEMS)
+  })
+
+  it('renders each group under its subheader when opened', async () => {
+    const wrapper = mount(MeasurementUnitSelect, {
+      props: { modelValue: 'g', amount: 100 },
+      global: { plugins: [vuetify] },
+      attachTo: document.body,
+    })
+    await wrapper.find('.v-field').trigger('mousedown')
+    await flushPromises()
+    const texts      = selector => [...document.querySelectorAll(selector)].map(el => el.textContent.trim())
+    const subheaders = texts('.v-list-subheader')
+    const options    = texts('.v-list-item')
+    expect(subheaders).toEqual(['Weight', 'Volume', 'Count'])
+    expect(options).toEqual(['g', 'kg', 'oz', 'lb', 'ml', 'L', 'tsp', 'tbsp', 'cup', 'fl oz', 'pint', 'quart', 'pcs'])
   })
 
   it('shows the unit and can be changed while there is an amount', () => {
@@ -31,12 +46,34 @@ describe('MeasurementUnitSelect', () => {
     const field = select(mountSelect({ amount: '' }))
     expect(field.props('modelValue')).toBeNull()
     expect(field.props('disabled')).toBe(true)
+    expect(field.props('placeholder')).toBeUndefined()
   })
 
   it('brings the unit back when an amount is entered again', async () => {
     const wrapper = mountSelect({ amount: null })
     await wrapper.setProps({ amount: 2 })
     expect(select(wrapper).props('modelValue')).toBe('g')
+  })
+
+  it('offers no clear button, and reads an empty unit as a count', async () => {
+    // An amount with no unit saves as pcs, and the clear icon squeezed the label to "U." on a phone.
+    const wrapper = mountSelect({ modelValue: null })
+    const field   = select(wrapper)
+    expect(field.props('clearable')).toBe(false)
+    expect(field.props('placeholder')).toBe('pcs')
+    expect(field.props('persistentPlaceholder')).toBe(true)
+  })
+
+  it('offers no count placeholder while a unit must be picked', () => {
+    // "1 can tomatoes": pcs would lose the can's size, so the empty field must not suggest it.
+    const field = select(mountSelect({ modelValue: null, requiresUnit: true }))
+    expect(field.props('placeholder')).toBeUndefined()
+  })
+
+  it('reports a cleared unit as null', async () => {
+    const wrapper = mountSelect()
+    select(wrapper).vm.$emit('update:modelValue', null)
+    expect(wrapper.emitted('update:modelValue')).toEqual([[null]])
   })
 
   it('reports the unit that is picked', async () => {

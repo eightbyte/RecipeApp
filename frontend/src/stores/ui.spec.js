@@ -25,6 +25,36 @@ describe('ui store', () => {
     expect(ui.snackbar.color).toBe('success')
   })
 
+  it('carries an action, and a later notify without one drops it', () => {
+    const ui = useUiStore()
+    const onClick = vi.fn()
+    ui.notify({ message: 'Step removed', action: { label: 'Undo', onClick } })
+    expect(ui.snackbar.action).toEqual({ label: 'Undo', onClick })
+
+    ui.notify({ message: 'Saved' })
+    expect(ui.snackbar.action).toBeNull()
+  })
+
+  it('runAction runs the action once and hides the snackbar', () => {
+    const ui = useUiStore()
+    const onClick = vi.fn()
+    ui.notify({ message: 'Step removed', action: { label: 'Undo', onClick } })
+
+    ui.runAction()
+    ui.runAction()
+
+    expect(onClick).toHaveBeenCalledTimes(1)
+    expect(ui.snackbar.show).toBe(false)
+  })
+
+  it('gives each notification its own id, so a replacement starts a fresh timeout', () => {
+    const ui = useUiStore()
+    ui.notify({ message: 'One' })
+    const first = ui.snackbar.id
+    ui.notify({ message: 'Two' })
+    expect(ui.snackbar.id).not.toBe(first)
+  })
+
   it('dismiss hides the snackbar but keeps the last message', () => {
     const ui = useUiStore()
     ui.notify({ message: 'Bye', color: 'error' })

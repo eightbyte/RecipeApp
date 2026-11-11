@@ -13,11 +13,12 @@ Read `CODING_STANDARDS.md` (repo root) before writing or reviewing code: comment
 | `components/` | Shared components; `layout/` has `AppTopBar`, `AppBottomNav` |
 | `stores/` | Pinia, one file per domain (`recipes`, `ingredients`, `mealPlans`, `shoppingList`, `ui`) |
 | `services/api.js` | The pre-configured Axios instance |
-| `constants/` | `units.js`, `categories.js`, `recipeSorts.js` — mirrors of the backend enums; `batchSizes.js` holds the recipe view's ½×/1×/2× shortcuts onto Servings, which exist only in the frontend; `servings.js` mirrors the Servings limits in `RecipeLimits` and formats a servings count; `modelServer.js` mirrors `ModelServerState` and its `UnavailableReason()` wording |
-| `composables/` | `useWakeLock.js`; `useRecipePages.js` pages a recipe list and holds the shared `SEARCH_DEBOUNCE_MS`; `useHold.js` is the 1-second press-and-hold on pointer events (editing a Custom Item); `useDelayedHide.js` keeps each just-ticked Purchased item shown for 3 seconds on its own timer |
-| `utils/` | `dateOnly.js` formats date-only values; `storage.js` wraps `localStorage` for device-local preferences |
+| `constants/` | `units.js`, `categories.js`, `recipeSorts.js` — mirrors of the backend enums; `batchSizes.js` holds the recipe view's ½×/1×/2× shortcuts onto Servings, which exist only in the frontend; `recipeLimits.js` mirrors `RecipeLimits` (lengths and the Servings range); `servings.js` formats a servings count; `modelServer.js` mirrors `ModelServerState` and its `UnavailableReason()` wording |
+| `composables/` | `useWakeLock.js`; `useRecipePages.js` pages a recipe list and holds the shared `SEARCH_DEBOUNCE_MS`; `useHold.js` is the 1-second press-and-hold on pointer events (editing a Custom Item); `useDelayedHide.js` keeps each just-ticked Purchased item shown for 3 seconds on its own timer; `useIngredientRowLayout.js` lays out a recipe form's Amount, Unit and Notes, splitting them onto two lines on a phone; `useRecipeValidation.js` decides which recipe-form problems are showing (on load, on leaving a field, after Save); `useRemovalUndo.js` removes a recipe form's ingredient rows and steps with Undo in the snackbar |
+| `utils/` | `dateOnly.js` formats date-only values; `storage.js` wraps `localStorage` for device-local preferences; `recipeValidation.js` is the one rule set that blocks a recipe save, shared by the recipe form and the Scrape preview; `recipeRows.js` removes and restores those pages' ingredient rows and steps, keeping step selections in step |
 | `styles/` | `settings.scss` — Vuetify Sass settings |
 | `router/index.js` | All routes |
+| `router/navigation.js` | `viewKey` (the key App.vue mounts a view under) and `scrollPosition` (the router's scroll behaviour), pure so they test without mounting `App` |
 | `router/recipeRoutes.js` | Builds and reads the recipe view and Cooking Mode links with their scale, kept apart so importing it doesn't load the router |
 | `test/` | Vitest `setup.js`, `factories.js`, `timeZone.js` (run a describe block in a given timezone) and `infiniteScrollStub.js` (stands in for `VInfiniteScroll`, which never loads under jsdom) |
 
@@ -45,8 +46,15 @@ each test or in `beforeEach`; a wrapper mounted in `beforeAll` is gone after the
   keep local-time formatting.
 - **Routes:** use the names defined in `router/index.js` (`home`, `recipes`, `recipe-detail`,
   `recipe-cooking`, `meal-plan`, `shopping`, …). A route with `meta.fullscreen` hides the top and
-  bottom bars (Cooking Mode). Link to a scaled recipe view or Cooking Mode, and read their scale,
-  only through `router/recipeRoutes.js`.
+  bottom bars (Cooking Mode). App.vue remounts a view, and the router scrolls to the top, on every
+  navigation, including a query-only change. A route with `meta.keepOnQueryChange` (the recipe
+  view only) stays mounted and keeps its scroll position while only its query changes, so it must
+  read the query reactively. Both rules live in `router/navigation.js`. Link to a scaled recipe
+  view or Cooking Mode, and read their scale, only through `router/recipeRoutes.js`.
+- **Leaving a finished page:** a page whose work is saved or cancelled (the Scrape preview, the
+  recipe form) leaves by `router.replace` or the `v-btn` `replace` prop, so back never reopens it.
+  The edit form goes `router.back()` instead when the page before it is its own recipe, so history
+  holds one copy of that recipe.
 - **Loading/empty/error states:** use `EmptyState`, `ErrorState`, and the global snackbar
   (`stores/ui.js` + `AppSnackbar`). Store fetches treat a 404 as "not found" (empty state), not
   as an error.

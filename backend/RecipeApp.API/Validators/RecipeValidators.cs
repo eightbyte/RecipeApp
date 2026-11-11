@@ -10,17 +10,16 @@ public class RecipeIngredientRequestValidator : AbstractValidator<RecipeIngredie
     {
         RuleFor(x => x.IngredientId).NotEmpty();
 
-        // Amount and Unit are null together or set together: a half-set pair is a half-written row, and zero is still rejected as a wrong quantity.
+        // A unit with no amount measures nothing, but an amount with no unit is a count, stored as pcs; zero is still rejected as a wrong quantity.
         RuleFor(x => x.Amount)
             .GreaterThan(0)
             .When(x => x.Amount.HasValue)
             .WithMessage("Amount must be greater than zero, or null when no quantity is stated.");
 
         RuleFor(x => x.Unit)
-            .NotEmpty()
-            .Must(MeasurementUnit.IsValid)
-            .WithMessage($"Unit must be one of: {string.Join(", ", MeasurementUnit.All)}")
-            .When(x => x.Amount.HasValue);
+            .Must(MeasurementUnit.IsAccepted)
+            .WithMessage($"Unit must be one of: {string.Join(", ", MeasurementUnit.Accepted)}, or null for a count")
+            .When(x => x.Amount.HasValue && x.Unit is not null);
 
         RuleFor(x => x.Unit)
             .Null()

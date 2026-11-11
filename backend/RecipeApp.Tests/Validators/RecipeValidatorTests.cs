@@ -44,8 +44,21 @@ public class RecipeValidatorTests
     public void Ingredient_InvalidUnit_HasErrorOnUnit()
     {
         var result = _ingredientValidator.TestValidate(
-            new RecipeIngredientRequest(Guid.NewGuid(), 100m, "oz", null, 0));
+            new RecipeIngredientRequest(Guid.NewGuid(), 100m, "gallon", null, 0));
         result.ShouldHaveValidationErrorFor(x => x.Unit);
+    }
+
+    [Theory]
+    [InlineData("oz")]
+    [InlineData("lb")]
+    [InlineData("fl oz")]
+    [InlineData("pint")]
+    [InlineData("quart")]
+    public void Ingredient_EachEntryOnlyUnit_HasNoError(string unit)
+    {
+        var result = _ingredientValidator.TestValidate(
+            new RecipeIngredientRequest(Guid.NewGuid(), 4m, unit, null, 0));
+        result.ShouldNotHaveValidationErrorFor(x => x.Unit);
     }
 
     [Theory]
@@ -99,11 +112,20 @@ public class RecipeValidatorTests
     }
 
     [Fact]
-    public void Ingredient_AmountWithNullUnit_HasErrorOnUnit()
+    public void Ingredient_AmountWithNullUnit_HasNoErrors()
+    {
+        // "2 eggs" is a count, which is stored as pcs.
+        var result = _ingredientValidator.TestValidate(
+            new RecipeIngredientRequest(Guid.NewGuid(), 2m, null, null, 0));
+        result.ShouldNotHaveAnyValidationErrors();
+    }
+
+    [Fact]
+    public void Ingredient_ZeroAmountWithNullUnit_HasErrorOnAmount()
     {
         var result = _ingredientValidator.TestValidate(
-            new RecipeIngredientRequest(Guid.NewGuid(), 100m, null, null, 0));
-        result.ShouldHaveValidationErrorFor(x => x.Unit);
+            new RecipeIngredientRequest(Guid.NewGuid(), 0m, null, null, 0));
+        result.ShouldHaveValidationErrorFor(x => x.Amount);
     }
 
     [Fact]

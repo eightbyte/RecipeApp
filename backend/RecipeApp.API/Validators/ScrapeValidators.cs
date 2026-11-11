@@ -13,7 +13,7 @@ public class ScrapeRecipeRequestValidator : AbstractValidator<ScrapeRecipeReques
             .Must(BeValidHttpUrl).WithMessage("A valid http or https URL is required.");
     }
 
-    private static bool BeValidHttpUrl(string? url)
+    internal static bool BeValidHttpUrl(string? url)
     {
         if (string.IsNullOrWhiteSpace(url)) return false;
         return Uri.TryCreate(url, UriKind.Absolute, out var uri) &&
@@ -46,17 +46,16 @@ public class ScrapeConfirmIngredientRequestValidator : AbstractValidator<ScrapeC
             .WithMessage($"Category must be one of: {string.Join(", ", IngredientCategory.All)}")
             .When(x => !string.IsNullOrWhiteSpace(x.Category));
 
-        // Amount and Unit are null together or set together, as in RecipeIngredientRequestValidator.
+        // A unit needs an amount, and an amount with no unit is a count stored as pcs, as in RecipeIngredientRequestValidator.
         RuleFor(x => x.Amount)
             .GreaterThan(0)
             .When(x => x.Amount.HasValue)
             .WithMessage("Amount must be greater than zero, or null when no quantity is stated.");
 
         RuleFor(x => x.Unit)
-            .NotEmpty()
-            .Must(MeasurementUnit.IsValid)
-            .WithMessage($"Unit must be one of: {string.Join(", ", MeasurementUnit.All)}")
-            .When(x => x.Amount.HasValue);
+            .Must(MeasurementUnit.IsAccepted)
+            .WithMessage($"Unit must be one of: {string.Join(", ", MeasurementUnit.Accepted)}, or null for a count")
+            .When(x => x.Amount.HasValue && x.Unit is not null);
 
         RuleFor(x => x.Unit)
             .Null()
@@ -65,7 +64,7 @@ public class ScrapeConfirmIngredientRequestValidator : AbstractValidator<ScrapeC
 
         RuleFor(x => x.SourceAmount).GreaterThan(0).When(x => x.SourceAmount.HasValue);
         RuleFor(x => x.SourceUnit).NotEmpty().MaximumLength(32).When(x => x.SourceUnit is not null);
-        RuleFor(x => x.Notes).MaximumLength(200).When(x => x.Notes is not null);
+        RuleFor(x => x.Notes).MaximumLength(RecipeLimits.IngredientNotesMaxLength).When(x => x.Notes is not null);
     }
 }
 
@@ -73,9 +72,16 @@ public class ScrapeConfirmRequestValidator : AbstractValidator<ScrapeConfirmRequ
 {
     public ScrapeConfirmRequestValidator()
     {
-        RuleFor(x => x.Name).NotEmpty().MaximumLength(200);
-        RuleFor(x => x.Servings).InclusiveBetween(1, 100);
+        RuleFor(x => x.Name).NotEmpty().MaximumLength(RecipeLimits.NameMaxLength);
+        RuleFor(x => x.Description).MaximumLength(RecipeLimits.DescriptionMaxLength).When(x => x.Description is not null);
+        RuleFor(x => x.Servings).InclusiveBetween(RecipeLimits.MinServings, RecipeLimits.MaxServings);
         RuleFor(x => x.SourceUrl).NotEmpty();
+
+        // The server downloads this URL, so anything but an absolute http(s) URL is refused before it is fetched.
+        RuleFor(x => x.ImageUrl)
+            .Must(ScrapeRecipeRequestValidator.BeValidHttpUrl).WithMessage("ImageUrl must be an absolute http or https URL.")
+            .MaximumLength(RecipeLimits.ImageUrlMaxLength)
+            .When(x => x.ImageUrl is not null);
         RuleFor(x => x.Ingredients).NotEmpty().WithMessage("At least one ingredient is required.");
         RuleForEach(x => x.Ingredients).SetValidator(new ScrapeConfirmIngredientRequestValidator());
 
@@ -89,6 +95,9 @@ public class ScrapeConfirmRequestValidator : AbstractValidator<ScrapeConfirmRequ
                     ctx.AddFailure($"Steps[{s}].StepNumber", "StepNumber must be ≥ 1.");
                 if (string.IsNullOrWhiteSpace(step.Instruction))
                     ctx.AddFailure($"Steps[{s}].Instruction", "Instruction is required.");
+                else if (step.Instruction.Length > RecipeLimits.StepInstructionMaxLength)
+                    ctx.AddFailure($"Steps[{s}].Instruction",
+                        $"Instruction must be {RecipeLimits.StepInstructionMaxLength} characters or fewer.");
 
                 foreach (var idx in step.IngredientIndexes)
                 {

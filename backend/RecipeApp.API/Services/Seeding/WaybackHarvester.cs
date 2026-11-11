@@ -347,7 +347,7 @@ public class WaybackHarvester(
             return ImageOutcome.Failed;
         }
 
-        var imageUrl = TryExtractImageUrl(html);
+        var imageUrl = RecipeJsonLdExtractor.ImageUrlsOf(new HtmlParser().ParseDocument(html)).FirstOrDefault();
         if (imageUrl is null)
         {
             logger.LogDebug("{Slug} has no JSON-LD image URL.", entry.Slug);
@@ -376,28 +376,6 @@ public class WaybackHarvester(
         return ImageOutcome.Fetched;
     }
 
-    /// <summary>Reads <c>image.url</c> from the page's schema.org Recipe block, in any of the shapes it takes.</summary>
-    internal static string? TryExtractImageUrl(string html)
-    {
-        var document = new HtmlParser().ParseDocument(html);
-        var recipe   = RecipeJsonLdExtractor.TryFindRecipeNode(document);
-
-        return recipe?["image"] switch
-        {
-            JsonValue value when value.TryGetValue<string>(out var url) => url,
-            JsonObject image => image["url"]?.GetValue<string>(),
-            JsonArray images => images
-                .Select(image => image switch
-                {
-                    JsonValue value when value.TryGetValue<string>(out var url) => url,
-                    JsonObject candidate => candidate["url"]?.GetValue<string>(),
-                    _ => null,
-                })
-                .FirstOrDefault(url => !string.IsNullOrWhiteSpace(url)),
-            _ => null,
-        };
-    }
-
     /// <summary>Matches the archive's <c>/web/{timestamp}{modifier}/</c> snapshot prefix.</summary>
     private static readonly Regex SnapshotPrefixPattern =
         new(@"/web/(?<timestamp>\d{14})(?<modifier>[a-z_]*)/", RegexOptions.Compiled);
@@ -416,7 +394,7 @@ public class WaybackHarvester(
     /// <summary>The extension to store a harvested image under, or null when the payload is not a usable image, with the file's own signature outranking the path and header.</summary>
     private string? ResolveImageExtension(byte[] content, string? contentType, string imageUrl)
     {
-        if (DetectImageExtension(content) is { } detected)
+        if (ImageService.DetectExtension(content) is { } detected)
             return _options.ImageExtensions.Contains(detected) ? detected : null;
 
         // An unrecognised signature is trusted as an image only if the server said so, and the extension still comes from the allow-list.
@@ -427,28 +405,6 @@ public class WaybackHarvester(
         var fromUrl = Path.GetExtension(path).ToLowerInvariant();
 
         return _options.ImageExtensions.Contains(fromUrl) ? fromUrl : _options.DefaultImageExtension;
-    }
-
-    private static readonly byte[] PngSignature = [0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A];
-
-    /// <summary>The file extension implied by a payload's own magic bytes, or null if unrecognised.</summary>
-    internal static string? DetectImageExtension(ReadOnlySpan<byte> content)
-    {
-        if (content.Length >= 3 && content[0] == 0xFF && content[1] == 0xD8 && content[2] == 0xFF)
-            return ".jpg";
-
-        if (content.Length >= 8 && content[..8].SequenceEqual(PngSignature))
-            return ".png";
-
-        if (content.Length >= 12
-            && content[..4].SequenceEqual("RIFF"u8)
-            && content[8..12].SequenceEqual("WEBP"u8))
-            return ".webp";
-
-        if (content.Length >= 6 && content[..4].SequenceEqual("GIF8"u8))
-            return ".gif";
-
-        return null;
     }
 
     // ── HTTP with politeness, retries and backoff ─────────────────────────────

@@ -1,10 +1,12 @@
 <template>
-  <v-container class="pa-2 pa-sm-4" max-width="600">
+  <v-container ref="containerRef" class="pa-2 pa-sm-4" max-width="600">
     <h1 class="text-h6 font-weight-bold mb-6">
       {{ isEdit ? 'Edit Recipe' : 'New Recipe' }}
     </h1>
 
-    <v-form ref="formRef" @submit.prevent="submit">
+    <RecipeProblemsBanner :problems="validation.shownProblems.value" />
+
+    <v-form @submit.prevent="submit">
 
       <!-- ── Basic info ──────────────────────────────────────────────── -->
       <v-card class="mb-6 pa-3 pa-sm-4">
@@ -13,9 +15,10 @@
         <v-text-field
           v-model="form.name"
           label="Recipe name"
-          :rules="[v => !!v || 'Name is required']"
+          :error-messages="validation.messagesFor('recipe', null, 'name')"
           required
           class="mb-2"
+          @update:focused="validation.leaveOnBlur($event, 'name')"
         />
 
         <v-textarea
@@ -23,7 +26,9 @@
           label="Description (optional)"
           rows="2"
           auto-grow
+          :error-messages="validation.messagesFor('recipe', null, 'description')"
           class="mb-2"
+          @update:focused="validation.leaveOnBlur($event, 'description')"
         />
 
         <div class="d-flex ga-4">
@@ -31,10 +36,11 @@
             v-model.number="form.servings"
             label="Servings"
             type="number"
-            min="1"
-            max="100"
-            :rules="[v => v > 0 || 'Must be at least 1']"
+            :min="MIN_SERVINGS"
+            :max="MAX_SERVINGS"
+            :error-messages="validation.messagesFor('recipe', null, 'servings')"
             style="max-width: 120px"
+            @update:focused="validation.leaveOnBlur($event, 'servings')"
           />
           <v-text-field
             v-model="form.sourceUrl"
@@ -103,11 +109,13 @@
               item-value="id"
               label="Ingredient"
               density="compact"
-              hide-details
+              hide-details="auto"
+              :error-messages="validation.messagesFor('ingredient', idx, 'ingredient')"
               class="mb-1"
               :loading="ingredientStore.loading"
               @update:search="onIngredientSearch"
               @update:model-value="onIngredientSelected(idx, $event)"
+              @update:focused="validation.leaveOnBlur($event, 'ingredient', ing)"
             >
               <template #no-data>
                 <div class="pa-2 text-caption text-medium-emphasis">
@@ -128,22 +136,27 @@
                 min="0"
                 step="0.5"
                 density="compact"
-                hide-details
+                hide-details="auto"
+                :error-messages="validation.messagesFor('ingredient', idx, 'amount')"
                 :style="rowLayout.amount"
+                @update:focused="validation.leaveOnBlur($event, 'amount', ing)"
               />
               <MeasurementUnitSelect
                 :model-value="ing.unit"
                 :amount="ing.amount"
                 :style="rowLayout.unit"
                 @update:model-value="setIngredientUnit(ing, $event)"
+                @update:focused="validation.leaveOnBlur($event, 'unit', ing)"
               />
               <v-text-field
                 v-model="ing.notes"
                 label="Notes"
                 density="compact"
-                hide-details
+                hide-details="auto"
+                :error-messages="validation.messagesFor('ingredient', idx, 'notes')"
                 placeholder="e.g. diced"
                 :class="rowLayout.notesClass"
+                @update:focused="validation.leaveOnBlur($event, 'notes', ing)"
               />
             </div>
           </div>
@@ -195,8 +208,10 @@
                 rows="2"
                 auto-grow
                 density="compact"
-                hide-details
+                hide-details="auto"
+                :error-messages="validation.messagesFor('step', sIdx, 'instruction')"
                 class="mb-2"
+                @update:focused="validation.leaveOnBlur($event, 'instruction', step)"
               />
 
               <!-- Ingredient chips for this step -->
@@ -314,8 +329,11 @@ import { useIngredientStore } from '@/stores/ingredients'
 import {
   MEASUREMENT_UNITS, DEFAULT_UNIT, setIngredientUnit, toFormMeasurement, toPayloadMeasurement,
 } from '@/constants/units'
+import { MIN_SERVINGS, MAX_SERVINGS } from '@/constants/recipeLimits'
 import MeasurementUnitSelect from '@/components/MeasurementUnitSelect.vue'
+import RecipeProblemsBanner from '@/components/RecipeProblemsBanner.vue'
 import { useIngredientRowLayout } from '@/composables/useIngredientRowLayout'
+import { useRecipeValidation } from '@/composables/useRecipeValidation'
 
 const props = defineProps({ id: { type: String, default: null } })
 const route  = useRoute()
@@ -331,7 +349,7 @@ const units = MEASUREMENT_UNITS
 const rowLayout = useIngredientRowLayout({ amountWidth: '100px' })
 
 // ── Form state ─────────────────────────────────────────────────────────────
-const formRef    = ref(null)
+const containerRef = ref(null)
 const saving     = ref(false)
 const submitError = ref(null)
 const imageFile  = ref(null)
@@ -345,6 +363,8 @@ const form = reactive({
   ingredients: [],  // { ingredientId, amount, unit, notes }
   steps:       [],  // { instruction, ingredientIndexes: number[] }
 })
+
+const validation = useRecipeValidation(form, { requireIngredient: true })
 
 // ── Create ingredient dialog ────────────────────────────────────────────────
 const createIngDialog   = ref(false)
@@ -394,19 +414,23 @@ function populateForm(recipe) {
       .map(riId => ingredients.findIndex(i => i.id === riId))
       .filter(idx => idx !== -1),
   }))
+
+  validation.markArrived()
 }
 
 // ── Ingredient management ───────────────────────────────────────────────────
 function addIngredient() {
   // Hand-entered rows have no source measurement — the unit chosen here IS the source.
-  form.ingredients.push({
+  const row = {
     ingredientId: null,
     amount:       1,
     unit:         DEFAULT_UNIT,
     notes:        '',
     sourceAmount: null,
     sourceUnit:   null,
-  })
+  }
+  form.ingredients.push(row)
+  validation.markFresh(row)
 }
 
 function removeIngredient(idx) {
@@ -466,7 +490,9 @@ async function confirmCreateIngredient() {
 
 // ── Step management ─────────────────────────────────────────────────────────
 function addStep() {
-  form.steps.push({ instruction: '', ingredientIndexes: [] })
+  const step = { instruction: '', ingredientIndexes: [] }
+  form.steps.push(step)
+  validation.markFresh(step)
 }
 
 function removeStep(idx) {
@@ -491,16 +517,10 @@ function onImageChange(files) {
 
 // ── Submit ──────────────────────────────────────────────────────────────────
 async function submit() {
-  const { valid } = await formRef.value.validate()
-  if (!valid) return
-
-  if (!form.ingredients.length) {
-    submitError.value = 'Add at least one ingredient.'
-    return
-  }
+  submitError.value = null
+  if (!await validation.attemptSave(containerRef.value?.$el)) return
 
   saving.value = true
-  submitError.value = null
 
   try {
     const payload = {

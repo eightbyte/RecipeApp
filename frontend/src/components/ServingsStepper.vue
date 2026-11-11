@@ -27,7 +27,7 @@
 
 <script setup>
 import { formatMeasurement } from '@/constants/units'
-import { MIN_SERVINGS, MAX_SERVINGS } from '@/constants/servings'
+import { MIN_SERVINGS, MAX_SERVINGS } from '@/constants/recipeLimits'
 
 // Can arrive fractional from a Batch Size shortcut, but every step lands on a whole number.
 const servings = defineModel({ type: Number, required: true })

@@ -4,7 +4,8 @@
     :items="UNIT_PICKER_ITEMS"
     label="Unit"
     density="compact"
-    hide-details
+    hide-details="auto"
+    :error-messages="errorMessages"
     :placeholder="countPlaceholder"
     :persistent-placeholder="!!countPlaceholder"
     :disabled="!hasAmount(amount)"
@@ -24,6 +25,7 @@ const props = defineProps({
   amount: { type: [Number, String, null], default: null },
   // Set when an empty unit cannot stand for a count, such as a scraped "can" whose size pcs would lose.
   requiresUnit: { type: Boolean, default: false },
+  errorMessages: { type: Array, default: () => [] },
 })
 
 // An amount with no unit saves as a count, so the empty field says so, unless a unit has to be picked.

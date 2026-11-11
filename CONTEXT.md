@@ -60,6 +60,11 @@ The recipe view's ½×, 1× and 2× shortcut onto Servings: a multiple of the wh
 one serving. It is never stored.
 _Avoid_: Portion, portion size
 
+**Photo**:
+The image of a recipe's prepared dish, stored with the recipe and shown with it. A Photo is one
+kind of image; an image that does not show the finished dish is not a Photo.
+_Avoid_: Picture, thumbnail, image (when the Photo is meant)
+
 **Cooked**:
 A recipe that has been marked as made. Cooking is recorded against the recipe, not against a
 Planned Meal.

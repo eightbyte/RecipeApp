@@ -260,9 +260,11 @@
       </v-alert>
 
       <div class="d-flex ga-4">
+        <!-- Replaces the form, so back never reopens the abandoned page. -->
         <v-btn
           variant="outlined"
           :to="isEdit ? { name: 'recipe-detail', params: { id: route.params.id } } : { name: 'recipes' }"
+          replace
         >
           Cancel
         </v-btn>
@@ -549,7 +551,8 @@ async function submit() {
       if (file) await recipeStore.uploadImage(saved.id, file)
     }
 
-    router.push({ name: 'recipe-detail', params: { id: saved.id } })
+    // Replaced, not pushed, so back from the saved recipe skips the finished form.
+    router.replace({ name: 'recipe-detail', params: { id: saved.id } })
   } catch (e) {
     submitError.value = e.message ?? 'Something went wrong. Please try again.'
   } finally {

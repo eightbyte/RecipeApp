@@ -25,10 +25,17 @@ catalogue.push(
   makeIngredient({ id: 'starch-id',   name: 'cornstarch',     displayName: 'Cornstarch',     category: 'BAKING_SPICES' }),
 )
 
+const router = vi.hoisted(() => ({ push: vi.fn(), replace: vi.fn() }))
+
 vi.mock('vue-router', () => ({
-  useRouter: () => ({ push: vi.fn() }),
+  useRouter: () => router,
   RouterLink: { template: '<a><slot /></a>' },
 }))
+
+beforeEach(() => {
+  router.push.mockReset()
+  router.replace.mockReset()
+})
 
 const vuetify = createVuetify({ components, directives })
 
@@ -542,9 +549,12 @@ describe('RecipeScrapePreviewView', () => {
     expect(payload.ingredients[0].sourceUnit).toBe('cups')
   })
 
-  it('shows warning when scrapePreview is null', async () => {
+  it('replaces itself with the Recipes list when there is no preview to show', async () => {
     const { wrapper } = await mountView(null)
-    expect(wrapper.text()).toContain('No preview available')
+
+    expect(router.replace).toHaveBeenCalledWith({ name: 'recipes' })
+    expect(router.push).not.toHaveBeenCalled()
+    expect(wrapper.text()).not.toContain('No preview available')
   })
 
   it('Save Recipe button calls confirmScrape', async () => {
@@ -559,6 +569,27 @@ describe('RecipeScrapePreviewView', () => {
     expect(store.confirmScrape).toHaveBeenCalledWith(
       expect.objectContaining({ name: 'Chicken Stir Fry' })
     )
+  })
+
+  describe('leaving the page', () => {
+    it('replaces itself with the saved recipe, so back skips the finished preview', async () => {
+      const { wrapper, store } = await mountView()
+      vi.spyOn(store, 'confirmScrape').mockResolvedValue(SAVED)
+
+      await saveButton(wrapper).trigger('click')
+      await flushPromises()
+
+      expect(router.replace).toHaveBeenCalledWith({ name: 'recipe-detail', params: { id: 'new-id' } })
+      expect(router.push).not.toHaveBeenCalled()
+    })
+
+    it('cancels to the Recipes list in place of the preview', async () => {
+      const { wrapper } = await mountView()
+
+      const cancel = wrapper.findAllComponents({ name: 'VBtn' }).find(b => b.text() === 'Cancel')
+      expect(cancel.props('to')).toEqual({ name: 'recipes' })
+      expect(cancel.props('replace')).toBe(true)
+    })
   })
 
   it('shows the reason a save was rejected in the error alert', async () => {

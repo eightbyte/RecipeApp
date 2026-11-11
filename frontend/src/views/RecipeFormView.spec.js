@@ -14,14 +14,14 @@ vi.mock('@/services/api', () => ({
   assetUrl: vi.fn((p) => p ?? ''),
 }))
 
-const mockPush = vi.fn()
+const mockRouter = { push: vi.fn(), replace: vi.fn() }
 
 vi.mock('vue-router', async (importActual) => {
   const actual = await importActual()
   return {
     ...actual,
     useRoute: () => ({ params: {} }),
-    useRouter: () => ({ push: mockPush }),
+    useRouter: () => mockRouter,
   }
 })
 
@@ -32,7 +32,8 @@ let pinia
 beforeEach(() => {
   pinia = createPinia()
   setActivePinia(pinia)
-  mockPush.mockReset()
+  mockRouter.push.mockReset()
+  mockRouter.replace.mockReset()
 })
 
 function mountForm(props = {}) {
@@ -512,5 +513,53 @@ describe('RecipeFormView — edit mode', () => {
     const [, payload] = recipeStore.updateRecipe.mock.calls[0]
     expect(payload.ingredients[0].amount).toBeNull()
     expect(payload.ingredients[0].unit).toBeNull()
+  })
+})
+
+describe('RecipeFormView — leaving the page', () => {
+  async function mountFilled(props = {}) {
+    const wrapper = mountForm(props)
+    useIngredientStore().ingredients = [makeIngredient()]
+    wrapper.vm.populateForm(makeRecipeDetail({ id: 'r1' }))
+    await wrapper.vm.$nextTick()
+    return wrapper
+  }
+
+  const cancelButton = wrapper => wrapper.findAllComponents({ name: 'VBtn' }).find(b => b.text() === 'Cancel')
+
+  it('replaces the new-recipe form with the created recipe, so back skips the finished form', async () => {
+    const wrapper = await mountFilled()
+    vi.spyOn(useRecipeStore(), 'createRecipe').mockResolvedValue(makeRecipeDetail({ id: 'created-id' }))
+
+    await wrapper.vm.submit()
+    await flushPromises()
+
+    expect(mockRouter.replace).toHaveBeenCalledWith({ name: 'recipe-detail', params: { id: 'created-id' } })
+    expect(mockRouter.push).not.toHaveBeenCalled()
+  })
+
+  it('replaces the edit form with the saved recipe, so back skips the finished form', async () => {
+    const wrapper = await mountFilled({ id: 'r1' })
+    vi.spyOn(useRecipeStore(), 'updateRecipe').mockResolvedValue(makeRecipeDetail({ id: 'r1' }))
+
+    await wrapper.vm.submit()
+    await flushPromises()
+
+    expect(mockRouter.replace).toHaveBeenCalledWith({ name: 'recipe-detail', params: { id: 'r1' } })
+    expect(mockRouter.push).not.toHaveBeenCalled()
+  })
+
+  it('cancels a new recipe to the Recipes list in place of the form', () => {
+    const cancel = cancelButton(mountForm())
+
+    expect(cancel.props('to')).toEqual({ name: 'recipes' })
+    expect(cancel.props('replace')).toBe(true)
+  })
+
+  it('cancels an edit back to the recipe in place of the form', () => {
+    const cancel = cancelButton(mountForm({ id: 'r1' }))
+
+    expect(cancel.props('to')).toMatchObject({ name: 'recipe-detail' })
+    expect(cancel.props('replace')).toBe(true)
   })
 })

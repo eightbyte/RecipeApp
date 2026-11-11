@@ -6,12 +6,7 @@
 
     <h1 class="text-h6 font-weight-bold mb-6">Review Imported Recipe</h1>
 
-    <!-- No preview guard -->
-    <v-alert v-if="!store.scrapePreview" type="warning" class="mb-6">
-      No preview available. Please <router-link :to="{ name: 'recipes' }">go back</router-link> and import a recipe.
-    </v-alert>
-
-    <template v-else>
+    <template v-if="store.scrapePreview">
 
       <RecipeProblemsBanner :problems="validation.shownProblems.value" />
 
@@ -280,7 +275,8 @@
 
       <!-- ── Actions ─────────────────────────────────────────────── -->
       <div class="d-flex ga-4">
-        <v-btn variant="outlined" :to="{ name: 'recipes' }">Cancel</v-btn>
+        <!-- Replaces the preview, so back never reopens the abandoned page. -->
+        <v-btn variant="outlined" :to="{ name: 'recipes' }" replace>Cancel</v-btn>
         <v-btn
           color="primary"
           class="flex-grow-1"
@@ -353,11 +349,15 @@ const catalogueIds = computed(() => new Set(ingredientStore.catalogue.map(i => i
 const sameName = (a, b) => a.trim().toLocaleLowerCase() === (b ?? '').trim().toLocaleLowerCase()
 
 onMounted(() => {
+  const preview = store.scrapePreview
+  // A refresh or browser forward arrives with nothing to review, and is replaced so back never returns here.
+  if (!preview) {
+    router.replace({ name: 'recipes' })
+    return
+  }
+
   // The catalogue is searched in the browser, so the scraped matches show by name from the start.
   ingredientStore.fetchCatalogue()
-
-  const preview = store.scrapePreview
-  if (!preview) return
 
   form.name        = preview.name
   form.description = preview.description ?? ''
@@ -526,7 +526,8 @@ async function saveRecipe() {
     store.clearScrapePreview()
     if (photoSkipped)
       ui.notify({ message: 'Saved without the photo. You can add one on the Edit page.', color: 'warning' })
-    router.push({ name: 'recipe-detail', params: { id } })
+    // Replaced, not pushed, so back from the new recipe skips the finished preview.
+    router.replace({ name: 'recipe-detail', params: { id } })
   } catch (e) {
     submitError.value = e.message ?? 'Something went wrong. Please try again.'
   }

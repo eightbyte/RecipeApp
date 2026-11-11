@@ -9,8 +9,9 @@ COPY . .
 RUN dotnet publish -c Release -o /app/publish --no-restore
 
 # Download the Chromium build used by the headless-render fallback; its shared-library dependencies are installed in the runtime stage.
+# PowerShell is pinned because 7.7.0's tool package depends on a powershell.linux-x64 package that nuget.org does not have.
 ENV PLAYWRIGHT_BROWSERS_PATH=/ms-playwright
-RUN dotnet tool install --global PowerShell \
+RUN dotnet tool install --global PowerShell --version 7.6.10 \
     && export PATH="$PATH:/root/.dotnet/tools" \
     && pwsh /app/publish/playwright.ps1 install chromium
 

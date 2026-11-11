@@ -44,9 +44,14 @@ function mustPickUnit(ing) {
   return hasAmount(ing.amount) && !ing.unit && !!ing.unstorableUnit
 }
 
-function ingredientRowProblems(ing, { requireIngredient }) {
+/** True while a row names its ingredient: picked from the catalogue, or, on the Scrape preview, a pending New one created on save. */
+function hasIngredient(ing) {
+  return !!ing.ingredientId || (!!ing.isNew && !!trimmed(ing.name))
+}
+
+function ingredientRowProblems(ing) {
   return {
-    ingredient: requireIngredient && !ing.ingredientId ? problem('Pick an ingredient') : null,
+    ingredient: hasIngredient(ing) ? null : problem('Pick an ingredient'),
     amount:     hasAmount(ing.amount) && Number(ing.amount) <= 0
       ? problem('Must be more than 0, or left empty')
       : null,
@@ -72,15 +77,15 @@ function summaryEntries(problems, { section, index, whereOf }) {
     .map(([field, { message, rule }]) => ({ section, index, field, rule, where: whereOf(field), message }))
 }
 
-/** Every problem that would stop a recipe form from saving, per field and as a summary in page order; the recipe form sets `requireIngredient`, because its rows pick from the catalogue. */
-export function validateRecipe(form, { requireIngredient = false } = {}) {
+/** Every problem that would stop a recipe form or the Scrape preview from saving, per field and as a summary in page order. */
+export function validateRecipe(form) {
   const recipe = {
     name:           nameProblem(form.name),
     description:    tooLong(form.description, DESCRIPTION_MAX_LENGTH),
     servings:       servingsProblem(form.servings),
     ingredientList: form.ingredients.length ? null : problem('Add at least one ingredient'),
   }
-  const ingredients = form.ingredients.map(ing => ingredientRowProblems(ing, { requireIngredient }))
+  const ingredients = form.ingredients.map(ingredientRowProblems)
   const steps       = form.steps.map(stepProblems)
 
   const summary = [

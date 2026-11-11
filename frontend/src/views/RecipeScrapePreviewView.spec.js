@@ -4,13 +4,26 @@ import * as components from 'vuetify/components'
 import * as directives from 'vuetify/directives'
 import { createPinia, setActivePinia } from 'pinia'
 import { useRecipeStore } from '@/stores/recipes'
+import { useUiStore } from '@/stores/ui'
 import RecipeScrapePreviewView from './RecipeScrapePreviewView.vue'
 import { UNIT_PICKER_ITEMS } from '@/constants/units'
+import { makeIngredient } from '@/test/factories'
+
+const { catalogue } = vi.hoisted(() => ({ catalogue: [] }))
 
 vi.mock('@/services/api', () => ({
-  default: { get: vi.fn(), post: vi.fn(), put: vi.fn(), delete: vi.fn() },
+  default: {
+    get: vi.fn(() => Promise.resolve({ data: catalogue })),
+    post: vi.fn(), put: vi.fn(), delete: vi.fn(),
+  },
   assetUrl: vi.fn((p) => p ?? ''),
 }))
+
+catalogue.push(
+  makeIngredient({ id: 'existing-id', name: 'chicken breast', displayName: 'Chicken Breast', category: 'MEAT_SEAFOOD' }),
+  makeIngredient({ id: 'broth-id',    name: 'chicken broth',  displayName: 'Chicken Broth',  category: 'SOUPS_BROTH' }),
+  makeIngredient({ id: 'starch-id',   name: 'cornstarch',     displayName: 'Cornstarch',     category: 'BAKING_SPICES' }),
+)
 
 vi.mock('vue-router', () => ({
   useRouter: () => ({ push: vi.fn() }),
@@ -506,5 +519,256 @@ describe('RecipeScrapePreviewView', () => {
     await wrapper.vm.$nextTick()
     const progress = wrapper.findComponent({ name: 'VProgressLinear' })
     expect(progress.exists()).toBe(true)
+  })
+})
+
+describe('RecipeScrapePreviewView — editing ingredients and steps', () => {
+  const twoStepPreview = () => makePreview({
+    steps: [
+      { stepNumber: 1, instruction: 'Slice the chicken', ingredientIndexes: [0] },
+      { stepNumber: 2, instruction: 'Stir-fry it all',   ingredientIndexes: [0, 1] },
+    ],
+  })
+
+  const ingredientBoxes = wrapper => wrapper.findAllComponents({ name: 'VAutocomplete' })
+    .filter(a => a.props('label') === 'Ingredient')
+  const buttonLabelled = (wrapper, label) => wrapper.findAllComponents({ name: 'VBtn' })
+    .filter(b => b.attributes('aria-label') === label)
+  const buttonText = (wrapper, text) => wrapper.findAllComponents({ name: 'VBtn' })
+    .find(b => b.text() === text)
+  const stepChips = (wrapper, stepIdx) => wrapper.findAll('[data-test="step-ingredients"]')[stepIdx]
+    .findAllComponents({ name: 'VChip' })
+
+  async function save(wrapper, store) {
+    const confirmSpy = vi.spyOn(store, 'confirmScrape').mockResolvedValue('new-id')
+    await saveButton(wrapper).trigger('click')
+    await flushPromises()
+    return confirmSpy.mock.calls[0]?.[0]
+  }
+
+  /** Types into an ingredient box and picks the dropdown entry with the given title. */
+  async function pick(wrapper, rowIdx, typed, title) {
+    const box = () => ingredientBoxes(wrapper)[rowIdx]
+    box().vm.$emit('update:search', typed)
+    await flushPromises()
+    const item = box().props('items').find(i => i.displayName === title)
+    expect(item, `no "${title}" entry`).toBeDefined()
+    box().vm.$emit('update:modelValue', item.id)
+    await flushPromises()
+  }
+
+  describe('removing an ingredient', () => {
+    it('unselects it from every step and shifts later selections down, leaving instructions alone', async () => {
+      const { wrapper } = await mountView(twoStepPreview())
+
+      await buttonLabelled(wrapper, 'Remove ingredient 1')[0].trigger('click')
+
+      expect(wrapper.vm.form.ingredients.map(i => i.displayName)).toEqual(['Bok Choy'])
+      expect(wrapper.vm.form.steps.map(s => s.ingredientIndexes)).toEqual([[], [0]])
+      expect(wrapper.vm.form.steps.map(s => s.instruction)).toEqual(['Slice the chicken', 'Stir-fry it all'])
+    })
+
+    it('never sends a removed New ingredient', async () => {
+      const { wrapper, store } = await mountView()
+
+      await buttonLabelled(wrapper, 'Remove ingredient 2')[0].trigger('click')
+      const payload = await save(wrapper, store)
+
+      expect(payload.ingredients).toHaveLength(1)
+      expect(payload.ingredients.some(i => i.newIngredientName)).toBe(false)
+    })
+
+    it('offers Undo, which puts it back with its step selections', async () => {
+      const { wrapper } = await mountView(twoStepPreview())
+      const ui = useUiStore()
+
+      await buttonLabelled(wrapper, 'Remove ingredient 1')[0].trigger('click')
+      expect(ui.snackbar).toMatchObject({ message: 'Ingredient removed', action: { label: 'Undo' } })
+      ui.runAction()
+      await flushPromises()
+
+      expect(wrapper.vm.form.ingredients.map(i => i.displayName)).toEqual(['Chicken Breast', 'Bok Choy'])
+      expect(wrapper.vm.form.steps.map(s => [...s.ingredientIndexes].sort())).toEqual([[0], [0, 1]])
+    })
+
+    it('shows a scraped problem again once its row is put back', async () => {
+      const preview = makePreview()
+      preview.ingredients[0].unit = 'can'
+      const { wrapper } = await mountView(preview)
+
+      await buttonLabelled(wrapper, 'Remove ingredient 1')[0].trigger('click')
+      await flushPromises()
+      useUiStore().runAction()
+      await flushPromises()
+
+      expect(wrapper.findAllComponents({ name: 'VChip' }).filter(c => c.text() === 'Needs unit')).toHaveLength(1)
+    })
+  })
+
+  describe('steps', () => {
+    it('adds a step, numbering every step by position on save', async () => {
+      const { wrapper, store } = await mountView(twoStepPreview())
+
+      await buttonText(wrapper, 'Add step').trigger('click')
+      wrapper.vm.form.steps[2].instruction = 'Serve'
+      await buttonLabelled(wrapper, 'Remove step 1')[0].trigger('click')
+      const payload = await save(wrapper, store)
+
+      expect(payload.steps.map(s => [s.stepNumber, s.instruction])).toEqual([[1, 'Stir-fry it all'], [2, 'Serve']])
+    })
+
+    it('offers Undo after removing a step, which puts it back in place', async () => {
+      const { wrapper } = await mountView(twoStepPreview())
+      const ui = useUiStore()
+
+      await buttonLabelled(wrapper, 'Remove step 1')[0].trigger('click')
+      expect(ui.snackbar.message).toBe('Step removed')
+      ui.runAction()
+
+      expect(wrapper.vm.form.steps.map(s => s.instruction)).toEqual(['Slice the chicken', 'Stir-fry it all'])
+    })
+  })
+
+  describe('the ingredient search box', () => {
+    it('opens on the scraped match and on a scraped New name', async () => {
+      const { wrapper } = await mountView()
+
+      const [matched, pending] = ingredientBoxes(wrapper)
+      expect(matched.text()).toContain('Chicken Breast')
+      expect(pending.text()).toContain('Bok Choy')
+    })
+
+    it('fixes a wrong match by picking another catalogue Ingredient', async () => {
+      const { wrapper, store } = await mountView()
+
+      await pick(wrapper, 0, 'broth', 'Chicken Broth')
+      const payload = await save(wrapper, store)
+
+      expect(payload.ingredients[0]).toMatchObject({ ingredientId: 'broth-id', newIngredientName: null })
+    })
+
+    it('turns a pending New row into a match when a catalogue Ingredient is picked', async () => {
+      const { wrapper, store } = await mountView()
+
+      await pick(wrapper, 1, 'starch', 'Cornstarch')
+
+      expect(wrapper.findAllComponents({ name: 'VChip' }).some(c => c.text() === 'New')).toBe(false)
+      const payload = await save(wrapper, store)
+      expect(payload.ingredients[1]).toMatchObject({ ingredientId: 'starch-id', newIngredientName: null, category: null })
+    })
+
+    it('offers the typed name as new, even beside a partial match', async () => {
+      const { wrapper } = await mountView()
+
+      ingredientBoxes(wrapper)[0].vm.$emit('update:search', 'corn')
+      await flushPromises()
+
+      const titles = ingredientBoxes(wrapper)[0].props('items').map(i => i.displayName)
+      expect(titles).toContain('Cornstarch')
+      expect(titles).toContain('Add "corn" as new')
+    })
+
+    it('does not offer a name the catalogue already has as new', async () => {
+      const { wrapper } = await mountView()
+
+      ingredientBoxes(wrapper)[1].vm.$emit('update:search', 'chicken broth')
+      await flushPromises()
+
+      expect(ingredientBoxes(wrapper)[1].props('items').map(i => i.displayName))
+        .not.toContain('Add "chicken broth" as new')
+    })
+  })
+
+  describe('adding an ingredient', () => {
+    it('adds a row matched from the catalogue', async () => {
+      const { wrapper, store } = await mountView()
+
+      await buttonText(wrapper, 'Add').trigger('click')
+      await pick(wrapper, 2, 'broth', 'Chicken Broth')
+      const payload = await save(wrapper, store)
+
+      expect(payload.ingredients[2]).toMatchObject({
+        ingredientId: 'broth-id', newIngredientName: null, amount: 1, unit: 'g', displayOrder: 2,
+      })
+    })
+
+    it('adds a pending New row with a Category select starting at Other, created only on save', async () => {
+      const { wrapper, store } = await mountView()
+      const ingredientsApi = (await import('@/services/api')).default
+
+      await buttonText(wrapper, 'Add').trigger('click')
+      await pick(wrapper, 2, 'Star Anise', 'Add "Star Anise" as new')
+
+      expect(wrapper.findAllComponents({ name: 'VChip' }).filter(c => c.text() === 'New')).toHaveLength(2)
+      const categories = wrapper.findAllComponents({ name: 'VSelect' }).filter(s => s.props('label') === 'Category')
+      expect(categories.map(s => s.props('modelValue'))).toEqual(['PRODUCE', 'OTHER'])
+      expect(ingredientsApi.post).not.toHaveBeenCalled()
+
+      const payload = await save(wrapper, store)
+      expect(payload.ingredients[2]).toMatchObject({
+        ingredientId: null, newIngredientName: 'star anise', newIngredientDisplayName: 'Star Anise', category: 'OTHER',
+      })
+    })
+
+    it('keeps the scraped Category guess when a matched row is made New', async () => {
+      const { wrapper } = await mountView()
+
+      await pick(wrapper, 0, 'chicken thigh', 'Add "chicken thigh" as new')
+
+      expect(wrapper.vm.form.ingredients[0]).toMatchObject({ isNew: true, ingredientId: null, category: 'MEAT_SEAFOOD' })
+    })
+
+    it('will not save a row whose ingredient was never picked', async () => {
+      const { wrapper, store } = await mountView()
+
+      await buttonText(wrapper, 'Add').trigger('click')
+      const payload = await save(wrapper, store)
+
+      expect(payload).toBeUndefined()
+      expect(ingredientBoxes(wrapper)[2].props('errorMessages')).toEqual(['Pick an ingredient'])
+    })
+  })
+
+  describe('step chips', () => {
+    it('keeps a pending New ingredient selectable', async () => {
+      const { wrapper } = await mountView()
+
+      const bokChoy = stepChips(wrapper, 0).find(c => c.text() === 'Bok Choy')
+      expect(bokChoy.props('disabled')).toBe(false)
+      await bokChoy.trigger('click')
+
+      expect(wrapper.vm.form.steps[0].ingredientIndexes).toEqual([0, 1])
+    })
+
+    it('labels a step chip with a New name added on the preview', async () => {
+      const { wrapper } = await mountView()
+
+      await buttonText(wrapper, 'Add').trigger('click')
+      await pick(wrapper, 2, 'Star Anise', 'Add "Star Anise" as new')
+
+      expect(stepChips(wrapper, 0).map(c => c.text())).toContain('Star Anise')
+    })
+
+    it('saves pending New ingredients selected in steps', async () => {
+      const { wrapper, store } = await mountView()
+
+      await buttonText(wrapper, 'Add').trigger('click')
+      await pick(wrapper, 2, 'Star Anise', 'Add "Star Anise" as new')
+      await stepChips(wrapper, 0).find(c => c.text() === 'Bok Choy').trigger('click')
+      await stepChips(wrapper, 0).find(c => c.text() === 'Star Anise').trigger('click')
+      const payload = await save(wrapper, store)
+
+      expect(payload.steps[0].ingredientIndexes).toEqual([0, 1, 2])
+      expect(payload.ingredients.slice(1).map(i => i.newIngredientName)).toEqual(['bok choy', 'star anise'])
+    })
+  })
+
+  it('takes its Undo away on leaving the page', async () => {
+    const { wrapper } = await mountView()
+    await buttonLabelled(wrapper, 'Remove ingredient 1')[0].trigger('click')
+
+    wrapper.unmount()
+
+    expect(useUiStore().snackbar.show).toBe(false)
   })
 })

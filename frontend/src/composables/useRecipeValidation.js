@@ -8,8 +8,8 @@ export const PROBLEMS_BANNER_CLASS = 'recipe-problems'
  * Decides which of a recipe form's problems are showing: those it arrived with until fixed, those in a field the
  * user has left (except length, which waits for Save), and every one once Save has been pressed.
  */
-export function useRecipeValidation(form, options = {}) {
-  const result = computed(() => validateRecipe(form, options))
+export function useRecipeValidation(form) {
+  const result = computed(() => validateRecipe(form))
 
   const saveAttempted = ref(false)
   // Each map is keyed by the form for recipe fields and by the row object otherwise, so removing a row does not pass its state to the next one.
@@ -40,9 +40,13 @@ export function useRecipeValidation(form, options = {}) {
     saveAttempted.value || has(arrived, ownerOf(entry), entry.field)
     || (entry.rule !== LENGTH_RULE && wasLeft(entry))))
 
-  // An arrived problem the user fixes is forgotten, so breaking it again follows the rules for the user's own problems.
+  const isOnForm = owner => toRaw(owner) === toRaw(form)
+    || form.ingredients.includes(owner) || form.steps.includes(owner)
+
+  // An arrived problem the user fixes is forgotten, so breaking it again follows the rules for the user's own problems; a removed row is not a fix, since Undo can bring it back.
   watch(() => result.value.summary, summary => {
     for (const [owner, fields] of arrived) {
+      if (!isOnForm(owner)) continue
       for (const field of fields) {
         const broken = summary.some(entry => entry.field === field && toRaw(ownerOf(entry)) === toRaw(owner))
         if (!broken) fields.delete(field)

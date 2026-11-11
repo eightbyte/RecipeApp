@@ -71,16 +71,21 @@ describe('validateRecipe', () => {
   })
 
   describe('ingredient row', () => {
-    const rowOf = (row, options) =>
-      validateRecipe(validForm({ ingredients: [{ ...validForm().ingredients[0], ...row }] }), options).ingredients[0]
+    const rowOf = row =>
+      validateRecipe(validForm({ ingredients: [{ ...validForm().ingredients[0], ...row }] })).ingredients[0]
 
-    it('needs an ingredient picked where the form asks for one', () => {
-      expect(rowOf({ ingredientId: null }, { requireIngredient: true }).ingredient)
+    it('needs an ingredient picked', () => {
+      expect(rowOf({ ingredientId: null }).ingredient)
         .toEqual({ message: 'Pick an ingredient', rule: VALUE_RULE })
     })
 
-    it('does not ask for a picked ingredient by default, because the import preview matches its own', () => {
-      expect(rowOf({ ingredientId: null }).ingredient).toBeNull()
+    it('accepts a pending New ingredient in place of a picked one', () => {
+      expect(rowOf({ ingredientId: null, isNew: true, name: 'bok choy' }).ingredient).toBeNull()
+    })
+
+    it.each(['', '  ', null])('needs a pending New ingredient to have a name (%j)', name => {
+      expect(rowOf({ ingredientId: null, isNew: true, name }).ingredient)
+        .toEqual({ message: 'Pick an ingredient', rule: VALUE_RULE })
     })
 
     it.each([0, -1, '0'])('rejects an amount of %j', amount => {
@@ -138,7 +143,7 @@ describe('validateRecipe', () => {
           { ingredientId: null,                         amount: 0, unit: 'g', notes: 'x'.repeat(501) },
         ],
         steps: [{ instruction: 'Fine.' }, { instruction: '' }],
-      }), { requireIngredient: true })
+      }))
 
       expect(result.summary).toEqual([
         { section: 'recipe',     index: null, field: 'name',       rule: VALUE_RULE,  where: 'Recipe name',

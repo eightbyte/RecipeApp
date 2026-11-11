@@ -167,6 +167,7 @@
             variant="text"
             color="error"
             class="mt-1"
+            :aria-label="`Remove ingredient ${idx + 1}`"
             @click="removeIngredient(idx)"
           />
         </div>
@@ -241,6 +242,7 @@
               size="small"
               variant="text"
               color="error"
+              :aria-label="`Remove step ${sIdx + 1}`"
               @click="removeStep(sIdx)"
             />
           </div>
@@ -334,6 +336,7 @@ import MeasurementUnitSelect from '@/components/MeasurementUnitSelect.vue'
 import RecipeProblemsBanner from '@/components/RecipeProblemsBanner.vue'
 import { useIngredientRowLayout } from '@/composables/useIngredientRowLayout'
 import { useRecipeValidation } from '@/composables/useRecipeValidation'
+import { useRemovalUndo } from '@/composables/useRemovalUndo'
 
 const props = defineProps({ id: { type: String, default: null } })
 const route  = useRoute()
@@ -364,7 +367,8 @@ const form = reactive({
   steps:       [],  // { instruction, ingredientIndexes: number[] }
 })
 
-const validation = useRecipeValidation(form, { requireIngredient: true })
+const validation = useRecipeValidation(form)
+const { removeIngredient, removeStep } = useRemovalUndo(form)
 
 // ── Create ingredient dialog ────────────────────────────────────────────────
 const createIngDialog   = ref(false)
@@ -433,16 +437,6 @@ function addIngredient() {
   validation.markFresh(row)
 }
 
-function removeIngredient(idx) {
-  form.ingredients.splice(idx, 1)
-  // Fix up step indexes
-  form.steps.forEach(step => {
-    step.ingredientIndexes = step.ingredientIndexes
-      .filter(i => i !== idx)
-      .map(i => (i > idx ? i - 1 : i))
-  })
-}
-
 let ingSearchTimer = null
 function onIngredientSearch(val) {
   clearTimeout(ingSearchTimer)
@@ -493,10 +487,6 @@ function addStep() {
   const step = { instruction: '', ingredientIndexes: [] }
   form.steps.push(step)
   validation.markFresh(step)
-}
-
-function removeStep(idx) {
-  form.steps.splice(idx, 1)
 }
 
 function toggleStepIngredient(stepIdx, ingIdx) {

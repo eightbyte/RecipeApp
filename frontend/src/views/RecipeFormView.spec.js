@@ -5,6 +5,7 @@ import * as directives from 'vuetify/directives'
 import { createPinia, setActivePinia } from 'pinia'
 import { useRecipeStore } from '@/stores/recipes'
 import { useIngredientStore } from '@/stores/ingredients'
+import { useUiStore } from '@/stores/ui'
 import RecipeFormView from './RecipeFormView.vue'
 import { makeRecipeDetail, makeIngredient } from '@/test/factories'
 
@@ -223,6 +224,92 @@ describe('RecipeFormView — problems shown before Save', () => {
     const wrapper = await mountEditing(detail)
 
     expect(fieldLabelled(wrapper, 'Notes').props('errorMessages')).toEqual(['Must be 500 characters or fewer'])
+  })
+})
+
+describe('RecipeFormView — removing with Undo', () => {
+  const twoIngredientRecipe = () => makeRecipeDetail({
+    ingredients: [
+      { ...makeRecipeDetail().ingredients[0], id: 'ri-1', ingredientId: 'flour' },
+      { ...makeRecipeDetail().ingredients[0], id: 'ri-2', ingredientId: 'sugar' },
+    ],
+    steps: [
+      { id: 's1', stepNumber: 1, instruction: 'Sift', recipeIngredientIds: ['ri-1'] },
+      { id: 's2', stepNumber: 2, instruction: 'Mix',  recipeIngredientIds: ['ri-1', 'ri-2'] },
+    ],
+  })
+
+  async function mountLoaded() {
+    const wrapper = mountForm({ id: 'r1' })
+    await flushPromises()
+    wrapper.vm.populateForm(twoIngredientRecipe())
+    await flushPromises()
+    return wrapper
+  }
+
+  const removeButtons = wrapper => wrapper.findAllComponents({ name: 'VBtn' })
+    .filter(b => b.props('icon') === 'mdi-close')
+
+  it('offers Undo after removing an ingredient, which brings it back with its step selections', async () => {
+    const wrapper = await mountLoaded()
+    const ui = useUiStore()
+
+    await removeButtons(wrapper)[0].trigger('click')
+    expect(wrapper.vm.form.ingredients.map(i => i.ingredientId)).toEqual(['sugar'])
+    expect(wrapper.vm.form.steps.map(s => s.ingredientIndexes)).toEqual([[], [0]])
+    expect(ui.snackbar).toMatchObject({ show: true, message: 'Ingredient removed', action: { label: 'Undo' } })
+
+    ui.runAction()
+    await flushPromises()
+
+    expect(wrapper.vm.form.ingredients.map(i => i.ingredientId)).toEqual(['flour', 'sugar'])
+    expect(wrapper.vm.form.steps.map(s => [...s.ingredientIndexes].sort())).toEqual([[0], [0, 1]])
+  })
+
+  it('offers Undo after removing a step, which brings it back in place', async () => {
+    const wrapper = await mountLoaded()
+    const ui = useUiStore()
+    // The two ingredient rows' remove buttons come first.
+    await removeButtons(wrapper)[2].trigger('click')
+    expect(wrapper.vm.form.steps.map(s => s.instruction)).toEqual(['Mix'])
+    expect(ui.snackbar.message).toBe('Step removed')
+
+    ui.runAction()
+
+    expect(wrapper.vm.form.steps.map(s => s.instruction)).toEqual(['Sift', 'Mix'])
+  })
+
+  it('undoes only the most recent removal', async () => {
+    const wrapper = await mountLoaded()
+    const ui = useUiStore()
+
+    wrapper.vm.removeStep(0)
+    wrapper.vm.removeIngredient(0)
+    ui.runAction()
+
+    expect(wrapper.vm.form.ingredients).toHaveLength(2)
+    expect(wrapper.vm.form.steps.map(s => s.instruction)).toEqual(['Mix'])
+  })
+
+  it('makes the removal final once the snackbar has gone', async () => {
+    const wrapper = await mountLoaded()
+    const ui = useUiStore()
+
+    wrapper.vm.removeIngredient(0)
+    ui.dismiss()
+    ui.runAction()
+
+    expect(wrapper.vm.form.ingredients).toHaveLength(1)
+  })
+
+  it('takes its Undo away on leaving the page', async () => {
+    const wrapper = await mountLoaded()
+    const ui = useUiStore()
+    wrapper.vm.removeIngredient(0)
+
+    wrapper.unmount()
+
+    expect(ui.snackbar.show).toBe(false)
   })
 })
 

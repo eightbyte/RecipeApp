@@ -141,10 +141,10 @@ public class RecipeScrapeEndpointsTests(DatabaseFixture db) : IAsyncLifetime
         response.StatusCode.Should().Be(HttpStatusCode.Created);
         response.Headers.Location.Should().NotBeNull();
 
-        var body = await response.Content.ReadFromJsonAsync<RecipeDetailResponse>();
-        body!.Name.Should().Be("Bolognese");
-        body.Ingredients.Should().HaveCount(1);
-        body.Ingredients[0].IngredientDisplayName.Should().Be("Beef Mince");
+        var body = await response.Content.ReadFromJsonAsync<ScrapeConfirmResponse>();
+        body!.Recipe.Name.Should().Be("Bolognese");
+        body.Recipe.Ingredients.Should().HaveCount(1);
+        body.Recipe.Ingredients[0].IngredientDisplayName.Should().Be("Beef Mince");
     }
 
     [Fact]
@@ -161,8 +161,8 @@ public class RecipeScrapeEndpointsTests(DatabaseFixture db) : IAsyncLifetime
         var response = await client.PostAsJsonAsync("/api/v1/recipes/scrape/confirm", request);
 
         response.StatusCode.Should().Be(HttpStatusCode.Created);
-        var body = await response.Content.ReadFromJsonAsync<RecipeDetailResponse>();
-        body!.Ingredients[0].IngredientId.Should().Be(ingredient.Id);
+        var body = await response.Content.ReadFromJsonAsync<ScrapeConfirmResponse>();
+        body!.Recipe.Ingredients[0].IngredientId.Should().Be(ingredient.Id);
     }
 
     [Fact]
@@ -184,8 +184,8 @@ public class RecipeScrapeEndpointsTests(DatabaseFixture db) : IAsyncLifetime
         var response = await db.CreateClient().PostAsJsonAsync("/api/v1/recipes/scrape/confirm", request);
 
         response.StatusCode.Should().Be(HttpStatusCode.Created);
-        var body = await response.Content.ReadFromJsonAsync<RecipeDetailResponse>();
-        body!.Ingredients.Single().Should().BeEquivalentTo(new
+        var body = await response.Content.ReadFromJsonAsync<ScrapeConfirmResponse>();
+        body!.Recipe.Ingredients.Single().Should().BeEquivalentTo(new
         {
             Amount = 113.398m, Unit = "g", SourceAmount = 4m, SourceUnit = "oz", EntryUnit = "oz",
         });
@@ -269,7 +269,7 @@ internal class FakeRecipeScrapeService(
         return Task.FromResult(preview!);
     }
 
-    public Task<RecipeDetailResponse> ConfirmAsync(
+    public Task<ScrapeConfirmResponse> ConfirmAsync(
         ScrapeConfirmRequest request, CancellationToken ct = default)
         => throw new NotImplementedException("Use real service for confirm tests.");
 }

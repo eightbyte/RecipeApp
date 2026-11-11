@@ -233,15 +233,15 @@ describe('scrapeRecipe', () => {
 // ── confirmScrape ─────────────────────────────────────────────────────────────
 
 describe('confirmScrape', () => {
-  it('calls POST /recipes/scrape/confirm and returns new recipe ID', async () => {
-    const detail = makeRecipeDetail({ id: 'new-recipe-id' })
-    api.post.mockResolvedValue({ data: detail })
+  it('calls POST /recipes/scrape/confirm and returns the new recipe ID with whether its photo was skipped', async () => {
+    const recipe = makeRecipeDetail({ id: 'new-recipe-id' })
+    api.post.mockResolvedValue({ data: { recipe, photoSkipped: true } })
 
     const store = useRecipeStore()
-    const id = await store.confirmScrape({ name: 'Bolognese' })
+    const saved = await store.confirmScrape({ name: 'Bolognese' })
 
     expect(api.post).toHaveBeenCalledWith('/recipes/scrape/confirm', { name: 'Bolognese' })
-    expect(id).toBe('new-recipe-id')
+    expect(saved).toEqual({ id: 'new-recipe-id', photoSkipped: true })
   })
 })
 

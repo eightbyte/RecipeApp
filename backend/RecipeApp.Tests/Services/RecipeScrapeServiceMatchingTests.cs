@@ -32,6 +32,7 @@ public class RecipeScrapeServiceMatchingTests(DatabaseFixture db) : IAsyncLifeti
             headlessRenderer: null!,      // not used in NormaliseAsync
             measurementConverter: new MeasurementConverter(Options.Create(new MeasurementOptions())),
             siteReaders: [],
+            images: null!,              // only confirm stores photos
             logger: NullLogger<RecipeScrapeService>.Instance);
     }
 

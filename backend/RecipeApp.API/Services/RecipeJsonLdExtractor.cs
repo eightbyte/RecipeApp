@@ -30,6 +30,28 @@ public static class RecipeJsonLdExtractor
     public static JsonNode? TryFindRecipeNode(IDocument document) =>
         EnumerateRecipeNodes(document).FirstOrDefault();
 
+    /// <summary>Every non-blank URL in the <c>image</c> field of the page's first Recipe object, in order, whether the field is a string, an ImageObject or a list of either.</summary>
+    public static IEnumerable<string> ImageUrlsOf(IDocument document)
+    {
+        JsonNode?[] images = TryFindRecipeNode(document)?["image"] switch
+        {
+            null => [],
+            JsonArray list => list.ToArray(),
+            var single => [single],
+        };
+
+        foreach (var image in images)
+        {
+            var url = image switch
+            {
+                JsonValue value when value.TryGetValue<string>(out var s) => s,
+                JsonObject obj when obj["url"] is JsonValue value && value.TryGetValue<string>(out var s) => s,
+                _ => null,
+            };
+            if (!string.IsNullOrWhiteSpace(url)) yield return url.Trim();
+        }
+    }
+
     /// <summary>Every Recipe node across the page's JSON-LD blocks in document order, lazily so callers that reject the first candidate only pay to parse the next.</summary>
     private static IEnumerable<JsonNode> EnumerateRecipeNodes(IDocument document)
     {

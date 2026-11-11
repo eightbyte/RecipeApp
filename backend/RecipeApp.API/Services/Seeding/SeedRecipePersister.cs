@@ -203,13 +203,13 @@ public class SeedRecipePersister(
 
         var created = await scrapeService.ConfirmAsync(prepared.Request, ct);
 
-        // ConfirmAsync has no image field, so attach the photo here inside the same transaction and a recipe is never committed half-imported.
+        // ConfirmAsync only downloads a remote photo, so the harvested one on disk is attached here inside the same transaction and a recipe is never committed half-imported.
         var imagePath = cache.FindImage(slug);
         if (imagePath is not null)
         {
             var imageUrl = await imageService.ImportAsync(imagePath, _options.SeedImageFilePrefix + slug, ct);
             await db.Recipes
-                .Where(recipe => recipe.Id == created.Id)
+                .Where(recipe => recipe.Id == created.Recipe.Id)
                 .ExecuteUpdateAsync(set => set.SetProperty(recipe => recipe.ImageUrl, imageUrl), ct);
         }
 

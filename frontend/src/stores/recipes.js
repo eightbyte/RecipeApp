@@ -95,11 +95,12 @@ export const useRecipeStore = defineStore('recipes', () => {
     }
   }
 
+  /** Saves the preview; resolves with the new recipe's `id` and `photoSkipped`, true when its photo could not be downloaded. */
   async function confirmScrape(payload) {
     confirmLoading.value = true
     try {
       const { data } = await api.post('/recipes/scrape/confirm', payload)
-      return data.id
+      return { id: data.recipe.id, photoSkipped: data.photoSkipped }
     } finally {
       confirmLoading.value = false
     }

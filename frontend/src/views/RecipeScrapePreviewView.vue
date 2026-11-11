@@ -15,6 +15,32 @@
 
       <RecipeProblemsBanner :problems="validation.shownProblems.value" />
 
+      <!-- ── Photo ───────────────────────────────────────────────── -->
+      <!-- Sent without a referrer, because hotlink protection refuses a request that names another site as its referrer. -->
+      <v-img
+        v-if="form.imageUrl"
+        :src="form.imageUrl"
+        alt="Recipe photo"
+        referrerpolicy="no-referrer"
+        height="200"
+        cover
+        rounded="lg"
+        class="mb-6"
+        data-test="preview-photo"
+      >
+        <div class="d-flex justify-end pa-2">
+          <v-btn
+            size="small"
+            variant="flat"
+            prepend-icon="mdi-close"
+            aria-label="Remove photo"
+            @click="form.imageUrl = null"
+          >
+            Remove
+          </v-btn>
+        </div>
+      </v-img>
+
       <!-- ── Basic info ──────────────────────────────────────────── -->
       <v-card class="mb-6 pa-3 pa-sm-4">
         <div class="text-subtitle-2 text-medium-emphasis mb-4">Basic Info</div>
@@ -275,6 +301,7 @@ import { computed, reactive, ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useRecipeStore } from '@/stores/recipes'
 import { useIngredientStore } from '@/stores/ingredients'
+import { useUiStore } from '@/stores/ui'
 import {
   DEFAULT_UNIT, formatMeasurement, isPickableUnit, setIngredientUnit, toFormMeasurement, toPayloadMeasurement,
 } from '@/constants/units'
@@ -296,6 +323,7 @@ const ADD_NEW = '__add-new__'
 const router          = useRouter()
 const store           = useRecipeStore()
 const ingredientStore = useIngredientStore()
+const ui              = useUiStore()
 
 const categories = INGREDIENT_CATEGORIES.map(({ title, value }) => ({ title, value }))
 
@@ -309,6 +337,7 @@ const form = reactive({
   description: '',
   servings:    4,
   sourceUrl:   '',
+  imageUrl:    null,
   ingredients: [],
   steps:       [],
 })
@@ -334,6 +363,7 @@ onMounted(() => {
   form.description = preview.description ?? ''
   form.servings    = preview.servings
   form.sourceUrl   = preview.sourceUrl
+  form.imageUrl    = preview.imageUrl ?? null
 
   form.ingredients = preview.ingredients.map(ing => {
     const { amount, unit, entryUnit } = toFormMeasurement(ing)
@@ -469,6 +499,8 @@ async function saveRecipe() {
     name:        form.name.trim(),
     description: form.description.trim() || null,
     sourceUrl:   form.sourceUrl,
+    // A removed photo is left out, so the server downloads nothing.
+    ...(form.imageUrl && { imageUrl: form.imageUrl }),
     servings:    form.servings,
     ingredients: form.ingredients.map((ing, i) => ({
       ingredientId:           ing.isNew ? null : ing.ingredientId,
@@ -490,9 +522,11 @@ async function saveRecipe() {
   }
 
   try {
-    const newId = await store.confirmScrape(payload)
+    const { id, photoSkipped } = await store.confirmScrape(payload)
     store.clearScrapePreview()
-    router.push({ name: 'recipe-detail', params: { id: newId } })
+    if (photoSkipped)
+      ui.notify({ message: 'Saved without the photo. You can add one on the Edit page.', color: 'warning' })
+    router.push({ name: 'recipe-detail', params: { id } })
   } catch (e) {
     submitError.value = e.message ?? 'Something went wrong. Please try again.'
   }

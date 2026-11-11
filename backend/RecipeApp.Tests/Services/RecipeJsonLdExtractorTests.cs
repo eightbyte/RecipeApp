@@ -14,6 +14,21 @@ public class RecipeJsonLdExtractorTests
     }
 
     [Fact]
+    public void ImageUrlsOf_ReadsTheImageObjectInsideAGraph() =>
+        RecipeJsonLdExtractor.ImageUrlsOf(new HtmlParser().ParseDocument("""
+            <html><head><script type="application/ld+json">
+            {"@graph":[{"@type":"WebPage"},
+                       {"@type":"Recipe","name":"3 Can Chili",
+                        "image":{"@type":"ImageObject","url":"https://myplate-prod.azureedge.us/Chili.jpg"}}]}
+            </script></head><body></body></html>
+            """)).Should().Equal("https://myplate-prod.azureedge.us/Chili.jpg");
+
+    [Fact]
+    public void ImageUrlsOf_IsEmptyWhenThePageHasNoRecipeMarkup() =>
+        RecipeJsonLdExtractor.ImageUrlsOf(new HtmlParser().ParseDocument("<html><body>no json-ld here</body></html>"))
+            .Should().BeEmpty();
+
+    [Fact]
     public async Task PlainRecipeObject_WithStringIngredientsAndInstructions_ExtractsAllFields()
     {
         var html = """

@@ -119,6 +119,12 @@ describe('RecipeDetailView', () => {
     expect(wrapper.get('#ingredient-ri-1').text()).toContain('266.67 g')
   })
 
+  it('shows each step ingredient’s amount scaled by the chosen servings', async () => {
+    const wrapper = await mountView()
+    await clickButton(wrapper, 'More servings')
+    expect(wrapper.get('.step-ingredients .v-chip').text().replace(/\s+/g, ' ').trim()).toBe('250 g Flour')
+  })
+
   it('reads "1 serving" at exactly one serving', async () => {
     const wrapper = await mountView({ servings: 2 })
     await clickButton(wrapper, 'Fewer servings')

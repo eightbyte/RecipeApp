@@ -299,6 +299,7 @@ describe('RecipeScrapePreviewView', () => {
     const fieldsLabelled = (wrapper, label) => wrapper.findAllComponents({ name: 'VTextField' })
       .filter(f => f.props('label') === label)
     const banner = wrapper => wrapper.find('[data-test="recipe-problems"]')
+    const unitProblems = wrapper => wrapper.findAll('[data-test="unit-problem"]')
 
     const withCans = () => {
       const preview = makePreview()
@@ -310,9 +311,10 @@ describe('RecipeScrapePreviewView', () => {
     it('flags every unstorable unit on load, on the field, the row and the banner', async () => {
       const { wrapper } = await mountView(withCans())
 
-      expect(unitSelects(wrapper).map(s => s.props('errorMessages'))).toEqual([
-        ['Source said "can": pick a unit or clear the amount.'],
-        ['Source said "jar": pick a unit or clear the amount.'],
+      expect(unitSelects(wrapper).map(s => s.props('error'))).toEqual([true, true])
+      expect(unitProblems(wrapper).map(p => p.text())).toEqual([
+        'Source said "can": pick a unit or clear the amount.',
+        'Source said "jar": pick a unit or clear the amount.',
       ])
       expect(wrapper.findAllComponents({ name: 'VChip' }).filter(c => c.text() === 'Needs unit')).toHaveLength(2)
       expect(banner(wrapper).text()).toContain('2 problems need fixing before saving')
@@ -342,7 +344,8 @@ describe('RecipeScrapePreviewView', () => {
       unitSelects(wrapper)[0].vm.$emit('update:modelValue', 'g')
       await flushPromises()
 
-      expect(unitSelects(wrapper)[0].props('errorMessages')).toEqual([])
+      expect(unitSelects(wrapper)[0].props('error')).toBe(false)
+      expect(unitProblems(wrapper)).toHaveLength(1)
       expect(banner(wrapper).text()).toContain('1 problem needs fixing before saving')
 
       unitSelects(wrapper)[1].vm.$emit('update:modelValue', 'g')

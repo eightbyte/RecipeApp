@@ -105,22 +105,16 @@
               </div>
 
               <!-- Per-step ingredient chips; the current step's are highlighted -->
-              <div v-if="stepIngredients(step).length" class="d-flex flex-wrap ga-2 mt-4">
-                <v-chip
+              <div v-if="stepIngredients(step).length" class="d-flex flex-column align-center ga-2 mt-4">
+                <StepIngredientChip
                   v-for="ing in stepIngredients(step)"
                   :key="ing.id"
+                  :recipe-ingredient="ing"
+                  :servings-multiplier="servingsMultiplier"
                   size="small"
                   :color="isCurrent(index) ? 'primary' : undefined"
                   :variant="isCurrent(index) ? 'flat' : 'tonal'"
-                >
-                  <!-- Absent for an ingredient whose source stated no quantity -->
-                  <span
-                    v-if="formatAmount(ing)"
-                    class="font-weight-medium mr-1"
-                  >{{ formatAmount(ing) }}</span>
-                  <span v-if="formatSource(ing)" class="text-caption mr-1">{{ formatSource(ing) }}</span>
-                  {{ ing.ingredientDisplayName }}
-                </v-chip>
+                />
               </div>
             </div>
           </div>
@@ -164,13 +158,13 @@
 import { ref, computed, onMounted, nextTick } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useRecipeStore } from '@/stores/recipes'
-import { formatIngredientMeasurement } from '@/constants/units'
 import { formatServings } from '@/constants/servings'
 import { recipeRoute, servingsFromQuery } from '@/router/recipeRoutes'
 import { useUiStore } from '@/stores/ui'
 import { useWakeLock } from '@/composables/useWakeLock'
 import EmptyState from '@/components/EmptyState.vue'
 import ErrorState from '@/components/ErrorState.vue'
+import StepIngredientChip from '@/components/StepIngredientChip.vue'
 
 const props  = defineProps({ id: { type: String, required: true } })
 const route  = useRoute()
@@ -220,16 +214,6 @@ function stepIngredients(step) {
   return step.recipeIngredientIds
     .map(riId => recipe.value.ingredients.find(i => i.id === riId))
     .filter(Boolean)
-}
-
-/** The chip's stored amount at the chosen servings, or null when it states no quantity or its source says the same count. */
-function formatAmount(ing) {
-  return formatIngredientMeasurement(ing, servingsMultiplier.value).amount
-}
-
-/** The measurement as the source recipe stated it; null when there is nothing to add. */
-function formatSource(ing) {
-  return formatIngredientMeasurement(ing, servingsMultiplier.value).source
 }
 
 function toggleStep(step) {

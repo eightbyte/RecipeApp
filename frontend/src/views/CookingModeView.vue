@@ -109,8 +109,8 @@
                 <StepIngredientChip
                   v-for="ing in stepIngredients(step)"
                   :key="ing.id"
-                  :ingredient="ing"
-                  :multiplier="servingsMultiplier"
+                  :recipe-ingredient="ing"
+                  :servings-multiplier="servingsMultiplier"
                   size="small"
                   :color="isCurrent(index) ? 'primary' : undefined"
                   :variant="isCurrent(index) ? 'flat' : 'tonal'"

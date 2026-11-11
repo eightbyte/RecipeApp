@@ -63,18 +63,54 @@
 
       <!-- ── Ingredients ─────────────────────────────────────────── -->
       <v-card class="mb-6 pa-3 pa-sm-4">
-        <div class="text-subtitle-2 text-medium-emphasis mb-4">Ingredients</div>
+        <div class="d-flex align-center justify-space-between mb-4">
+          <div class="text-subtitle-2 text-medium-emphasis">Ingredients</div>
+          <v-btn
+            size="small"
+            variant="tonal"
+            color="primary"
+            prepend-icon="mdi-plus"
+            @click="addIngredient"
+          >
+            Add
+          </v-btn>
+        </div>
 
         <div
           v-for="(ing, idx) in form.ingredients"
-          :key="idx"
+          :key="rowKey(ing)"
           class="mb-6"
         >
-          <div class="d-flex align-center ga-2 mb-1">
-            <span class="text-caption text-medium-emphasis" style="min-width: 20px">{{ idx + 1 }}.</span>
-            <span class="text-body-2 font-weight-medium">{{ ing.displayName }}</span>
-            <v-chip v-if="ing.isNew" size="x-small" color="info" variant="flat">New</v-chip>
-            <v-chip v-if="rowChip(idx)" size="x-small" color="error" variant="flat">{{ rowChip(idx) }}</v-chip>
+          <div class="d-flex align-start ga-2 mb-2">
+            <span class="text-caption text-medium-emphasis mt-3" style="min-width: 20px">{{ idx + 1 }}.</span>
+            <v-autocomplete
+              :model-value="pickedValueOf(ing)"
+              :items="itemsFor(ing)"
+              :custom-filter="matchTitleOrAddNew"
+              item-title="displayName"
+              item-value="id"
+              label="Ingredient"
+              density="compact"
+              hide-details="auto"
+              class="flex-grow-1"
+              style="min-width: 0"
+              :error-messages="validation.messagesFor('ingredient', idx, 'ingredient')"
+              @update:search="searches.set(ing, $event ?? '')"
+              @update:model-value="onIngredientPicked(ing, $event)"
+              @update:focused="validation.leaveOnBlur($event, 'ingredient', ing)"
+            />
+            <div class="d-flex flex-column align-end ga-1 mt-2">
+              <v-chip v-if="ing.isNew" size="x-small" color="info" variant="flat">New</v-chip>
+              <v-chip v-if="rowChip(idx)" size="x-small" color="error" variant="flat">{{ rowChip(idx) }}</v-chip>
+            </div>
+            <v-btn
+              icon="mdi-close"
+              size="small"
+              variant="text"
+              color="error"
+              :aria-label="`Remove ingredient ${idx + 1}`"
+              @click="removeIngredient(idx)"
+            />
           </div>
 
           <div class="d-flex flex-wrap flex-sm-nowrap ga-2 pl-3 pl-sm-6">
@@ -122,26 +158,41 @@
             />
           </div>
         </div>
+
+        <div v-if="!form.ingredients.length" class="text-caption text-medium-emphasis text-center py-2">
+          Add at least one ingredient
+        </div>
       </v-card>
 
       <!-- ── Steps ───────────────────────────────────────────────── -->
       <v-card class="mb-6 pa-3 pa-sm-4">
-        <div class="text-subtitle-2 text-medium-emphasis mb-4">Steps</div>
+        <div class="d-flex align-center justify-space-between mb-4">
+          <div class="text-subtitle-2 text-medium-emphasis">Steps</div>
+          <v-btn
+            size="small"
+            variant="tonal"
+            color="primary"
+            prepend-icon="mdi-plus"
+            @click="addStep"
+          >
+            Add step
+          </v-btn>
+        </div>
 
         <div
           v-for="(step, sIdx) in form.steps"
-          :key="sIdx"
+          :key="rowKey(step)"
           class="mb-6"
         >
           <div class="d-flex align-start ga-2">
             <v-avatar color="primary" size="28" class="text-white text-caption font-weight-bold mt-4">
-              {{ step.stepNumber }}
+              {{ sIdx + 1 }}
             </v-avatar>
 
             <div class="flex-grow-1">
               <v-textarea
                 v-model="step.instruction"
-                :label="`Step ${step.stepNumber} instruction`"
+                :label="`Step ${sIdx + 1} instruction`"
                 rows="2"
                 auto-grow
                 density="compact"
@@ -152,7 +203,8 @@
               />
 
               <div class="text-caption text-medium-emphasis mb-1">Ingredients used in this step:</div>
-              <div class="d-flex flex-wrap ga-1">
+              <!-- Every chip stays enabled, because a pending New ingredient is selectable before it exists. -->
+              <div class="d-flex flex-wrap ga-1" data-test="step-ingredients">
                 <v-chip
                   v-for="(ing, iIdx) in form.ingredients"
                   :key="iIdx"
@@ -163,10 +215,26 @@
                 >
                   {{ ing.displayName || `Ingredient ${iIdx + 1}` }}
                 </v-chip>
+                <span v-if="!form.ingredients.length" class="text-caption text-medium-emphasis">
+                  Add ingredients above first
+                </span>
               </div>
             </div>
+
+            <v-btn
+              icon="mdi-close"
+              size="small"
+              variant="text"
+              color="error"
+              :aria-label="`Remove step ${sIdx + 1}`"
+              @click="removeStep(sIdx)"
+            />
           </div>
           <v-divider v-if="sIdx < form.steps.length - 1" class="mt-4" />
+        </div>
+
+        <div v-if="!form.steps.length" class="text-caption text-medium-emphasis text-center py-2">
+          No steps yet — add your first step above
         </div>
       </v-card>
 
@@ -194,21 +262,31 @@
 </template>
 
 <script setup>
-import { reactive, ref, onMounted } from 'vue'
+import { computed, reactive, ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useRecipeStore } from '@/stores/recipes'
+import { useIngredientStore } from '@/stores/ingredients'
 import {
-  isPickableUnit, setIngredientUnit, toFormMeasurement, toPayloadMeasurement,
+  DEFAULT_UNIT, isPickableUnit, setIngredientUnit, toFormMeasurement, toPayloadMeasurement,
 } from '@/constants/units'
 import { MIN_SERVINGS, MAX_SERVINGS } from '@/constants/recipeLimits'
 import MeasurementUnitSelect from '@/components/MeasurementUnitSelect.vue'
 import RecipeProblemsBanner from '@/components/RecipeProblemsBanner.vue'
-import { INGREDIENT_CATEGORIES } from '@/constants/categories'
+import { DEFAULT_CATEGORY, INGREDIENT_CATEGORIES } from '@/constants/categories'
 import { useIngredientRowLayout } from '@/composables/useIngredientRowLayout'
 import { useRecipeValidation } from '@/composables/useRecipeValidation'
+import { useRemovalUndo } from '@/composables/useRemovalUndo'
+import { rowKey } from '@/utils/recipeRows'
 
-const router = useRouter()
-const store  = useRecipeStore()
+/** The search box's value for a row holding a pending New ingredient, which has no catalogue id until save. */
+const PENDING_NEW = '__pending-new__'
+
+/** The search box's "Add … as new" entry, which turns the typed name into a pending New ingredient. */
+const ADD_NEW = '__add-new__'
+
+const router          = useRouter()
+const store           = useRecipeStore()
+const ingredientStore = useIngredientStore()
 
 const categories = INGREDIENT_CATEGORIES.map(({ title, value }) => ({ title, value }))
 
@@ -227,8 +305,19 @@ const form = reactive({
 })
 
 const validation = useRecipeValidation(form)
+const { removeIngredient, removeStep } = useRemovalUndo(form)
+
+// What each row's search box holds as typed, keyed by row so a removed row takes its text with it.
+const searches = reactive(new WeakMap())
+
+const catalogueIds = computed(() => new Set(ingredientStore.catalogue.map(i => i.id)))
+
+const sameName = (a, b) => a.trim().toLocaleLowerCase() === (b ?? '').trim().toLocaleLowerCase()
 
 onMounted(() => {
+  // The catalogue is searched in the browser, so the scraped matches show by name from the start.
+  ingredientStore.fetchCatalogue()
+
   const preview = store.scrapePreview
   if (!preview) return
 
@@ -253,18 +342,88 @@ onMounted(() => {
       notes:          ing.notes ?? '',
       isNew:          ing.isNew,
       category:       ing.suggestedCategory,
-      displayOrder:   ing.displayOrder,
     }
   })
 
   form.steps = preview.steps.map(s => ({
-    stepNumber:        s.stepNumber,
     instruction:       s.instruction,
     ingredientIndexes: [...s.ingredientIndexes],
   }))
 
   validation.markArrived()
 })
+
+function addIngredient() {
+  // Hand-entered rows have no Source Measurement, because what is typed here is the measurement itself.
+  const row = {
+    ingredientId:   null,
+    name:           '',
+    displayName:    '',
+    amount:         1,
+    unit:           DEFAULT_UNIT,
+    unstorableUnit: null,
+    entryUnit:      null,
+    sourceAmount:   null,
+    sourceUnit:     null,
+    notes:          '',
+    isNew:          false,
+    category:       null,
+  }
+  form.ingredients.push(row)
+  validation.markFresh(row)
+}
+
+function addStep() {
+  const step = { instruction: '', ingredientIndexes: [] }
+  form.steps.push(step)
+  validation.markFresh(step)
+}
+
+function pickedValueOf(ing) {
+  if (ing.isNew) return PENDING_NEW
+  return ing.ingredientId
+}
+
+/** A row's search box entries: the catalogue, led by the row's own ingredient when the catalogue lacks it, and ending with "Add … as new" for a typed name the catalogue does not have. */
+function itemsFor(ing) {
+  const own = ing.isNew || (ing.ingredientId && !catalogueIds.value.has(ing.ingredientId))
+    ? [{ id: pickedValueOf(ing), displayName: ing.displayName }]
+    : []
+  const typed = (searches.get(ing) ?? '').trim()
+  const known = !typed || sameName(typed, ing.displayName)
+    || ingredientStore.catalogue.some(i => sameName(typed, i.displayName) || sameName(typed, i.name))
+  const addNew = known ? [] : [{ id: ADD_NEW, displayName: `Add "${typed}" as new`, typed }]
+  return [...own, ...ingredientStore.catalogue, ...addNew]
+}
+
+/** Vuetify's default title match, except that "Add … as new" always shows, since it names whatever was typed. */
+function matchTitleOrAddNew(value, query, item) {
+  if (item?.raw?.id === ADD_NEW) return true
+  return String(value).toLocaleLowerCase().indexOf(query.toLocaleLowerCase())
+}
+
+function onIngredientPicked(ing, value) {
+  if (value === PENDING_NEW) return
+  if (value === ADD_NEW) {
+    const typed = searches.get(ing).trim()
+    Object.assign(ing, {
+      ingredientId: null,
+      isNew:        true,
+      name:         typed.toLocaleLowerCase(),
+      displayName:  typed,
+      // A scraped row keeps the category the scrape guessed for it.
+      category:     ing.category ?? DEFAULT_CATEGORY,
+    })
+    return
+  }
+  const found = ingredientStore.catalogue.find(i => i.id === value)
+  Object.assign(ing, {
+    ingredientId: found?.id ?? null,
+    isNew:        false,
+    name:         found?.name ?? '',
+    displayName:  found?.displayName ?? '',
+  })
+}
 
 /** The chip on an ingredient's name line while one of its fields shows a problem. */
 function rowChip(idx) {
@@ -301,8 +460,8 @@ async function saveRecipe() {
       notes:                  ing.notes?.trim() || null,
       displayOrder:           i,
     })),
-    steps: form.steps.map(s => ({
-      stepNumber:        s.stepNumber,
+    steps: form.steps.map((s, i) => ({
+      stepNumber:        i + 1,
       instruction:       s.instruction.trim(),
       ingredientIndexes: s.ingredientIndexes,
     })),

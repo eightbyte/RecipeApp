@@ -92,7 +92,7 @@
 
         <div
           v-for="(ing, idx) in form.ingredients"
-          :key="idx"
+          :key="rowKey(ing)"
           class="d-flex ga-2 align-start mb-4"
         >
           <!-- Drag handle future: just a number for now -->
@@ -167,6 +167,7 @@
             variant="text"
             color="error"
             class="mt-1"
+            :aria-label="`Remove ingredient ${idx + 1}`"
             @click="removeIngredient(idx)"
           />
         </div>
@@ -193,7 +194,7 @@
 
         <div
           v-for="(step, sIdx) in form.steps"
-          :key="sIdx"
+          :key="rowKey(step)"
           class="mb-6"
         >
           <div class="d-flex align-start ga-2">
@@ -241,6 +242,7 @@
               size="small"
               variant="text"
               color="error"
+              :aria-label="`Remove step ${sIdx + 1}`"
               @click="removeStep(sIdx)"
             />
           </div>
@@ -334,6 +336,8 @@ import MeasurementUnitSelect from '@/components/MeasurementUnitSelect.vue'
 import RecipeProblemsBanner from '@/components/RecipeProblemsBanner.vue'
 import { useIngredientRowLayout } from '@/composables/useIngredientRowLayout'
 import { useRecipeValidation } from '@/composables/useRecipeValidation'
+import { useRemovalUndo } from '@/composables/useRemovalUndo'
+import { rowKey } from '@/utils/recipeRows'
 
 const props = defineProps({ id: { type: String, default: null } })
 const route  = useRoute()
@@ -364,7 +368,8 @@ const form = reactive({
   steps:       [],  // { instruction, ingredientIndexes: number[] }
 })
 
-const validation = useRecipeValidation(form, { requireIngredient: true })
+const validation = useRecipeValidation(form)
+const { removeIngredient, removeStep } = useRemovalUndo(form)
 
 // ── Create ingredient dialog ────────────────────────────────────────────────
 const createIngDialog   = ref(false)
@@ -420,7 +425,7 @@ function populateForm(recipe) {
 
 // ── Ingredient management ───────────────────────────────────────────────────
 function addIngredient() {
-  // Hand-entered rows have no source measurement — the unit chosen here IS the source.
+  // Hand-entered rows have no Source Measurement, because what is typed here is the measurement itself.
   const row = {
     ingredientId: null,
     amount:       1,
@@ -431,16 +436,6 @@ function addIngredient() {
   }
   form.ingredients.push(row)
   validation.markFresh(row)
-}
-
-function removeIngredient(idx) {
-  form.ingredients.splice(idx, 1)
-  // Fix up step indexes
-  form.steps.forEach(step => {
-    step.ingredientIndexes = step.ingredientIndexes
-      .filter(i => i !== idx)
-      .map(i => (i > idx ? i - 1 : i))
-  })
 }
 
 let ingSearchTimer = null
@@ -493,10 +488,6 @@ function addStep() {
   const step = { instruction: '', ingredientIndexes: [] }
   form.steps.push(step)
   validation.markFresh(step)
-}
-
-function removeStep(idx) {
-  form.steps.splice(idx, 1)
 }
 
 function toggleStepIngredient(stepIdx, ingIdx) {

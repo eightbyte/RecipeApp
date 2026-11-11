@@ -276,7 +276,7 @@ describe('RecipeScrapePreviewView', () => {
       await flushPromises()
 
       expect(fieldsLabelled(wrapper, 'Amount')[0].props('errorMessages'))
-        .toEqual(['Must be more than 0, or empty for no quantity'])
+        .toEqual(['Must be more than 0, or left empty'])
     })
 
     it('flags an amount of 0 the user types only once the field is left', async () => {
@@ -290,7 +290,7 @@ describe('RecipeScrapePreviewView', () => {
 
       amount().vm.$emit('update:focused', false)
       await flushPromises()
-      expect(amount().props('errorMessages')).toEqual(['Must be more than 0, or empty for no quantity'])
+      expect(amount().props('errorMessages')).toEqual(['Must be more than 0, or left empty'])
       expect(wrapper.findAllComponents({ name: 'VChip' }).some(c => c.text() === 'Needs attention')).toBe(true)
     })
 
@@ -316,6 +316,44 @@ describe('RecipeScrapePreviewView', () => {
       const instruction = wrapper.findAllComponents({ name: 'VTextarea' })
         .find(t => t.props('label') === 'Step 1 instruction')
       expect(instruction.props('errorMessages')).toEqual(['Required'])
+    })
+
+    it('treats an arrived problem as the user\'s own once it has been fixed', async () => {
+      const { wrapper } = await mountView(makePreview({ description: 'x'.repeat(2001) }))
+      const description = () => wrapper.findAllComponents({ name: 'VTextarea' })
+        .find(t => t.props('label') === 'Description (optional)')
+
+      wrapper.vm.form.description = 'Short'
+      await flushPromises()
+      wrapper.vm.form.description = 'x'.repeat(2001)
+      description().vm.$emit('update:focused', false)
+      await flushPromises()
+
+      expect(description().props('errorMessages')).toEqual([])
+    })
+
+    it('flags only the field that was left, not the rest of its row', async () => {
+      const { wrapper } = await mountView()
+
+      wrapper.vm.form.ingredients[0].amount = 0
+      fieldsLabelled(wrapper, 'Notes')[0].vm.$emit('update:focused', false)
+      await flushPromises()
+
+      expect(fieldsLabelled(wrapper, 'Amount')[0].props('errorMessages')).toEqual([])
+    })
+
+    it('scrolls the first field in error into view on Save', async () => {
+      // jsdom does not implement scrolling.
+      const scrollIntoView = vi.fn()
+      Element.prototype.scrollIntoView = scrollIntoView
+      const { wrapper } = await mountView(withCans())
+
+      await saveButton(wrapper).trigger('click')
+      await flushPromises()
+
+      expect(scrollIntoView).toHaveBeenCalledTimes(1)
+      expect(scrollIntoView.mock.contexts[0]).toBe(unitSelects(wrapper)[0].element)
+      delete Element.prototype.scrollIntoView
     })
 
     it('flags a scraped description over the limit on load', async () => {

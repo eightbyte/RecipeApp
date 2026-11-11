@@ -18,7 +18,7 @@
           :error-messages="validation.messagesFor('recipe', null, 'name')"
           required
           class="mb-2"
-          @update:focused="focused => focused || validation.touchField('name')"
+          @update:focused="validation.leaveOnBlur($event, 'name')"
         />
 
         <v-textarea
@@ -28,7 +28,7 @@
           auto-grow
           :error-messages="validation.messagesFor('recipe', null, 'description')"
           class="mb-2"
-          @update:focused="focused => focused || validation.touchField('description')"
+          @update:focused="validation.leaveOnBlur($event, 'description')"
         />
 
         <div class="d-flex ga-4">
@@ -40,7 +40,7 @@
             :max="MAX_SERVINGS"
             :error-messages="validation.messagesFor('recipe', null, 'servings')"
             style="max-width: 120px"
-            @update:focused="focused => focused || validation.touchField('servings')"
+            @update:focused="validation.leaveOnBlur($event, 'servings')"
           />
           <v-text-field
             v-model="form.sourceUrl"
@@ -115,7 +115,7 @@
               :loading="ingredientStore.loading"
               @update:search="onIngredientSearch"
               @update:model-value="onIngredientSelected(idx, $event)"
-              @update:focused="focused => focused || validation.touchRow(ing)"
+              @update:focused="validation.leaveOnBlur($event, 'ingredient', ing)"
             >
               <template #no-data>
                 <div class="pa-2 text-caption text-medium-emphasis">
@@ -139,14 +139,14 @@
                 hide-details="auto"
                 :error-messages="validation.messagesFor('ingredient', idx, 'amount')"
                 :style="rowLayout.amount"
-                @update:focused="focused => focused || validation.touchRow(ing)"
+                @update:focused="validation.leaveOnBlur($event, 'amount', ing)"
               />
               <MeasurementUnitSelect
                 :model-value="ing.unit"
                 :amount="ing.amount"
                 :style="rowLayout.unit"
                 @update:model-value="setIngredientUnit(ing, $event)"
-                @update:focused="focused => focused || validation.touchRow(ing)"
+                @update:focused="validation.leaveOnBlur($event, 'unit', ing)"
               />
               <v-text-field
                 v-model="ing.notes"
@@ -156,7 +156,7 @@
                 :error-messages="validation.messagesFor('ingredient', idx, 'notes')"
                 placeholder="e.g. diced"
                 :class="rowLayout.notesClass"
-                @update:focused="focused => focused || validation.touchRow(ing)"
+                @update:focused="validation.leaveOnBlur($event, 'notes', ing)"
               />
             </div>
           </div>
@@ -211,7 +211,7 @@
                 hide-details="auto"
                 :error-messages="validation.messagesFor('step', sIdx, 'instruction')"
                 class="mb-2"
-                @update:focused="focused => focused || validation.touchRow(step)"
+                @update:focused="validation.leaveOnBlur($event, 'instruction', step)"
               />
 
               <!-- Ingredient chips for this step -->
@@ -421,14 +421,16 @@ function populateForm(recipe) {
 // ── Ingredient management ───────────────────────────────────────────────────
 function addIngredient() {
   // Hand-entered rows have no source measurement — the unit chosen here IS the source.
-  form.ingredients.push({
+  const row = {
     ingredientId: null,
     amount:       1,
     unit:         DEFAULT_UNIT,
     notes:        '',
     sourceAmount: null,
     sourceUnit:   null,
-  })
+  }
+  form.ingredients.push(row)
+  validation.markFresh(row)
 }
 
 function removeIngredient(idx) {
@@ -488,7 +490,9 @@ async function confirmCreateIngredient() {
 
 // ── Step management ─────────────────────────────────────────────────────────
 function addStep() {
-  form.steps.push({ instruction: '', ingredientIndexes: [] })
+  const step = { instruction: '', ingredientIndexes: [] }
+  form.steps.push(step)
+  validation.markFresh(step)
 }
 
 function removeStep(idx) {

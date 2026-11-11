@@ -40,7 +40,7 @@ function servingsProblem(servings) {
 }
 
 /** True while a row states an amount, has no unit, and arrived with one the app cannot store, such as "can", whose size pcs would lose. */
-export function mustPickUnit(ing) {
+function mustPickUnit(ing) {
   return hasAmount(ing.amount) && !ing.unit && !!ing.unstorableUnit
 }
 
@@ -48,7 +48,7 @@ function ingredientRowProblems(ing, { requireIngredient }) {
   return {
     ingredient: requireIngredient && !ing.ingredientId ? problem('Pick an ingredient') : null,
     amount:     hasAmount(ing.amount) && Number(ing.amount) <= 0
-      ? problem('Must be more than 0, or empty for no quantity')
+      ? problem('Must be more than 0, or left empty')
       : null,
     unit:       mustPickUnit(ing)
       ? problem(`Source said "${ing.unstorableUnit}": pick a unit or clear the amount.`)
@@ -65,17 +65,14 @@ function stepProblems(step) {
   }
 }
 
-/** The problems in a field map as summary entries, keeping the map's field order. */
-function summaryEntries(problems, { section, index, where }) {
+/** The problems in a field map as summary entries, keeping the map's field order, where `whereOf` names a field's place on the page. */
+function summaryEntries(problems, { section, index, whereOf }) {
   return Object.entries(problems)
     .filter(([, found]) => found)
-    .map(([field, { message, rule }]) => ({ section, index, field, rule, where, message }))
+    .map(([field, { message, rule }]) => ({ section, index, field, rule, where: whereOf(field), message }))
 }
 
-/**
- * Every problem that would stop a recipe form from saving, as one entry per field plus a summary list in page order.
- * `requireIngredient` is set by the recipe form, whose rows pick an ingredient from the catalogue.
- */
+/** Every problem that would stop a recipe form from saving, per field and as a summary in page order; the recipe form sets `requireIngredient`, because its rows pick from the catalogue. */
 export function validateRecipe(form, { requireIngredient = false } = {}) {
   const recipe = {
     name:           nameProblem(form.name),
@@ -87,17 +84,14 @@ export function validateRecipe(form, { requireIngredient = false } = {}) {
   const steps       = form.steps.map(stepProblems)
 
   const summary = [
-    ...Object.entries(recipe)
-      .filter(([, found]) => found)
-      .map(([field, { message, rule }]) =>
-        ({ section: 'recipe', index: null, field, rule, where: RECIPE_FIELD_LABELS[field], message })),
+    ...summaryEntries(recipe, { section: 'recipe', index: null, whereOf: field => RECIPE_FIELD_LABELS[field] }),
     ...ingredients.flatMap((problems, index) => {
       const name = form.ingredients[index].displayName
       const where = name ? `Ingredient ${index + 1} (${name})` : `Ingredient ${index + 1}`
-      return summaryEntries(problems, { section: 'ingredient', index, where })
+      return summaryEntries(problems, { section: 'ingredient', index, whereOf: () => where })
     }),
     ...steps.flatMap((problems, index) =>
-      summaryEntries(problems, { section: 'step', index, where: `Step ${index + 1}` })),
+      summaryEntries(problems, { section: 'step', index, whereOf: () => `Step ${index + 1}` })),
   ]
 
   return { ...recipe, ingredients, steps, summary }

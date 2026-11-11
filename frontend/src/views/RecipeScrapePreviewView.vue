@@ -25,7 +25,7 @@
           :error-messages="validation.messagesFor('recipe', null, 'name')"
           required
           class="mb-2"
-          @update:focused="focused => focused || validation.touchField('name')"
+          @update:focused="validation.leaveOnBlur($event, 'name')"
         />
 
         <v-textarea
@@ -35,7 +35,7 @@
           auto-grow
           :error-messages="validation.messagesFor('recipe', null, 'description')"
           class="mb-2"
-          @update:focused="focused => focused || validation.touchField('description')"
+          @update:focused="validation.leaveOnBlur($event, 'description')"
         />
 
         <div class="d-flex ga-4">
@@ -47,7 +47,7 @@
             :max="MAX_SERVINGS"
             :error-messages="validation.messagesFor('recipe', null, 'servings')"
             style="max-width: 120px"
-            @update:focused="focused => focused || validation.touchField('servings')"
+            @update:focused="validation.leaveOnBlur($event, 'servings')"
           />
           <v-text-field
             :model-value="form.sourceUrl"
@@ -88,7 +88,7 @@
               hide-details="auto"
               :error-messages="validation.messagesFor('ingredient', idx, 'amount')"
               :style="rowLayout.amount"
-              @update:focused="focused => focused || validation.touchRow(ing)"
+              @update:focused="validation.leaveOnBlur($event, 'amount', ing)"
             />
             <MeasurementUnitSelect
               :model-value="ing.unit"
@@ -97,7 +97,7 @@
               :error-messages="validation.messagesFor('ingredient', idx, 'unit')"
               :style="rowLayout.unit"
               @update:model-value="setIngredientUnit(ing, $event)"
-              @update:focused="focused => focused || validation.touchRow(ing)"
+              @update:focused="validation.leaveOnBlur($event, 'unit', ing)"
             />
             <v-text-field
               v-model="ing.notes"
@@ -107,7 +107,7 @@
               :error-messages="validation.messagesFor('ingredient', idx, 'notes')"
               placeholder="e.g. diced"
               :class="rowLayout.notesClass"
-              @update:focused="focused => focused || validation.touchRow(ing)"
+              @update:focused="validation.leaveOnBlur($event, 'notes', ing)"
             />
           </div>
 
@@ -148,7 +148,7 @@
                 hide-details="auto"
                 :error-messages="validation.messagesFor('step', sIdx, 'instruction')"
                 class="mb-2"
-                @update:focused="focused => focused || validation.touchRow(step)"
+                @update:focused="validation.leaveOnBlur($event, 'instruction', step)"
               />
 
               <div class="text-caption text-medium-emphasis mb-1">Ingredients used in this step:</div>

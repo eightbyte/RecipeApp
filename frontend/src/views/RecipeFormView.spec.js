@@ -177,6 +177,20 @@ describe('RecipeFormView — problems shown before Save', () => {
     return wrapper
   }
 
+  it('scrolls the banner into view when the only problem has no field of its own', async () => {
+    // jsdom does not implement scrolling.
+    const scrollIntoView = vi.fn()
+    Element.prototype.scrollIntoView = scrollIntoView
+    const wrapper = mountForm()
+    wrapper.vm.form.name = 'My Recipe'
+
+    await wrapper.vm.submit()
+    await flushPromises()
+
+    expect(scrollIntoView.mock.contexts[0]).toBe(banner(wrapper).element)
+    delete Element.prototype.scrollIntoView
+  })
+
   it('flags clearing the name only once the field is left', async () => {
     const wrapper = await mountEditing()
     wrapper.vm.form.name = ''

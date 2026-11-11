@@ -85,7 +85,7 @@ describe('validateRecipe', () => {
 
     it.each([0, -1, '0'])('rejects an amount of %j', amount => {
       expect(rowOf({ amount }).amount)
-        .toEqual({ message: 'Must be more than 0, or empty for no quantity', rule: VALUE_RULE })
+        .toEqual({ message: 'Must be more than 0, or left empty', rule: VALUE_RULE })
     })
 
     it.each(['', null, 0.5])('allows an amount of %j', amount => {
@@ -150,7 +150,7 @@ describe('validateRecipe', () => {
         { section: 'ingredient', index: 2,    field: 'ingredient', rule: VALUE_RULE,  where: 'Ingredient 3',
           message: 'Pick an ingredient' },
         { section: 'ingredient', index: 2,    field: 'amount',     rule: VALUE_RULE,  where: 'Ingredient 3',
-          message: 'Must be more than 0, or empty for no quantity' },
+          message: 'Must be more than 0, or left empty' },
         { section: 'ingredient', index: 2,    field: 'notes',      rule: LENGTH_RULE, where: 'Ingredient 3',
           message: 'Must be 500 characters or fewer' },
         { section: 'step',       index: 1,    field: 'instruction', rule: VALUE_RULE, where: 'Step 2',

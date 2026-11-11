@@ -1,81 +1,92 @@
-import { computed, nextTick, reactive, ref } from 'vue'
+import { computed, nextTick, reactive, ref, toRaw, watch } from 'vue'
 import { validateRecipe, LENGTH_RULE } from '@/utils/recipeValidation'
 
+/** The class `RecipeProblemsBanner` carries, which Save scrolls to when no field is in error. */
+export const PROBLEMS_BANNER_CLASS = 'recipe-problems'
+
 /**
- * Decides which of a recipe form's problems are showing: those it arrived with, those in a field the user has left
- * (except length, which waits for Save), and every one once Save has been pressed.
+ * Decides which of a recipe form's problems are showing: those it arrived with until fixed, those in a field the
+ * user has left (except length, which waits for Save), and every one once Save has been pressed.
  */
 export function useRecipeValidation(form, options = {}) {
   const result = computed(() => validateRecipe(form, options))
 
   const saveAttempted = ref(false)
-  const touchedFields = reactive(new Set())
-  // Rows are tracked by object rather than index, so removing a row does not pass its state to the next one.
-  const touchedRows   = reactive(new WeakSet())
-  const arrivedKeys   = reactive(new Set())
-  const arrivedRows   = reactive(new WeakMap())
+  // Each map is keyed by the form for recipe fields and by the row object otherwise, so removing a row does not pass its state to the next one.
+  const leftFields  = reactive(new WeakMap())
+  const arrived     = reactive(new Map())
+  const freshRows   = reactive(new WeakSet())
 
-  const rowOf = ({ section, index }) => {
+  function ownerOf({ section, index }) {
     if (section === 'ingredient') return form.ingredients[index]
     if (section === 'step')       return form.steps[index]
-    return null
+    return form
   }
 
-  function arrivedWith(entry) {
-    const row = rowOf(entry)
-    return row ? !!arrivedRows.get(row)?.has(entry.field) : arrivedKeys.has(entry.field)
+  const has = (map, owner, field) => !!map.get(owner)?.has(field)
+
+  function add(map, owner, field) {
+    if (!map.has(owner)) map.set(owner, new Set())
+    map.get(owner).add(field)
   }
 
-  function touched(entry) {
-    const row = rowOf(entry)
-    return row ? touchedRows.has(row) : touchedFields.has(entry.field)
+  function wasLeft(entry) {
+    const owner = ownerOf(entry)
+    // A row just added has nothing worth flagging until the user has been through one of its fields.
+    return freshRows.has(owner) ? !!leftFields.get(owner)?.size : has(leftFields, owner, entry.field)
   }
 
   const shownProblems = computed(() => result.value.summary.filter(entry =>
-    saveAttempted.value || arrivedWith(entry) || (entry.rule !== LENGTH_RULE && touched(entry))))
+    saveAttempted.value || has(arrived, ownerOf(entry), entry.field)
+    || (entry.rule !== LENGTH_RULE && wasLeft(entry))))
+
+  // An arrived problem the user fixes is forgotten, so breaking it again follows the rules for the user's own problems.
+  watch(() => result.value.summary, summary => {
+    for (const [owner, fields] of arrived) {
+      for (const field of fields) {
+        const broken = summary.some(entry => entry.field === field && toRaw(ownerOf(entry)) === toRaw(owner))
+        if (!broken) fields.delete(field)
+      }
+    }
+  })
 
   /** Records the problems the loaded recipe already has, so they show before the user touches anything. */
   function markArrived() {
-    for (const entry of result.value.summary) {
-      const row = rowOf(entry)
-      if (!row) { arrivedKeys.add(entry.field); continue }
-      if (!arrivedRows.has(row)) arrivedRows.set(row, new Set())
-      arrivedRows.get(row).add(entry.field)
-    }
+    for (const entry of result.value.summary) add(arrived, ownerOf(entry), entry.field)
   }
 
-  /** Marks a recipe field as left, so its problems show from now on. */
-  function touchField(field) {
-    touchedFields.add(field)
+  /** Marks a row the user has just added, whose problems wait until one of its fields has been left. */
+  function markFresh(row) {
+    freshRows.add(row)
   }
 
-  /** Marks an ingredient or step row as left, so a freshly added blank row shows its problems once any field is left. */
-  function touchRow(row) {
-    touchedRows.add(row)
+  /** Handles a field's `update:focused`, marking it left on blur; a recipe field is recorded on the form, a row field on its row. */
+  function leaveOnBlur(focused, field, row = form) {
+    if (!focused) add(leftFields, row, field)
   }
+
+  const shownIn = (section, index) =>
+    shownProblems.value.filter(entry => entry.section === section && entry.index === index)
 
   /** The messages showing for one field, for a Vuetify `error-messages` prop. */
   function messagesFor(section, index, field) {
-    return shownProblems.value
-      .filter(entry => entry.section === section && entry.index === index && entry.field === field)
-      .map(entry => entry.message)
+    return shownIn(section, index).filter(entry => entry.field === field).map(entry => entry.message)
   }
 
   /** The fields of one ingredient or step row with a problem showing. */
   function shownFieldsOf(section, index) {
-    return shownProblems.value
-      .filter(entry => entry.section === section && entry.index === index)
-      .map(entry => entry.field)
+    return shownIn(section, index).map(entry => entry.field)
   }
 
-  /** Shows every problem and scrolls the first field in error into view, returning whether the recipe can be saved. */
+  /** Shows every problem and scrolls the first field in error, or else the banner, into view, returning whether the recipe can be saved. */
   async function attemptSave(rootEl) {
     saveAttempted.value = true
     if (!result.value.summary.length) return true
     await nextTick()
-    rootEl?.querySelector('.v-input--error')?.scrollIntoView?.({ behavior: 'smooth', block: 'center' })
+    const target = rootEl?.querySelector('.v-input--error') ?? rootEl?.querySelector(`.${PROBLEMS_BANNER_CLASS}`)
+    target?.scrollIntoView?.({ behavior: 'smooth', block: 'center' })
     return false
   }
 
-  return { shownProblems, markArrived, touchField, touchRow, messagesFor, shownFieldsOf, attemptSave }
+  return { shownProblems, markArrived, markFresh, leaveOnBlur, messagesFor, shownFieldsOf, attemptSave }
 }

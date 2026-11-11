@@ -64,7 +64,7 @@ public class ScrapeConfirmIngredientRequestValidator : AbstractValidator<ScrapeC
 
         RuleFor(x => x.SourceAmount).GreaterThan(0).When(x => x.SourceAmount.HasValue);
         RuleFor(x => x.SourceUnit).NotEmpty().MaximumLength(32).When(x => x.SourceUnit is not null);
-        RuleFor(x => x.Notes).MaximumLength(200).When(x => x.Notes is not null);
+        RuleFor(x => x.Notes).MaximumLength(RecipeLimits.IngredientNotesMaxLength).When(x => x.Notes is not null);
     }
 }
 
@@ -72,8 +72,9 @@ public class ScrapeConfirmRequestValidator : AbstractValidator<ScrapeConfirmRequ
 {
     public ScrapeConfirmRequestValidator()
     {
-        RuleFor(x => x.Name).NotEmpty().MaximumLength(200);
-        RuleFor(x => x.Servings).InclusiveBetween(1, 100);
+        RuleFor(x => x.Name).NotEmpty().MaximumLength(RecipeLimits.NameMaxLength);
+        RuleFor(x => x.Description).MaximumLength(RecipeLimits.DescriptionMaxLength).When(x => x.Description is not null);
+        RuleFor(x => x.Servings).InclusiveBetween(RecipeLimits.MinServings, RecipeLimits.MaxServings);
         RuleFor(x => x.SourceUrl).NotEmpty();
         RuleFor(x => x.Ingredients).NotEmpty().WithMessage("At least one ingredient is required.");
         RuleForEach(x => x.Ingredients).SetValidator(new ScrapeConfirmIngredientRequestValidator());
@@ -88,6 +89,9 @@ public class ScrapeConfirmRequestValidator : AbstractValidator<ScrapeConfirmRequ
                     ctx.AddFailure($"Steps[{s}].StepNumber", "StepNumber must be ≥ 1.");
                 if (string.IsNullOrWhiteSpace(step.Instruction))
                     ctx.AddFailure($"Steps[{s}].Instruction", "Instruction is required.");
+                else if (step.Instruction.Length > RecipeLimits.StepInstructionMaxLength)
+                    ctx.AddFailure($"Steps[{s}].Instruction",
+                        $"Instruction must be {RecipeLimits.StepInstructionMaxLength} characters or fewer.");
 
                 foreach (var idx in step.IngredientIndexes)
                 {

@@ -1,5 +1,5 @@
 <template>
-  <v-container class="pa-2 pa-sm-4" max-width="600">
+  <v-container ref="containerRef" class="pa-2 pa-sm-4" max-width="600">
 
     <!-- Loading bar during save -->
     <v-progress-linear v-if="store.confirmLoading" indeterminate color="primary" class="mb-2" />
@@ -13,6 +13,8 @@
 
     <template v-else>
 
+      <RecipeProblemsBanner :problems="validation.shownProblems.value" />
+
       <!-- ── Basic info ──────────────────────────────────────────── -->
       <v-card class="mb-6 pa-3 pa-sm-4">
         <div class="text-subtitle-2 text-medium-emphasis mb-4">Basic Info</div>
@@ -20,9 +22,10 @@
         <v-text-field
           v-model="form.name"
           label="Recipe name"
-          :rules="[v => !!v || 'Name is required']"
+          :error-messages="validation.messagesFor('recipe', null, 'name')"
           required
           class="mb-2"
+          @update:focused="focused => focused || validation.touchField('name')"
         />
 
         <v-textarea
@@ -30,7 +33,9 @@
           label="Description (optional)"
           rows="2"
           auto-grow
+          :error-messages="validation.messagesFor('recipe', null, 'description')"
           class="mb-2"
+          @update:focused="focused => focused || validation.touchField('description')"
         />
 
         <div class="d-flex ga-4">
@@ -38,10 +43,11 @@
             v-model.number="form.servings"
             label="Servings"
             type="number"
-            min="1"
-            max="100"
-            :rules="[v => v > 0 || 'Must be at least 1']"
+            :min="MIN_SERVINGS"
+            :max="MAX_SERVINGS"
+            :error-messages="validation.messagesFor('recipe', null, 'servings')"
             style="max-width: 120px"
+            @update:focused="focused => focused || validation.touchField('servings')"
           />
           <v-text-field
             :model-value="form.sourceUrl"
@@ -68,6 +74,7 @@
             <span class="text-caption text-medium-emphasis" style="min-width: 20px">{{ idx + 1 }}.</span>
             <span class="text-body-2 font-weight-medium">{{ ing.displayName }}</span>
             <v-chip v-if="ing.isNew" size="x-small" color="info" variant="flat">New</v-chip>
+            <v-chip v-if="rowChip(idx)" size="x-small" color="error" variant="flat">{{ rowChip(idx) }}</v-chip>
           </div>
 
           <div class="d-flex flex-wrap flex-sm-nowrap ga-2 pl-3 pl-sm-6">
@@ -78,23 +85,29 @@
               min="0"
               step="0.001"
               density="compact"
-              hide-details
+              hide-details="auto"
+              :error-messages="validation.messagesFor('ingredient', idx, 'amount')"
               :style="rowLayout.amount"
+              @update:focused="focused => focused || validation.touchRow(ing)"
             />
             <MeasurementUnitSelect
               :model-value="ing.unit"
               :amount="ing.amount"
               :requires-unit="!!ing.unstorableUnit"
+              :error-messages="validation.messagesFor('ingredient', idx, 'unit')"
               :style="rowLayout.unit"
               @update:model-value="setIngredientUnit(ing, $event)"
+              @update:focused="focused => focused || validation.touchRow(ing)"
             />
             <v-text-field
               v-model="ing.notes"
               label="Notes"
               density="compact"
-              hide-details
+              hide-details="auto"
+              :error-messages="validation.messagesFor('ingredient', idx, 'notes')"
               placeholder="e.g. diced"
               :class="rowLayout.notesClass"
+              @update:focused="focused => focused || validation.touchRow(ing)"
             />
           </div>
 
@@ -132,8 +145,10 @@
                 rows="2"
                 auto-grow
                 density="compact"
-                hide-details
+                hide-details="auto"
+                :error-messages="validation.messagesFor('step', sIdx, 'instruction')"
                 class="mb-2"
+                @update:focused="focused => focused || validation.touchRow(step)"
               />
 
               <div class="text-caption text-medium-emphasis mb-1">Ingredients used in this step:</div>
@@ -183,11 +198,14 @@ import { reactive, ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useRecipeStore } from '@/stores/recipes'
 import {
-  hasAmount, isPickableUnit, setIngredientUnit, toFormMeasurement, toPayloadMeasurement,
+  isPickableUnit, setIngredientUnit, toFormMeasurement, toPayloadMeasurement,
 } from '@/constants/units'
+import { MIN_SERVINGS, MAX_SERVINGS } from '@/constants/recipeLimits'
 import MeasurementUnitSelect from '@/components/MeasurementUnitSelect.vue'
+import RecipeProblemsBanner from '@/components/RecipeProblemsBanner.vue'
 import { INGREDIENT_CATEGORIES } from '@/constants/categories'
 import { useIngredientRowLayout } from '@/composables/useIngredientRowLayout'
+import { useRecipeValidation } from '@/composables/useRecipeValidation'
 
 const router = useRouter()
 const store  = useRecipeStore()
@@ -196,7 +214,8 @@ const categories = INGREDIENT_CATEGORIES.map(({ title, value }) => ({ title, val
 
 const rowLayout = useIngredientRowLayout({ amountWidth: '110px' })
 
-const submitError = ref(null)
+const submitError  = ref(null)
+const containerRef = ref(null)
 
 const form = reactive({
   name:        '',
@@ -206,6 +225,8 @@ const form = reactive({
   ingredients: [],
   steps:       [],
 })
+
+const validation = useRecipeValidation(form)
 
 onMounted(() => {
   const preview = store.scrapePreview
@@ -241,11 +262,15 @@ onMounted(() => {
     instruction:       s.instruction,
     ingredientIndexes: [...s.ingredientIndexes],
   }))
+
+  validation.markArrived()
 })
 
-/** True while a row states an amount, has no unit, and arrived with one the app cannot store, such as "can". */
-function mustPickUnit(ing) {
-  return hasAmount(ing.amount) && !ing.unit && !!ing.unstorableUnit
+/** The chip on an ingredient's name line while one of its fields shows a problem. */
+function rowChip(idx) {
+  const fields = validation.shownFieldsOf('ingredient', idx)
+  if (!fields.length) return null
+  return fields.includes('unit') ? 'Needs unit' : 'Needs attention'
 }
 
 function toggleStepIngredient(stepIdx, ingIdx) {
@@ -257,22 +282,7 @@ function toggleStepIngredient(stepIdx, ingIdx) {
 
 async function saveRecipe() {
   submitError.value = null
-
-  if (!form.name.trim()) {
-    submitError.value = 'Recipe name is required.'
-    return
-  }
-  if (!form.ingredients.length) {
-    submitError.value = 'At least one ingredient is required.'
-    return
-  }
-  // An amount with no unit saves as a count, except where the source's unit has a size pcs would lose.
-  const unitToPick = form.ingredients.find(ing => mustPickUnit(ing))
-  if (unitToPick) {
-    submitError.value = `Pick a unit for "${unitToPick.displayName}", or clear its amount. ` +
-      `The source said "${unitToPick.unstorableUnit}", which this app can't store.`
-    return
-  }
+  if (!await validation.attemptSave(containerRef.value?.$el)) return
 
   const payload = {
     name:        form.name.trim(),

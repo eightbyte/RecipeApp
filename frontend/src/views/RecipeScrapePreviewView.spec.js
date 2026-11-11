@@ -209,34 +209,124 @@ describe('RecipeScrapePreviewView', () => {
     expect(unitSelects[1].props('placeholder')).toBe('pcs')
   })
 
-  it('blocks saving until every unstorable unit has been picked', async () => {
-    const preview = makePreview()
-    preview.ingredients[0].unit = 'can'
-    const { wrapper, store } = await mountView(preview)
-    const confirmSpy = vi.spyOn(store, 'confirmScrape').mockResolvedValue('new-id')
+  describe('problems shown before Save', () => {
+    const unitSelects = wrapper => wrapper.findAllComponents({ name: 'VSelect' })
+      .filter(s => s.props('label') === 'Unit')
+    const fieldsLabelled = (wrapper, label) => wrapper.findAllComponents({ name: 'VTextField' })
+      .filter(f => f.props('label') === label)
+    const banner = wrapper => wrapper.find('[data-test="recipe-problems"]')
 
-    const buttons = wrapper.findAllComponents({ name: 'VBtn' })
-    const saveBtn = buttons.find(b => b.text().includes('Save Recipe'))
-    await saveBtn?.trigger('click')
-    await flushPromises()
+    const withCans = () => {
+      const preview = makePreview()
+      preview.ingredients[0].unit = 'can'
+      preview.ingredients[1].unit = 'jar'
+      return preview
+    }
 
-    expect(confirmSpy).not.toHaveBeenCalled()
-    expect(wrapper.text()).toContain('Pick a unit for "Chicken Breast"')
+    it('flags every unstorable unit on load, on the field, the row and the banner', async () => {
+      const { wrapper } = await mountView(withCans())
+
+      expect(unitSelects(wrapper).map(s => s.props('errorMessages'))).toEqual([
+        ['Source said "can": pick a unit or clear the amount.'],
+        ['Source said "jar": pick a unit or clear the amount.'],
+      ])
+      expect(wrapper.findAllComponents({ name: 'VChip' }).filter(c => c.text() === 'Needs unit')).toHaveLength(2)
+      expect(banner(wrapper).text()).toContain('2 problems need fixing before saving')
+    })
+
+    it('lists every problem on one Save, and does not save', async () => {
+      const { wrapper, store } = await mountView(withCans())
+      const confirmSpy = vi.spyOn(store, 'confirmScrape').mockResolvedValue('new-id')
+      wrapper.vm.form.name = ''
+
+      await saveButton(wrapper).trigger('click')
+      await flushPromises()
+
+      expect(confirmSpy).not.toHaveBeenCalled()
+      const text = banner(wrapper).text()
+      expect(text).toContain('3 problems need fixing before saving')
+      expect(text).toContain('Recipe name — Required')
+      expect(text).toContain('Ingredient 1 (Chicken Breast) — Source said "can"')
+      expect(text).toContain('Ingredient 2 (Bok Choy) — Source said "jar"')
+    })
+
+    it('clears a problem as soon as it is fixed after a Save attempt', async () => {
+      const { wrapper } = await mountView(withCans())
+      await saveButton(wrapper).trigger('click')
+      await flushPromises()
+
+      unitSelects(wrapper)[0].vm.$emit('update:modelValue', 'g')
+      await flushPromises()
+
+      expect(unitSelects(wrapper)[0].props('errorMessages')).toEqual([])
+      expect(banner(wrapper).text()).toContain('1 problem needs fixing before saving')
+
+      unitSelects(wrapper)[1].vm.$emit('update:modelValue', 'g')
+      await flushPromises()
+      expect(banner(wrapper).exists()).toBe(false)
+    })
+
+    it('shows a new problem immediately once Save has been pressed', async () => {
+      const { wrapper, store } = await mountView()
+      vi.spyOn(store, 'confirmScrape').mockRejectedValue({ message: 'offline' })
+      await saveButton(wrapper).trigger('click')
+      await flushPromises()
+
+      wrapper.vm.form.ingredients[0].amount = 0
+      await flushPromises()
+
+      expect(fieldsLabelled(wrapper, 'Amount')[0].props('errorMessages'))
+        .toEqual(['Must be more than 0, or empty for no quantity'])
+    })
+
+    it('flags an amount of 0 the user types only once the field is left', async () => {
+      const { wrapper } = await mountView()
+      const amount = () => fieldsLabelled(wrapper, 'Amount')[0]
+
+      wrapper.vm.form.ingredients[0].amount = 0
+      await flushPromises()
+      expect(amount().props('errorMessages')).toEqual([])
+      expect(banner(wrapper).exists()).toBe(false)
+
+      amount().vm.$emit('update:focused', false)
+      await flushPromises()
+      expect(amount().props('errorMessages')).toEqual(['Must be more than 0, or empty for no quantity'])
+      expect(wrapper.findAllComponents({ name: 'VChip' }).some(c => c.text() === 'Needs attention')).toBe(true)
+    })
+
+    it('flags an over-long field only after a Save attempt, even once it is left', async () => {
+      const { wrapper } = await mountView()
+      const notes = () => fieldsLabelled(wrapper, 'Notes')[0]
+
+      wrapper.vm.form.ingredients[0].notes = 'x'.repeat(501)
+      notes().vm.$emit('update:focused', false)
+      await flushPromises()
+      expect(notes().props('errorMessages')).toEqual([])
+
+      await saveButton(wrapper).trigger('click')
+      await flushPromises()
+      expect(notes().props('errorMessages')).toEqual(['Must be 500 characters or fewer'])
+    })
+
+    it('flags a scraped step with no instruction on load', async () => {
+      const { wrapper } = await mountView(makePreview({
+        steps: [{ stepNumber: 1, instruction: '', ingredientIndexes: [] }],
+      }))
+
+      const instruction = wrapper.findAllComponents({ name: 'VTextarea' })
+        .find(t => t.props('label') === 'Step 1 instruction')
+      expect(instruction.props('errorMessages')).toEqual(['Required'])
+    })
+
+    it('flags a scraped description over the limit on load', async () => {
+      const { wrapper } = await mountView(makePreview({ description: 'x'.repeat(2001) }))
+
+      const description = wrapper.findAllComponents({ name: 'VTextarea' })
+        .find(t => t.props('label') === 'Description (optional)')
+      expect(description.props('errorMessages')).toEqual(['Must be 2000 characters or fewer'])
+    })
   })
 
-  it('names the unstorable source unit and offers clearing the amount', async () => {
-    const preview = makePreview()
-    preview.ingredients[0].amount     = 1
-    preview.ingredients[0].unit       = 'can'
-    preview.ingredients[0].sourceUnit = 'can'
-    const { wrapper } = await mountView(preview)
-
-    await saveButton(wrapper).trigger('click')
-    await flushPromises()
-
-    expect(wrapper.text()).toContain(
-      'Pick a unit for "Chicken Breast", or clear its amount. The source said "can", which this app can\'t store.')
-  })
 
   it('saves an unstorable unit once one has been picked', async () => {
     const preview = makePreview()

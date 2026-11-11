@@ -1,4 +1,4 @@
-import { mount } from '@vue/test-utils'
+import { mount, flushPromises } from '@vue/test-utils'
 import { createVuetify } from 'vuetify'
 import * as components from 'vuetify/components'
 import * as directives from 'vuetify/directives'
@@ -48,6 +48,8 @@ function mountForm(props = {}) {
   })
 }
 
+const banner = wrapper => wrapper.find('[data-test="recipe-problems"]')
+
 describe('RecipeFormView — create mode', () => {
   it('form fields start empty in create mode', () => {
     const wrapper = mountForm()
@@ -88,23 +90,125 @@ describe('RecipeFormView — create mode', () => {
     const store = useRecipeStore()
     vi.spyOn(store, 'createRecipe')
 
-    // formRef.validate() will return { valid: false } since name is empty
     await wrapper.vm.submit()
 
     expect(store.createRecipe).not.toHaveBeenCalled()
   })
 
-  it('shows submitError when submitting with no ingredients', async () => {
+  it('lists a missing ingredient list when submitting with no ingredients', async () => {
     const wrapper = mountForm()
+    const store = useRecipeStore()
+    vi.spyOn(store, 'createRecipe')
     wrapper.vm.form.name = 'My Recipe'
-    wrapper.vm.form.servings = 4
-
-    // Patch formRef.validate to simulate a valid form so we reach the ingredient check
-    wrapper.vm.formRef = { validate: vi.fn().mockResolvedValue({ valid: true }) }
 
     await wrapper.vm.submit()
+    await flushPromises()
 
-    expect(wrapper.vm.submitError).toBeTruthy()
+    expect(store.createRecipe).not.toHaveBeenCalled()
+    expect(banner(wrapper).text()).toContain('Ingredients — Add at least one ingredient')
+  })
+})
+
+describe('RecipeFormView — problems shown before Save', () => {
+  const ingredientPickers = wrapper => wrapper.findAllComponents({ name: 'VAutocomplete' })
+    .filter(a => a.props('label') === 'Ingredient')
+  const fieldLabelled = (wrapper, label) => wrapper.findAllComponents({ name: 'VTextField' })
+    .find(f => f.props('label') === label)
+
+  it('shows nothing on a fresh New Recipe form', async () => {
+    const wrapper = mountForm()
+    await flushPromises()
+
+    expect(fieldLabelled(wrapper, 'Recipe name').props('errorMessages')).toEqual([])
+    expect(banner(wrapper).exists()).toBe(false)
+  })
+
+  it('does not flag a newly added blank row until one of its fields is left', async () => {
+    const wrapper = mountForm()
+    wrapper.vm.addIngredient()
+    await flushPromises()
+    expect(ingredientPickers(wrapper)[0].props('errorMessages')).toEqual([])
+
+    fieldLabelled(wrapper, 'Amount').vm.$emit('update:focused', false)
+    await flushPromises()
+
+    expect(ingredientPickers(wrapper)[0].props('errorMessages')).toEqual(['Pick an ingredient'])
+  })
+
+  it('flags a newly added blank row once Save is pressed', async () => {
+    const wrapper = mountForm()
+    wrapper.vm.form.name = 'My Recipe'
+    wrapper.vm.addIngredient()
+
+    await wrapper.vm.submit()
+    await flushPromises()
+
+    expect(ingredientPickers(wrapper)[0].props('errorMessages')).toEqual(['Pick an ingredient'])
+    expect(banner(wrapper).text()).toContain('1 problem needs fixing before saving')
+  })
+
+  it('lists every problem on one Save, and clears each as soon as it is fixed', async () => {
+    const wrapper = mountForm()
+    const store = useRecipeStore()
+    vi.spyOn(store, 'createRecipe')
+    wrapper.vm.addIngredient()
+    wrapper.vm.addStep()
+
+    await wrapper.vm.submit()
+    await flushPromises()
+
+    expect(store.createRecipe).not.toHaveBeenCalled()
+    const text = banner(wrapper).text()
+    expect(text).toContain('3 problems need fixing before saving')
+    expect(text).toContain('Recipe name — Required')
+    expect(text).toContain('Ingredient 1 — Pick an ingredient')
+    expect(text).toContain('Step 1 — Required')
+
+    wrapper.vm.form.name = 'My Recipe'
+    await flushPromises()
+    expect(fieldLabelled(wrapper, 'Recipe name').props('errorMessages')).toEqual([])
+    expect(banner(wrapper).text()).toContain('2 problems need fixing before saving')
+  })
+
+  async function mountEditing(detail = makeRecipeDetail({ id: 'r1' })) {
+    vi.spyOn(useRecipeStore(), 'fetchRecipe').mockResolvedValue(detail)
+    const wrapper = mountForm({ id: 'r1' })
+    await flushPromises()
+    return wrapper
+  }
+
+  it('flags clearing the name only once the field is left', async () => {
+    const wrapper = await mountEditing()
+    wrapper.vm.form.name = ''
+    await flushPromises()
+    expect(fieldLabelled(wrapper, 'Recipe name').props('errorMessages')).toEqual([])
+
+    fieldLabelled(wrapper, 'Recipe name').vm.$emit('update:focused', false)
+    await flushPromises()
+    expect(fieldLabelled(wrapper, 'Recipe name').props('errorMessages')).toEqual(['Required'])
+  })
+
+  it('flags an over-long description only after a Save attempt, even once it is left', async () => {
+    const wrapper = await mountEditing()
+    const description = () => wrapper.findAllComponents({ name: 'VTextarea' })
+      .find(t => t.props('label') === 'Description (optional)')
+
+    wrapper.vm.form.description = 'x'.repeat(2001)
+    description().vm.$emit('update:focused', false)
+    await flushPromises()
+    expect(description().props('errorMessages')).toEqual([])
+
+    await wrapper.vm.submit()
+    await flushPromises()
+    expect(description().props('errorMessages')).toEqual(['Must be 2000 characters or fewer'])
+  })
+
+  it('flags notes loaded over the limit as soon as the recipe opens', async () => {
+    const detail = makeRecipeDetail({ id: 'r1' })
+    detail.ingredients[0].notes = 'x'.repeat(501)
+    const wrapper = await mountEditing(detail)
+
+    expect(fieldLabelled(wrapper, 'Notes').props('errorMessages')).toEqual(['Must be 500 characters or fewer'])
   })
 })
 
@@ -135,7 +239,6 @@ describe('RecipeFormView — edit mode', () => {
     await wrapper.vm.$nextTick()
 
     vi.spyOn(recipeStore, 'updateRecipe').mockResolvedValue(makeRecipeDetail({ id: 'r1' }))
-    wrapper.vm.formRef = { validate: vi.fn().mockResolvedValue({ valid: true }) }
 
     await wrapper.vm.submit()
 
@@ -156,7 +259,6 @@ describe('RecipeFormView — edit mode', () => {
 
     wrapper.vm.form.ingredients[0].amount = ''
     vi.spyOn(recipeStore, 'updateRecipe').mockResolvedValue(makeRecipeDetail({ id: 'r1' }))
-    wrapper.vm.formRef = { validate: vi.fn().mockResolvedValue({ valid: true }) }
 
     await wrapper.vm.submit()
 
@@ -178,7 +280,6 @@ describe('RecipeFormView — edit mode', () => {
     expect(unitSelect.props('placeholder')).toBe('pcs')
 
     vi.spyOn(recipeStore, 'updateRecipe').mockResolvedValue(makeRecipeDetail({ id: 'r1' }))
-    wrapper.vm.formRef = { validate: vi.fn().mockResolvedValue({ valid: true }) }
     await wrapper.vm.submit()
 
     const [, payload] = recipeStore.updateRecipe.mock.calls[0]
@@ -238,7 +339,6 @@ describe('RecipeFormView — edit mode', () => {
     async function submittedRow(wrapper) {
       const recipeStore = useRecipeStore()
       vi.spyOn(recipeStore, 'updateRecipe').mockResolvedValue(makeRecipeDetail({ id: 'r1' }))
-      wrapper.vm.formRef = { validate: vi.fn().mockResolvedValue({ valid: true }) }
       await wrapper.vm.submit()
       return recipeStore.updateRecipe.mock.calls[0][1].ingredients[0]
     }
@@ -305,7 +405,6 @@ describe('RecipeFormView — edit mode', () => {
     await wrapper.vm.$nextTick()
 
     vi.spyOn(recipeStore, 'updateRecipe').mockResolvedValue(makeRecipeDetail({ id: 'r1' }))
-    wrapper.vm.formRef = { validate: vi.fn().mockResolvedValue({ valid: true }) }
 
     await wrapper.vm.submit()
 

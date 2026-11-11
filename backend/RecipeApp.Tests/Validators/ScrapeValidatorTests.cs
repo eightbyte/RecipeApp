@@ -246,9 +246,17 @@ public class ScrapeValidatorTests
     }
 
     [Fact]
-    public void Ingredient_OverlongNotes_HasErrorOnNotes()
+    public void Ingredient_NotesAtTheRecipeLimit_HasNoErrorOnNotes()
     {
-        var result = _ingredientValidator.TestValidate(Ingredient() with { Notes = new string('x', 201) });
+        // Edit allows 500, so a scrape must too, or the preview would refuse notes the recipe form accepts.
+        var result = _ingredientValidator.TestValidate(Ingredient() with { Notes = new string('x', 500) });
+        result.ShouldNotHaveValidationErrorFor(x => x.Notes);
+    }
+
+    [Fact]
+    public void Ingredient_NotesOverTheRecipeLimit_HasErrorOnNotes()
+    {
+        var result = _ingredientValidator.TestValidate(Ingredient() with { Notes = new string('x', 501) });
         result.ShouldHaveValidationErrorFor(x => x.Notes);
     }
 
@@ -266,6 +274,53 @@ public class ScrapeValidatorTests
     {
         var result = _confirmValidator.TestValidate(ConfirmRequest() with { Name = "" });
         result.ShouldHaveValidationErrorFor(x => x.Name);
+    }
+
+    [Fact]
+    public void Confirm_NameOverTheRecipeLimit_HasErrorOnName()
+    {
+        var result = _confirmValidator.TestValidate(ConfirmRequest() with { Name = new string('x', 201) });
+        result.ShouldHaveValidationErrorFor(x => x.Name);
+    }
+
+    [Fact]
+    public void Confirm_DescriptionAtTheRecipeLimit_HasNoErrorOnDescription()
+    {
+        var result = _confirmValidator.TestValidate(ConfirmRequest() with { Description = new string('x', 2000) });
+        result.ShouldNotHaveValidationErrorFor(x => x.Description);
+    }
+
+    [Fact]
+    public void Confirm_DescriptionOverTheRecipeLimit_HasErrorOnDescription()
+    {
+        // A scrape that saved a description Edit refuses would leave a recipe that can never be saved again.
+        var result = _confirmValidator.TestValidate(ConfirmRequest() with { Description = new string('x', 2001) });
+        result.ShouldHaveValidationErrorFor(x => x.Description);
+    }
+
+    [Fact]
+    public void Confirm_NoDescription_HasNoErrorOnDescription()
+    {
+        var result = _confirmValidator.TestValidate(ConfirmRequest() with { Description = null });
+        result.ShouldNotHaveValidationErrorFor(x => x.Description);
+    }
+
+    [Fact]
+    public void Confirm_StepInstructionAtTheRecipeLimit_HasNoErrorOnThatStep()
+    {
+        var result = _confirmValidator.TestValidate(
+            ConfirmRequest() with { Steps = [new ScrapeConfirmStepRequest(1, new string('x', 2000), [0])] });
+
+        result.ShouldNotHaveValidationErrorFor("Steps[0].Instruction");
+    }
+
+    [Fact]
+    public void Confirm_StepInstructionOverTheRecipeLimit_HasErrorOnThatStep()
+    {
+        var result = _confirmValidator.TestValidate(
+            ConfirmRequest() with { Steps = [new ScrapeConfirmStepRequest(1, new string('x', 2001), [0])] });
+
+        result.ShouldHaveValidationErrorFor("Steps[0].Instruction");
     }
 
     [Fact]

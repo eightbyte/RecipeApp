@@ -263,6 +263,14 @@ describe('RecipeFormView — edit mode', () => {
       expect(wrapper.vm.form.ingredients[0]).toMatchObject({ amount: 150, unit: 'g' })
     })
 
+    it('rounds a row with no entry unit to 2 decimals, and saves the rounded amount', async () => {
+      const detail = importedFeta()
+      detail.ingredients[0] = { ...detail.ingredients[0], amount: 236.588, unit: 'ml', entryUnit: null }
+      const wrapper = await mountEditing(detail)
+      expect(wrapper.vm.form.ingredients[0].amount).toBe(236.59)
+      expect(await submittedRow(wrapper)).toMatchObject({ amount: 236.59, unit: 'ml' })
+    })
+
     it('clears the source when the row is changed to a storable unit', async () => {
       const wrapper = await mountEditing(importedFeta())
       unitSelect(wrapper).vm.$emit('update:modelValue', 'g')

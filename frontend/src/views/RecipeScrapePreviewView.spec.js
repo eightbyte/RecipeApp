@@ -99,6 +99,61 @@ describe('RecipeScrapePreviewView', () => {
     expect(categorySelects.length).toBe(1)
   })
 
+  it('labels the Category select with the category titles', async () => {
+    const { wrapper } = await mountView()
+    const categorySelect = wrapper.findAllComponents({ name: 'VSelect' })
+      .find(s => s.props('label') === 'Category')
+
+    expect(categorySelect.props('items')).toContainEqual(
+      expect.objectContaining({ value: 'GRAINS_RICE', title: 'Grains & Rice' }))
+    expect(categorySelect.text()).toContain('Produce')
+  })
+
+  it('opens a row converted from an entry-only unit in that unit', async () => {
+    const preview = makePreview()
+    Object.assign(preview.ingredients[0], {
+      amount: 453.592, unit: 'g', sourceAmount: 1, sourceUnit: 'lb', entryUnit: 'lb',
+    })
+    const { wrapper } = await mountView(preview)
+
+    const amountField = wrapper.findAllComponents({ name: 'VTextField' })
+      .filter(f => f.props('label') === 'Amount')[0]
+    const unitSelect = wrapper.findAllComponents({ name: 'VSelect' })
+      .filter(s => s.props('label') === 'Unit')[0]
+    expect(amountField.props('modelValue')).toBe(1)
+    expect(unitSelect.props('modelValue')).toBe('lb')
+  })
+
+  it('saves a row opened in its entry unit with the source measurement kept', async () => {
+    const preview = makePreview()
+    Object.assign(preview.ingredients[0], {
+      amount: 453.592, unit: 'g', sourceAmount: 1, sourceUnit: 'pound', entryUnit: 'lb',
+    })
+    const { wrapper, store } = await mountView(preview)
+    const confirmSpy = vi.spyOn(store, 'confirmScrape').mockResolvedValue('new-id')
+
+    await saveButton(wrapper).trigger('click')
+    await flushPromises()
+
+    expect(confirmSpy.mock.calls[0][0].ingredients[0]).toMatchObject({
+      amount: 1, unit: 'lb', sourceAmount: 1, sourceUnit: 'pound',
+    })
+  })
+
+  it('rounds a row with no entry unit to 2 decimals, and saves the rounded amount', async () => {
+    const preview = makePreview()
+    Object.assign(preview.ingredients[0], {
+      amount: 236.588, unit: 'ml', sourceAmount: 1, sourceUnit: 'cup', entryUnit: null,
+    })
+    const { wrapper, store } = await mountView(preview)
+    const confirmSpy = vi.spyOn(store, 'confirmScrape').mockResolvedValue('new-id')
+
+    await saveButton(wrapper).trigger('click')
+    await flushPromises()
+
+    expect(confirmSpy.mock.calls[0][0].ingredients[0]).toMatchObject({ amount: 236.59, unit: 'ml' })
+  })
+
   it('renders the unit as a select over the grouped picker units, one per ingredient', async () => {
     const { wrapper } = await mountView()
     const unitSelects = wrapper.findAllComponents({ name: 'VSelect' })
@@ -137,7 +192,7 @@ describe('RecipeScrapePreviewView', () => {
     await flushPromises()
 
     expect(confirmSpy.mock.calls[0][0].ingredients[0]).toMatchObject({
-      amount: 113.398, unit: 'g', sourceAmount: 4, sourceUnit: 'ounces',
+      amount: 113.4, unit: 'g', sourceAmount: 4, sourceUnit: 'ounces',
     })
   })
 

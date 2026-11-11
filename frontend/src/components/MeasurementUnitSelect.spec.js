@@ -55,11 +55,11 @@ describe('MeasurementUnitSelect', () => {
     expect(select(wrapper).props('modelValue')).toBe('g')
   })
 
-  it('can be cleared, and then reads as a count', async () => {
-    // An amount with no unit saves as pcs.
+  it('offers no clear button, and reads an empty unit as a count', async () => {
+    // An amount with no unit saves as pcs, and the clear icon squeezed the label to "U." on a phone.
     const wrapper = mountSelect({ modelValue: null })
     const field   = select(wrapper)
-    expect(field.props('clearable')).toBe(true)
+    expect(field.props('clearable')).toBe(false)
     expect(field.props('placeholder')).toBe('pcs')
     expect(field.props('persistentPlaceholder')).toBe(true)
   })

@@ -496,6 +496,7 @@ public class RecipeScrapeService(
                 Unit:              unit,
                 SourceAmount:      sourceAmount,
                 SourceUnit:        sourceUnit,
+                EntryUnit:         null,
                 Notes:             notes,
                 IsNew:             true,
                 SuggestedCategory: CategoriseIngredient(normalisedName),
@@ -615,7 +616,13 @@ public class RecipeScrapeService(
             Description: string.IsNullOrWhiteSpace(extracted.Description) ? null : extracted.Description.Trim(),
             Servings:    extracted.Servings > 0 ? extracted.Servings : 4,
             SourceUrl:   url,
-            Ingredients: previewIngredients,
+            // Named once every row is final, because matching can resolve a row's measurement against a density.
+            Ingredients: previewIngredients
+                .Select(row => row with
+                {
+                    EntryUnit = MeasurementConverter.EntryUnitOf(row.Amount, row.Unit, row.SourceAmount, row.SourceUnit),
+                })
+                .ToList(),
             Steps:       previewSteps
         );
     }

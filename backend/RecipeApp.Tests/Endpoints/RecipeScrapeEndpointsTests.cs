@@ -46,6 +46,7 @@ public class RecipeScrapeEndpointsTests(DatabaseFixture db) : IAsyncLifetime
                 Unit:              "g",
                 SourceAmount:      500m,
                 SourceUnit:        "g",
+                EntryUnit:         null,
                 Notes:             null,
                 IsNew:             true,
                 SuggestedCategory: IngredientCategory.MeatSeafood,

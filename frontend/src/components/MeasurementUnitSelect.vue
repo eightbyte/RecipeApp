@@ -5,7 +5,6 @@
     label="Unit"
     density="compact"
     hide-details
-    clearable
     :placeholder="countPlaceholder"
     :persistent-placeholder="!!countPlaceholder"
     :disabled="!hasAmount(amount)"

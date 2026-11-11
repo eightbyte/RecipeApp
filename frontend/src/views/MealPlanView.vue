@@ -16,12 +16,13 @@
 
     <!-- ── Active plan header ───────────────────────────────────────────── -->
     <div v-else-if="mealPlanStore.activePlan">
-      <div class="d-flex align-center justify-space-between mb-6">
-        <div>
+      <!-- On a phone the Shopping list button wraps below the title, so the title keeps its line. -->
+      <div class="d-flex flex-wrap align-center ga-1 mb-6">
+        <div class="flex-grow-1 order-1">
           <h1 class="text-h6 font-weight-bold mb-2">{{ mealPlanStore.activePlan.name }}</h1>
           <div class="text-caption text-medium-emphasis">Active plan</div>
         </div>
-        <div class="d-flex align-center ga-1">
+        <div class="order-3 order-sm-2" :class="{ 'w-100 mt-2': xs }">
           <v-btn
             color="primary"
             variant="tonal"
@@ -31,27 +32,28 @@
           >
             Shopping list
           </v-btn>
-
-          <!-- Plan-level overflow menu -->
-          <v-menu>
-            <template #activator="{ props: menuProps }">
-              <v-btn
-                icon="mdi-dots-vertical"
-                variant="text"
-                size="small"
-                aria-label="Plan options"
-                v-bind="menuProps"
-              />
-            </template>
-            <v-list>
-              <v-list-item
-                prepend-icon="mdi-calendar-plus"
-                title="Start new plan"
-                @click="startNewPlan"
-              />
-            </v-list>
-          </v-menu>
         </div>
+
+        <!-- Plan-level overflow menu -->
+        <v-menu>
+          <template #activator="{ props: menuProps }">
+            <v-btn
+              icon="mdi-dots-vertical"
+              variant="text"
+              size="small"
+              aria-label="Plan options"
+              class="order-2 order-sm-3"
+              v-bind="menuProps"
+            />
+          </template>
+          <v-list>
+            <v-list-item
+              prepend-icon="mdi-calendar-plus"
+              title="Start new plan"
+              @click="startNewPlan"
+            />
+          </v-list>
+        </v-menu>
       </div>
 
       <!-- Meal list (pre-sorted by API: dated first ascending, then undated by order) -->
@@ -112,6 +114,7 @@
 <script setup>
 import { ref, onMounted } from 'vue'
 import { onBeforeRouteLeave, useRouter } from 'vue-router'
+import { useDisplay } from 'vuetify'
 import { useMealPlanStore } from '@/stores/mealPlans'
 import { useUiStore } from '@/stores/ui'
 import PlannedMealCard from '@/components/PlannedMealCard.vue'
@@ -122,6 +125,7 @@ import ErrorState from '@/components/ErrorState.vue'
 const router        = useRouter()
 const mealPlanStore = useMealPlanStore()
 const ui            = useUiStore()
+const { xs }        = useDisplay()
 
 const browserOpen = ref(false)
 

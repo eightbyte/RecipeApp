@@ -1,5 +1,5 @@
 <template>
-  <v-container class="pa-4" max-width="600">
+  <v-container class="pa-2 pa-sm-4" max-width="600">
     <h1 class="text-h6 font-weight-bold mb-6">
       {{ isEdit ? 'Edit Recipe' : 'New Recipe' }}
     </h1>
@@ -7,7 +7,7 @@
     <v-form ref="formRef" @submit.prevent="submit">
 
       <!-- ── Basic info ──────────────────────────────────────────────── -->
-      <v-card class="mb-6 pa-4">
+      <v-card class="mb-6 pa-3 pa-sm-4">
         <div class="text-subtitle-2 text-medium-emphasis mb-4">Basic Info</div>
 
         <v-text-field
@@ -45,7 +45,7 @@
       </v-card>
 
       <!-- ── Image ────────────────────────────────────────────────────── -->
-      <v-card class="mb-6 pa-4">
+      <v-card class="mb-6 pa-3 pa-sm-4">
         <div class="text-subtitle-2 text-medium-emphasis mb-4">Photo</div>
 
         <v-img
@@ -70,7 +70,7 @@
       </v-card>
 
       <!-- ── Ingredients ────────────────────────────────────────────── -->
-      <v-card class="mb-6 pa-4">
+      <v-card class="mb-6 pa-3 pa-sm-4">
         <div class="d-flex align-center justify-space-between mb-4">
           <div class="text-subtitle-2 text-medium-emphasis">Ingredients</div>
           <v-btn
@@ -120,7 +120,7 @@
               </template>
             </v-autocomplete>
 
-            <div class="d-flex ga-2">
+            <div class="d-flex flex-wrap flex-sm-nowrap ga-2">
               <v-text-field
                 v-model.number="ing.amount"
                 label="Amount"
@@ -129,11 +129,12 @@
                 step="0.5"
                 density="compact"
                 hide-details
-                style="max-width: 100px"
+                :style="rowFieldStyles.amount"
               />
               <MeasurementUnitSelect
                 :model-value="ing.unit"
                 :amount="ing.amount"
+                :style="rowFieldStyles.unit"
                 @update:model-value="setIngredientUnit(ing, $event)"
               />
               <v-text-field
@@ -142,7 +143,7 @@
                 density="compact"
                 hide-details
                 placeholder="e.g. diced"
-                class="flex-grow-1"
+                :class="rowFieldStyles.notesClass"
               />
             </div>
           </div>
@@ -163,7 +164,7 @@
       </v-card>
 
       <!-- ── Steps ─────────────────────────────────────────────────── -->
-      <v-card class="mb-6 pa-4">
+      <v-card class="mb-6 pa-3 pa-sm-4">
         <div class="d-flex align-center justify-space-between mb-4">
           <div class="text-subtitle-2 text-medium-emphasis">Steps</div>
           <v-btn
@@ -314,6 +315,7 @@ import {
   MEASUREMENT_UNITS, DEFAULT_UNIT, setIngredientUnit, toFormMeasurement, toPayloadMeasurement,
 } from '@/constants/units'
 import MeasurementUnitSelect from '@/components/MeasurementUnitSelect.vue'
+import { useIngredientRowLayout } from '@/composables/useIngredientRowLayout'
 
 const props = defineProps({ id: { type: String, default: null } })
 const route  = useRoute()
@@ -325,6 +327,8 @@ const ingredientStore = useIngredientStore()
 const isEdit = computed(() => !!(props.id || route.params.id))
 
 const units = MEASUREMENT_UNITS
+
+const rowFieldStyles = useIngredientRowLayout({ amountWidth: '100px' })
 
 // ── Form state ─────────────────────────────────────────────────────────────
 const formRef    = ref(null)

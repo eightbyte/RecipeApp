@@ -134,6 +134,15 @@
             />
           </div>
 
+          <div
+            v-for="message in validation.messagesFor('ingredient', idx, 'unit')"
+            :key="message"
+            class="text-caption text-error pl-3 pl-sm-6 mb-2"
+            data-test="unit-problem"
+          >
+            {{ message }}
+          </div>
+
           <div class="d-flex flex-wrap flex-sm-nowrap ga-2 pl-3 pl-sm-6">
             <v-text-field
               v-model.number="ing.amount"
@@ -151,7 +160,7 @@
               :model-value="ing.unit"
               :amount="ing.amount"
               :requires-unit="!!ing.unstorableUnit"
-              :error-messages="validation.messagesFor('ingredient', idx, 'unit')"
+              :error="validation.messagesFor('ingredient', idx, 'unit').length > 0"
               :style="rowLayout.unit"
               @update:model-value="setIngredientUnit(ing, $event)"
               @update:focused="validation.leaveOnBlur($event, 'unit', ing)"

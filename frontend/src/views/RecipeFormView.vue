@@ -260,12 +260,8 @@
       </v-alert>
 
       <div class="d-flex ga-4">
-        <v-btn
-          variant="outlined"
-          :to="isEdit ? { name: 'recipe-detail', params: { id: route.params.id } } : { name: 'recipes' }"
-        >
-          Cancel
-        </v-btn>
+        <v-btn v-if="isEdit" variant="outlined" @click="returnToRecipe(recipeId)">Cancel</v-btn>
+        <v-btn v-else variant="outlined" :to="{ name: 'recipes' }" replace>Cancel</v-btn>
         <v-btn
           type="submit"
           color="primary"
@@ -346,7 +342,8 @@ const router = useRouter()
 const recipeStore     = useRecipeStore()
 const ingredientStore = useIngredientStore()
 
-const isEdit = computed(() => !!(props.id || route.params.id))
+const recipeId = computed(() => props.id ?? route.params.id)
+const isEdit   = computed(() => !!recipeId.value)
 
 const units = MEASUREMENT_UNITS
 
@@ -388,8 +385,7 @@ onMounted(async () => {
   await ingredientStore.fetchCategories()
 
   if (isEdit.value) {
-    const id = props.id ?? route.params.id
-    const recipe = await recipeStore.fetchRecipe(id)
+    const recipe = await recipeStore.fetchRecipe(recipeId.value)
     if (recipe) populateForm(recipe)
   }
 })
@@ -537,8 +533,7 @@ async function submit() {
 
     let saved
     if (isEdit.value) {
-      const id = props.id ?? route.params.id
-      saved = await recipeStore.updateRecipe(id, payload)
+      saved = await recipeStore.updateRecipe(recipeId.value, payload)
     } else {
       saved = await recipeStore.createRecipe(payload)
     }
@@ -549,11 +544,20 @@ async function submit() {
       if (file) await recipeStore.uploadImage(saved.id, file)
     }
 
-    router.push({ name: 'recipe-detail', params: { id: saved.id } })
+    if (isEdit.value) returnToRecipe(saved.id)
+    else router.replace({ name: 'recipe-detail', params: { id: saved.id } })
   } catch (e) {
     submitError.value = e.message ?? 'Something went wrong. Please try again.'
   } finally {
     saving.value = false
   }
+}
+
+/** Leaves the edit form for its recipe: back when the recipe is the page before, so history keeps one copy of it, and otherwise in place of the form. */
+function returnToRecipe(id) {
+  const back     = router.options.history.state.back
+  const previous = back && router.resolve(back)
+  if (previous?.name === 'recipe-detail' && previous.params.id === id) router.back()
+  else router.replace({ name: 'recipe-detail', params: { id } })
 }
 </script>

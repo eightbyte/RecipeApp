@@ -341,4 +341,33 @@ public class RecipeJsonLdExtractorTests
         text.Should().Contain("Recipe Name: Wrapped Text Recipe");
         text.Should().Contain("Finely dice the celery, carrot and onion, then finely grate the garlic.");
     }
+
+    [Fact]
+    public async Task StepLines_GoUnderTheirStep_CountingStepsButNotSectionHeadings()
+    {
+        var html = """
+            <html><body><script type="application/ld+json">
+            {
+              "@type": "Recipe",
+              "name": "Sectioned",
+              "recipeIngredient": ["salt", "oil"],
+              "recipeInstructions": [
+                { "@type": "HowToSection", "name": "Sauce", "itemListElement": [
+                  { "@type": "HowToStep", "text": "Warm the oil." },
+                  { "@type": "HowToStep", "text": "Add the salt." }
+                ] }
+              ]
+            }
+            </script></body></html>
+            """;
+        var doc = await new HtmlParser().ParseDocumentAsync(html);
+        var stepLines = new Dictionary<int, IReadOnlyList<string>> { [2] = ["½ tsp salt"] };
+
+        var text = RecipeJsonLdExtractor.TryBuildRecipeText(doc, stepLines);
+
+        text.Should().Contain(
+            $"3. Add the salt.\n   {RecipeJsonLdExtractor.StepLinesHeading}\n   - ½ tsp salt".ReplaceLineEndings());
+        text!.IndexOf(RecipeJsonLdExtractor.StepLinesHeading, StringComparison.Ordinal)
+            .Should().BeGreaterThan(text.IndexOf("Add the salt", StringComparison.Ordinal));
+    }
 }

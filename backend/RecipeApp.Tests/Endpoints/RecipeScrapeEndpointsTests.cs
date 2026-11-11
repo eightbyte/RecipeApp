@@ -50,7 +50,9 @@ public class RecipeScrapeEndpointsTests(DatabaseFixture db) : IAsyncLifetime
                 Notes:             null,
                 IsNew:             true,
                 SuggestedCategory: IngredientCategory.MeatSeafood,
-                DisplayOrder:      0)
+                DisplayOrder:      0,
+                AmountFromSteps:   false,
+                StepAmounts:       [])
         ],
         Steps:
         [

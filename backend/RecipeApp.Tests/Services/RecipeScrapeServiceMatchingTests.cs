@@ -31,6 +31,7 @@ public class RecipeScrapeServiceMatchingTests(DatabaseFixture db) : IAsyncLifeti
             db: db.CreateDbContext(),
             headlessRenderer: null!,      // not used in NormaliseAsync
             measurementConverter: new MeasurementConverter(Options.Create(new MeasurementOptions())),
+            siteReaders: [],
             logger: NullLogger<RecipeScrapeService>.Instance);
     }
 

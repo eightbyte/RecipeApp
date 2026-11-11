@@ -153,6 +153,67 @@ describe('RecipeScrapePreviewView', () => {
     })
   })
 
+  describe('amounts from steps', () => {
+    const stepAmountHint = wrapper => wrapper.findAll('[data-test="step-amounts"]')
+
+    it('shows the step amounts a filled row was added up from', async () => {
+      const preview = makePreview()
+      Object.assign(preview.ingredients[0], {
+        amount: 1, unit: 'tsp', amountFromSteps: true,
+        stepAmounts: [{ amount: 0.5, unit: 'tsp' }, { amount: 0.5, unit: 'tsp' }],
+      })
+      const { wrapper } = await mountView(preview)
+
+      const hints = stepAmountHint(wrapper)
+      expect(hints).toHaveLength(1)
+      expect(hints[0].text()).toBe('From steps: 0.5 tsp + 0.5 tsp')
+    })
+
+    it('asks for a total on a row whose step amounts could not be added up', async () => {
+      const preview = makePreview()
+      Object.assign(preview.ingredients[0], {
+        amount: null, unit: null, amountFromSteps: false,
+        stepAmounts: [{ amount: 1, unit: 'tbsp' }, { amount: 10, unit: 'g' }],
+      })
+      const { wrapper } = await mountView(preview)
+
+      expect(stepAmountHint(wrapper)[0].text()).toBe('Steps say 1 tbsp + 10 g. Enter the total.')
+    })
+
+    it('names a Sizeless Unit stated with no amount by its word', async () => {
+      const preview = makePreview()
+      Object.assign(preview.ingredients[0], {
+        amount: null, unit: null, sourceUnit: 'pinch', amountFromSteps: true,
+        stepAmounts: [{ amount: null, unit: 'pinch' }, { amount: 1, unit: 'pinch' }],
+      })
+      const { wrapper } = await mountView(preview)
+
+      expect(stepAmountHint(wrapper)[0].text()).toBe('From steps: pinch + 1 pinch')
+    })
+
+    it('shows no hint on rows whose list stated the amount', async () => {
+      const { wrapper } = await mountView()
+
+      expect(stepAmountHint(wrapper)).toHaveLength(0)
+    })
+
+    it('never sends the hint on save', async () => {
+      const preview = makePreview()
+      Object.assign(preview.ingredients[0], {
+        amount: 1, unit: 'tsp', amountFromSteps: true, stepAmounts: [{ amount: 1, unit: 'tsp' }],
+      })
+      const { wrapper, store } = await mountView(preview)
+      const confirmSpy = vi.spyOn(store, 'confirmScrape').mockResolvedValue('new-id')
+
+      await saveButton(wrapper).trigger('click')
+      await flushPromises()
+
+      const sent = confirmSpy.mock.calls[0][0].ingredients[0]
+      expect(sent).not.toHaveProperty('amountFromSteps')
+      expect(sent).not.toHaveProperty('stepAmounts')
+    })
+  })
+
   it('rounds a row with no entry unit to 2 decimals, and saves the rounded amount', async () => {
     const preview = makePreview()
     Object.assign(preview.ingredients[0], {

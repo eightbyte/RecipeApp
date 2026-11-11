@@ -136,6 +136,10 @@ Turning one external source, such as a web page, into a draft recipe that the us
 confirms before it is saved.
 _Avoid_: Parse, extract, import (for a single page)
 
+**Site Reader**:
+A reader for one site's own page data, adding detail its JSON-LD leaves out.
+_Avoid_: Adapter, plugin, template, scraper
+
 **Import**:
 Loading a Recipe Pack whose recipes are already structured, with no review step.
 _Avoid_: Scrape (for a pack), seed (as a user action)

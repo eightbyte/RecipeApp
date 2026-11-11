@@ -56,6 +56,7 @@ builder.Services.AddScoped<IRecipeScrapeService, RecipeScrapeService>();
 builder.Services.AddScoped<MealPlanService>();
 builder.Services.AddScoped<ShoppingListService>();
 builder.Services.AddSingleton<MeasurementConverter>();
+builder.Services.AddSingleton<ISiteReader, MealimeSiteReader>();
 
 // ── Measurement handling ──────────────────────────────────────────────────────
 builder.Services.Configure<MeasurementOptions>(

@@ -147,6 +147,15 @@
             />
           </div>
 
+          <div
+            v-if="ing.stepAmounts.length"
+            class="d-flex align-center ga-1 text-caption text-medium-emphasis pl-3 pl-sm-6 mt-1"
+            data-test="step-amounts"
+          >
+            <v-icon icon="mdi-format-list-numbered" size="x-small" />
+            <span>{{ stepAmountsHint(ing) }}</span>
+          </div>
+
           <!-- Category selector for new ingredients -->
           <div v-if="ing.isNew" class="pl-3 pl-sm-6 mt-2">
             <v-select
@@ -267,7 +276,7 @@ import { useRouter } from 'vue-router'
 import { useRecipeStore } from '@/stores/recipes'
 import { useIngredientStore } from '@/stores/ingredients'
 import {
-  DEFAULT_UNIT, isPickableUnit, setIngredientUnit, toFormMeasurement, toPayloadMeasurement,
+  DEFAULT_UNIT, formatMeasurement, isPickableUnit, setIngredientUnit, toFormMeasurement, toPayloadMeasurement,
 } from '@/constants/units'
 import { MIN_SERVINGS, MAX_SERVINGS } from '@/constants/recipeLimits'
 import MeasurementUnitSelect from '@/components/MeasurementUnitSelect.vue'
@@ -342,6 +351,9 @@ onMounted(() => {
       notes:          ing.notes ?? '',
       isNew:          ing.isNew,
       category:       ing.suggestedCategory,
+      // Shown on the preview only and never sent, so a confirmed recipe looks the same as one whose list stated the amounts.
+      amountFromSteps: ing.amountFromSteps ?? false,
+      stepAmounts:     ing.stepAmounts ?? [],
     }
   })
 
@@ -368,9 +380,19 @@ function addIngredient() {
     notes:          '',
     isNew:          false,
     category:       null,
+    amountFromSteps: false,
+    stepAmounts:     [],
   }
   form.ingredients.push(row)
   validation.markFresh(row)
+}
+
+/** The amounts a row's steps state, as the hint under it lists them, where a Sizeless Unit stated with no amount shows its word. */
+function stepAmountsHint(ing) {
+  const amounts = ing.stepAmounts
+    .map(({ amount, unit }) => formatMeasurement(amount, unit) ?? unit)
+    .join(' + ')
+  return ing.amountFromSteps ? `From steps: ${amounts}` : `Steps say ${amounts}. Enter the total.`
 }
 
 function addStep() {

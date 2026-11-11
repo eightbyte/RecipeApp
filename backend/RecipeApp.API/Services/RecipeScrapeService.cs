@@ -25,6 +25,7 @@ public class RecipeScrapeService(
     AppDbContext db,
     IHeadlessRenderer headlessRenderer,
     MeasurementConverter measurementConverter,
+    IEnumerable<ISiteReader> siteReaders,
     ILogger<RecipeScrapeService> logger) : IRecipeScrapeService
 {
     private readonly RecipeScrapingOptions _options = options.Value;
@@ -109,6 +110,43 @@ public class RecipeScrapeService(
         }
         """;
 
+    /// <summary>The scrape's own schema: <c>RecipeSchemaJson</c> plus the amounts each step states, kept apart so the seed normaliser's output is unchanged.</summary>
+    internal static readonly string ScrapeSchemaJson = WithStatedAmounts(RecipeSchemaJson);
+
+    private static string WithStatedAmounts(string recipeSchemaJson)
+    {
+        var schema = JsonNode.Parse(recipeSchemaJson)!;
+        var step   = schema["properties"]!["steps"]!["items"]!;
+
+        step["properties"]!["stated_amounts"] = JsonNode.Parse($$"""
+            {
+              "type": "array",
+              "description": "Every amount this step states for an ingredient, in its own text or in the lines under its '{{RecipeJsonLdExtractor.StepLinesHeading}}' heading. Empty when it states none.",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "ingredient_index": {
+                    "type": "integer",
+                    "description": "0-based index into the ingredients array of the ingredient the amount is for."
+                  },
+                  "amount": {
+                    "type": ["number", "null"],
+                    "description": "Numeric quantity exactly as the step states it. Null when the step names a unit with no number (e.g. 'a pinch')."
+                  },
+                  "unit": {
+                    "type": ["string", "null"],
+                    "description": "Unit as the step states it; do not convert. Null for a plain count (e.g. '2 eggs')."
+                  }
+                },
+                "required": ["ingredient_index", "amount", "unit"]
+              }
+            }
+            """);
+        step["required"]!.AsArray().Add("stated_amounts");
+
+        return schema.ToJsonString();
+    }
+
     // Semantic matching schema for unmatched scraped ingredients
     private const string MatchingSchemaJson = """
         {
@@ -140,6 +178,10 @@ public class RecipeScrapeService(
         "Never invent a quantity: if an ingredient line states no amount, emit null for both amount and unit. " +
         "For a counted ingredient with no unit (e.g. '2 eggs'), emit the amount and a null unit, " +
         "and put a size word such as 'large' in notes rather than in unit. " +
+        "For each step, list in stated_amounts every amount the step states for an ingredient, whether in the step's own text " +
+        $"(e.g. 'drizzle with 2 tbsp oil') or in the lines under its '{RecipeJsonLdExtractor.StepLinesHeading}' heading. " +
+        "Wording with no amount (e.g. 'a drizzle of oil', 'season with salt') states none, so leave it out. " +
+        "A step's instruction is its own text only, without the lines under that heading. " +
         "Respond with a single JSON object conforming to the schema and nothing else.";
 
     // ── Ingredient category heuristic ─────────────────────────────────────────
@@ -284,7 +326,7 @@ public class RecipeScrapeService(
     public async Task<string> FetchAndStripHtmlAsync(string url, CancellationToken ct)
     {
         var html = await FetchHtmlAsync(url, ct);
-        var (text, sufficient) = await ExtractCandidateTextAsync(html);
+        var (text, sufficient) = await ExtractCandidateTextAsync(html, url);
         if (sufficient) return text;
 
         if (!_options.EnableHeadlessFallback) return text;
@@ -293,7 +335,7 @@ public class RecipeScrapeService(
         {
             var renderedHtml = await headlessRenderer.RenderAsync(
                 url, TimeSpan.FromSeconds(_options.HeadlessRenderTimeoutSeconds), ct);
-            var (renderedText, renderedSufficient) = await ExtractCandidateTextAsync(renderedHtml);
+            var (renderedText, renderedSufficient) = await ExtractCandidateTextAsync(renderedHtml, url);
 
             // Prefer the rendered result if it cleared the bar or is simply more substantial than the static fetch.
             if (renderedSufficient || renderedText.Length > text.Length)
@@ -349,16 +391,44 @@ public class RecipeScrapeService(
     }
 
     /// <summary>Tries JSON-LD recipe markup first, falling back to stripped visible body text, and reports whether the result is sufficient for the caller to stop trying.</summary>
-    private async Task<(string Text, bool Sufficient)> ExtractCandidateTextAsync(string html)
+    private async Task<(string Text, bool Sufficient)> ExtractCandidateTextAsync(string html, string url)
     {
         var parser = new HtmlParser();
         var doc    = await parser.ParseDocumentAsync(html);
 
-        var jsonLdText = RecipeJsonLdExtractor.TryBuildRecipeText(doc);
+        // Read before stripping, because stripping removes the scripts a site keeps its page data in.
+        var stepLines = ReadStepLines(doc, url);
+
+        var jsonLdText = RecipeJsonLdExtractor.TryBuildRecipeText(doc, stepLines);
         if (jsonLdText is not null) return (jsonLdText, true);
 
+        // Judged on the page's own text, because a reader's lines alone do not make a thin static fetch readable.
         var strippedText = StripBodyText(doc);
-        return (strippedText, strippedText.Length >= _options.MinStaticContentLength);
+        return (strippedText + RecipeJsonLdExtractor.BuildStepLinesSection(stepLines),
+            strippedText.Length >= _options.MinStaticContentLength);
+    }
+
+    /// <summary>The extra lines per step from the Site Reader for the URL's host, or null when no reader handles it or the reader fails, which never fails the scrape.</summary>
+    private IReadOnlyDictionary<int, IReadOnlyList<string>>? ReadStepLines(IDocument doc, string url)
+    {
+        if (!Uri.TryCreate(url, UriKind.Absolute, out var uri)) return null;
+
+        var reader = siteReaders.FirstOrDefault(r => r.Hosts.Contains(uri.Host, StringComparer.OrdinalIgnoreCase));
+        if (reader is null) return null;
+
+        try
+        {
+            var lines = reader.ReadStepLines(doc);
+            if (lines is null)
+                logger.LogWarning("{Reader} found no page data in the shape it expects on {Url}; scraping without it.",
+                    reader.GetType().Name, url);
+            return lines;
+        }
+        catch (Exception ex)
+        {
+            logger.LogWarning(ex, "{Reader} failed on {Url}; scraping without it.", reader.GetType().Name, url);
+            return null;
+        }
     }
 
     public static async Task<string> StripHtmlAsync(string html)
@@ -402,7 +472,7 @@ public class RecipeScrapeService(
             strippedText = strippedText[.._options.MaxHtmlCharacters];
 
         var userMessage = $"Extract the recipe from the following web page text:\n\n---\n{strippedText}\n---";
-        var schema      = JsonNode.Parse(RecipeSchemaJson)!;
+        var schema      = JsonNode.Parse(ScrapeSchemaJson)!;
 
         using var llmCts    = new CancellationTokenSource(TimeSpan.FromSeconds(_options.LlmTimeoutSeconds));
         using var linkedCts = CancellationTokenSource.CreateLinkedTokenSource(ct, llmCts.Token);
@@ -466,14 +536,17 @@ public class RecipeScrapeService(
             .Where(i => i.GramsPerMillilitre.HasValue)
             .ToDictionary(i => i.Id, i => i.GramsPerMillilitre);
 
+        decimal? DensityOf(Guid? ingredientId) =>
+            ingredientId is { } id && densityById.TryGetValue(id, out var density) ? density : null;
+
         // Stage B: resolve an import-resolvable unit against the matched ingredient's density, leaving an unmatched or unquantified row as stated.
-        ScrapePreviewIngredientResponse ResolveAgainstCatalogue(ScrapePreviewIngredientResponse row, Guid ingredientId)
+        ScrapePreviewIngredientResponse ResolveAgainstCatalogue(ScrapePreviewIngredientResponse row)
         {
+            if (row.IngredientId is null) return row;
             if (row.Amount is not { } statedAmount || row.Unit is not { } statedUnit) return row;
 
-            densityById.TryGetValue(ingredientId, out var density);
             var (resolvedAmount, resolvedUnit) =
-                measurementConverter.ResolveForImport(statedAmount, statedUnit, density);
+                measurementConverter.ResolveForImport(statedAmount, statedUnit, DensityOf(row.IngredientId));
             return row with { Amount = resolvedAmount, Unit = resolvedUnit };
         }
 
@@ -500,7 +573,9 @@ public class RecipeScrapeService(
                 Notes:             notes,
                 IsNew:             true,
                 SuggestedCategory: CategoriseIngredient(normalisedName),
-                DisplayOrder:      i);
+                DisplayOrder:      i,
+                AmountFromSteps:   false,
+                StepAmounts:       []);
 
             if (exactLookup.TryGetValue(normalisedName, out var existingId))
             {
@@ -510,7 +585,6 @@ public class RecipeScrapeService(
                     IsNew             = false,
                     SuggestedCategory = IngredientCategory.Other,
                 };
-                row = ResolveAgainstCatalogue(row, existingId);
             }
             else
             {
@@ -575,14 +649,12 @@ public class RecipeScrapeService(
                         {
                             // Matched to existing catalogue entry
                             var matchedId = candidates[result.CandidateIndex.Value].ing.Id;
-                            previewIngredients[origIdx] = ResolveAgainstCatalogue(
-                                prevIngred with
-                                {
-                                    IngredientId      = matchedId,
-                                    IsNew             = false,
-                                    SuggestedCategory = IngredientCategory.Other,
-                                },
-                                matchedId);
+                            previewIngredients[origIdx] = prevIngred with
+                            {
+                                IngredientId      = matchedId,
+                                IsNew             = false,
+                                SuggestedCategory = IngredientCategory.Other,
+                            };
                         }
                         else
                         {
@@ -605,10 +677,20 @@ public class RecipeScrapeService(
             }
         }
 
+        // Filled once matching is done, because adding a volume to a mass needs the matched Ingredient's density, and before Stage B so a filled cup resolves too.
+        var stepAmounts = StepAmountsByIngredient(extracted, url);
+        for (int i = 0; i < previewIngredients.Count; i++)
+        {
+            var row = previewIngredients[i];
+            if (stepAmounts.TryGetValue(i, out var mentions))
+                row = FillFromSteps(row, extracted.Ingredients[i], mentions, DensityOf(row.IngredientId));
+            previewIngredients[i] = ResolveAgainstCatalogue(row);
+        }
+
         var previewSteps = extracted.Steps
             .OrderBy(s => s.StepNumber)
             .Select(s => new ScrapePreviewStepResponse(
-                s.StepNumber, s.Instruction, DistinctIngredientIndexesInRange(s, previewIngredients.Count, url)))
+                s.StepNumber, WithoutStepLines(s.Instruction), DistinctIngredientIndexesInRange(s, previewIngredients.Count, url)))
             .ToList();
 
         return new ScrapePreviewResponse(
@@ -640,6 +722,87 @@ public class RecipeScrapeService(
                 url, step.StepNumber, string.Join(", ", dropped), ingredientCount - 1);
 
         return kept;
+    }
+
+    /// <summary>A step's instruction without any Site Reader lines the model copied into it, because saved text does not scale with Servings.</summary>
+    private static string WithoutStepLines(string instruction)
+    {
+        var heading = instruction.IndexOf(RecipeJsonLdExtractor.StepLinesHeading, StringComparison.OrdinalIgnoreCase);
+        return heading < 0 ? instruction : instruction[..heading].TrimEnd();
+    }
+
+    // ── Amounts from steps ────────────────────────────────────────────────────
+
+    /// <summary>The amounts every step states, in step order, keyed by the index of the ingredient each is for, keeping only those that state something.</summary>
+    private Dictionary<int, List<StepAmount>> StepAmountsByIngredient(ExtractedRecipe extracted, string url)
+    {
+        var byIngredient = new Dictionary<int, List<StepAmount>>();
+        foreach (var step in extracted.Steps.OrderBy(s => s.StepNumber))
+        {
+            var dropped = new List<int>();
+            foreach (var stated in step.StatedAmounts ?? [])
+            {
+                if (stated.IngredientIndex < 0 || stated.IngredientIndex >= extracted.Ingredients.Count)
+                {
+                    dropped.Add(stated.IngredientIndex);
+                    continue;
+                }
+
+                var amount = stated.Amount is > 0 ? Math.Round((decimal)stated.Amount.Value, 3) : (decimal?)null;
+                var unit   = string.IsNullOrWhiteSpace(stated.Unit) ? null : stated.Unit.Trim();
+                if (amount is null && !SizelessUnit.IsSizeless(unit)) continue;
+
+                if (!byIngredient.TryGetValue(stated.IngredientIndex, out var mentions))
+                    byIngredient[stated.IngredientIndex] = mentions = [];
+                mentions.Add(new StepAmount(amount, unit));
+            }
+
+            if (dropped.Count > 0)
+                logger.LogWarning(
+                    "Scrape of {Url} gave step {StepNumber} amounts for ingredient indexes {DroppedIndexes} outside 0–{LastIndex}; dropped them.",
+                    url, step.StepNumber, string.Join(", ", dropped), extracted.Ingredients.Count - 1);
+        }
+        return byIngredient;
+    }
+
+    /// <summary>
+    /// Fills a row whose list line states nothing, not even a Sizeless Unit, from the total of its step amounts, leaving it
+    /// empty but listing the amounts when they cannot be added up; a row whose line states anything keeps it.
+    /// </summary>
+    private static ScrapePreviewIngredientResponse FillFromSteps(
+        ScrapePreviewIngredientResponse row, ExtractedIngredient ing, List<StepAmount> mentions, decimal? density)
+    {
+        if (row.Amount is not null || row.SourceAmount is not null || row.SourceUnit is not null) return row;
+
+        var withStepAmounts = row with
+        {
+            StepAmounts = mentions.Select(m => new ScrapePreviewStepAmountResponse(m.Amount, m.Unit)).ToList(),
+        };
+
+        switch (StepAmountTotaller.Total(mentions, row.Name, density))
+        {
+            case StepAmountTotal.InSharedUnit shared:
+                // Read like a stated line, so a Count Word, an Entry-only Unit or a cup is stored as one would be.
+                var (amount, unit, sourceAmount, sourceUnit, notes) =
+                    ReadStatedMeasurement(ing with { Amount = (double)shared.Amount, Unit = shared.Unit });
+                return withStepAmounts with
+                {
+                    Amount = amount, Unit = unit, SourceAmount = sourceAmount, SourceUnit = sourceUnit, Notes = notes,
+                    AmountFromSteps = true,
+                };
+
+            case StepAmountTotal.Converted converted:
+                return withStepAmounts with { Amount = converted.Amount, Unit = converted.Unit, AmountFromSteps = true };
+
+            case StepAmountTotal.Sizeless sizeless:
+                return withStepAmounts with { SourceAmount = sizeless.SourceAmount, SourceUnit = sizeless.Word, AmountFromSteps = true };
+
+            case StepAmountTotal.NotAddedUp:
+                return withStepAmounts;
+
+            default:
+                return row;
+        }
     }
 
     /// <summary>
@@ -807,10 +970,18 @@ public class RecipeScrapeService(
         string? Notes
     );
 
+    /// <param name="StatedAmounts">The amounts the step states, which only the scrape's schema asks for, so null from the seed normaliser.</param>
     internal record ExtractedStep(
         [property: JsonPropertyName("step_number")]       int StepNumber,
         string Instruction,
-        [property: JsonPropertyName("ingredient_indexes")] List<int> IngredientIndexes
+        [property: JsonPropertyName("ingredient_indexes")] List<int> IngredientIndexes,
+        [property: JsonPropertyName("stated_amounts")]     List<ExtractedStepAmount>? StatedAmounts = null
+    );
+
+    internal record ExtractedStepAmount(
+        [property: JsonPropertyName("ingredient_index")] int IngredientIndex,
+        double? Amount,
+        string? Unit
     );
 
     internal record MatchingResponse(List<MatchResult> Results);

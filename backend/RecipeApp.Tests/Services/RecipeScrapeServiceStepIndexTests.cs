@@ -63,6 +63,7 @@ public class RecipeScrapeServiceStepIndexTests(DatabaseFixture db) : IAsyncLifet
             db:                   db.CreateDbContext(),
             headlessRenderer:     new FakeHeadlessRenderer(),
             measurementConverter: new MeasurementConverter(Options.Create(new MeasurementOptions())),
+            siteReaders:          [],
             logger:               _logger);
     }
 

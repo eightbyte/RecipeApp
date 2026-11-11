@@ -8,6 +8,7 @@ paths:
   - "backend/RecipeApp.API/Services/MealPlanService.cs"
   - "backend/RecipeApp.API/Services/ShoppingListService.cs"
   - "backend/RecipeApp.API/Services/RecipeScrapeService.cs"
+  - "backend/RecipeApp.API/Services/StepAmountTotaller.cs"
   - "backend/RecipeApp.API/Services/RecipeService.cs"
   - "backend/RecipeApp.API/Services/Seeding/SeedQuantityGate.cs"
   - "backend/RecipeApp.API/Models/Ingredient.cs"
@@ -101,6 +102,11 @@ paths:
   Measurement stating the same count shows the source alone (`formatIngredientMeasurement`), as "(2 cloves) Garlic". The
   Unit picker still offers `pcs`, and shows it as the placeholder for an amount with no unit. The
   picker has no clear button, because its icon squeezed the label on a phone.
+- A scraped row whose list line states nothing, not even a Sizeless Unit, is filled from the amounts its steps
+  state (`stated_amounts`, a scrape-only schema field). `StepAmountTotaller` adds them up in code, never the model:
+  sized mentions sum, a Sizeless Unit is ignored beside a sized one, and mass meets volume only through the matched
+  Ingredient's density. A shared unit keeps the total as the Source Measurement; mixed units keep none. Filling runs
+  after matching and before Stage B. `amountFromSteps` and `stepAmounts` are preview-only and never saved.
 - **Never store zero.** `0` renders as `0 g Salt` and sums into shopping lists.
 - `ShoppingListService` partitions unquantified rows out of consolidation and never sums them. An
   ingredient the plan only ever names yields one amount-less item.

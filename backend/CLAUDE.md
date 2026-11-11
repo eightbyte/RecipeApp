@@ -15,7 +15,7 @@ Read `CODING_STANDARDS.md` (repo root) before writing or reviewing code: comment
 | `Validators/` | One FluentValidation validator per request DTO. `RecipeLimits.cs` holds the shared length and range limits |
 | `Models/` | EF entities, one per file |
 | `Enums/` | `MeasurementUnit`, `SizelessUnit`, `CountWords`, `IngredientCategory`, `RecipeSort`, `SortDirection` (the single source of truth for each) |
-| `Services/` | Business logic; `Llm/` Model Server client, `Seeding/` MyPlate import pipeline, `RecipePacks/` recipe-pack import |
+| `Services/` | Business logic; Site Readers (`ISiteReader`, one class per site such as `MealimeSiteReader`, registered in `Program.cs`) beside `RecipeJsonLdExtractor`; `Llm/` Model Server client, `Seeding/` MyPlate import pipeline, `RecipePacks/` recipe-pack import |
 | `Data/` | `AppDbContext`, migrations, `FirstRunSeeder` and its ledger keys, catalogue/density seeders |
 | `seed-data/` | `ingredient-catalogue.json` and `sample-recipes.json` (committed, shipped artefacts) and the `myplate/` cache (personal use; only `manifest.json` committed) |
 

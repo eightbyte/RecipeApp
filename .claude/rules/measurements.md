@@ -52,9 +52,12 @@ paths:
   `MeasurementConverter.ToStored`. That converts an Entry-only Unit by Stage A to `g`/`ml` and keeps the
   typed measurement as the Source Measurement. A given source stating the same quantity in another
   spelling (`4 ounces` for a typed `4 oz`) is kept instead, so a reopened row saves unchanged.
-- **The recipe form reopens a row in an Entry-only Unit only through the response's `entryUnit`**
-  (`MeasurementConverter.EntryUnitOf`). It is set only while the source still converts to the
-  stored amount, so a row edited by hand after import is never reverted to its source.
+- **The recipe form and the scrape preview open a row in an Entry-only Unit only through the
+  response's `entryUnit`** (`MeasurementConverter.EntryUnitOf`, on `RecipeIngredientResponse` and
+  `ScrapePreviewIngredientResponse`), both via `toFormMeasurement`. It is set only while the source
+  still converts to the stored amount, so a row edited by hand after import is never reverted to
+  its source. A row with no entry unit opens rounded to 2 decimals (`236.588` → `236.59`), and the
+  rounded amount is what saves.
 - Frontend: the picker's items are `UNIT_PICKER_ITEMS`, derived from the two unit mirrors. Change a
   form row's unit only through `setIngredientUnit`. It drops the Source Measurement only for a row
   opened in an Entry-only Unit, so a scraped or imported source survives a pass through `oz`.
@@ -96,7 +99,8 @@ paths:
   the size.
 - Frontend: `pcs` is never displayed (`formatMeasurement` drops it), and a `pcs` row with a Source
   Measurement stating the same count shows the source alone (`formatIngredientMeasurement`), as "(2 cloves) Garlic". The
-  Unit picker still offers `pcs`, and shows it as the placeholder once cleared.
+  Unit picker still offers `pcs`, and shows it as the placeholder for an amount with no unit. The
+  picker has no clear button, because its icon squeezed the label on a phone.
 - **Never store zero.** `0` renders as `0 g Salt` and sums into shopping lists.
 - `ShoppingListService` partitions unquantified rows out of consolidation and never sums them. An
   ingredient the plan only ever names yields one amount-less item.

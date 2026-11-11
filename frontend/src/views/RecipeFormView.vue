@@ -129,12 +129,12 @@
                 step="0.5"
                 density="compact"
                 hide-details
-                :style="rowFieldStyles.amount"
+                :style="rowLayout.amount"
               />
               <MeasurementUnitSelect
                 :model-value="ing.unit"
                 :amount="ing.amount"
-                :style="rowFieldStyles.unit"
+                :style="rowLayout.unit"
                 @update:model-value="setIngredientUnit(ing, $event)"
               />
               <v-text-field
@@ -143,7 +143,7 @@
                 density="compact"
                 hide-details
                 placeholder="e.g. diced"
-                :class="rowFieldStyles.notesClass"
+                :class="rowLayout.notesClass"
               />
             </div>
           </div>
@@ -328,7 +328,7 @@ const isEdit = computed(() => !!(props.id || route.params.id))
 
 const units = MEASUREMENT_UNITS
 
-const rowFieldStyles = useIngredientRowLayout({ amountWidth: '100px' })
+const rowLayout = useIngredientRowLayout({ amountWidth: '100px' })
 
 // ── Form state ─────────────────────────────────────────────────────────────
 const formRef    = ref(null)

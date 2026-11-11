@@ -18,10 +18,12 @@ const PICKER_GROUPS = [
   { title: 'Count',  dimension: 'Count' },
 ]
 
+const PICKABLE_UNITS = [...MEASUREMENT_UNITS, ...ENTRY_ONLY_UNITS]
+
 /** The Unit picker's items, every storable then entry-only unit under its dimension's subheader. */
 export const UNIT_PICKER_ITEMS = PICKER_GROUPS.flatMap(({ title, dimension }) => [
   { type: 'subheader', title },
-  ...[...MEASUREMENT_UNITS, ...ENTRY_ONLY_UNITS].filter(unit => UNIT_DIMENSIONS[unit] === dimension),
+  ...PICKABLE_UNITS.filter(unit => UNIT_DIMENSIONS[unit] === dimension),
 ])
 
 function isEntryOnlyUnit(unit) {
@@ -30,7 +32,7 @@ function isEntryOnlyUnit(unit) {
 
 /** True for a unit the Unit picker offers, storable or entry-only. */
 export function isPickableUnit(unit) {
-  return MEASUREMENT_UNITS.includes(unit) || isEntryOnlyUnit(unit)
+  return PICKABLE_UNITS.includes(unit)
 }
 
 /** Rounds an amount to 2 decimals, trimming conversion and scaling noise such as `236.588`. */

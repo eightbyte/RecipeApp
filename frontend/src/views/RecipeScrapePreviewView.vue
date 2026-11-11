@@ -79,13 +79,13 @@
               step="0.001"
               density="compact"
               hide-details
-              :style="rowFieldStyles.amount"
+              :style="rowLayout.amount"
             />
             <MeasurementUnitSelect
               :model-value="ing.unit"
               :amount="ing.amount"
               :requires-unit="!!ing.unstorableUnit"
-              :style="rowFieldStyles.unit"
+              :style="rowLayout.unit"
               @update:model-value="setIngredientUnit(ing, $event)"
             />
             <v-text-field
@@ -94,7 +94,7 @@
               density="compact"
               hide-details
               placeholder="e.g. diced"
-              :class="rowFieldStyles.notesClass"
+              :class="rowLayout.notesClass"
             />
           </div>
 
@@ -194,7 +194,7 @@ const store  = useRecipeStore()
 
 const categories = INGREDIENT_CATEGORIES.map(({ title, value }) => ({ title, value }))
 
-const rowFieldStyles = useIngredientRowLayout({ amountWidth: '110px' })
+const rowLayout = useIngredientRowLayout({ amountWidth: '110px' })
 
 const submitError = ref(null)
 

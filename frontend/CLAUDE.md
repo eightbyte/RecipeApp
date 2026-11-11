@@ -14,7 +14,7 @@ Read `CODING_STANDARDS.md` (repo root) before writing or reviewing code: comment
 | `stores/` | Pinia, one file per domain (`recipes`, `ingredients`, `mealPlans`, `shoppingList`, `ui`) |
 | `services/api.js` | The pre-configured Axios instance |
 | `constants/` | `units.js`, `categories.js`, `recipeSorts.js` — mirrors of the backend enums; `batchSizes.js` holds the recipe view's ½×/1×/2× shortcuts onto Servings, which exist only in the frontend; `servings.js` mirrors the Servings limits in `RecipeLimits` and formats a servings count; `modelServer.js` mirrors `ModelServerState` and its `UnavailableReason()` wording |
-| `composables/` | `useWakeLock.js`; `useRecipePages.js` pages a recipe list and holds the shared `SEARCH_DEBOUNCE_MS`; `useHold.js` is the 1-second press-and-hold on pointer events (editing a Custom Item); `useDelayedHide.js` keeps each just-ticked Purchased item shown for 3 seconds on its own timer |
+| `composables/` | `useWakeLock.js`; `useRecipePages.js` pages a recipe list and holds the shared `SEARCH_DEBOUNCE_MS`; `useHold.js` is the 1-second press-and-hold on pointer events (editing a Custom Item); `useDelayedHide.js` keeps each just-ticked Purchased item shown for 3 seconds on its own timer; `useIngredientRowLayout.js` lays out a recipe form's Amount, Unit and Notes, splitting them onto two lines on a phone |
 | `utils/` | `dateOnly.js` formats date-only values; `storage.js` wraps `localStorage` for device-local preferences |
 | `styles/` | `settings.scss` — Vuetify Sass settings |
 | `router/index.js` | All routes |

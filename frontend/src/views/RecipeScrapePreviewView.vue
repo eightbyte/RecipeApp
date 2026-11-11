@@ -1,5 +1,5 @@
 <template>
-  <v-container class="pa-4" max-width="600">
+  <v-container class="pa-2 pa-sm-4" max-width="600">
 
     <!-- Loading bar during save -->
     <v-progress-linear v-if="store.confirmLoading" indeterminate color="primary" class="mb-2" />
@@ -14,7 +14,7 @@
     <template v-else>
 
       <!-- ── Basic info ──────────────────────────────────────────── -->
-      <v-card class="mb-6 pa-4">
+      <v-card class="mb-6 pa-3 pa-sm-4">
         <div class="text-subtitle-2 text-medium-emphasis mb-4">Basic Info</div>
 
         <v-text-field
@@ -56,7 +56,7 @@
       </v-card>
 
       <!-- ── Ingredients ─────────────────────────────────────────── -->
-      <v-card class="mb-6 pa-4">
+      <v-card class="mb-6 pa-3 pa-sm-4">
         <div class="text-subtitle-2 text-medium-emphasis mb-4">Ingredients</div>
 
         <div
@@ -70,7 +70,7 @@
             <v-chip v-if="ing.isNew" size="x-small" color="info" variant="flat">New</v-chip>
           </div>
 
-          <div class="d-flex ga-2 pl-6">
+          <div class="d-flex flex-wrap flex-sm-nowrap ga-2 pl-3 pl-sm-6">
             <v-text-field
               v-model.number="ing.amount"
               label="Amount"
@@ -79,12 +79,13 @@
               step="0.001"
               density="compact"
               hide-details
-              style="max-width: 110px"
+              :style="rowLayout.amount"
             />
             <MeasurementUnitSelect
               :model-value="ing.unit"
               :amount="ing.amount"
               :requires-unit="!!ing.unstorableUnit"
+              :style="rowLayout.unit"
               @update:model-value="setIngredientUnit(ing, $event)"
             />
             <v-text-field
@@ -93,12 +94,12 @@
               density="compact"
               hide-details
               placeholder="e.g. diced"
-              class="flex-grow-1"
+              :class="rowLayout.notesClass"
             />
           </div>
 
           <!-- Category selector for new ingredients -->
-          <div v-if="ing.isNew" class="pl-6 mt-2">
+          <div v-if="ing.isNew" class="pl-3 pl-sm-6 mt-2">
             <v-select
               v-model="ing.category"
               :items="categories"
@@ -111,7 +112,7 @@
       </v-card>
 
       <!-- ── Steps ───────────────────────────────────────────────── -->
-      <v-card class="mb-6 pa-4">
+      <v-card class="mb-6 pa-3 pa-sm-4">
         <div class="text-subtitle-2 text-medium-emphasis mb-4">Steps</div>
 
         <div
@@ -181,16 +182,19 @@
 import { reactive, ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useRecipeStore } from '@/stores/recipes'
-import { MEASUREMENT_UNITS, hasAmount, setIngredientUnit, toPayloadMeasurement } from '@/constants/units'
+import {
+  hasAmount, isPickableUnit, setIngredientUnit, toFormMeasurement, toPayloadMeasurement,
+} from '@/constants/units'
 import MeasurementUnitSelect from '@/components/MeasurementUnitSelect.vue'
-import { INGREDIENT_CATEGORY_VALUES } from '@/constants/categories'
+import { INGREDIENT_CATEGORIES } from '@/constants/categories'
+import { useIngredientRowLayout } from '@/composables/useIngredientRowLayout'
 
 const router = useRouter()
 const store  = useRecipeStore()
 
-const units = MEASUREMENT_UNITS
+const categories = INGREDIENT_CATEGORIES.map(({ title, value }) => ({ title, value }))
 
-const categories = INGREDIENT_CATEGORY_VALUES
+const rowLayout = useIngredientRowLayout({ amountWidth: '110px' })
 
 const submitError = ref(null)
 
@@ -212,21 +216,25 @@ onMounted(() => {
   form.servings    = preview.servings
   form.sourceUrl   = preview.sourceUrl
 
-  form.ingredients = preview.ingredients.map(ing => ({
-    ingredientId:  ing.ingredientId,
-    name:          ing.name,
-    displayName:   ing.displayName,
-    amount:        ing.amount,
-    // A scraped unit outside the storable set, such as "can", shows unselected and has to be picked before the recipe can be saved.
-    unit:          units.includes(ing.unit) ? ing.unit : null,
-    unstorableUnit: ing.unit && !units.includes(ing.unit) ? ing.unit : null,
-    sourceAmount:  ing.sourceAmount ?? null,
-    sourceUnit:    ing.sourceUnit ?? null,
-    notes:         ing.notes ?? '',
-    isNew:         ing.isNew,
-    category:      ing.suggestedCategory,
-    displayOrder:  ing.displayOrder,
-  }))
+  form.ingredients = preview.ingredients.map(ing => {
+    const { amount, unit, entryUnit } = toFormMeasurement(ing)
+    return {
+      ingredientId:   ing.ingredientId,
+      name:           ing.name,
+      displayName:    ing.displayName,
+      amount,
+      unit:           isPickableUnit(unit) ? unit : null,
+      // A scraped unit the picker doesn't offer, such as "can", shows unselected and has to be picked before the recipe can be saved.
+      unstorableUnit: unit && !isPickableUnit(unit) ? unit : null,
+      entryUnit,
+      sourceAmount:   ing.sourceAmount ?? null,
+      sourceUnit:     ing.sourceUnit ?? null,
+      notes:          ing.notes ?? '',
+      isNew:          ing.isNew,
+      category:       ing.suggestedCategory,
+      displayOrder:   ing.displayOrder,
+    }
+  })
 
   form.steps = preview.steps.map(s => ({
     stepNumber:        s.stepNumber,

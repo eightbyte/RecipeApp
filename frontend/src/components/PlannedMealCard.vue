@@ -1,12 +1,12 @@
 <template>
   <v-card @click="openRecipe">
-    <div class="d-flex align-center pa-3 ga-4">
-      <div class="text-center" style="min-width: 48px">
+    <div class="d-flex align-center pa-3 ga-2">
+      <div class="text-center" style="min-width: 36px">
         <template v-if="plannedMeal.scheduledDate">
           <div class="text-caption font-weight-bold">{{ formatDateOnly(plannedMeal.scheduledDate, { day: 'numeric' }) }}</div>
           <div class="text-caption text-medium-emphasis">{{ formatDateOnly(plannedMeal.scheduledDate, { month: 'short' }) }}</div>
         </template>
-        <v-icon v-else color="grey" size="20">mdi-calendar-question</v-icon>
+        <v-icon v-else color="grey" size="16">mdi-calendar-question</v-icon>
       </div>
 
       <v-divider vertical class="mx-1" />
@@ -22,7 +22,7 @@
         <v-icon v-else color="grey" size="18">mdi-food</v-icon>
       </v-avatar>
 
-      <div class="flex-grow-1 ml-2">
+      <div class="flex-grow-1">
         <div class="text-body-1 font-weight-medium">{{ plannedMeal.recipeName }}</div>
         <ServingsChip :servings="plannedMeal.servings" size="x-small" class="mt-1" />
       </div>

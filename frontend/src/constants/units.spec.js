@@ -65,6 +65,16 @@ describe('toFormMeasurement', () => {
     expect(toFormMeasurement({ amount: null, unit: null, sourceAmount: null, sourceUnit: 'to taste' }))
       .toEqual({ amount: null, unit: null, entryUnit: null })
   })
+
+  it('rounds a row with no entry unit to 2 decimals', () => {
+    expect(toFormMeasurement({ amount: 236.588, unit: 'ml', entryUnit: null }))
+      .toEqual({ amount: 236.59, unit: 'ml', entryUnit: null })
+  })
+
+  it('keeps the source amount of a row opened in its entry unit unrounded', () => {
+    expect(toFormMeasurement({ amount: 37.797, unit: 'g', sourceAmount: 1.3333, sourceUnit: 'oz', entryUnit: 'oz' }))
+      .toEqual({ amount: 1.3333, unit: 'oz', entryUnit: 'oz' })
+  })
 })
 
 describe('setIngredientUnit', () => {

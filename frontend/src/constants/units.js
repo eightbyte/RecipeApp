@@ -18,21 +18,32 @@ const PICKER_GROUPS = [
   { title: 'Count',  dimension: 'Count' },
 ]
 
+const PICKABLE_UNITS = [...MEASUREMENT_UNITS, ...ENTRY_ONLY_UNITS]
+
 /** The Unit picker's items, every storable then entry-only unit under its dimension's subheader. */
 export const UNIT_PICKER_ITEMS = PICKER_GROUPS.flatMap(({ title, dimension }) => [
   { type: 'subheader', title },
-  ...[...MEASUREMENT_UNITS, ...ENTRY_ONLY_UNITS].filter(unit => UNIT_DIMENSIONS[unit] === dimension),
+  ...PICKABLE_UNITS.filter(unit => UNIT_DIMENSIONS[unit] === dimension),
 ])
 
 function isEntryOnlyUnit(unit) {
   return ENTRY_ONLY_UNITS.includes(unit)
 }
 
-/** The `{ amount, unit, entryUnit }` the recipe form opens a row with, at its source amount in the entry-only unit the API names when there is one. */
+/** True for a unit the Unit picker offers, storable or entry-only. */
+export function isPickableUnit(unit) {
+  return PICKABLE_UNITS.includes(unit)
+}
+
+/** Rounds an amount to 2 decimals, trimming conversion and scaling noise such as `236.588`. */
+function roundAmount(amount) {
+  return Math.round(amount * 100) / 100
+}
+
+/** The `{ amount, unit, entryUnit }` a recipe form opens a row with, at its source amount in the entry-only unit the API names when there is one, and otherwise as stored rounded to 2 decimals. */
 export function toFormMeasurement(ing) {
-  return ing.entryUnit
-    ? { amount: ing.sourceAmount, unit: ing.entryUnit, entryUnit: ing.entryUnit }
-    : { amount: ing.amount, unit: ing.unit, entryUnit: null }
+  if (ing.entryUnit) return { amount: ing.sourceAmount, unit: ing.entryUnit, entryUnit: ing.entryUnit }
+  return { amount: ing.amount == null ? null : roundAmount(ing.amount), unit: ing.unit, entryUnit: null }
 }
 
 /** Sets a form row's unit, dropping the Source Measurement once a row opened in an entry-only unit moves to a storable one, because it is then entered by hand. */
@@ -54,7 +65,7 @@ export const COUNT_UNIT = 'pcs'
 /** Formats an amount and unit for display, trimming float noise from scaling and hiding `pcs`, and returns `null` when there is no amount to show. */
 export function formatMeasurement(amount, unit) {
   if (amount == null) return null
-  const rounded = Math.round(amount * 100) / 100
+  const rounded = roundAmount(amount)
   return unit && unit !== COUNT_UNIT ? `${rounded} ${unit}` : `${rounded}`
 }
 

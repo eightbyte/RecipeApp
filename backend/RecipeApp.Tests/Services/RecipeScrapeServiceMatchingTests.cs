@@ -309,6 +309,36 @@ public class RecipeScrapeServiceMatchingTests(DatabaseFixture db) : IAsyncLifeti
         ing.SourceUnit.Should().Be("g");
     }
 
+    [Theory]
+    [InlineData(1.0, "lb",     453.592, "g",  "lb")]
+    [InlineData(1.0, "pound",  453.592, "g",  "lb")]
+    [InlineData(4.0, "ounces", 113.398, "g",  "oz")]
+    public async Task NormaliseAsync_AnEntryOnlyUnitSource_NamesTheEntryUnitTheRowOpensIn(
+        double amount, string unit, double storedAmount, string storedUnit, string entryUnit)
+    {
+        var svc     = BuildService();
+        var preview = await svc.NormaliseAsync(
+            MakeRecipeMeasured("beef mince", "Beef Mince", amount, unit), "https://x", default);
+
+        preview.Ingredients.Single().Should().BeEquivalentTo(new
+        {
+            Amount = (decimal)storedAmount, Unit = storedUnit,
+            SourceAmount = (decimal)amount, SourceUnit = unit, EntryUnit = entryUnit,
+        });
+    }
+
+    [Theory]
+    [InlineData(500.0, "g")]
+    [InlineData(2.0,   "cups")]
+    public async Task NormaliseAsync_ASourceInNoEntryOnlyUnit_NamesNoEntryUnit(double amount, string unit)
+    {
+        var svc     = BuildService();
+        var preview = await svc.NormaliseAsync(
+            MakeRecipeMeasured("plain flour", "Plain Flour", amount, unit), "https://x", default);
+
+        preview.Ingredients.Single().EntryUnit.Should().BeNull();
+    }
+
     [Fact]
     public async Task NormaliseAsync_ExactMatchWithDensity_ResolvesCupsToGrams()
     {

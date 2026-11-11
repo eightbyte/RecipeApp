@@ -1,3 +1,15 @@
+import { toRaw } from 'vue'
+
+const keys    = new WeakMap()
+let   lastKey = 0
+
+/** A `v-for` key that stays with a row object, because rows removed and put back mid-list would otherwise hand their fields' state to a neighbour. */
+export function rowKey(row) {
+  const raw = toRaw(row)
+  if (!keys.has(raw)) keys.set(raw, ++lastKey)
+  return keys.get(raw)
+}
+
 /**
  * Removes a recipe form's ingredient row, unselecting it from every step and shifting later step indexes down,
  * and returns what `restoreIngredient` needs to undo it; instructions are left alone for the user to check.

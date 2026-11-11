@@ -78,7 +78,7 @@
 
         <div
           v-for="(ing, idx) in form.ingredients"
-          :key="idx"
+          :key="rowKey(ing)"
           class="mb-6"
         >
           <div class="d-flex align-start ga-2 mb-2">
@@ -86,7 +86,7 @@
             <v-autocomplete
               :model-value="pickedValueOf(ing)"
               :items="itemsFor(ing)"
-              :custom-filter="keepAddNew"
+              :custom-filter="matchTitleOrAddNew"
               item-title="displayName"
               item-value="id"
               label="Ingredient"
@@ -181,7 +181,7 @@
 
         <div
           v-for="(step, sIdx) in form.steps"
-          :key="sIdx"
+          :key="rowKey(step)"
           class="mb-6"
         >
           <div class="d-flex align-start ga-2">
@@ -276,6 +276,7 @@ import { DEFAULT_CATEGORY, INGREDIENT_CATEGORIES } from '@/constants/categories'
 import { useIngredientRowLayout } from '@/composables/useIngredientRowLayout'
 import { useRecipeValidation } from '@/composables/useRecipeValidation'
 import { useRemovalUndo } from '@/composables/useRemovalUndo'
+import { rowKey } from '@/utils/recipeRows'
 
 /** The search box's value for a row holding a pending New ingredient, which has no catalogue id until save. */
 const PENDING_NEW = '__pending-new__'
@@ -353,7 +354,7 @@ onMounted(() => {
 })
 
 function addIngredient() {
-  // Hand-entered rows have no source measurement — the unit chosen here IS the source.
+  // Hand-entered rows have no Source Measurement, because what is typed here is the measurement itself.
   const row = {
     ingredientId:   null,
     name:           '',
@@ -396,7 +397,7 @@ function itemsFor(ing) {
 }
 
 /** Vuetify's default title match, except that "Add … as new" always shows, since it names whatever was typed. */
-function keepAddNew(value, query, item) {
+function matchTitleOrAddNew(value, query, item) {
   if (item?.raw?.id === ADD_NEW) return true
   return String(value).toLocaleLowerCase().indexOf(query.toLocaleLowerCase())
 }

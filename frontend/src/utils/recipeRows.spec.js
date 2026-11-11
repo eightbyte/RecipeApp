@@ -1,4 +1,18 @@
-import { removeIngredient, restoreIngredient, removeStep, restoreStep } from './recipeRows'
+import { removeIngredient, restoreIngredient, removeStep, restoreStep, rowKey } from './recipeRows'
+
+describe('rowKey', () => {
+  it('stays with a row as it moves, and differs between rows', () => {
+    const form = makeForm()
+    const sugar = form.ingredients[1]
+    const before = rowKey(sugar)
+
+    restoreIngredient(form, removeIngredient(form, 0))
+    form.ingredients.reverse()
+
+    expect(rowKey(sugar)).toBe(before)
+    expect(new Set(form.ingredients.map(rowKey)).size).toBe(4)
+  })
+})
 
 const makeForm = () => ({
   ingredients: [{ name: 'flour' }, { name: 'sugar' }, { name: 'eggs' }, { name: 'milk' }],

@@ -92,7 +92,7 @@
 
         <div
           v-for="(ing, idx) in form.ingredients"
-          :key="idx"
+          :key="rowKey(ing)"
           class="d-flex ga-2 align-start mb-4"
         >
           <!-- Drag handle future: just a number for now -->
@@ -194,7 +194,7 @@
 
         <div
           v-for="(step, sIdx) in form.steps"
-          :key="sIdx"
+          :key="rowKey(step)"
           class="mb-6"
         >
           <div class="d-flex align-start ga-2">
@@ -337,6 +337,7 @@ import RecipeProblemsBanner from '@/components/RecipeProblemsBanner.vue'
 import { useIngredientRowLayout } from '@/composables/useIngredientRowLayout'
 import { useRecipeValidation } from '@/composables/useRecipeValidation'
 import { useRemovalUndo } from '@/composables/useRemovalUndo'
+import { rowKey } from '@/utils/recipeRows'
 
 const props = defineProps({ id: { type: String, default: null } })
 const route  = useRoute()
@@ -424,7 +425,7 @@ function populateForm(recipe) {
 
 // ── Ingredient management ───────────────────────────────────────────────────
 function addIngredient() {
-  // Hand-entered rows have no source measurement — the unit chosen here IS the source.
+  // Hand-entered rows have no Source Measurement, because what is typed here is the measurement itself.
   const row = {
     ingredientId: null,
     amount:       1,

@@ -4,6 +4,8 @@ using System.Text.Json.Nodes;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
+using Microsoft.Extensions.Options;
+using RecipeApp.API.Validators;
 using RecipeApp.API.DTOs.Scrape;
 using RecipeApp.API.Services;
 using RecipeApp.API.Services.Llm;
@@ -230,6 +232,15 @@ public class RecipeScrapeTextEndpointsTests(DatabaseFixture db) : IAsyncLifetime
     }
 
     [Fact]
+    public async Task ScrapeText_BlankText_ReportsOneReason()
+    {
+        var response = await PostText(CreateClient(new StubLlmStructuredClient(Extraction())), "   ");
+
+        var problem = await response.Content.ReadFromJsonAsync<ValidationProblemDetails>();
+        problem!.Errors[nameof(ScrapeTextRequest.Text)].Should().ContainSingle();
+    }
+
+    [Fact]
     public async Task ScrapeText_OverThirtyThousandCharacters_Returns400RatherThanTruncating()
     {
         var llm = new StubLlmStructuredClient(Extraction());
@@ -240,6 +251,15 @@ public class RecipeScrapeTextEndpointsTests(DatabaseFixture db) : IAsyncLifetime
         var problem = await response.Content.ReadFromJsonAsync<ValidationProblemDetails>();
         problem!.Errors.Should().ContainKey(nameof(ScrapeTextRequest.Text));
         llm.CallCount.Should().Be(0);
+    }
+
+    [Fact]
+    public void TheModelReadsEveryCharacterThePasteLimitAllows()
+    {
+        var options = db.Factory.Services.GetRequiredService<IOptions<RecipeScrapingOptions>>().Value;
+
+        options.MaxHtmlCharacters.Should().BeGreaterThanOrEqualTo(ScrapeLimits.TextMaxLength,
+            "a paste the validator accepts must never be cut short before the model reads it");
     }
 
     [Fact]

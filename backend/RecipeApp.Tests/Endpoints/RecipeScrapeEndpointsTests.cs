@@ -205,6 +205,19 @@ public class RecipeScrapeEndpointsTests(DatabaseFixture db) : IAsyncLifetime
     }
 
     [Fact]
+    public async Task Confirm_WithABlankSourceUrl_SavesTheRecipeWithoutOne()
+    {
+        var request = BuildConfirmRequest(ingredientId: null, newName: "beef mince",
+            newDisplayName: "Beef Mince", category: IngredientCategory.MeatSeafood) with { SourceUrl = "  " };
+
+        var response = await db.CreateClient().PostAsJsonAsync("/api/v1/recipes/scrape/confirm", request);
+
+        response.StatusCode.Should().Be(HttpStatusCode.Created);
+        var body = await response.Content.ReadFromJsonAsync<ScrapeConfirmResponse>();
+        body!.Recipe.SourceUrl.Should().BeNull();
+    }
+
+    [Fact]
     public async Task Confirm_EmptyName_Returns400()
     {
         var client  = db.CreateClient();

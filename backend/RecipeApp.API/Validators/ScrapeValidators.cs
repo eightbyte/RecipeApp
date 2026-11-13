@@ -26,15 +26,16 @@ public class ScrapeTextRequestValidator : AbstractValidator<ScrapeTextRequest>
     public ScrapeTextRequestValidator()
     {
         RuleFor(x => x.Text)
-            .NotEmpty().WithMessage("Paste a recipe to import.")
-            .Must(text => text is not null && text.Trim().Length >= ScrapeLimits.TextMinLength)
+            .Cascade(CascadeMode.Stop)
+            .NotEmpty().WithMessage("Paste a recipe.")
+            .Must(text => text.Trim().Length >= ScrapeLimits.TextMinLength)
             .WithMessage($"The text must be at least {ScrapeLimits.TextMinLength} characters.")
             .MaximumLength(ScrapeLimits.TextMaxLength)
             .WithMessage($"The text must be {ScrapeLimits.TextMaxLength} characters or fewer.");
     }
 }
 
-public class ScrapeConfirmIngredientRequestValidator: AbstractValidator<ScrapeConfirmIngredientRequest>
+public class ScrapeConfirmIngredientRequestValidator : AbstractValidator<ScrapeConfirmIngredientRequest>
 {
     public ScrapeConfirmIngredientRequestValidator()
     {

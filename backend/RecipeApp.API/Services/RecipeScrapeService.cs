@@ -223,11 +223,7 @@ public class RecipeScrapeService(
     public async Task<ScrapePreviewResponse> ScrapeAsync(string url, CancellationToken ct = default)
     {
         // Checked before the fetch, which can take 35 seconds and is wasted when nothing can read the page.
-        var status = await modelServer.GetStatusAsync(ct);
-        if (status.State != ModelServerState.Ready)
-            throw UnavailableError(status.State);
-
-        logger.LogInformation("Scraping {Url} with model {Model}.", url, status.Model ?? "(unnamed)");
+        await EnsureModelServerReadyAsync(url, ct);
 
         var page      = await FetchPageAsync(url, ct);
         var extracted = await ExtractRecipeAsync(page.Text, ct);
@@ -236,11 +232,7 @@ public class RecipeScrapeService(
 
     public async Task<ScrapePreviewResponse> ScrapeTextAsync(string text, CancellationToken ct = default)
     {
-        var status = await modelServer.GetStatusAsync(ct);
-        if (status.State != ModelServerState.Ready)
-            throw UnavailableError(status.State);
-
-        logger.LogInformation("Scraping {Source} with model {Model}.", PastedTextLabel, status.Model ?? "(unnamed)");
+        await EnsureModelServerReadyAsync(PastedTextLabel, ct);
 
         var recipeText = TidyPastedText(text);
         try
@@ -252,6 +244,15 @@ public class RecipeScrapeService(
         {
             throw new RecipeScrapeException(RecipeScrapeError.NoContent, "Couldn't find a recipe in that text.");
         }
+    }
+
+    private async Task EnsureModelServerReadyAsync(string source, CancellationToken ct)
+    {
+        var status = await modelServer.GetStatusAsync(ct);
+        if (status.State != ModelServerState.Ready)
+            throw UnavailableError(status.State);
+
+        logger.LogInformation("Scraping {Source} with model {Model}.", source, status.Model ?? "(unnamed)");
     }
 
     /// <summary>Names a text Scrape with no Source URL in the warnings that otherwise name the page.</summary>
@@ -390,7 +391,7 @@ public class RecipeScrapeService(
             Id          = Guid.NewGuid(),
             Name        = request.Name.Trim(),
             Description = request.Description?.Trim(),
-            SourceUrl   = request.SourceUrl?.Trim(),
+            SourceUrl   = string.IsNullOrWhiteSpace(request.SourceUrl) ? null : request.SourceUrl.Trim(),
             ImageUrl    = imageUrl,
             Servings    = request.Servings,
             CreatedAt   = DateTime.UtcNow,
@@ -804,7 +805,8 @@ public class RecipeScrapeService(
         }
 
         // Filled once matching is done, because adding a volume to a mass needs the matched Ingredient's density, and before Stage B so a filled cup resolves too.
-        var stepAmounts = StepAmountsByIngredient(extracted, url ?? PastedTextLabel);
+        var source      = url ?? PastedTextLabel;
+        var stepAmounts = StepAmountsByIngredient(extracted, source);
         for (int i = 0; i < previewIngredients.Count; i++)
         {
             var row = previewIngredients[i];
@@ -816,7 +818,7 @@ public class RecipeScrapeService(
         var previewSteps = extracted.Steps
             .OrderBy(s => s.StepNumber)
             .Select(s => new ScrapePreviewStepResponse(
-                s.StepNumber, WithoutStepLines(s.Instruction), DistinctIngredientIndexesInRange(s, previewIngredients.Count, url ?? PastedTextLabel)))
+                s.StepNumber, WithoutStepLines(s.Instruction), DistinctIngredientIndexesInRange(s, previewIngredients.Count, source)))
             .ToList();
 
         return new ScrapePreviewResponse(

@@ -27,19 +27,7 @@ public static class RecipeScrapeEndpoints
                 logger.LogWarning("Scrape failed for URL {Url}: [{Error}] {Message}",
                     request.Url, ex.Error, ex.Message);
 
-                return ex.Error switch
-                {
-                    RecipeScrapeError.ModelServerUnavailable =>
-                        Results.Problem(detail: ex.Message, statusCode: StatusCodes.Status503ServiceUnavailable),
-                    RecipeScrapeError.FetchTimeout or
-                    RecipeScrapeError.FetchFailed or
-                    RecipeScrapeError.FetchNonSuccess or
-                    RecipeScrapeError.LlmTimeout or
-                    RecipeScrapeError.LlmFailed or
-                    RecipeScrapeError.NoContent =>
-                        Results.Problem(detail: ex.Message, statusCode: StatusCodes.Status422UnprocessableEntity),
-                    _ => Results.Problem(detail: ex.Message, statusCode: StatusCodes.Status422UnprocessableEntity),
-                };
+                return ToProblem(ex);
             }
         })
         .WithValidation<ScrapeRecipeRequest>()
@@ -64,9 +52,7 @@ public static class RecipeScrapeEndpoints
                 logger.LogWarning("Scrape of pasted text ({Length} characters) failed: [{Error}] {Message}",
                     request.Text.Length, ex.Error, ex.Message);
 
-                return ex.Error == RecipeScrapeError.ModelServerUnavailable
-                    ? Results.Problem(detail: ex.Message, statusCode: StatusCodes.Status503ServiceUnavailable)
-                    : Results.Problem(detail: ex.Message, statusCode: StatusCodes.Status422UnprocessableEntity);
+                return ToProblem(ex);
             }
         })
         .WithValidation<ScrapeTextRequest>()
@@ -89,4 +75,12 @@ public static class RecipeScrapeEndpoints
 
         return routes;
     }
+
+    /// <summary>Every failed Scrape is the source's fault (422) except an unavailable Model Server, which a retry later can fix (503).</summary>
+    private static IResult ToProblem(RecipeScrapeException ex) =>
+        Results.Problem(
+            detail: ex.Message,
+            statusCode: ex.Error == RecipeScrapeError.ModelServerUnavailable
+                ? StatusCodes.Status503ServiceUnavailable
+                : StatusCodes.Status422UnprocessableEntity);
 }

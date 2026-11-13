@@ -21,7 +21,20 @@ public class ScrapeRecipeRequestValidator : AbstractValidator<ScrapeRecipeReques
     }
 }
 
-public class ScrapeConfirmIngredientRequestValidator : AbstractValidator<ScrapeConfirmIngredientRequest>
+public class ScrapeTextRequestValidator : AbstractValidator<ScrapeTextRequest>
+{
+    public ScrapeTextRequestValidator()
+    {
+        RuleFor(x => x.Text)
+            .NotEmpty().WithMessage("Paste a recipe to import.")
+            .Must(text => text is not null && text.Trim().Length >= ScrapeLimits.TextMinLength)
+            .WithMessage($"The text must be at least {ScrapeLimits.TextMinLength} characters.")
+            .MaximumLength(ScrapeLimits.TextMaxLength)
+            .WithMessage($"The text must be {ScrapeLimits.TextMaxLength} characters or fewer.");
+    }
+}
+
+public class ScrapeConfirmIngredientRequestValidator: AbstractValidator<ScrapeConfirmIngredientRequest>
 {
     public ScrapeConfirmIngredientRequestValidator()
     {
@@ -75,7 +88,6 @@ public class ScrapeConfirmRequestValidator : AbstractValidator<ScrapeConfirmRequ
         RuleFor(x => x.Name).NotEmpty().MaximumLength(RecipeLimits.NameMaxLength);
         RuleFor(x => x.Description).MaximumLength(RecipeLimits.DescriptionMaxLength).When(x => x.Description is not null);
         RuleFor(x => x.Servings).InclusiveBetween(RecipeLimits.MinServings, RecipeLimits.MaxServings);
-        RuleFor(x => x.SourceUrl).NotEmpty();
 
         // The server downloads this URL, so anything but an absolute http(s) URL is refused before it is fetched.
         RuleFor(x => x.ImageUrl)

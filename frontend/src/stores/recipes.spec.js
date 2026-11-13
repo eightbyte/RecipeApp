@@ -230,6 +230,32 @@ describe('scrapeRecipe', () => {
   })
 })
 
+// ── scrapeRecipeText ──────────────────────────────────────────────────────────
+
+describe('scrapeRecipeText', () => {
+  it('posts the pasted text to the text route and stores the draft', async () => {
+    api.post.mockResolvedValue({ data: makeScrapePreview({ name: 'Honey Chicken', sourceUrl: null }) })
+
+    const store = useRecipeStore()
+    await store.scrapeRecipeText('Honey Chicken\n\n• 2 chicken breasts')
+
+    expect(api.post).toHaveBeenCalledWith('/recipes/scrape/text', { text: 'Honey Chicken\n\n• 2 chicken breasts' })
+    expect(store.scrapePreview).toMatchObject({ name: 'Honey Chicken', sourceUrl: null })
+    expect(store.scrapeError).toBeNull()
+    expect(store.scrapeLoading).toBe(false)
+  })
+
+  it('sets scrapeError on API failure', async () => {
+    api.post.mockRejectedValue({ message: "Couldn't find a recipe in that text." })
+
+    const store = useRecipeStore()
+    await store.scrapeRecipeText('Remember to buy a birthday card.')
+
+    expect(store.scrapeError).toBe("Couldn't find a recipe in that text.")
+    expect(store.scrapePreview).toBeNull()
+  })
+})
+
 // ── confirmScrape ─────────────────────────────────────────────────────────────
 
 describe('confirmScrape', () => {

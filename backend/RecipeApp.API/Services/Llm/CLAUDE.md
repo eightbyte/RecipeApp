@@ -2,8 +2,8 @@
 
 Inference runs in the **Model Server**: llama.cpp's `llama-server`, started by hand with
 `tools/llm-server/start.ps1` (see `tools/llm-server/README.md`) and called over HTTP. The API holds
-no model, no GPU libraries and no CUDA runtime. No cloud calls. Used by recipe scraping
-(`RecipeScrapeService`) and the seed pipeline's LLM stages. ADR 0002 records why.
+no model, no GPU libraries and no CUDA runtime. No cloud calls. Used by Scraping, from a URL or
+from pasted text (`RecipeScrapeService`), and the seed pipeline's LLM stages. ADR 0002 records why.
 
 | Type | Role |
 |---|---|

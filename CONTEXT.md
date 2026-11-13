@@ -137,8 +137,8 @@ _Avoid_: Bought, done
 ### Getting recipes in
 
 **Scrape**:
-Turning one external source, such as a web page, into a draft recipe that the user reviews and
-confirms before it is saved.
+Turning one external source, a web page or pasted text, into a draft recipe that the user
+reviews and confirms before it is saved.
 _Avoid_: Parse, extract, import (for a single page)
 
 **Site Reader**:

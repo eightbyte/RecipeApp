@@ -1,10 +1,11 @@
 namespace RecipeApp.API.DTOs.Scrape;
 
+/// <param name="SourceUrl">The preview's source, null when it came from pasted text that named no single URL.</param>
 /// <param name="ImageUrl">The preview's remote photo, downloaded on confirm; null when the page had none or the user removed it.</param>
 public record ScrapeConfirmRequest(
     string Name,
     string? Description,
-    string SourceUrl,
+    string? SourceUrl,
     int Servings,
     List<ScrapeConfirmIngredientRequest> Ingredients,
     List<ScrapeConfirmStepRequest> Steps,

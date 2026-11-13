@@ -11,5 +11,5 @@ export const MODEL_SERVER_UNAVAILABLE_MESSAGES = Object.freeze({
   [MODEL_SERVER_UNAUTHORIZED]: 'Scraping is unavailable: the Model Server rejected the API key.',
 })
 
-/** How often the URL sheet asks again while the model is loading. */
+/** How often the Import Recipe sheet asks again while the model is loading. */
 export const MODEL_SERVER_LOADING_RECHECK_MS = 3000

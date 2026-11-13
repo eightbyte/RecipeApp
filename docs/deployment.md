@@ -231,7 +231,7 @@ Anything written to the database after that dump is lost.
 | Production mode | `/scalar/v1` on the API returns 404 |
 | Auto-deploy | A merge to `master` is running on the host within about five minutes of the workflow finishing, and the updater log records it |
 | Pre-update dump | An update that changes the API image leaves a new file in `deploy/backups/` that `pg_restore --list` reads. A frontend-only update leaves none |
-| Model Server | With it started, the URL sheet reads ready and a Scrape works. With it stopped, the sheet says so and `/health/ready` still returns 200 |
+| Model Server | With it started, the Import Recipe sheet reads ready and a Scrape works. With it stopped, the sheet says so and `/health/ready` still returns 200 |
 
 ## Not covered
 

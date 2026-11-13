@@ -47,6 +47,33 @@ public static class RecipeScrapeEndpoints
         .ProducesProblem(StatusCodes.Status503ServiceUnavailable)
         .WithSummary("Scrape a recipe from a URL and return a preview for review");
 
+        // POST /recipes/scrape/text
+        group.MapPost("/scrape/text", async (
+            ScrapeTextRequest request,
+            IRecipeScrapeService svc,
+            ILogger<Program> logger,
+            CancellationToken ct) =>
+        {
+            try
+            {
+                var preview = await svc.ScrapeTextAsync(request.Text, ct);
+                return Results.Ok(preview);
+            }
+            catch (RecipeScrapeException ex)
+            {
+                logger.LogWarning("Scrape of pasted text ({Length} characters) failed: [{Error}] {Message}",
+                    request.Text.Length, ex.Error, ex.Message);
+
+                return ex.Error == RecipeScrapeError.ModelServerUnavailable
+                    ? Results.Problem(detail: ex.Message, statusCode: StatusCodes.Status503ServiceUnavailable)
+                    : Results.Problem(detail: ex.Message, statusCode: StatusCodes.Status422UnprocessableEntity);
+            }
+        })
+        .WithValidation<ScrapeTextRequest>()
+        .ProducesProblem(StatusCodes.Status422UnprocessableEntity)
+        .ProducesProblem(StatusCodes.Status503ServiceUnavailable)
+        .WithSummary("Scrape a recipe from pasted text and return a preview for review");
+
         // POST /recipes/scrape/confirm
         group.MapPost("/scrape/confirm", async (
             ScrapeConfirmRequest request,

@@ -12,7 +12,7 @@ Read `CODING_STANDARDS.md` (repo root) before writing or reviewing code: comment
 | `Endpoints/` | Minimal API endpoint groups, one extension method per area |
 | `Filters/` | `ValidationFilter.cs`, which provides `.WithValidation<T>()` |
 | `DTOs/<Area>/` | Request/response DTOs. `DTOs/Mappings.cs` holds all mapping |
-| `Validators/` | One FluentValidation validator per request DTO. `RecipeLimits.cs` holds the shared length and range limits |
+| `Validators/` | One FluentValidation validator per request DTO. `RecipeLimits.cs` holds the shared length and range limits; `ScrapeLimits.cs` bounds a Scrape's pasted text |
 | `Models/` | EF entities, one per file |
 | `Enums/` | `MeasurementUnit`, `SizelessUnit`, `CountWords`, `IngredientCategory`, `RecipeSort`, `SortDirection` (the single source of truth for each) |
 | `Services/` | Business logic; Site Readers (`ISiteReader`, one class per site such as `MealimeSiteReader`, registered in `Program.cs`) beside `RecipeJsonLdExtractor`; `Llm/` Model Server client, `Seeding/` MyPlate import pipeline, `RecipePacks/` recipe-pack import |
@@ -33,7 +33,13 @@ Read `CODING_STANDARDS.md` (repo root) before writing or reviewing code: comment
 - **Service-level writes bypass validation.** `RecipeScrapeService.ConfirmAsync` validates nothing. Any
   caller that is not an endpoint must check against `RecipeLimits`, or it can persist a recipe the
   UI then cannot save. It also downloads any `ImageUrl` it is handed, so such a caller must pass only
-  an absolute http(s) URL, or none.
+  an absolute http(s) URL, or none. `SourceUrl` may be null, which a Scrape from text sends when its
+  text names no single URL.
+- **Scraping has two routes.** `POST /recipes/scrape` fetches a page. `POST /recipes/scrape/text`
+  (`ScrapeTextAsync`) takes pasted text, bounded by `Validators/ScrapeLimits.cs`, and skips the
+  fetch, JSON-LD, the Site Readers and the photo. Both share the Model Server check,
+  `ExtractRecipeAsync`, `NormaliseAsync` and `ConfirmAsync`. The text route keeps the text's line
+  breaks and takes `SourceUrl` from the one URL the text names, never from the model.
 - **Migrations:** `dotnet ef migrations add <Name> --output-dir Data/Migrations`.
 - **Timestamps:** `DateTime.UtcNow` and `TIMESTAMPTZ` only. Never local time.
 - Hard deletes. No soft deletes in v1.

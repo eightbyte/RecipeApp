@@ -82,11 +82,19 @@ export const useRecipeStore = defineStore('recipes', () => {
 
   // ── Scrape actions ─────────────────────────────────────────────────────────
 
-  async function scrapeRecipe(url) {
+  function scrapeRecipe(url) {
+    return scrape('/recipes/scrape', { url })
+  }
+
+  function scrapeRecipeText(text) {
+    return scrape('/recipes/scrape/text', { text })
+  }
+
+  async function scrape(route, body) {
     scrapeLoading.value = true
     scrapeError.value   = null
     try {
-      const { data } = await api.post('/recipes/scrape', { url })
+      const { data } = await api.post(route, body)
       scrapePreview.value = data
     } catch (e) {
       scrapeError.value = e.message ?? 'Failed to extract recipe.'
@@ -131,6 +139,6 @@ export const useRecipeStore = defineStore('recipes', () => {
     createRecipe, updateRecipe, deleteRecipe,
     uploadImage, markCooked, isRecentlyCooked,
     scrapePreview, scrapeError, scrapeLoading, confirmLoading,
-    scrapeRecipe, confirmScrape, clearScrapePreview, fetchModelServerStatus,
+    scrapeRecipe, scrapeRecipeText, confirmScrape, clearScrapePreview, fetchModelServerStatus,
   }
 })

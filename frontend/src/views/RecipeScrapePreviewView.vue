@@ -71,6 +71,7 @@
             @update:focused="validation.leaveOnBlur($event, 'servings')"
           />
           <v-text-field
+            v-if="form.sourceUrl"
             :model-value="form.sourceUrl"
             label="Source URL"
             class="flex-grow-1"

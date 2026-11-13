@@ -108,6 +108,27 @@ describe('RecipeScrapePreviewView', () => {
     expect(nameField?.props('modelValue')).toBe('Chicken Stir Fry')
   })
 
+  const sourceUrlField = wrapper =>
+    wrapper.findAllComponents({ name: 'VTextField' }).find(f => f.props('label') === 'Source URL')
+
+  it('shows the Source URL read-only when the draft has one', async () => {
+    const { wrapper } = await mountView()
+
+    expect(sourceUrlField(wrapper).props('modelValue')).toBe('https://example.com/stir-fry')
+    expect(sourceUrlField(wrapper).props('readonly')).toBe(true)
+  })
+
+  it('hides the Source URL field when the draft has none, and saves without one', async () => {
+    const { wrapper, store } = await mountView(makePreview({ sourceUrl: null }))
+    const confirmSpy = vi.spyOn(store, 'confirmScrape').mockResolvedValue(SAVED)
+
+    expect(sourceUrlField(wrapper)).toBeUndefined()
+
+    await saveButton(wrapper).trigger('click')
+    await flushPromises()
+    expect(confirmSpy).toHaveBeenCalledWith(expect.objectContaining({ sourceUrl: null }))
+  })
+
   it('shows a New chip for new ingredients', async () => {
     const { wrapper } = await mountView()
     const chips = wrapper.findAllComponents({ name: 'VChip' })

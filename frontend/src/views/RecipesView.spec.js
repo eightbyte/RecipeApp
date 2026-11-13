@@ -43,7 +43,7 @@ function deferred() {
   return { promise, resolve, reject }
 }
 
-async function mountView() {
+async function mountView(stubs = {}) {
   const wrapper = mount(RecipesView, {
     global: {
       plugins: [vuetify, pinia],
@@ -52,6 +52,7 @@ async function mountView() {
         'router-link': { template: '<a><slot/></a>' },
         teleport: true,
         VInfiniteScroll: InfiniteScrollStub,
+        ...stubs,
       },
     },
   })
@@ -120,6 +121,21 @@ describe('RecipesView', () => {
 
     expect(wrapper.findComponent({ name: 'VSpeedDial' }).exists()).toBe(false)
     expect(wrapper.findComponent({ name: 'VFab' }).exists()).toBe(false)
+  })
+
+  it.each([
+    ['Import from URL',  'url'],
+    ['Import from text', 'text'],
+  ])('%s opens the Import Recipe sheet in %s mode', async (item, mode) => {
+    // Renders the menu's items inline, because its overlay never opens under jsdom.
+    const wrapper = await mountView({ VMenu: { template: '<div><slot name="activator" :props="{}" /><slot /></div>' } })
+
+    await wrapper.findAllComponents({ name: 'VListItem' }).find((listItem) => listItem.text() === item).trigger('click')
+    await flushPromises()
+
+    const sheet = wrapper.findComponent({ name: 'RecipeUrlBottomSheet' })
+    expect(sheet.props('modelValue')).toBe(true)
+    expect(sheet.props('initialMode')).toBe(mode)
   })
 })
 

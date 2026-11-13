@@ -63,7 +63,7 @@ public class MeasurementConverter(IOptions<MeasurementOptions> options)
     {
         var trimmed = unit?.Trim() ?? string.Empty;
 
-        if (UnitConversions.TryGetValue(trimmed, out var conversion))
+        if (UnitConversions.TryGetValue(MeasurementUnit.WithoutTrailingPeriod(trimmed), out var conversion))
             return (Round((decimal)(rawAmount * conversion.Factor)), conversion.MetricUnit);
 
         if (MeasurementUnit.TryCanonicalise(trimmed, out var canonical))
@@ -106,7 +106,7 @@ public class MeasurementConverter(IOptions<MeasurementOptions> options)
     {
         if (amount is not { } storedAmount || unit is null) return null;
         if (sourceAmount is not { } givenAmount || sourceUnit is null) return null;
-        if (!UnitConversions.TryGetValue(sourceUnit.Trim(), out var conversion)) return null;
+        if (!UnitConversions.TryGetValue(MeasurementUnit.WithoutTrailingPeriod(sourceUnit), out var conversion)) return null;
 
         var entryUnit = MeasurementUnit.EntryOnly.FirstOrDefault(u => UnitConversions[u] == conversion);
         if (entryUnit is null) return null;

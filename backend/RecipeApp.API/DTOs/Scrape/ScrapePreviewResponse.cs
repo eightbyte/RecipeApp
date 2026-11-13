@@ -1,11 +1,12 @@
 namespace RecipeApp.API.DTOs.Scrape;
 
-/// <param name="ImageUrl">The source page's photo, which the preview loads straight from the source site; null when the page offers none.</param>
+/// <param name="SourceUrl">The page scraped, or the one URL a pasted text names; null when the text names none or several.</param>
+/// <param name="ImageUrl">The source page's photo, which the preview loads straight from the source site; null when the page offers none, and always for pasted text.</param>
 public record ScrapePreviewResponse(
     string Name,
     string? Description,
     int Servings,
-    string SourceUrl,
+    string? SourceUrl,
     List<ScrapePreviewIngredientResponse> Ingredients,
     List<ScrapePreviewStepResponse> Steps,
     string? ImageUrl = null

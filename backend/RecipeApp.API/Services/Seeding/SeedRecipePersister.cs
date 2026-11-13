@@ -198,7 +198,7 @@ public class SeedRecipePersister(
         await using var transaction = await db.Database.BeginTransactionAsync(ct);
 
         var replaced = false;
-        if (replaceExisting)
+        if (replaceExisting && sourceUrl is not null)
             replaced = await DeleteExistingAsync(sourceUrl, ct);
 
         var created = await scrapeService.ConfirmAsync(prepared.Request, ct);

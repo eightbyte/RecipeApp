@@ -89,7 +89,7 @@ public static class MeasurementUnit
         canonical = null;
         if (string.IsNullOrWhiteSpace(unit)) return false;
 
-        var trimmed = unit.Trim();
+        var trimmed = WithoutTrailingPeriod(unit);
 
         var exact = All.FirstOrDefault(u => string.Equals(u, trimmed, StringComparison.OrdinalIgnoreCase));
         if (exact is not null)
@@ -99,6 +99,13 @@ public static class MeasurementUnit
         }
 
         return Aliases.TryGetValue(trimmed, out canonical);
+    }
+
+    /// <summary>The unit trimmed and without the one abbreviating full stop a recipe writes after it (<c>tsp.</c>, <c>oz.</c>), for the lenient lookups only.</summary>
+    public static string WithoutTrailingPeriod(string unit)
+    {
+        var trimmed = unit.Trim();
+        return trimmed.Length > 1 && trimmed[^1] == '.' && trimmed[^2] != '.' ? trimmed[..^1].TrimEnd() : trimmed;
     }
 
     /// <summary>Dimension of a canonical unit, or null if the unit is not storable.</summary>

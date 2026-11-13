@@ -77,6 +77,34 @@ public class MeasurementConverterTests
         amount.Should().Be((decimal)expectedAmount);
     }
 
+    [Theory]
+    [InlineData("oz.",     8.0, 226.796, "g")]
+    [InlineData("Oz.",     1.0,  28.35,  "g")]
+    [InlineData("lb.",     1.0, 453.592, "g")]
+    [InlineData("lbs.",    2.0, 907.184, "g")]
+    [InlineData("fl oz.",  1.0,  29.574, "ml")]
+    [InlineData("pt.",     1.0, 473.176, "ml")]
+    [InlineData("qt.",     1.0, 946.353, "ml")]
+    [InlineData("gal.",    1.0,   3.785, "L")]
+    public void ToCanonical_ConvertsACustomaryUnitWrittenWithATrailingPeriod(
+        string unit, double input, double expectedApprox, string expectedUnit)
+    {
+        var (amount, outUnit) = MeasurementConverter.ToCanonical(input, unit);
+        outUnit.Should().Be(expectedUnit);
+        ((double)amount).Should().BeApproximately(expectedApprox, 0.01);
+    }
+
+    [Theory]
+    [InlineData("tsp.",  "tsp")]
+    [InlineData("Tbsp.", "tbsp")]
+    [InlineData("g.",    "g")]
+    public void ToCanonical_CanonicalisesAUnitWrittenWithATrailingPeriod(string unit, string expectedUnit)
+    {
+        var (amount, outUnit) = MeasurementConverter.ToCanonical(2.0, unit);
+        outUnit.Should().Be(expectedUnit);
+        amount.Should().Be(2m);
+    }
+
     [Fact]
     public void ToCanonical_DoesNotConvertCupsToMillilitres()
     {
@@ -234,6 +262,8 @@ public class MeasurementConverterTests
     [InlineData(177.441, "ml", 6,  "us fluid ounces", "fl oz")]
     [InlineData(473.176, "ml", 1,  "pints",           "pint")]
     [InlineData(946.353, "ml", 1,  "qt",              "quart")]
+    [InlineData(226.796, "g",  8,  "oz.",             "oz")]
+    [InlineData(453.592, "g",  1,  "lb.",             "lb")]
     public void EntryUnitOf_SourceThatStillConvertsToTheStoredMeasurement_IsItsEntryOnlyUnit(
         double amount, string unit, double sourceAmount, string sourceUnit, string expected)
     {

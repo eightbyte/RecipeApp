@@ -16,6 +16,10 @@ public static class Mappings
 
     public static LlmStatusResponse ToResponse(this LlmStatus s) => new(s.Provider, s.State, s.Model);
 
+    public static LlmCallResponse ToResponse(this LlmCall c) => new(
+        c.Id, c.CreatedAt, c.Provider, c.Model, c.Operation, c.Step, c.CorrelationId, c.SourceUrl, c.Outcome,
+        c.DurationMs, c.InputTokens, c.CacheReadTokens, c.CacheWriteTokens, c.OutputTokens, c.EstimatedCostUsd);
+
     // ── Ingredient ────────────────────────────────────────────────────────────
 
     public static IngredientResponse ToResponse(this Ingredient i) => new(

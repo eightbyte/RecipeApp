@@ -7,6 +7,7 @@ public static class LlmServiceCollectionExtensions
     /// <summary>
     /// Registers every provider's client and status probe keyed by <see cref="LlmProvider"/>, and the unkeyed ones as the
     /// provider <c>Llm:Provider</c> names, which is what Scraping takes; the seed pipeline asks for the Model Server by key.
+    /// Every client is wrapped in <see cref="UsageRecordingLlmClient"/>, which needs an <c>IDbContextFactory&lt;AppDbContext&gt;</c>.
     /// </summary>
     public static IServiceCollection AddLlm(this IServiceCollection services, IConfiguration configuration)
     {
@@ -20,16 +21,24 @@ public static class LlmServiceCollectionExtensions
         services.AddHttpClient(AnthropicStructuredClient.HttpClientName, client =>
             client.Timeout = Timeout.InfiniteTimeSpan);
 
-        services.AddKeyedSingleton<ILlmStructuredClient, ModelServerClient>(LlmProvider.ModelServer);
+        services.AddSingleton<ILlmCallRecorder, LlmCallRecorder>();
+
+        services.AddKeyedSingleton(LlmProvider.ModelServer, (sp, _) => Recorded<ModelServerClient>(sp, LlmProvider.ModelServer));
         services.AddKeyedSingleton<ILlmStatusProbe, ModelServerStatusProbe>(LlmProvider.ModelServer);
-        services.AddKeyedSingleton<ILlmStructuredClient, AnthropicStructuredClient>(LlmProvider.Anthropic);
+        services.AddKeyedSingleton(LlmProvider.Anthropic, (sp, _) => Recorded<AnthropicStructuredClient>(sp, LlmProvider.Anthropic));
         services.AddKeyedSingleton<ILlmStatusProbe, AnthropicStatusProbe>(LlmProvider.Anthropic);
 
+        // Resolved through the keyed clients, which are already wrapped, so Scraping's calls are recorded exactly once.
         services.AddSingleton(sp => sp.GetRequiredKeyedService<ILlmStructuredClient>(ConfiguredProvider(sp)));
         services.AddSingleton(sp => sp.GetRequiredKeyedService<ILlmStatusProbe>(ConfiguredProvider(sp)));
 
         return services;
     }
+
+    private static ILlmStructuredClient Recorded<TClient>(IServiceProvider sp, LlmProvider provider)
+        where TClient : ILlmStructuredClient =>
+        ActivatorUtilities.CreateInstance<UsageRecordingLlmClient>(
+            sp, ActivatorUtilities.CreateInstance<TClient>(sp), provider);
 
     private static LlmProvider ConfiguredProvider(IServiceProvider sp) =>
         sp.GetRequiredService<IOptions<LlmOptions>>().Value.Provider;

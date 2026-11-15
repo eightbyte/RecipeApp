@@ -225,9 +225,10 @@ public class RecipeScrapeService(
         // Checked before the fetch, which can take 35 seconds and is wasted when nothing can read the page.
         await EnsureLlmReadyAsync(url, ct);
 
+        var scrape    = new LlmCallContext(LlmOperation.ScrapeUrl, Step: null, url, Guid.NewGuid());
         var page      = await FetchPageAsync(url, ct);
-        var extracted = await ExtractRecipeAsync(page.Text, ct);
-        return await NormaliseAsync(extracted, url, ct) with { ImageUrl = page.ImageUrl };
+        var extracted = await ExtractRecipeAsync(page.Text, scrape, ct);
+        return await NormaliseAsync(extracted, scrape, ct) with { ImageUrl = page.ImageUrl };
     }
 
     public async Task<ScrapePreviewResponse> ScrapeTextAsync(string text, CancellationToken ct = default)
@@ -235,10 +236,11 @@ public class RecipeScrapeService(
         await EnsureLlmReadyAsync(PastedTextLabel, ct);
 
         var recipeText = TidyPastedText(text);
+        var scrape     = new LlmCallContext(LlmOperation.ScrapeText, Step: null, SourceUrlNamedIn(recipeText), Guid.NewGuid());
         try
         {
-            var extracted = await ExtractRecipeAsync(recipeText, ct);
-            return await NormaliseAsync(extracted, SourceUrlNamedIn(recipeText), ct);
+            var extracted = await ExtractRecipeAsync(recipeText, scrape, ct);
+            return await NormaliseAsync(extracted, scrape, ct);
         }
         catch (RecipeScrapeException ex) when (ex.Error == RecipeScrapeError.NoContent)
         {
@@ -594,7 +596,7 @@ public class RecipeScrapeService(
 
     // ── LLM extraction ────────────────────────────────────────────────────────
 
-    private async Task<ExtractedRecipe> ExtractRecipeAsync(string strippedText, CancellationToken ct)
+    private async Task<ExtractedRecipe> ExtractRecipeAsync(string strippedText, LlmCallContext scrape, CancellationToken ct)
     {
         if (_options.MaxHtmlCharacters > 0 && strippedText.Length > _options.MaxHtmlCharacters)
             strippedText = strippedText[.._options.MaxHtmlCharacters];
@@ -608,7 +610,9 @@ public class RecipeScrapeService(
         JsonNode json;
         try
         {
-            json = await llm.CompleteStructuredAsync(ExtractionSystemPrompt, userMessage, schema, maxTokens: 4096, linkedCts.Token);
+            json = (await llm.CompleteStructuredAsync(
+                ExtractionSystemPrompt, userMessage, schema, maxTokens: 4096,
+                scrape with { Step = LlmStep.Extraction }, linkedCts.Token)).Json;
         }
         // A TimeoutException is a provider's own budget running out, which is shorter than this one for a cloud provider.
         catch (Exception ex) when (ex is TimeoutException
@@ -640,9 +644,12 @@ public class RecipeScrapeService(
 
     // ── Normalisation with semantic matching ──────────────────────────────────
 
+    /// <param name="scrape">The Scrape's own LLM Call context, whose Source URL is the preview's.</param>
     internal async Task<ScrapePreviewResponse> NormaliseAsync(
-        ExtractedRecipe extracted, string? url, CancellationToken ct)
+        ExtractedRecipe extracted, LlmCallContext scrape, CancellationToken ct)
     {
+        var url = scrape.SourceUrl;
+
         if (string.IsNullOrWhiteSpace(extracted.Name) ||
             extracted.Ingredients.Count == 0 ||
             extracted.Steps.Count == 0)
@@ -759,8 +766,9 @@ public class RecipeScrapeService(
 
             try
             {
-                var matchJson = await llm.CompleteStructuredAsync(
-                    systemPrompt, userContent, matchSchema, maxTokens: 2048, matchLinked.Token);
+                var matchJson = (await llm.CompleteStructuredAsync(
+                    systemPrompt, userContent, matchSchema, maxTokens: 2048,
+                    scrape with { Step = LlmStep.IngredientMatching }, matchLinked.Token)).Json;
 
                 var matchResponse = matchJson.Deserialize<MatchingResponse>(LlmJsonOptions);
                 if (matchResponse?.Results != null)

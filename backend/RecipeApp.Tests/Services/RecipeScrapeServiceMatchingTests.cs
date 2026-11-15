@@ -19,6 +19,9 @@ public class RecipeScrapeServiceMatchingTests(DatabaseFixture db) : IAsyncLifeti
 
     // ── Helpers ───────────────────────────────────────────────────────────────
 
+    private static readonly LlmCallContext UrlScrape =
+        new(LlmOperation.ScrapeUrl, Step: null, "https://x", Guid.NewGuid());
+
     private RecipeScrapeService BuildService(params JsonNode[] llmResponses)
     {
         var opts    = Options.Create(new RecipeScrapingOptions { MatchConfidenceThreshold = 0.8 });
@@ -101,7 +104,7 @@ public class RecipeScrapeServiceMatchingTests(DatabaseFixture db) : IAsyncLifeti
 
         // No LLM response needed — exact match short-circuits
         var svc     = BuildService();
-        var preview = await svc.NormaliseAsync(MakeRecipe(("scallion", "Scallion")), "https://x", default);
+        var preview = await svc.NormaliseAsync(MakeRecipe(("scallion", "Scallion")), UrlScrape, default);
 
         preview.Ingredients.Should().HaveCount(1);
         var ing = preview.Ingredients[0];
@@ -121,7 +124,7 @@ public class RecipeScrapeServiceMatchingTests(DatabaseFixture db) : IAsyncLifeti
 
         var svc     = BuildService();
         var preview = await svc.NormaliseAsync(
-            MakeRecipe(("garbanzo beans", "Garbanzo Beans")), "https://x", default);
+            MakeRecipe(("garbanzo beans", "Garbanzo Beans")), UrlScrape, default);
 
         var ing = preview.Ingredients.Should().ContainSingle().Which;
         ing.IsNew.Should().BeFalse();
@@ -141,7 +144,7 @@ public class RecipeScrapeServiceMatchingTests(DatabaseFixture db) : IAsyncLifeti
 
         var svc     = BuildService();
         var preview = await svc.NormaliseAsync(
-            MakeRecipe(("diced tomatoes", "Diced Tomatoes")), "https://x", default);
+            MakeRecipe(("diced tomatoes", "Diced Tomatoes")), UrlScrape, default);
 
         preview.Ingredients.Should().ContainSingle().Which.IngredientId.Should().Be(diced.Id);
     }
@@ -170,7 +173,7 @@ public class RecipeScrapeServiceMatchingTests(DatabaseFixture db) : IAsyncLifeti
             """)!;
 
         var svc     = BuildService(matchResponse);
-        var preview = await svc.NormaliseAsync(MakeRecipe(("spring onion", "Spring Onion")), "https://x", default);
+        var preview = await svc.NormaliseAsync(MakeRecipe(("spring onion", "Spring Onion")), UrlScrape, default);
 
         preview.Ingredients.Should().HaveCount(1);
         var ing = preview.Ingredients[0];
@@ -202,7 +205,7 @@ public class RecipeScrapeServiceMatchingTests(DatabaseFixture db) : IAsyncLifeti
             """)!;
 
         var svc     = BuildService(matchResponse);
-        var preview = await svc.NormaliseAsync(MakeRecipe(("spring onion", "Spring Onion")), "https://x", default);
+        var preview = await svc.NormaliseAsync(MakeRecipe(("spring onion", "Spring Onion")), UrlScrape, default);
 
         preview.Ingredients[0].IsNew.Should().BeTrue();
         preview.Ingredients[0].IngredientId.Should().BeNull();
@@ -232,7 +235,7 @@ public class RecipeScrapeServiceMatchingTests(DatabaseFixture db) : IAsyncLifeti
 
         var svc     = BuildService(matchResponse);
         // "chicken breast" should be categorised as MEAT_SEAFOOD by keyword fallback
-        var preview = await svc.NormaliseAsync(MakeRecipe(("chicken breast", "Chicken Breast")), "https://x", default);
+        var preview = await svc.NormaliseAsync(MakeRecipe(("chicken breast", "Chicken Breast")), UrlScrape, default);
 
         preview.Ingredients[0].SuggestedCategory.Should().Be(IngredientCategory.MeatSeafood);
     }
@@ -242,7 +245,7 @@ public class RecipeScrapeServiceMatchingTests(DatabaseFixture db) : IAsyncLifeti
     {
         // Empty DB — semantic match skipped entirely
         var svc     = BuildService();
-        var preview = await svc.NormaliseAsync(MakeRecipe(("salmon fillet", "Salmon Fillet")), "https://x", default);
+        var preview = await svc.NormaliseAsync(MakeRecipe(("salmon fillet", "Salmon Fillet")), UrlScrape, default);
 
         preview.Ingredients[0].IsNew.Should().BeTrue();
         preview.Ingredients[0].SuggestedCategory.Should().Be(IngredientCategory.MeatSeafood);
@@ -270,7 +273,7 @@ public class RecipeScrapeServiceMatchingTests(DatabaseFixture db) : IAsyncLifeti
             """)!;
 
         var svc     = BuildService(matchResponse);
-        var preview = await svc.NormaliseAsync(MakeRecipe(("spring onion", "Spring Onion")), "https://x", default);
+        var preview = await svc.NormaliseAsync(MakeRecipe(("spring onion", "Spring Onion")), UrlScrape, default);
 
         preview.Ingredients[0].IsNew.Should().BeTrue();
     }
@@ -286,7 +289,7 @@ public class RecipeScrapeServiceMatchingTests(DatabaseFixture db) : IAsyncLifeti
 
         var svc     = BuildService();
         var preview = await svc.NormaliseAsync(
-            MakeRecipeMeasured("plain flour", "Plain Flour", 2.0, "cups"), "https://x", default);
+            MakeRecipeMeasured("plain flour", "Plain Flour", 2.0, "cups"), UrlScrape, default);
 
         var ing = preview.Ingredients.Single();
         ing.SourceAmount.Should().Be(2m);
@@ -302,7 +305,7 @@ public class RecipeScrapeServiceMatchingTests(DatabaseFixture db) : IAsyncLifeti
 
         var svc     = BuildService();
         var preview = await svc.NormaliseAsync(
-            MakeRecipeMeasured("plain flour", "Plain Flour", 500.0, "g"), "https://x", default);
+            MakeRecipeMeasured("plain flour", "Plain Flour", 500.0, "g"), UrlScrape, default);
 
         var ing = preview.Ingredients.Single();
         ing.Amount.Should().Be(500m);
@@ -320,7 +323,7 @@ public class RecipeScrapeServiceMatchingTests(DatabaseFixture db) : IAsyncLifeti
     {
         var svc     = BuildService();
         var preview = await svc.NormaliseAsync(
-            MakeRecipeMeasured("beef mince", "Beef Mince", amount, unit), "https://x", default);
+            MakeRecipeMeasured("beef mince", "Beef Mince", amount, unit), UrlScrape, default);
 
         preview.Ingredients.Single().Should().BeEquivalentTo(new
         {
@@ -336,7 +339,7 @@ public class RecipeScrapeServiceMatchingTests(DatabaseFixture db) : IAsyncLifeti
     {
         var svc     = BuildService();
         var preview = await svc.NormaliseAsync(
-            MakeRecipeMeasured("plain flour", "Plain Flour", amount, unit), "https://x", default);
+            MakeRecipeMeasured("plain flour", "Plain Flour", amount, unit), UrlScrape, default);
 
         preview.Ingredients.Single().EntryUnit.Should().BeNull();
     }
@@ -351,7 +354,7 @@ public class RecipeScrapeServiceMatchingTests(DatabaseFixture db) : IAsyncLifeti
 
         var svc     = BuildService();
         var preview = await svc.NormaliseAsync(
-            MakeRecipeMeasured("plain flour", "Plain Flour", 2.0, "cups"), "https://x", default);
+            MakeRecipeMeasured("plain flour", "Plain Flour", 2.0, "cups"), UrlScrape, default);
 
         var ing = preview.Ingredients.Single();
         ing.Amount.Should().Be(240m);        // 2 x 240 ml x 0.5 g/ml
@@ -369,7 +372,7 @@ public class RecipeScrapeServiceMatchingTests(DatabaseFixture db) : IAsyncLifeti
 
         var svc     = BuildService();
         var preview = await svc.NormaliseAsync(
-            MakeRecipeMeasured("spinach", "Spinach", 2.0, "cups"), "https://x", default);
+            MakeRecipeMeasured("spinach", "Spinach", 2.0, "cups"), UrlScrape, default);
 
         var ing = preview.Ingredients.Single();
         ing.Amount.Should().Be(2m);
@@ -387,7 +390,7 @@ public class RecipeScrapeServiceMatchingTests(DatabaseFixture db) : IAsyncLifeti
 
         var svc     = BuildService(ConfidentMatchTo(0));
         var preview = await svc.NormaliseAsync(
-            MakeRecipeMeasured("all-purpose flour", "All-Purpose Flour", 2.0, "cups"), "https://x", default);
+            MakeRecipeMeasured("all-purpose flour", "All-Purpose Flour", 2.0, "cups"), UrlScrape, default);
 
         var ing = preview.Ingredients.Single();
         ing.IsNew.Should().BeFalse();
@@ -405,7 +408,7 @@ public class RecipeScrapeServiceMatchingTests(DatabaseFixture db) : IAsyncLifeti
 
         var svc     = BuildService();   // no LLM response: semantic matching falls back
         var preview = await svc.NormaliseAsync(
-            MakeRecipeMeasured("mixed salad greens", "Mixed Salad Greens", 3.0, "cups"), "https://x", default);
+            MakeRecipeMeasured("mixed salad greens", "Mixed Salad Greens", 3.0, "cups"), UrlScrape, default);
 
         var ing = preview.Ingredients.Single();
         ing.IsNew.Should().BeTrue();
@@ -423,7 +426,7 @@ public class RecipeScrapeServiceMatchingTests(DatabaseFixture db) : IAsyncLifeti
 
         var svc     = BuildService();
         var preview = await svc.NormaliseAsync(
-            MakeRecipeMeasured("tomato", "Tomato", 1.0, "can"), "https://x", default);
+            MakeRecipeMeasured("tomato", "Tomato", 1.0, "can"), UrlScrape, default);
 
         var ing = preview.Ingredients.Single();
         ing.Unit.Should().Be("can");
@@ -438,7 +441,7 @@ public class RecipeScrapeServiceMatchingTests(DatabaseFixture db) : IAsyncLifeti
         // "2 eggs": nothing is lost by storing pcs, so there is no Source Measurement to keep.
         var svc     = BuildService();
         var preview = await svc.NormaliseAsync(
-            MakeRecipeStated("egg", "Egg", amount: 2.0, unit: null), "https://x", default);
+            MakeRecipeStated("egg", "Egg", amount: 2.0, unit: null), UrlScrape, default);
 
         var ing = preview.Ingredients.Single();
         ing.Amount.Should().Be(2m);
@@ -452,7 +455,7 @@ public class RecipeScrapeServiceMatchingTests(DatabaseFixture db) : IAsyncLifeti
     {
         var svc     = BuildService();
         var preview = await svc.NormaliseAsync(
-            MakeRecipeStated("garlic", "Garlic", amount: 2.0, unit: "cloves"), "https://x", default);
+            MakeRecipeStated("garlic", "Garlic", amount: 2.0, unit: "cloves"), UrlScrape, default);
 
         var ing = preview.Ingredients.Single();
         ing.Amount.Should().Be(2m);
@@ -469,7 +472,7 @@ public class RecipeScrapeServiceMatchingTests(DatabaseFixture db) : IAsyncLifeti
     {
         var svc     = BuildService();
         var preview = await svc.NormaliseAsync(
-            MakeRecipeStated(name, display, amount, unit, notes), "https://x", default);
+            MakeRecipeStated(name, display, amount, unit, notes), UrlScrape, default);
 
         preview.Ingredients.Single().Should().BeEquivalentTo(new
         {
@@ -483,7 +486,7 @@ public class RecipeScrapeServiceMatchingTests(DatabaseFixture db) : IAsyncLifeti
     {
         var svc     = BuildService();
         var preview = await svc.NormaliseAsync(
-            MakeRecipeStated("butter", "Butter", 1.0, "stick"), "https://x", default);
+            MakeRecipeStated("butter", "Butter", 1.0, "stick"), UrlScrape, default);
 
         preview.Ingredients.Single().Unit.Should().Be("stick");
     }
@@ -496,7 +499,7 @@ public class RecipeScrapeServiceMatchingTests(DatabaseFixture db) : IAsyncLifeti
     {
         var svc     = BuildService();
         var preview = await svc.NormaliseAsync(
-            MakeRecipeStated("blueberry", "Blueberries", count, unit), "https://x", default);
+            MakeRecipeStated("blueberry", "Blueberries", count, unit), UrlScrape, default);
 
         preview.Ingredients.Single().Should().BeEquivalentTo(new
         {
@@ -518,7 +521,7 @@ public class RecipeScrapeServiceMatchingTests(DatabaseFixture db) : IAsyncLifeti
         // The model sometimes splits "1 (6 oz) pkg" into a unit of "pkg" and notes of "(6 oz)".
         var svc     = BuildService();
         var preview = await svc.NormaliseAsync(
-            MakeRecipeStated("blueberry", "Blueberries", count, unit, notes), "https://x", default);
+            MakeRecipeStated("blueberry", "Blueberries", count, unit, notes), UrlScrape, default);
 
         preview.Ingredients.Single().Should().BeEquivalentTo(new
         {
@@ -532,7 +535,7 @@ public class RecipeScrapeServiceMatchingTests(DatabaseFixture db) : IAsyncLifeti
     {
         var svc     = BuildService();
         var preview = await svc.NormaliseAsync(
-            MakeRecipeStated("blueberry", "Blueberries", 1.0, "pkg", "(any brand)"), "https://x", default);
+            MakeRecipeStated("blueberry", "Blueberries", 1.0, "pkg", "(any brand)"), UrlScrape, default);
 
         preview.Ingredients.Single().Should().BeEquivalentTo(new { Unit = "pkg", Notes = "(any brand)" });
     }
@@ -542,7 +545,7 @@ public class RecipeScrapeServiceMatchingTests(DatabaseFixture db) : IAsyncLifeti
     {
         var svc     = BuildService();
         var preview = await svc.NormaliseAsync(
-            MakeRecipeStated("milk", "Milk", 1.0, "cup", "8 oz"), "https://x", default);
+            MakeRecipeStated("milk", "Milk", 1.0, "cup", "8 oz"), UrlScrape, default);
 
         preview.Ingredients.Single().Should().BeEquivalentTo(new { Amount = 1m, Unit = "cup", Notes = "8 oz" });
     }
@@ -552,7 +555,7 @@ public class RecipeScrapeServiceMatchingTests(DatabaseFixture db) : IAsyncLifeti
     {
         var svc     = BuildService();
         var preview = await svc.NormaliseAsync(
-            MakeRecipeStated("tomato", "Tomatoes", 2.0, "(15 ounce) cans", "diced"), "https://x", default);
+            MakeRecipeStated("tomato", "Tomatoes", 2.0, "(15 ounce) cans", "diced"), UrlScrape, default);
 
         preview.Ingredients.Single().Should().BeEquivalentTo(new
         {
@@ -566,7 +569,7 @@ public class RecipeScrapeServiceMatchingTests(DatabaseFixture db) : IAsyncLifeti
     {
         var svc     = BuildService();
         var preview = await svc.NormaliseAsync(
-            MakeRecipeStated("egg", "Egg", amount: 2.0, unit: "large"), "https://x", default);
+            MakeRecipeStated("egg", "Egg", amount: 2.0, unit: "large"), UrlScrape, default);
 
         var ing = preview.Ingredients.Single();
         ing.Amount.Should().Be(2m);
@@ -581,7 +584,7 @@ public class RecipeScrapeServiceMatchingTests(DatabaseFixture db) : IAsyncLifeti
     {
         var svc     = BuildService();
         var preview = await svc.NormaliseAsync(
-            MakeRecipeStated("egg", "Egg", amount: 2.0, unit: "Large", notes: "beaten"), "https://x", default);
+            MakeRecipeStated("egg", "Egg", amount: 2.0, unit: "Large", notes: "beaten"), UrlScrape, default);
 
         preview.Ingredients.Single().Notes.Should().Be("Large, beaten");
     }
@@ -591,7 +594,7 @@ public class RecipeScrapeServiceMatchingTests(DatabaseFixture db) : IAsyncLifeti
     {
         var svc     = BuildService();
         var preview = await svc.NormaliseAsync(
-            MakeRecipeStated("egg", "Egg", amount: 2.0, unit: "large", notes: "large, beaten"), "https://x", default);
+            MakeRecipeStated("egg", "Egg", amount: 2.0, unit: "large", notes: "large, beaten"), UrlScrape, default);
 
         preview.Ingredients.Single().Notes.Should().Be("large, beaten");
     }
@@ -605,7 +608,7 @@ public class RecipeScrapeServiceMatchingTests(DatabaseFixture db) : IAsyncLifeti
 
         var svc     = BuildService();
         var preview = await svc.NormaliseAsync(
-            MakeRecipeMeasured("salt", "Salt", 1.0, "pinch"), "https://x", default);
+            MakeRecipeMeasured("salt", "Salt", 1.0, "pinch"), UrlScrape, default);
 
         var ing = preview.Ingredients.Single();
         ing.Amount.Should().BeNull();
@@ -623,7 +626,7 @@ public class RecipeScrapeServiceMatchingTests(DatabaseFixture db) : IAsyncLifeti
 
         var svc     = BuildService();
         var preview = await svc.NormaliseAsync(
-            MakeRecipeStated("salt", "Salt", amount: null, unit: "to taste"), "https://x", default);
+            MakeRecipeStated("salt", "Salt", amount: null, unit: "to taste"), UrlScrape, default);
 
         var ing = preview.Ingredients.Single();
         ing.Amount.Should().BeNull();
@@ -642,7 +645,7 @@ public class RecipeScrapeServiceMatchingTests(DatabaseFixture db) : IAsyncLifeti
 
         var svc     = BuildService();
         var preview = await svc.NormaliseAsync(
-            MakeRecipeStated("salt", "Salt", amount: null, unit: "g"), "https://x", default);
+            MakeRecipeStated("salt", "Salt", amount: null, unit: "g"), UrlScrape, default);
 
         var ing = preview.Ingredients.Single();
         ing.SourceAmount.Should().BeNull();

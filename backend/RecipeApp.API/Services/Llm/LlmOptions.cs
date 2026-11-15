@@ -9,6 +9,18 @@ public class LlmOptions
 
     public ModelServerOptions ModelServer { get; init; } = new();
     public AnthropicOptions Anthropic { get; init; } = new();
+
+    /// <summary>List prices keyed by the model id that answers, kept by hand; a model missing here records a null cost, never a guess.</summary>
+    public Dictionary<string, LlmModelPrice> Pricing { get; init; } = [];
+}
+
+/// <summary>USD per million tokens, <see cref="CacheWrite"/> at the 5-minute write rate.</summary>
+public class LlmModelPrice
+{
+    public decimal Input { get; init; }
+    public decimal Output { get; init; }
+    public decimal CacheRead { get; init; }
+    public decimal CacheWrite { get; init; }
 }
 
 /// <summary>Where the Model Server (llama.cpp's <c>llama-server</c>) listens, an empty <see cref="BaseUrl"/> meaning there is none and Scraping is unavailable.</summary>

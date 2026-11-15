@@ -22,11 +22,12 @@ public sealed class AnthropicStructuredClient(IHttpClientFactory httpClientFacto
 
     private readonly AnthropicOptions _options = options.Value.Anthropic;
 
-    public async Task<JsonNode> CompleteStructuredAsync(
+    public async Task<LlmCompletion> CompleteStructuredAsync(
         string systemPrompt,
         string userContent,
         JsonNode jsonSchema,
         int maxTokens,
+        LlmCallContext context,
         CancellationToken ct = default)
     {
         var client = AnthropicConnection.Create(httpClientFactory, _options, _options.MaxRetries);
@@ -60,15 +61,20 @@ public sealed class AnthropicStructuredClient(IHttpClientFactory httpClientFacto
         }
         catch (Exception ex) when (AnthropicConnection.UnavailableStateOf(ex) is { } state)
         {
-            throw new LlmUnavailableException(LlmProvider.Anthropic, state);
+            throw new LlmUnavailableException(LlmProvider.Anthropic, state,
+                providerAnswered: ex is not (AnthropicIOException or HttpRequestException)
+                                  || LlmUnavailableException.ReachedProvider(ex));
         }
         catch (AnthropicApiException ex)
         {
             throw new LlmRequestRejectedException($"Claude rejected the request: {ex.Message}", ex);
         }
 
+        var usage = UsageOf(message);
+
         if (message.StopReason != "end_turn")
-            throw new InvalidOperationException($"Claude stopped with '{message.StopReason}' before finishing the answer.");
+            throw new LlmAnswerFailedException(
+                $"Claude stopped with '{usage.StopReason}' before finishing the answer.", usage);
 
         var text = string.Concat(message.Content
             .Select(block => block.TryPickText(out var t) ? t.Text : null)
@@ -76,14 +82,25 @@ public sealed class AnthropicStructuredClient(IHttpClientFactory httpClientFacto
 
         try
         {
-            return JsonNode.Parse(text)
-                ?? throw new InvalidOperationException("Claude returned an empty answer.");
+            var json = JsonNode.Parse(text)
+                ?? throw new LlmAnswerFailedException("Claude returned an empty answer.", usage);
+            return new LlmCompletion(json, usage);
         }
         catch (JsonException ex)
         {
-            throw new InvalidOperationException($"Claude returned invalid JSON: {ex.Message}", ex);
+            throw new LlmAnswerFailedException($"Claude returned invalid JSON: {ex.Message}", usage, ex);
         }
     }
+
+    /// <summary>What the final message reports, its own input count already excluding the cached tokens.</summary>
+    private static LlmUsage UsageOf(BetaMessage message) => new(
+        LlmProvider.Anthropic,
+        message.Model.Raw(),
+        InputTokens:      (int)message.Usage.InputTokens,
+        CacheReadTokens:  (int)(message.Usage.CacheReadInputTokens ?? 0),
+        CacheWriteTokens: (int)(message.Usage.CacheCreationInputTokens ?? 0),
+        OutputTokens:     (int)message.Usage.OutputTokens,
+        StopReason:       message.StopReason?.Raw());
 
     private static Dictionary<string, JsonElement> SchemaProperties(JsonNode schema) =>
         schema.AsObject().ToDictionary(

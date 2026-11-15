@@ -39,7 +39,8 @@ var builder = WebApplication.CreateBuilder(hostArgs);
 builder.Services.AddOpenApi();
 
 // ── Database ──────────────────────────────────────────────────────────────────
-builder.Services.AddDbContext<AppDbContext>(options =>
+// A factory as well as the scoped context, because LLM Calls are written through a context of their own.
+builder.Services.AddDbContextFactory<AppDbContext>(options =>
     options.UseNpgsql(
         builder.Configuration.GetConnectionString("DefaultConnection"),
         npgsql => npgsql.MigrationsAssembly("RecipeApp.API")
@@ -111,6 +112,7 @@ builder.Services.AddHttpClient(WaybackHarvester.HttpClientName, (sp, client) =>
 
 // ── LLM (Scraping follows Llm:Provider; the seed pipeline always uses the Model Server) ──
 builder.Services.AddLlm(builder.Configuration);
+builder.Services.AddScoped<LlmUsageService>();
 
 // ── CORS ──────────────────────────────────────────────────────────────────────
 builder.Services.AddCors(options =>

@@ -8,7 +8,16 @@ namespace RecipeApp.Tests.Services.Llm;
 public static class AnthropicSse
 {
     /// <summary>A streamed message whose one text block is <paramref name="text"/>, after a thinking block as the default model sends.</summary>
-    public static HttpResponseMessage Message(string text, string stopReason = "end_turn")
+    /// <param name="model">The model that answered, which the refusal fallback can make differ from the one requested.</param>
+    /// <param name="outputTokens">The final output count, which <c>message_delta</c> reports cumulatively.</param>
+    public static HttpResponseMessage Message(
+        string text,
+        string stopReason = "end_turn",
+        string model = "claude-opus-5-5",
+        int inputTokens = 10,
+        int cacheReadTokens = 0,
+        int cacheWriteTokens = 0,
+        int outputTokens = 20)
     {
         var events = new (string Name, JsonNode Data)[]
         {
@@ -17,9 +26,15 @@ public static class AnthropicSse
                 ["type"] = "message_start",
                 ["message"] = new JsonObject
                 {
-                    ["id"] = "msg_test", ["type"] = "message", ["role"] = "assistant", ["model"] = "claude-opus-5-5",
+                    ["id"] = "msg_test", ["type"] = "message", ["role"] = "assistant", ["model"] = model,
                     ["content"] = new JsonArray(), ["stop_reason"] = null, ["stop_sequence"] = null,
-                    ["usage"] = new JsonObject { ["input_tokens"] = 10, ["output_tokens"] = 1 },
+                    ["usage"] = new JsonObject
+                    {
+                        ["input_tokens"]                = inputTokens,
+                        ["cache_read_input_tokens"]     = cacheReadTokens,
+                        ["cache_creation_input_tokens"] = cacheWriteTokens,
+                        ["output_tokens"]               = 1,
+                    },
                 },
             }),
             ("content_block_start", new JsonObject
@@ -48,7 +63,7 @@ public static class AnthropicSse
             {
                 ["type"] = "message_delta",
                 ["delta"] = new JsonObject { ["stop_reason"] = stopReason, ["stop_sequence"] = null },
-                ["usage"] = new JsonObject { ["output_tokens"] = 20 },
+                ["usage"] = new JsonObject { ["output_tokens"] = outputTokens },
             }),
             ("message_stop", new JsonObject { ["type"] = "message_stop" }),
         };

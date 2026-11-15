@@ -150,7 +150,7 @@ public class RecipeScrapeService(
     }
 
     // Semantic matching schema for unmatched scraped ingredients
-    private const string MatchingSchemaJson = """
+    internal const string MatchingSchemaJson = """
         {
           "type": "object",
           "properties": {
@@ -801,6 +801,11 @@ public class RecipeScrapeService(
                         }
                     }
                 }
+            }
+            catch (LlmRequestRejectedException ex)
+            {
+                // Still best-effort, but a request the provider refuses is a bug that must not pass silently.
+                logger.LogError(ex, "The LLM provider rejected the ingredient-matching request; using keyword categories.");
             }
             catch (Exception)
             {

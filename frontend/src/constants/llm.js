@@ -10,21 +10,15 @@ export const LLM_UNAUTHORIZED   = 'unauthorized'
 export const LLM_BUSY           = 'busy'
 export const LLM_NOT_CONFIGURED = 'notConfigured'
 
-const MODEL_SERVER_NOT_RUNNING = "Scraping is unavailable: the Model Server isn't running."
-const CLAUDE_UNREACHABLE       = "Scraping is unavailable: Claude (Anthropic) can't be reached."
-
-/** Why Scraping is unavailable for each provider in each state that is not ready, worded as the backend's `UnavailableReason` so the sheet and a 503 say the same thing. */
+/** Why Scraping is unavailable in each state a provider reports other than ready, worded as the backend's `UnavailableReason` so the sheet and a 503 say the same thing. */
 export const LLM_UNAVAILABLE_MESSAGES = Object.freeze({
   [LLM_PROVIDER_MODEL_SERVER]: Object.freeze({
-    [LLM_OFFLINE]:        MODEL_SERVER_NOT_RUNNING,
-    [LLM_LOADING]:        'Scraping is unavailable: the Model Server is still loading the model, try again in a moment.',
-    [LLM_UNAUTHORIZED]:   'Scraping is unavailable: the Model Server rejected the API key.',
-    [LLM_BUSY]:           'Scraping is unavailable: the Model Server is busy, try again in a moment.',
-    [LLM_NOT_CONFIGURED]: MODEL_SERVER_NOT_RUNNING,
+    [LLM_OFFLINE]:      "Scraping is unavailable: the Model Server isn't running.",
+    [LLM_LOADING]:      'Scraping is unavailable: the Model Server is still loading the model, try again in a moment.',
+    [LLM_UNAUTHORIZED]: 'Scraping is unavailable: the Model Server rejected the API key.',
   }),
   [LLM_PROVIDER_ANTHROPIC]: Object.freeze({
-    [LLM_OFFLINE]:        CLAUDE_UNREACHABLE,
-    [LLM_LOADING]:        CLAUDE_UNREACHABLE,
+    [LLM_OFFLINE]:        "Scraping is unavailable: Claude (Anthropic) can't be reached.",
     [LLM_UNAUTHORIZED]:   'Scraping is unavailable: Claude (Anthropic) rejected the API key.',
     [LLM_BUSY]:           'Scraping is unavailable: Claude is busy right now, try again in a moment.',
     [LLM_NOT_CONFIGURED]: "Scraping is unavailable: Claude (Anthropic) isn't configured.",

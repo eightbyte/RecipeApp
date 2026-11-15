@@ -49,21 +49,21 @@ public class StructuredOutputSchemaTests
         schema.ToJsonString().Should().Be(before);
     }
 
-    /// <summary>The real Scrape schema, walked node by node, because one missed object anywhere is a 400 on every Scrape.</summary>
-    [Fact]
-    public void TheScrapeSchema_FitsTheSubset_WithNoTypeArrayAndNoOpenObjectLeft()
+    public static TheoryData<string> ScrapingSchemas =>
+        new(RecipeScrapeService.ScrapeSchemaJson, RecipeScrapeService.MatchingSchemaJson);
+
+    /// <summary>Each real Scraping schema, walked node by node, because one missed object anywhere is a 400 on every Scrape.</summary>
+    [Theory]
+    [MemberData(nameof(ScrapingSchemas))]
+    public void EveryScrapingSchema_FitsTheSubset_WithNoTypeArrayAndNoOpenObjectLeft(string schemaJson)
     {
-        var fitted = StructuredOutputSchema.Fit(JsonNode.Parse(RecipeScrapeService.ScrapeSchemaJson)!);
+        var fitted = StructuredOutputSchema.Fit(JsonNode.Parse(schemaJson)!);
 
-        foreach (var node in Descendants(fitted).OfType<JsonObject>())
-        {
-            (node["type"] is JsonArray).Should().BeFalse("type arrays are rewritten as anyOf");
-            if (node["type"]?.GetValue<string>() == "object")
-                node["additionalProperties"]?.GetValue<bool>().Should().BeFalse();
-        }
-
-        fitted["properties"]!["steps"]!["items"]!["properties"]!["stated_amounts"]!["items"]!["additionalProperties"]!
-            .GetValue<bool>().Should().BeFalse();
+        var objects = Descendants(fitted).OfType<JsonObject>().ToList();
+        objects.Should().NotContain(node => node["type"] is JsonArray, "type arrays are rewritten as anyOf");
+        objects.Where(node => node["type"] is JsonValue && node["type"]!.GetValue<string>() == "object")
+            .Should().OnlyContain(node => node["additionalProperties"] is JsonValue
+                                          && node["additionalProperties"]!.GetValue<bool>() == false);
     }
 
     private static IEnumerable<JsonNode> Descendants(JsonNode node)

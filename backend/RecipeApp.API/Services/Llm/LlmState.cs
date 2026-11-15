@@ -46,7 +46,6 @@ public static class LlmStateExtensions
         {
             LlmState.Loading      => "the Model Server is still loading the model, try again in a moment.",
             LlmState.Unauthorized => "the Model Server rejected the API key.",
-            LlmState.Busy         => "the Model Server is busy, try again in a moment.",
             _                     => "the Model Server isn't running.",
         },
     };

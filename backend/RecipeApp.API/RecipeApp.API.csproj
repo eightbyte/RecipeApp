@@ -1,4 +1,4 @@
-﻿<Project Sdk="Microsoft.NET.Sdk.Web">
+<Project Sdk="Microsoft.NET.Sdk.Web">
 
   <PropertyGroup>
     <TargetFramework>net10.0</TargetFramework>
@@ -27,7 +27,9 @@
   <ItemGroup>
     <Content Remove="seed-data\**" />
     <None Remove="seed-data\**" />
-    <Content Include="seed-data\ingredient-catalogue.json;seed-data\sample-recipes.json" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
+    <Content Include="seed-data\ingredient-catalogue.json;seed-data\sample-recipes.json"
+             CopyToOutputDirectory="PreserveNewest"
+             CopyToPublishDirectory="PreserveNewest" />
   </ItemGroup>
 
 </Project>

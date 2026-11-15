@@ -28,7 +28,12 @@
           <v-list-item
             prepend-icon="mdi-link"
             title="Import from URL"
-            @click="showImportSheet = true"
+            @click="openImportSheet(SCRAPE_SOURCE_URL)"
+          />
+          <v-list-item
+            prepend-icon="mdi-text-box-outline"
+            title="Import from text"
+            @click="openImportSheet(SCRAPE_SOURCE_TEXT)"
           />
           <v-list-item
             prepend-icon="mdi-pencil-outline"
@@ -170,8 +175,8 @@
       :text="loadedSearch ? 'Try a different search term' : 'Add your first recipe using the button above'"
     />
 
-    <!-- ── Import from URL sheet ───────────────────────────────────────── -->
-    <RecipeUrlBottomSheet v-model="showImportSheet" />
+    <!-- ── Import Recipe sheet ──────────────────────────────────────────── -->
+    <RecipeUrlBottomSheet v-model="showImportSheet" :initial-mode="importSource" />
 
   </v-container>
 </template>
@@ -193,10 +198,17 @@ import {
   sortDirectionIcon,
 } from '@/constants/recipeSorts'
 import { readStoredJson, writeStoredJson } from '@/utils/storage'
+import { SCRAPE_SOURCE_TEXT, SCRAPE_SOURCE_URL } from '@/constants/scrapeSources'
 
 const store  = useRecipeStore()
 const search = ref('')
 const showImportSheet = ref(false)
+const importSource    = ref(SCRAPE_SOURCE_URL)
+
+function openImportSheet(source) {
+  importSource.value    = source
+  showImportSheet.value = true
+}
 const listSort = ref(toRecipeListSort(readStoredJson(RECIPE_LIST_SORT_STORAGE_KEY, null)))
 
 const {

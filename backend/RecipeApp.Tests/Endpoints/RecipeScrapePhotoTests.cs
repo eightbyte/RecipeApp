@@ -53,8 +53,8 @@ public class RecipeScrapePhotoTests(DatabaseFixture db) : IAsyncLifetime
                 services.AddSingleton<IHttpClientFactory>(http);
                 services.RemoveAll<IHeadlessRenderer>();
                 services.AddSingleton<IHeadlessRenderer>(new FakeHeadlessRenderer());
-                services.RemoveAll<IModelServerStatusProbe>();
-                services.AddSingleton<IModelServerStatusProbe>(new StubModelServerStatusProbe(ModelServerState.Ready, "model.gguf"));
+                services.RemoveAll<ILlmStatusProbe>();
+                services.AddSingleton<ILlmStatusProbe>(new StubLlmStatusProbe(LlmState.Ready, "model.gguf"));
                 if (llm is not null)
                 {
                     services.RemoveAll<ILlmStructuredClient>();

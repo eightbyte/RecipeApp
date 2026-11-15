@@ -1,6 +1,7 @@
 using RecipeApp.API.DTOs.Scrape;
 using RecipeApp.API.Filters;
 using RecipeApp.API.Services;
+using RecipeApp.API.Services.Llm;
 
 namespace RecipeApp.API.Endpoints;
 
@@ -27,25 +28,48 @@ public static class RecipeScrapeEndpoints
                 logger.LogWarning("Scrape failed for URL {Url}: [{Error}] {Message}",
                     request.Url, ex.Error, ex.Message);
 
-                return ex.Error switch
-                {
-                    RecipeScrapeError.ModelServerUnavailable =>
-                        Results.Problem(detail: ex.Message, statusCode: StatusCodes.Status503ServiceUnavailable),
-                    RecipeScrapeError.FetchTimeout or
-                    RecipeScrapeError.FetchFailed or
-                    RecipeScrapeError.FetchNonSuccess or
-                    RecipeScrapeError.LlmTimeout or
-                    RecipeScrapeError.LlmFailed or
-                    RecipeScrapeError.NoContent =>
-                        Results.Problem(detail: ex.Message, statusCode: StatusCodes.Status422UnprocessableEntity),
-                    _ => Results.Problem(detail: ex.Message, statusCode: StatusCodes.Status422UnprocessableEntity),
-                };
+                return ToProblem(ex);
+            }
+            catch (LlmRequestRejectedException ex)
+            {
+                return RejectedProblem(logger, ex);
             }
         })
         .WithValidation<ScrapeRecipeRequest>()
         .ProducesProblem(StatusCodes.Status422UnprocessableEntity)
+        .ProducesProblem(StatusCodes.Status500InternalServerError)
         .ProducesProblem(StatusCodes.Status503ServiceUnavailable)
         .WithSummary("Scrape a recipe from a URL and return a preview for review");
+
+        // POST /recipes/scrape/text
+        group.MapPost("/scrape/text", async (
+            ScrapeTextRequest request,
+            IRecipeScrapeService svc,
+            ILogger<Program> logger,
+            CancellationToken ct) =>
+        {
+            try
+            {
+                var preview = await svc.ScrapeTextAsync(request.Text, ct);
+                return Results.Ok(preview);
+            }
+            catch (RecipeScrapeException ex)
+            {
+                logger.LogWarning("Scrape of pasted text ({Length} characters) failed: [{Error}] {Message}",
+                    request.Text.Length, ex.Error, ex.Message);
+
+                return ToProblem(ex);
+            }
+            catch (LlmRequestRejectedException ex)
+            {
+                return RejectedProblem(logger, ex);
+            }
+        })
+        .WithValidation<ScrapeTextRequest>()
+        .ProducesProblem(StatusCodes.Status422UnprocessableEntity)
+        .ProducesProblem(StatusCodes.Status500InternalServerError)
+        .ProducesProblem(StatusCodes.Status503ServiceUnavailable)
+        .WithSummary("Scrape a recipe from pasted text and return a preview for review");
 
         // POST /recipes/scrape/confirm
         group.MapPost("/scrape/confirm", async (
@@ -61,5 +85,22 @@ public static class RecipeScrapeEndpoints
         .WithSummary("Confirm a scraped recipe preview and save it to the database");
 
         return routes;
+    }
+
+    /// <summary>Every failed Scrape is the source's fault (422) except an unavailable LLM provider, which a retry later can fix (503).</summary>
+    private static IResult ToProblem(RecipeScrapeException ex) =>
+        Results.Problem(
+            detail: ex.Message,
+            statusCode: ex.Error == RecipeScrapeError.LlmUnavailable
+                ? StatusCodes.Status503ServiceUnavailable
+                : StatusCodes.Status422UnprocessableEntity);
+
+    /// <summary>A request the provider refused as malformed is a bug in the app, logged as an error and never blamed on the source.</summary>
+    private static IResult RejectedProblem(ILogger logger, LlmRequestRejectedException ex)
+    {
+        logger.LogError(ex, "The LLM provider rejected the Scrape's request.");
+        return Results.Problem(
+            detail: "Scraping failed because of a problem in the app. Please create the recipe manually.",
+            statusCode: StatusCodes.Status500InternalServerError);
     }
 }

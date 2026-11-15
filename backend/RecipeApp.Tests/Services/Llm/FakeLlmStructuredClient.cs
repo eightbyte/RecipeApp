@@ -1,5 +1,6 @@
 using System.Text.Json.Nodes;
 using RecipeApp.API.Services.Llm;
+using RecipeApp.Tests.Infrastructure;
 
 namespace RecipeApp.Tests.Services.Llm;
 
@@ -15,17 +16,18 @@ public class FakeLlmStructuredClient : ILlmStructuredClient
 
     public int CallCount { get; private set; }
 
-    public Task<JsonNode> CompleteStructuredAsync(
+    public Task<LlmCompletion> CompleteStructuredAsync(
         string systemPrompt,
         string userContent,
         JsonNode jsonSchema,
         int maxTokens,
+        LlmCallContext context,
         CancellationToken ct = default)
     {
         CallCount++;
         if (_responses.Count == 0)
             throw new InvalidOperationException("FakeLlmStructuredClient has no more canned responses.");
 
-        return Task.FromResult(_responses.Dequeue());
+        return Task.FromResult(new LlmCompletion(_responses.Dequeue(), StubLlmStructuredClient.Usage));
     }
 }

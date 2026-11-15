@@ -192,6 +192,32 @@ public class RecipeScrapeEndpointsTests(DatabaseFixture db) : IAsyncLifetime
     }
 
     [Fact]
+    public async Task Confirm_WithNoSourceUrl_SavesTheRecipeWithoutOne()
+    {
+        var request = BuildConfirmRequest(ingredientId: null, newName: "beef mince",
+            newDisplayName: "Beef Mince", category: IngredientCategory.MeatSeafood) with { SourceUrl = null };
+
+        var response = await db.CreateClient().PostAsJsonAsync("/api/v1/recipes/scrape/confirm", request);
+
+        response.StatusCode.Should().Be(HttpStatusCode.Created);
+        var body = await response.Content.ReadFromJsonAsync<ScrapeConfirmResponse>();
+        body!.Recipe.SourceUrl.Should().BeNull();
+    }
+
+    [Fact]
+    public async Task Confirm_WithABlankSourceUrl_SavesTheRecipeWithoutOne()
+    {
+        var request = BuildConfirmRequest(ingredientId: null, newName: "beef mince",
+            newDisplayName: "Beef Mince", category: IngredientCategory.MeatSeafood) with { SourceUrl = "  " };
+
+        var response = await db.CreateClient().PostAsJsonAsync("/api/v1/recipes/scrape/confirm", request);
+
+        response.StatusCode.Should().Be(HttpStatusCode.Created);
+        var body = await response.Content.ReadFromJsonAsync<ScrapeConfirmResponse>();
+        body!.Recipe.SourceUrl.Should().BeNull();
+    }
+
+    [Fact]
     public async Task Confirm_EmptyName_Returns400()
     {
         var client  = db.CreateClient();
@@ -268,6 +294,9 @@ internal class FakeRecipeScrapeService(
 
         return Task.FromResult(preview!);
     }
+
+    public Task<ScrapePreviewResponse> ScrapeTextAsync(string text, CancellationToken ct = default)
+        => throw new NotImplementedException("Use real service for text scrape tests.");
 
     public Task<ScrapeConfirmResponse> ConfirmAsync(
         ScrapeConfirmRequest request, CancellationToken ct = default)

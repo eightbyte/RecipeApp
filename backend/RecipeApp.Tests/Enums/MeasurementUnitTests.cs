@@ -107,6 +107,39 @@ public class MeasurementUnitTests
     }
 
     [Theory]
+    [InlineData("tsp.", "tsp")]
+    [InlineData("Tbsp.", "tbsp")]
+    [InlineData("tbs.", "tbsp")]
+    [InlineData("g.", "g")]
+    [InlineData("kg.", "kg")]
+    [InlineData("pcs.", "pcs")]
+    [InlineData("cups.", "cup")]
+    [InlineData(" tsp. ", "tsp")]
+    public void TryCanonicalise_AcceptsAnyAcceptedSpellingWithATrailingPeriod(string input, string expected)
+    {
+        MeasurementUnit.TryCanonicalise(input, out var canonical).Should().BeTrue();
+        canonical.Should().Be(expected);
+    }
+
+    [Theory]
+    [InlineData(".")]
+    [InlineData("tsp..")]
+    [InlineData("clove.")]
+    public void TryCanonicalise_RejectsAPeriodWithNothingAcceptedBeforeIt(string input)
+    {
+        MeasurementUnit.TryCanonicalise(input, out _).Should().BeFalse();
+    }
+
+    [Theory]
+    [InlineData("tsp.")]
+    [InlineData("oz.")]
+    public void IsValidAndIsAccepted_StayStrictAboutATrailingPeriod(string unit)
+    {
+        MeasurementUnit.IsValid(unit).Should().BeFalse();
+        MeasurementUnit.IsAccepted(unit).Should().BeFalse();
+    }
+
+    [Theory]
     [InlineData("clove")]
     [InlineData("pinch")]
     [InlineData("can")]

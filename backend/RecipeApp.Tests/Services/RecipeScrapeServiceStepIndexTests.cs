@@ -59,7 +59,7 @@ public class RecipeScrapeServiceStepIndexTests(DatabaseFixture db) : IAsyncLifet
             httpClientFactory:    StubHttpClientFactory.Returning(RecipePage),
             options:              Options.Create(new RecipeScrapingOptions()),
             llm:                  new StubLlmStructuredClient(extraction),
-            modelServer:          new StubModelServerStatusProbe(ModelServerState.Ready, "model.gguf"),
+            llmStatus:            new StubLlmStatusProbe(LlmState.Ready, "model.gguf"),
             db:                   db.CreateDbContext(),
             headlessRenderer:     new FakeHeadlessRenderer(),
             measurementConverter: new MeasurementConverter(Options.Create(new MeasurementOptions())),

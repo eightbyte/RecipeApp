@@ -12,18 +12,19 @@ vi.mock('@/services/api', () => ({
   assetUrl: vi.fn((p) => p ?? ''),
 }))
 
+const push = vi.fn()
 vi.mock('vue-router', () => ({
-  useRouter: () => ({ push: vi.fn() }),
+  useRouter: () => ({ push }),
 }))
 
 const vuetify = createVuetify({ components, directives })
 
-function mountSheet(modelValue = true) {
+function mountSheet(modelValue = true, props = {}) {
   const pinia = createPinia()
   setActivePinia(pinia)
 
   const wrapper = mount(RecipeUrlBottomSheet, {
-    props: { modelValue },
+    props: { modelValue, ...props },
     global: {
       plugins: [vuetify, pinia],
       stubs: {
@@ -36,10 +37,10 @@ function mountSheet(modelValue = true) {
   return { wrapper, store: useRecipeStore() }
 }
 
-const STATUS_URL = '/model-server/status'
+const STATUS_URL = '/llm/status'
 
-function statusResponse(state, model = null) {
-  return { data: { state, model } }
+function statusResponse(state, model = null, provider = 'modelServer') {
+  return { data: { provider, state, model } }
 }
 
 function importButton(wrapper) {
@@ -71,7 +72,7 @@ describe('RecipeUrlBottomSheet', () => {
     const { wrapper, store } = mountSheet(true)
     store.scrapeLoading = true
     await wrapper.vm.$nextTick()
-    expect(wrapper.text()).toContain('Extracting recipe')
+    expect(wrapper.text()).toContain('Extracting recipe… this may take up to a minute.')
   })
 
   it('displays scrapeError message when set', async () => {
@@ -98,7 +99,118 @@ describe('RecipeUrlBottomSheet', () => {
     expect(importBtn?.props('disabled')).toBe(true)
   })
 
-  describe('Model Server status', () => {
+  describe('URL / Text toggle', () => {
+    const RECIPE_TEXT = 'Honey Chicken\n\n• 2 chicken breasts\n• 1 tbsp honey'
+
+    function textArea(wrapper) {
+      return wrapper.findComponent({ name: 'VTextarea' })
+    }
+
+    async function chooseText(wrapper) {
+      const textButton = wrapper.findAllComponents({ name: 'VBtn' }).find(b => b.text() === 'Text')
+      await textButton.trigger('click')
+    }
+
+    it('opens on URL, with the URL field and no text field', async () => {
+      const { wrapper } = mountSheet(true)
+      await flushPromises()
+
+      expect(wrapper.findComponent({ name: 'VTextField' }).exists()).toBe(true)
+      expect(textArea(wrapper).exists()).toBe(false)
+    })
+
+    it('shows a multi-line field with a counter against the maximum in Text mode, in place of the URL field', async () => {
+      const { wrapper } = mountSheet(true)
+      await flushPromises()
+
+      await chooseText(wrapper)
+
+      expect(textArea(wrapper).exists()).toBe(true)
+      expect(textArea(wrapper).props('counter')).toBe(30000)
+      expect(wrapper.findComponent({ name: 'VTextField' }).exists()).toBe(false)
+    })
+
+    it('opens in Text mode when asked to', async () => {
+      const { wrapper } = mountSheet(true, { initialMode: 'text' })
+      await flushPromises()
+
+      expect(textArea(wrapper).exists()).toBe(true)
+    })
+
+    it('opens on its initial mode every time, not the mode it was left in, with the text cleared', async () => {
+      const { wrapper } = mountSheet(true)
+      await flushPromises()
+      await chooseText(wrapper)
+      await textArea(wrapper).find('textarea').setValue(RECIPE_TEXT)
+
+      await wrapper.setProps({ modelValue: false })
+      await wrapper.setProps({ modelValue: true })
+      await flushPromises()
+      expect(textArea(wrapper).exists()).toBe(false)
+
+      await chooseText(wrapper)
+      expect(textArea(wrapper).find('textarea').element.value).toBe('')
+    })
+
+    it('enables Import for a pasted recipe', async () => {
+      const { wrapper } = mountSheet(true, { initialMode: 'text' })
+      await flushPromises()
+      await textArea(wrapper).find('textarea').setValue(RECIPE_TEXT)
+
+      expect(importButton(wrapper).props('disabled')).toBe(false)
+    })
+
+    it.each([
+      ['empty',     ''],
+      ['blank',     '   \n  '],
+      ['over-long', 'a'.repeat(30001)],
+    ])('disables Import for an %s text', async (_, text) => {
+      const { wrapper } = mountSheet(true, { initialMode: 'text' })
+      await flushPromises()
+      await textArea(wrapper).find('textarea').setValue(text)
+
+      expect(importButton(wrapper).props('disabled')).toBe(true)
+    })
+
+    it('scrapes the text and opens the preview on success', async () => {
+      api.post.mockResolvedValue({ data: { name: 'Honey Chicken', sourceUrl: null, ingredients: [], steps: [] } })
+      const { wrapper } = mountSheet(true, { initialMode: 'text' })
+      await flushPromises()
+      await textArea(wrapper).find('textarea').setValue(RECIPE_TEXT)
+
+      await importButton(wrapper).trigger('click')
+      await flushPromises()
+
+      expect(api.post).toHaveBeenCalledWith('/recipes/scrape/text', { text: RECIPE_TEXT })
+      expect(push).toHaveBeenCalledWith({ name: 'scrape-preview' })
+    })
+
+    it('keeps the text after a failed Scrape so it can be edited and retried', async () => {
+      api.post.mockRejectedValue({ message: "Couldn't find a recipe in that text." })
+      const { wrapper } = mountSheet(true, { initialMode: 'text' })
+      await flushPromises()
+      await textArea(wrapper).find('textarea').setValue(RECIPE_TEXT)
+
+      await importButton(wrapper).trigger('click')
+      await flushPromises()
+
+      expect(wrapper.text()).toContain("Couldn't find a recipe in that text.")
+      expect(textArea(wrapper).find('textarea').element.value).toBe(RECIPE_TEXT)
+      expect(push).not.toHaveBeenCalled()
+    })
+
+    it('shows why Scraping is unavailable and disables Import in Text mode too', async () => {
+      api.get.mockResolvedValue(statusResponse('offline'))
+      const { wrapper } = mountSheet(true, { initialMode: 'text' })
+      await flushPromises()
+      await textArea(wrapper).find('textarea').setValue(RECIPE_TEXT)
+
+      expect(wrapper.text()).toContain("the Model Server isn't running")
+      expect(importButton(wrapper).props('disabled')).toBe(true)
+    })
+  })
+
+  describe('LLM status', () => {
     afterEach(() => vi.useRealTimers())
 
     it('asks for the status when the sheet opens', async () => {
@@ -129,6 +241,36 @@ describe('RecipeUrlBottomSheet', () => {
 
       expect(wrapper.text()).toContain(message)
       expect(importButton(wrapper).props('disabled')).toBe(true)
+    })
+
+    it.each([
+      ['offline',       "Claude (Anthropic) can't be reached"],
+      ['unauthorized',  'Claude (Anthropic) rejected the API key'],
+      ['busy',          'Claude is busy right now, try again in a moment'],
+      ['notConfigured', "Claude (Anthropic) isn't configured"],
+    ])('names Claude when it is the provider and the state is %s', async (state, message) => {
+      api.get.mockResolvedValue(statusResponse(state, null, 'anthropic'))
+      const { wrapper } = mountSheet(true)
+      await flushPromises()
+      await wrapper.find('input').setValue('https://example.com/soup')
+
+      expect(wrapper.text()).toContain(`Scraping is unavailable: ${message}`)
+      expect(importButton(wrapper).props('disabled')).toBe(true)
+    })
+
+    it('says the recipe is extracted with Claude, because its content leaves the network', async () => {
+      api.get.mockResolvedValue(statusResponse('ready', 'claude-opus-5-5', 'anthropic'))
+      const { wrapper } = mountSheet(true)
+      await flushPromises()
+
+      expect(wrapper.text()).toContain('Extracted with Claude (Anthropic)')
+    })
+
+    it('shows no provider caption for the Model Server, which stays on the network', async () => {
+      const { wrapper } = mountSheet(true)
+      await flushPromises()
+
+      expect(wrapper.text()).not.toContain('Extracted with')
     })
 
     it('keeps the URL field usable while Scraping is unavailable', async () => {

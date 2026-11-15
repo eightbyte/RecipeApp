@@ -21,8 +21,9 @@ under [Running it by hand](#running-it-by-hand).
    the file is in the OS cache, longer the first time.
 4. `powershell -File tools\llm-server\stop.ps1` when you're done, to free the GPU.
 
-The URL sheet in the app and `GET /api/v1/model-server/status` report the state: `offline`,
-`loading`, `ready` or `unauthorized`.
+The URL sheet in the app and `GET /api/v1/llm/status` report the state: `offline`,
+`loading`, `ready` or `unauthorized`. That endpoint describes Scraping's provider, so it reports
+the Model Server only while `Llm:Provider` is `ModelServer` (the default).
 
 ## Settings (`settings.psd1`)
 

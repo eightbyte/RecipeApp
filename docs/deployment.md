@@ -68,6 +68,8 @@ run.
 | `RECIPEAPP_BACKUP_KEEP` | How many pre-update dumps the updater keeps. Default `10` |
 | `MODEL_SERVER_URL` | Where the API reaches the [Model Server](#model-server). Default `http://host.docker.internal:9931` |
 | `MODEL_SERVER_API_KEY` | The Model Server's key. Empty for a server on this PC's loopback |
+| `LLM_PROVIDER` | Which LLM Scraping uses: `ModelServer` (default) or `Anthropic`. See [Claude API](#claude-api) |
+| `ANTHROPIC_API_KEY` | The Claude API key. Needed only when `LLM_PROVIDER=Anthropic` |
 
 ## CI (`deploy.yml`)
 
@@ -175,8 +177,9 @@ Tailscale name. Make the machine share again, and reinstall the PWA on each phon
 
 ## Model Server
 
-Scraping runs on the **Model Server** (llama.cpp's `llama-server`), a separate process started by
-hand with `tools/llm-server/start.ps1` and stopped with `stop.ps1`. Setup, settings and the
+By default Scraping runs on the **Model Server** (llama.cpp's `llama-server`), a separate process
+started by hand with `tools/llm-server/start.ps1` and stopped with `stop.ps1`. It can use the
+[Claude API](#claude-api) instead, and the seed pipeline always uses the Model Server. Setup, settings and the
 pinned release are in [tools/llm-server/README.md](../tools/llm-server/README.md). Production works
 without it: everything except Import from URL is available, the URL sheet says why, and
 `/health/ready` never checks it, so a stopped server never fails an update.
@@ -199,7 +202,27 @@ reaches the host's loopback through `host.docker.internal`.
 
 Traffic is plain HTTP inside the tailnet's WireGuard tunnel. Never expose the Model Server to the
 public internet. A key mismatch shows as `unauthorized` in the URL sheet and in
-`GET /api/v1/model-server/status`.
+`GET /api/v1/llm/status`.
+
+## Claude API
+
+Scraping (from a URL and from pasted text) can use the Claude API instead of the Model Server, so it
+works with no GPU and no server started. The page text or pasted text is then sent to Anthropic, and
+the Import Recipe sheet says "Extracted with Claude (Anthropic)". The seed pipeline still uses the
+Model Server. [ADR 0004](adr/0004-llm-provider-is-chosen-per-deployment.md) records why.
+
+1. Create an API key at `console.anthropic.com`.
+2. In `.env`, set `LLM_PROVIDER=Anthropic` and `ANTHROPIC_API_KEY=<key>`.
+3. Recreate the API container so it reads the new values:
+   `docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d api`.
+
+`GET /api/v1/llm/status` then reports `{ "provider": "anthropic", "state": ..., "model": ... }`.
+The states are `ready`, `notConfigured` (no key, or a model the key can't use), `unauthorized` (the
+key is rejected), `busy` (rate-limited or overloaded) and `offline` (Claude can't be reached). Each
+check asks the Models API about the configured model, which spends no tokens. The model, effort and
+timeout come from `Llm:Anthropic:*` in `appsettings.json`.
+
+Set `LLM_PROVIDER=ModelServer` and recreate the container to go back. Nothing else changes.
 
 ## Rollback
 
@@ -231,7 +254,8 @@ Anything written to the database after that dump is lost.
 | Production mode | `/scalar/v1` on the API returns 404 |
 | Auto-deploy | A merge to `master` is running on the host within about five minutes of the workflow finishing, and the updater log records it |
 | Pre-update dump | An update that changes the API image leaves a new file in `deploy/backups/` that `pg_restore --list` reads. A frontend-only update leaves none |
-| Model Server | With it started, the URL sheet reads ready and a Scrape works. With it stopped, the sheet says so and `/health/ready` still returns 200 |
+| Model Server | With it started, the Import Recipe sheet reads ready and a Scrape works. With it stopped, the sheet says so and `/health/ready` still returns 200 |
+| Claude API | With `LLM_PROVIDER=Anthropic`, `/api/v1/llm/status` reads `anthropic` and `ready`, the sheet shows the Claude caption, and a Scrape works with the Model Server stopped |
 
 ## Not covered
 

@@ -14,6 +14,7 @@ using RecipeApp.API.DTOs.Scrape;
 using RecipeApp.API.Enums;
 using RecipeApp.API.Models;
 using RecipeApp.API.Services.Llm;
+using RecipeApp.API.Validators;
 
 namespace RecipeApp.API.Services;
 
@@ -21,7 +22,7 @@ public class RecipeScrapeService(
     IHttpClientFactory httpClientFactory,
     IOptions<RecipeScrapingOptions> options,
     ILlmStructuredClient llm,
-    IModelServerStatusProbe modelServer,
+    ILlmStatusProbe llmStatus,
     AppDbContext db,
     IHeadlessRenderer headlessRenderer,
     MeasurementConverter measurementConverter,
@@ -149,7 +150,7 @@ public class RecipeScrapeService(
     }
 
     // Semantic matching schema for unmatched scraped ingredients
-    private const string MatchingSchemaJson = """
+    internal const string MatchingSchemaJson = """
         {
           "type": "object",
           "properties": {
@@ -222,15 +223,63 @@ public class RecipeScrapeService(
     public async Task<ScrapePreviewResponse> ScrapeAsync(string url, CancellationToken ct = default)
     {
         // Checked before the fetch, which can take 35 seconds and is wasted when nothing can read the page.
-        var status = await modelServer.GetStatusAsync(ct);
-        if (status.State != ModelServerState.Ready)
-            throw UnavailableError(status.State);
+        await EnsureLlmReadyAsync(url, ct);
 
-        logger.LogInformation("Scraping {Url} with model {Model}.", url, status.Model ?? "(unnamed)");
-
+        var scrape    = new LlmCallContext(LlmOperation.ScrapeUrl, Step: null, url, Guid.NewGuid());
         var page      = await FetchPageAsync(url, ct);
-        var extracted = await ExtractRecipeAsync(page.Text, ct);
-        return await NormaliseAsync(extracted, url, ct) with { ImageUrl = page.ImageUrl };
+        var extracted = await ExtractRecipeAsync(page.Text, scrape, ct);
+        return await NormaliseAsync(extracted, scrape, ct) with { ImageUrl = page.ImageUrl };
+    }
+
+    public async Task<ScrapePreviewResponse> ScrapeTextAsync(string text, CancellationToken ct = default)
+    {
+        await EnsureLlmReadyAsync(PastedTextLabel, ct);
+
+        var recipeText = TidyPastedText(text);
+        var scrape     = new LlmCallContext(LlmOperation.ScrapeText, Step: null, SourceUrlNamedIn(recipeText), Guid.NewGuid());
+        try
+        {
+            var extracted = await ExtractRecipeAsync(recipeText, scrape, ct);
+            return await NormaliseAsync(extracted, scrape, ct);
+        }
+        catch (RecipeScrapeException ex) when (ex.Error == RecipeScrapeError.NoContent)
+        {
+            throw new RecipeScrapeException(RecipeScrapeError.NoContent, "Couldn't find a recipe in that text.");
+        }
+    }
+
+    private async Task EnsureLlmReadyAsync(string source, CancellationToken ct)
+    {
+        var status = await llmStatus.GetStatusAsync(ct);
+        if (status.State != LlmState.Ready)
+            throw UnavailableError(status.Provider, status.State);
+
+        logger.LogInformation("Scraping {Source} with {Provider} model {Model}.",
+            source, status.Provider, status.Model ?? "(unnamed)");
+    }
+
+    /// <summary>Names a text Scrape with no Source URL in the warnings that otherwise name the page.</summary>
+    private const string PastedTextLabel = "pasted text";
+
+    /// <summary>Keeps the text's line breaks, which tell the model where one ingredient or step ends, and collapses only runs of blank lines.</summary>
+    private static string TidyPastedText(string text)
+    {
+        var unixLineEnds = text.ReplaceLineEndings("\n");
+        return Regex.Replace(unixLineEnds, @"\n(?:[ \t]*\n){2,}", "\n\n").Trim();
+    }
+
+    private static readonly Regex HttpUrl = new(@"\bhttps?://[^\s<>""]+", RegexOptions.Compiled | RegexOptions.IgnoreCase);
+
+    /// <summary>The one absolute http(s) URL the text names, or null for none or several, because only code, never the model, may say where a recipe came from.</summary>
+    private static string? SourceUrlNamedIn(string text)
+    {
+        var urls = HttpUrl.Matches(text)
+            .Select(m => m.Value.TrimEnd('.', ',', ';', ':', '!', '?', ')', ']', '\'', '’', '”'))
+            .Where(ScrapeRecipeRequestValidator.BeValidHttpUrl)
+            .Distinct(StringComparer.Ordinal)
+            .ToList();
+
+        return urls.Count == 1 ? urls[0] : null;
     }
 
     public async Task<ScrapeConfirmResponse> ConfirmAsync(ScrapeConfirmRequest request, CancellationToken ct = default)
@@ -345,7 +394,7 @@ public class RecipeScrapeService(
             Id          = Guid.NewGuid(),
             Name        = request.Name.Trim(),
             Description = request.Description?.Trim(),
-            SourceUrl   = request.SourceUrl.Trim(),
+            SourceUrl   = string.IsNullOrWhiteSpace(request.SourceUrl) ? null : request.SourceUrl.Trim(),
             ImageUrl    = imageUrl,
             Servings    = request.Servings,
             CreatedAt   = DateTime.UtcNow,
@@ -547,7 +596,7 @@ public class RecipeScrapeService(
 
     // ── LLM extraction ────────────────────────────────────────────────────────
 
-    private async Task<ExtractedRecipe> ExtractRecipeAsync(string strippedText, CancellationToken ct)
+    private async Task<ExtractedRecipe> ExtractRecipeAsync(string strippedText, LlmCallContext scrape, CancellationToken ct)
     {
         if (_options.MaxHtmlCharacters > 0 && strippedText.Length > _options.MaxHtmlCharacters)
             strippedText = strippedText[.._options.MaxHtmlCharacters];
@@ -561,19 +610,24 @@ public class RecipeScrapeService(
         JsonNode json;
         try
         {
-            json = await llm.CompleteStructuredAsync(ExtractionSystemPrompt, userMessage, schema, maxTokens: 4096, linkedCts.Token);
+            json = (await llm.CompleteStructuredAsync(
+                ExtractionSystemPrompt, userMessage, schema, maxTokens: 4096,
+                scrape with { Step = LlmStep.Extraction }, linkedCts.Token)).Json;
         }
-        catch (OperationCanceledException) when (llmCts.IsCancellationRequested)
+        // A TimeoutException is a provider's own budget running out, which is shorter than this one for a cloud provider.
+        catch (Exception ex) when (ex is TimeoutException
+                                   || (ex is OperationCanceledException && llmCts.IsCancellationRequested))
         {
             throw new RecipeScrapeException(RecipeScrapeError.LlmTimeout,
                 "Recipe extraction timed out. Please try again.");
         }
-        catch (ModelServerUnavailableException ex)
+        catch (LlmUnavailableException ex)
         {
-            throw UnavailableError(ex.State);
+            throw UnavailableError(ex.Provider, ex.State);
         }
-        catch (Exception ex) when (ex is not RecipeScrapeException)
+        catch (Exception ex) when (ex is not RecipeScrapeException and not LlmRequestRejectedException)
         {
+            logger.LogWarning("Recipe extraction failed: {Message}", ex.Message);
             throw new RecipeScrapeException(RecipeScrapeError.LlmFailed,
                 "Recipe extraction failed. Please try again or create the recipe manually.");
         }
@@ -585,14 +639,17 @@ public class RecipeScrapeService(
         return extracted;
     }
 
-    private static RecipeScrapeException UnavailableError(ModelServerState state) =>
-        new(RecipeScrapeError.ModelServerUnavailable, $"Scraping is unavailable: {state.UnavailableReason()}");
+    private static RecipeScrapeException UnavailableError(LlmProvider provider, LlmState state) =>
+        new(RecipeScrapeError.LlmUnavailable, $"Scraping is unavailable: {state.UnavailableReason(provider)}");
 
     // ── Normalisation with semantic matching ──────────────────────────────────
 
+    /// <param name="scrape">The Scrape's own LLM Call context, whose Source URL is the preview's.</param>
     internal async Task<ScrapePreviewResponse> NormaliseAsync(
-        ExtractedRecipe extracted, string url, CancellationToken ct)
+        ExtractedRecipe extracted, LlmCallContext scrape, CancellationToken ct)
     {
+        var url = scrape.SourceUrl;
+
         if (string.IsNullOrWhiteSpace(extracted.Name) ||
             extracted.Ingredients.Count == 0 ||
             extracted.Steps.Count == 0)
@@ -703,14 +760,15 @@ public class RecipeScrapeService(
 
             var matchSchema = JsonNode.Parse(MatchingSchemaJson)!;
 
-            // Its own budget, because the Model Server queues behind other callers and the client has no timeout.
+            // Its own budget, because the Model Server queues behind other callers and its client has no timeout.
             using var matchCts    = new CancellationTokenSource(TimeSpan.FromSeconds(_options.LlmTimeoutSeconds));
             using var matchLinked = CancellationTokenSource.CreateLinkedTokenSource(ct, matchCts.Token);
 
             try
             {
-                var matchJson = await llm.CompleteStructuredAsync(
-                    systemPrompt, userContent, matchSchema, maxTokens: 2048, matchLinked.Token);
+                var matchJson = (await llm.CompleteStructuredAsync(
+                    systemPrompt, userContent, matchSchema, maxTokens: 2048,
+                    scrape with { Step = LlmStep.IngredientMatching }, matchLinked.Token)).Json;
 
                 var matchResponse = matchJson.Deserialize<MatchingResponse>(LlmJsonOptions);
                 if (matchResponse?.Results != null)
@@ -752,6 +810,11 @@ public class RecipeScrapeService(
                     }
                 }
             }
+            catch (LlmRequestRejectedException ex)
+            {
+                // Still best-effort, but a request the provider refuses is a bug that must not pass silently.
+                logger.LogError(ex, "The LLM provider rejected the ingredient-matching request; using keyword categories.");
+            }
             catch (Exception)
             {
                 // Semantic matching is best-effort — fall back to keyword categorisation already set
@@ -759,7 +822,8 @@ public class RecipeScrapeService(
         }
 
         // Filled once matching is done, because adding a volume to a mass needs the matched Ingredient's density, and before Stage B so a filled cup resolves too.
-        var stepAmounts = StepAmountsByIngredient(extracted, url);
+        var source      = url ?? PastedTextLabel;
+        var stepAmounts = StepAmountsByIngredient(extracted, source);
         for (int i = 0; i < previewIngredients.Count; i++)
         {
             var row = previewIngredients[i];
@@ -771,7 +835,7 @@ public class RecipeScrapeService(
         var previewSteps = extracted.Steps
             .OrderBy(s => s.StepNumber)
             .Select(s => new ScrapePreviewStepResponse(
-                s.StepNumber, WithoutStepLines(s.Instruction), DistinctIngredientIndexesInRange(s, previewIngredients.Count, url)))
+                s.StepNumber, WithoutStepLines(s.Instruction), DistinctIngredientIndexesInRange(s, previewIngredients.Count, source)))
             .ToList();
 
         return new ScrapePreviewResponse(
@@ -1091,8 +1155,8 @@ public enum RecipeScrapeError
     LlmFailed,
     NoContent,
 
-    /// <summary>The Model Server is offline, loading or rejecting the key, before or during extraction.</summary>
-    ModelServerUnavailable,
+    /// <summary>The LLM provider is offline, loading, busy, unconfigured or rejecting the key, before or during extraction.</summary>
+    LlmUnavailable,
 }
 
 public class RecipeScrapeException(RecipeScrapeError error, string message)

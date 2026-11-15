@@ -324,10 +324,10 @@ public class ScrapeValidatorTests
     }
 
     [Fact]
-    public void Confirm_EmptySourceUrl_HasErrorOnSourceUrl()
+    public void Confirm_NoSourceUrl_IsValid()
     {
-        var result = _confirmValidator.TestValidate(ConfirmRequest() with { SourceUrl = "" });
-        result.ShouldHaveValidationErrorFor(x => x.SourceUrl);
+        var result = _confirmValidator.TestValidate(ConfirmRequest() with { SourceUrl = null });
+        result.ShouldNotHaveValidationErrorFor(x => x.SourceUrl);
     }
 
     [Theory]

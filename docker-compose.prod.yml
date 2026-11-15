@@ -36,6 +36,9 @@ services:
       # The Model Server (tools/llm-server). host.docker.internal reaches a server bound to the host's 127.0.0.1.
       Llm__ModelServer__BaseUrl: ${MODEL_SERVER_URL:-http://host.docker.internal:9931}
       Llm__ModelServer__ApiKey: ${MODEL_SERVER_API_KEY:-}
+      # Which LLM Scraping uses, ModelServer or Anthropic; the seed pipeline always uses the Model Server.
+      Llm__Provider: ${LLM_PROVIDER:-ModelServer}
+      Llm__Anthropic__ApiKey: ${ANTHROPIC_API_KEY:-}
     ports: !reset []
 
   frontend:

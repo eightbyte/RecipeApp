@@ -36,7 +36,7 @@ public class ModelServerStatusProbeTests
 
         var status = await Probe(http, baseUrl: "").GetStatusAsync();
 
-        status.State.Should().Be(ModelServerState.Offline);
+        status.State.Should().Be(LlmState.Offline);
         http.RequestedUrls.Should().BeEmpty();
     }
 
@@ -48,7 +48,7 @@ public class ModelServerStatusProbeTests
 
         var status = await Probe(http).GetStatusAsync();
 
-        status.State.Should().Be(ModelServerState.Offline);
+        status.State.Should().Be(LlmState.Offline);
         status.Model.Should().BeNull();
     }
 
@@ -59,7 +59,7 @@ public class ModelServerStatusProbeTests
 
         var status = await Probe(http).GetStatusAsync();
 
-        status.State.Should().Be(ModelServerState.Loading);
+        status.State.Should().Be(LlmState.Loading);
     }
 
     /// <summary>/health answers 200 with any key, so a wrong key would read as ready without the second call.</summary>
@@ -72,7 +72,7 @@ public class ModelServerStatusProbeTests
 
         var status = await Probe(http, apiKey: "wrong-key").GetStatusAsync();
 
-        status.State.Should().Be(ModelServerState.Unauthorized);
+        status.State.Should().Be(LlmState.Unauthorized);
     }
 
     [Fact]
@@ -89,7 +89,7 @@ public class ModelServerStatusProbeTests
 
         var status = await Probe(http, apiKey: "tailnet-key").GetStatusAsync();
 
-        status.State.Should().Be(ModelServerState.Ready);
+        status.State.Should().Be(LlmState.Ready);
         status.Model.Should().Be("Qwen3.5-9B-Q6_K.gguf");
         authorization.Should().Be("Bearer tailnet-key");
         http.RequestedUrls.Should().Equal(
@@ -105,7 +105,7 @@ public class ModelServerStatusProbeTests
 
         var status = await Probe(http).GetStatusAsync();
 
-        status.State.Should().Be(ModelServerState.Ready);
+        status.State.Should().Be(LlmState.Ready);
         status.Model.Should().BeNull();
     }
 
@@ -122,7 +122,7 @@ public class ModelServerStatusProbeTests
         var started = DateTime.UtcNow;
         var status  = await Probe(http, statusTimeoutSeconds: 1).GetStatusAsync();
 
-        status.State.Should().Be(ModelServerState.Offline);
+        status.State.Should().Be(LlmState.Offline);
         (DateTime.UtcNow - started).Should().BeLessThan(TimeSpan.FromSeconds(10));
     }
 }

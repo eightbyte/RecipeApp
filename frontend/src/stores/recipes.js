@@ -82,11 +82,19 @@ export const useRecipeStore = defineStore('recipes', () => {
 
   // ── Scrape actions ─────────────────────────────────────────────────────────
 
-  async function scrapeRecipe(url) {
+  function scrapeRecipe(url) {
+    return scrape('/recipes/scrape', { url })
+  }
+
+  function scrapeRecipeText(text) {
+    return scrape('/recipes/scrape/text', { text })
+  }
+
+  async function scrape(route, body) {
     scrapeLoading.value = true
     scrapeError.value   = null
     try {
-      const { data } = await api.post('/recipes/scrape', { url })
+      const { data } = await api.post(route, body)
       scrapePreview.value = data
     } catch (e) {
       scrapeError.value = e.message ?? 'Failed to extract recipe.'
@@ -106,9 +114,9 @@ export const useRecipeStore = defineStore('recipes', () => {
     }
   }
 
-  /** The Model Server's `{ state, model }`, read fresh each time because it can start or stop at any moment; throws if the API is unreachable. */
-  async function fetchModelServerStatus() {
-    const { data } = await api.get('/model-server/status')
+  /** Scraping's LLM provider as `{ provider, state, model }`, read fresh each time because it can start or stop at any moment; throws if the API is unreachable. */
+  async function fetchLlmStatus() {
+    const { data } = await api.get('/llm/status')
     return data
   }
 
@@ -131,6 +139,6 @@ export const useRecipeStore = defineStore('recipes', () => {
     createRecipe, updateRecipe, deleteRecipe,
     uploadImage, markCooked, isRecentlyCooked,
     scrapePreview, scrapeError, scrapeLoading, confirmLoading,
-    scrapeRecipe, confirmScrape, clearScrapePreview, fetchModelServerStatus,
+    scrapeRecipe, scrapeRecipeText, confirmScrape, clearScrapePreview, fetchLlmStatus,
   }
 })

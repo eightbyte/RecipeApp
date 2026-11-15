@@ -149,10 +149,15 @@ _Avoid_: Adapter, plugin, template, scraper
 Loading a Recipe Pack whose recipes are already structured, with no review step.
 _Avoid_: Scrape (for a pack), seed (as a user action)
 
+**LLM Provider**:
+Whoever answers Scraping's language-model requests, chosen once per deployment: the Model Server
+(the default) or the Claude API. The MyPlate seed pipeline always uses the Model Server.
+_Avoid_: Model Server (for the Claude API), backend, engine
+
 **Model Server**:
-The separate process that hosts the language model used by Scraping and by the MyPlate seed
-pipeline. It runs only while someone has started it. The app works without it, except for those
-two.
+The separate process on this network that hosts a local language model, used by the MyPlate seed
+pipeline and, when it is the LLM Provider, by Scraping. It runs only while someone has started
+it. The app works without it, except for those two.
 _Avoid_: LLM service, companion app, Ollama, recipe reader
 
 ### Seeding and distribution

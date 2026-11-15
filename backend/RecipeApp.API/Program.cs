@@ -109,16 +109,8 @@ builder.Services.AddHttpClient(WaybackHarvester.HttpClientName, (sp, client) =>
     client.DefaultRequestHeaders.UserAgent.ParseAdd(seeding.UserAgent);
 });
 
-// ── LLM (the Model Server, llama.cpp's llama-server over HTTP) ───────────────
-builder.Services.Configure<LlmOptions>(
-    builder.Configuration.GetSection(LlmOptions.SectionName));
-
-// No timeout: each caller's LlmTimeoutSeconds budget owns the limit, so a long completion surfaces as LlmTimeout rather than a failure.
-builder.Services.AddHttpClient(ModelServerClient.HttpClientName, client =>
-    client.Timeout = Timeout.InfiniteTimeSpan);
-
-builder.Services.AddSingleton<ILlmStructuredClient, ModelServerClient>();
-builder.Services.AddSingleton<IModelServerStatusProbe, ModelServerStatusProbe>();
+// ── LLM (Scraping follows Llm:Provider; the seed pipeline always uses the Model Server) ──
+builder.Services.AddLlm(builder.Configuration);
 
 // ── CORS ──────────────────────────────────────────────────────────────────────
 builder.Services.AddCors(options =>
@@ -132,7 +124,7 @@ builder.Services.AddCors(options =>
 });
 
 // ── Health Checks ─────────────────────────────────────────────────────────────
-// The Model Server is deliberately absent: the updater rolls back on a failed readiness check, and the server is off most of the time.
+// The LLM provider is deliberately absent: the updater rolls back on a failed readiness check, and the Model Server is off most of the time.
 builder.Services.AddHealthChecks()
     .AddNpgSql(
         sp => sp.GetRequiredService<IConfiguration>().GetConnectionString("DefaultConnection")!,
@@ -239,7 +231,7 @@ var api = app.MapGroup("/api/v1");
 api.MapIngredientsEndpoints();
 api.MapRecipesEndpoints();
 api.MapRecipeScrapeEndpoints();
-api.MapModelServerEndpoints();
+api.MapLlmEndpoints();
 api.MapMealPlanEndpoints();
 api.MapShoppingListEndpoints();
 

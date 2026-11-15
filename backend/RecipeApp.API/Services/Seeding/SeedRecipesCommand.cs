@@ -221,12 +221,12 @@ public static class SeedRecipesCommand
             logger.LogError("Seed harvest aborted: {Message}", ex.Message);
             return FailureExitCode;
         }
-        catch (ModelServerUnavailableException ex)
+        catch (LlmUnavailableException ex)
         {
             // Mid-run: the recipe in progress was left unrecorded, so a re-run resumes with it.
             logger.LogError(
                 "Stopped: {Reason} Cached output is kept and a re-run resumes where it stopped.",
-                Capitalise(ex.State.UnavailableReason()));
+                Capitalise(ex.Reason));
             return FailureExitCode;
         }
         catch (CatalogueValidationException ex)
@@ -253,8 +253,10 @@ public static class SeedRecipesCommand
     /// <summary>Checks the Model Server once before a stage that needs it, reporting the state rather than failing recipe after recipe.</summary>
     private static async Task<bool> ModelServerIsReadyAsync(IServiceProvider services, ILogger logger, CancellationToken ct)
     {
-        var status = await services.GetRequiredService<IModelServerStatusProbe>().GetStatusAsync(ct);
-        if (status.State == ModelServerState.Ready)
+        // Always the Model Server, whatever Llm:Provider says, because the seed prompts were measured against it.
+        var probe  = services.GetRequiredKeyedService<ILlmStatusProbe>(LlmProvider.ModelServer);
+        var status = await probe.GetStatusAsync(ct);
+        if (status.State == LlmState.Ready)
         {
             logger.LogInformation("Model Server ready with model {Model}.", status.Model ?? "(unnamed)");
             return true;
@@ -262,7 +264,7 @@ public static class SeedRecipesCommand
 
         logger.LogError(
             "{Reason} Start it with tools/llm-server/start.ps1 and check Llm:ModelServer:BaseUrl.",
-            Capitalise(status.State.UnavailableReason()));
+            Capitalise(status.State.UnavailableReason(LlmProvider.ModelServer)));
         return false;
     }
 

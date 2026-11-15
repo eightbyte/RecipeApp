@@ -12,7 +12,7 @@ namespace RecipeApp.API.Services.Seeding;
 public class IngredientCatalogueBuilder(
     SeedCacheStore cache,
     CatalogueBuildFileStore buildStore,
-    ILlmStructuredClient llm,
+    [FromKeyedServices(LlmProvider.ModelServer)] ILlmStructuredClient llm,
     IOptions<RecipeSeedingOptions> options,
     ILogger<IngredientCatalogueBuilder> logger)
 {
@@ -455,7 +455,7 @@ public class IngredientCatalogueBuilder(
                         "unanswered and {Collapsed} in collapsed groups; retrying.",
                         index + 1, batches.Count, attempt, reading.Unanswered, batch.Count, reading.Collapsed);
                 }
-                catch (Exception ex) when (ex is not OperationCanceledException and not ModelServerUnavailableException)
+                catch (Exception ex) when (ex is not OperationCanceledException and not LlmUnavailableException)
                 {
                     // A failed batch is recorded and skipped, and its names fall through to gap recovery as single-name entries.
                     logger.LogWarning(ex,

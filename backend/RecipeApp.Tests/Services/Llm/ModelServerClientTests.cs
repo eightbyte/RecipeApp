@@ -22,8 +22,12 @@ public class ModelServerClientTests
 
     private static LlmOptions Options(string apiKey = "") => new()
     {
-        ModelServer = new ModelServerOptions { BaseUrl = BaseUrl, ApiKey = apiKey },
-        Sampling    = new LlmSamplingOptions { Temperature = 0.33f, TopK = 17, TopP = 0.44f, MinP = 0.05f },
+        ModelServer = new ModelServerOptions
+        {
+            BaseUrl  = BaseUrl,
+            ApiKey   = apiKey,
+            Sampling = new LlmSamplingOptions { Temperature = 0.33f, TopK = 17, TopP = 0.44f, MinP = 0.05f },
+        },
     };
 
     private static ModelServerClient Client(StubHttpClientFactory http, LlmOptions? options = null) =>
@@ -149,8 +153,8 @@ public class ModelServerClientTests
         var act = CompleteAgainst(_ => throw new HttpRequestException(
             HttpRequestError.ConnectionError, "No connection could be made because the target machine actively refused it."));
 
-        (await act.Should().ThrowAsync<ModelServerUnavailableException>())
-            .Which.State.Should().Be(ModelServerState.Offline);
+        (await act.Should().ThrowAsync<LlmUnavailableException>())
+            .Which.State.Should().Be(LlmState.Offline);
     }
 
     /// <summary>
@@ -165,8 +169,8 @@ public class ModelServerClientTests
         var act = CompleteAgainst(_ => throw new HttpRequestException(
             error, "An existing connection was forcibly closed by the remote host.", new IOException()));
 
-        (await act.Should().ThrowAsync<ModelServerUnavailableException>())
-            .Which.State.Should().Be(ModelServerState.Offline);
+        (await act.Should().ThrowAsync<LlmUnavailableException>())
+            .Which.State.Should().Be(LlmState.Offline);
     }
 
     [Fact]
@@ -174,8 +178,8 @@ public class ModelServerClientTests
     {
         var act = CompleteAgainst(_ => StubHttpClientFactory.Status(HttpStatusCode.Unauthorized));
 
-        (await act.Should().ThrowAsync<ModelServerUnavailableException>())
-            .Which.State.Should().Be(ModelServerState.Unauthorized);
+        (await act.Should().ThrowAsync<LlmUnavailableException>())
+            .Which.State.Should().Be(LlmState.Unauthorized);
     }
 
     /// <summary>llama-server answers 503 while it is still loading the model.</summary>
@@ -184,8 +188,8 @@ public class ModelServerClientTests
     {
         var act = CompleteAgainst(_ => StubHttpClientFactory.Status(HttpStatusCode.ServiceUnavailable));
 
-        (await act.Should().ThrowAsync<ModelServerUnavailableException>())
-            .Which.State.Should().Be(ModelServerState.Loading);
+        (await act.Should().ThrowAsync<LlmUnavailableException>())
+            .Which.State.Should().Be(LlmState.Loading);
     }
 
     [Fact]
@@ -196,8 +200,8 @@ public class ModelServerClientTests
 
         var act = () => Client(http, options).CompleteStructuredAsync("SYSTEM", "USER", Schema, 512);
 
-        (await act.Should().ThrowAsync<ModelServerUnavailableException>())
-            .Which.State.Should().Be(ModelServerState.Offline);
+        (await act.Should().ThrowAsync<LlmUnavailableException>())
+            .Which.State.Should().Be(LlmState.Offline);
         http.RequestedUrls.Should().BeEmpty();
     }
 
@@ -208,6 +212,6 @@ public class ModelServerClientTests
         var act = CompleteAgainst(_ => StubHttpClientFactory.Status(HttpStatusCode.InternalServerError));
 
         var thrown = await act.Should().ThrowAsync<Exception>();
-        thrown.Which.Should().NotBeOfType<ModelServerUnavailableException>();
+        thrown.Which.Should().NotBeOfType<LlmUnavailableException>();
     }
 }

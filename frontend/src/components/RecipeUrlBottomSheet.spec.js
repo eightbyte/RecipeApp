@@ -37,10 +37,10 @@ function mountSheet(modelValue = true, props = {}) {
   return { wrapper, store: useRecipeStore() }
 }
 
-const STATUS_URL = '/model-server/status'
+const STATUS_URL = '/llm/status'
 
-function statusResponse(state, model = null) {
-  return { data: { state, model } }
+function statusResponse(state, model = null, provider = 'modelServer') {
+  return { data: { provider, state, model } }
 }
 
 function importButton(wrapper) {
@@ -210,7 +210,7 @@ describe('RecipeUrlBottomSheet', () => {
     })
   })
 
-  describe('Model Server status', () => {
+  describe('LLM status', () => {
     afterEach(() => vi.useRealTimers())
 
     it('asks for the status when the sheet opens', async () => {
@@ -241,6 +241,36 @@ describe('RecipeUrlBottomSheet', () => {
 
       expect(wrapper.text()).toContain(message)
       expect(importButton(wrapper).props('disabled')).toBe(true)
+    })
+
+    it.each([
+      ['offline',       "Claude (Anthropic) can't be reached"],
+      ['unauthorized',  'Claude (Anthropic) rejected the API key'],
+      ['busy',          'Claude is busy right now, try again in a moment'],
+      ['notConfigured', "Claude (Anthropic) isn't configured"],
+    ])('names Claude when it is the provider and the state is %s', async (state, message) => {
+      api.get.mockResolvedValue(statusResponse(state, null, 'anthropic'))
+      const { wrapper } = mountSheet(true)
+      await flushPromises()
+      await wrapper.find('input').setValue('https://example.com/soup')
+
+      expect(wrapper.text()).toContain(`Scraping is unavailable: ${message}`)
+      expect(importButton(wrapper).props('disabled')).toBe(true)
+    })
+
+    it('says the recipe is extracted with Claude, because its content leaves the network', async () => {
+      api.get.mockResolvedValue(statusResponse('ready', 'claude-opus-5-5', 'anthropic'))
+      const { wrapper } = mountSheet(true)
+      await flushPromises()
+
+      expect(wrapper.text()).toContain('Extracted with Claude (Anthropic)')
+    })
+
+    it('shows no provider caption for the Model Server, which stays on the network', async () => {
+      const { wrapper } = mountSheet(true)
+      await flushPromises()
+
+      expect(wrapper.text()).not.toContain('Extracted with')
     })
 
     it('keeps the URL field usable while Scraping is unavailable', async () => {

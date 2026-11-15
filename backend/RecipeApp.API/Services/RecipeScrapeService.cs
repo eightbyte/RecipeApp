@@ -22,7 +22,7 @@ public class RecipeScrapeService(
     IHttpClientFactory httpClientFactory,
     IOptions<RecipeScrapingOptions> options,
     ILlmStructuredClient llm,
-    IModelServerStatusProbe modelServer,
+    ILlmStatusProbe llmStatus,
     AppDbContext db,
     IHeadlessRenderer headlessRenderer,
     MeasurementConverter measurementConverter,
@@ -223,7 +223,7 @@ public class RecipeScrapeService(
     public async Task<ScrapePreviewResponse> ScrapeAsync(string url, CancellationToken ct = default)
     {
         // Checked before the fetch, which can take 35 seconds and is wasted when nothing can read the page.
-        await EnsureModelServerReadyAsync(url, ct);
+        await EnsureLlmReadyAsync(url, ct);
 
         var page      = await FetchPageAsync(url, ct);
         var extracted = await ExtractRecipeAsync(page.Text, ct);
@@ -232,7 +232,7 @@ public class RecipeScrapeService(
 
     public async Task<ScrapePreviewResponse> ScrapeTextAsync(string text, CancellationToken ct = default)
     {
-        await EnsureModelServerReadyAsync(PastedTextLabel, ct);
+        await EnsureLlmReadyAsync(PastedTextLabel, ct);
 
         var recipeText = TidyPastedText(text);
         try
@@ -246,13 +246,14 @@ public class RecipeScrapeService(
         }
     }
 
-    private async Task EnsureModelServerReadyAsync(string source, CancellationToken ct)
+    private async Task EnsureLlmReadyAsync(string source, CancellationToken ct)
     {
-        var status = await modelServer.GetStatusAsync(ct);
-        if (status.State != ModelServerState.Ready)
-            throw UnavailableError(status.State);
+        var status = await llmStatus.GetStatusAsync(ct);
+        if (status.State != LlmState.Ready)
+            throw UnavailableError(status.Provider, status.State);
 
-        logger.LogInformation("Scraping {Source} with model {Model}.", source, status.Model ?? "(unnamed)");
+        logger.LogInformation("Scraping {Source} with {Provider} model {Model}.",
+            source, status.Provider, status.Model ?? "(unnamed)");
     }
 
     /// <summary>Names a text Scrape with no Source URL in the warnings that otherwise name the page.</summary>
@@ -609,17 +610,20 @@ public class RecipeScrapeService(
         {
             json = await llm.CompleteStructuredAsync(ExtractionSystemPrompt, userMessage, schema, maxTokens: 4096, linkedCts.Token);
         }
-        catch (OperationCanceledException) when (llmCts.IsCancellationRequested)
+        // A TimeoutException is a provider's own budget running out, which is shorter than this one for a cloud provider.
+        catch (Exception ex) when (ex is TimeoutException
+                                   || (ex is OperationCanceledException && llmCts.IsCancellationRequested))
         {
             throw new RecipeScrapeException(RecipeScrapeError.LlmTimeout,
                 "Recipe extraction timed out. Please try again.");
         }
-        catch (ModelServerUnavailableException ex)
+        catch (LlmUnavailableException ex)
         {
-            throw UnavailableError(ex.State);
+            throw UnavailableError(ex.Provider, ex.State);
         }
-        catch (Exception ex) when (ex is not RecipeScrapeException)
+        catch (Exception ex) when (ex is not RecipeScrapeException and not LlmRequestRejectedException)
         {
+            logger.LogWarning("Recipe extraction failed: {Message}", ex.Message);
             throw new RecipeScrapeException(RecipeScrapeError.LlmFailed,
                 "Recipe extraction failed. Please try again or create the recipe manually.");
         }
@@ -631,8 +635,8 @@ public class RecipeScrapeService(
         return extracted;
     }
 
-    private static RecipeScrapeException UnavailableError(ModelServerState state) =>
-        new(RecipeScrapeError.ModelServerUnavailable, $"Scraping is unavailable: {state.UnavailableReason()}");
+    private static RecipeScrapeException UnavailableError(LlmProvider provider, LlmState state) =>
+        new(RecipeScrapeError.LlmUnavailable, $"Scraping is unavailable: {state.UnavailableReason(provider)}");
 
     // ── Normalisation with semantic matching ──────────────────────────────────
 
@@ -749,7 +753,7 @@ public class RecipeScrapeService(
 
             var matchSchema = JsonNode.Parse(MatchingSchemaJson)!;
 
-            // Its own budget, because the Model Server queues behind other callers and the client has no timeout.
+            // Its own budget, because the Model Server queues behind other callers and its client has no timeout.
             using var matchCts    = new CancellationTokenSource(TimeSpan.FromSeconds(_options.LlmTimeoutSeconds));
             using var matchLinked = CancellationTokenSource.CreateLinkedTokenSource(ct, matchCts.Token);
 
@@ -1138,8 +1142,8 @@ public enum RecipeScrapeError
     LlmFailed,
     NoContent,
 
-    /// <summary>The Model Server is offline, loading or rejecting the key, before or during extraction.</summary>
-    ModelServerUnavailable,
+    /// <summary>The LLM provider is offline, loading, busy, unconfigured or rejecting the key, before or during extraction.</summary>
+    LlmUnavailable,
 }
 
 public class RecipeScrapeException(RecipeScrapeError error, string message)

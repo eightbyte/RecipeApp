@@ -28,9 +28,9 @@ public sealed class ModelServerClient(IHttpClientFactory httpClientFactory, IOpt
     {
         var server = _options.ModelServer;
         if (string.IsNullOrWhiteSpace(server.BaseUrl))
-            throw new ModelServerUnavailableException(ModelServerState.Offline);
+            throw new LlmUnavailableException(LlmProvider.ModelServer, LlmState.Offline);
 
-        var sampling = _options.Sampling;
+        var sampling = server.Sampling;
 
         // grammar is llama.cpp's own field, not response_format, because the server's schema converter would let the model emit optional properties.
         var body = new JsonObject
@@ -63,13 +63,13 @@ public sealed class ModelServerClient(IHttpClientFactory httpClientFactory, IOpt
         catch (HttpRequestException)
         {
             // No HTTP answer at all: refused, or dropped mid-generation when the server is stopped (ResponseEnded or a reset).
-            throw new ModelServerUnavailableException(ModelServerState.Offline);
+            throw new LlmUnavailableException(LlmProvider.ModelServer, LlmState.Offline);
         }
 
         using (response)
         {
             if (UnavailableStateOf(response.StatusCode) is { } unavailable)
-                throw new ModelServerUnavailableException(unavailable);
+                throw new LlmUnavailableException(LlmProvider.ModelServer, unavailable);
 
             response.EnsureSuccessStatusCode();
 
@@ -82,10 +82,10 @@ public sealed class ModelServerClient(IHttpClientFactory httpClientFactory, IOpt
     }
 
     /// <summary>The state a running Model Server's answer proves it cannot serve in (401 rejects the key, 503 is still loading), or null for any other status.</summary>
-    internal static ModelServerState? UnavailableStateOf(HttpStatusCode status) => status switch
+    internal static LlmState? UnavailableStateOf(HttpStatusCode status) => status switch
     {
-        HttpStatusCode.Unauthorized       => ModelServerState.Unauthorized,
-        HttpStatusCode.ServiceUnavailable => ModelServerState.Loading,
+        HttpStatusCode.Unauthorized       => LlmState.Unauthorized,
+        HttpStatusCode.ServiceUnavailable => LlmState.Loading,
         _                                 => null,
     };
 

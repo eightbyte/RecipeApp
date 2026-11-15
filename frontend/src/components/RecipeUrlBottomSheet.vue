@@ -16,6 +16,10 @@
           {{ unavailableMessage }}
         </v-alert>
 
+        <p v-if="cloudCaption" class="text-caption text-medium-emphasis mb-4">
+          {{ cloudCaption }}
+        </p>
+
         <v-btn-toggle
           v-model="source"
           mandatory
@@ -93,10 +97,11 @@ import { computed, onBeforeUnmount, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { useRecipeStore } from '@/stores/recipes'
 import {
-  MODEL_SERVER_LOADING,
-  MODEL_SERVER_LOADING_RECHECK_MS,
-  MODEL_SERVER_UNAVAILABLE_MESSAGES,
-} from '@/constants/modelServer'
+  LLM_CLOUD_CAPTIONS,
+  LLM_LOADING,
+  LLM_LOADING_RECHECK_MS,
+  LLM_UNAVAILABLE_MESSAGES,
+} from '@/constants/llm'
 import { SCRAPE_TEXT_MAX_LENGTH } from '@/constants/scrapeLimits'
 import { SCRAPE_SOURCE_TEXT, SCRAPE_SOURCE_URL } from '@/constants/scrapeSources'
 
@@ -129,46 +134,48 @@ const canImport = computed(() => hasInput.value && !store.scrapeLoading && !unav
 watch(source, () => { store.scrapeError = null })
 
 // Null until the status answers, and when the status request itself fails, so the Scrape can report the real error.
-const modelServerState   = ref(null)
-const unavailableMessage = computed(() => MODEL_SERVER_UNAVAILABLE_MESSAGES[modelServerState.value] ?? null)
+const llmStatus          = ref(null)
+const unavailableMessage = computed(() =>
+  LLM_UNAVAILABLE_MESSAGES[llmStatus.value?.provider]?.[llmStatus.value?.state] ?? null)
+const cloudCaption       = computed(() => LLM_CLOUD_CAPTIONS[llmStatus.value?.provider] ?? null)
 
 let recheckTimer = null
 // Bumped on close and on every new check, so an answer that arrives late cannot overwrite a newer one.
 let statusCheck = 0
 
-async function checkModelServer() {
+async function checkLlm() {
   const check = ++statusCheck
-  let state
+  let status
   try {
-    ({ state } = await store.fetchModelServerStatus())
+    status = await store.fetchLlmStatus()
   } catch {
-    state = null
+    status = null
   }
   if (check !== statusCheck) return
 
-  modelServerState.value = state
-  if (state === MODEL_SERVER_LOADING) recheckTimer = setTimeout(checkModelServer, MODEL_SERVER_LOADING_RECHECK_MS)
+  llmStatus.value = status
+  if (status?.state === LLM_LOADING) recheckTimer = setTimeout(checkLlm, LLM_LOADING_RECHECK_MS)
 }
 
-function stopCheckingModelServer() {
+function stopCheckingLlm() {
   clearTimeout(recheckTimer)
   recheckTimer = null
   statusCheck++
 }
 
 watch(model, (open) => {
-  stopCheckingModelServer()
+  stopCheckingLlm()
   if (open) {
     source.value = props.initialMode
     url.value = ''
     text.value = ''
     store.clearScrapePreview()
-    modelServerState.value = null
-    checkModelServer()
+    llmStatus.value = null
+    checkLlm()
   }
 }, { immediate: true })
 
-onBeforeUnmount(stopCheckingModelServer)
+onBeforeUnmount(stopCheckingLlm)
 
 async function handleImport() {
   if (!canImport.value) return

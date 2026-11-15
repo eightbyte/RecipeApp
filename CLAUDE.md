@@ -18,7 +18,7 @@ recipes can be imported on top.
 | First-run seeding, `import-recipes`, clean-start paths | `backend/CLAUDE.md` |
 | Recipe-pack file format and import rules | `docs/recipe-packs.md` |
 | MyPlate seed-import pipeline and licensing (personal use) | `backend/RecipeApp.API/Services/Seeding/CLAUDE.md` |
-| LLM layer: the Model Server client, status, sampling | `backend/RecipeApp.API/Services/Llm/CLAUDE.md` |
+| LLM layer: the Model Server and Claude API clients, provider choice, status, sampling | `backend/RecipeApp.API/Services/Llm/CLAUDE.md` |
 | Starting, stopping or upgrading the Model Server | `tools/llm-server/README.md` |
 | Self-hosted deployment, CI, updater, rollback | `docs/deployment.md` |
 | Units, amounts, density, Servings scaling | `.claude/rules/measurements.md` |
@@ -48,7 +48,9 @@ global.json                .NET SDK pin, and opts `dotnet test` into Microsoft.T
 
 Vue 3 (`<script setup>`) + Vite · Pinia · Vue Router 4 · Vuetify 3 · Axios
 — .NET 10 Minimal API · EF Core 10 + Npgsql · FluentValidation 12 · PostgreSQL 16 ·
-llama.cpp `llama-server` b12110 as the Model Server (CUDA 12, local GGUF model, called over HTTP).
+llama.cpp `llama-server` b12110 as the Model Server (CUDA 12, local GGUF model, called over HTTP) ·
+the Claude API through the `Anthropic` NuGet package, which Scraping uses instead when
+`Llm:Provider = Anthropic`.
 
 ## Running locally
 
@@ -56,7 +58,7 @@ llama.cpp `llama-server` b12110 as the Model Server (CUDA 12, local GGUF model, 
 docker compose up -d postgres
 cd backend/RecipeApp.API && dotnet run   # http://localhost:5197 (5000 under docker compose); migrates + seeds a fresh DB on start
 cd frontend && npm run dev               # http://localhost:3000
-powershell -File tools\llm-server\start.ps1   # Model Server on :9931, only for Scraping and seed-recipes' model stages
+powershell -File tools\llm-server\start.ps1   # Model Server on :9931, only for seed-recipes' model stages, and for Scraping unless Llm:Provider = Anthropic
 ```
 
 API docs `/scalar/v1`, health `/health`, readiness `/health/ready`.

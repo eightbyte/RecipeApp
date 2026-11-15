@@ -14,7 +14,7 @@ namespace RecipeApp.API.Services.Seeding;
 /// to ingredients, then holds the result to the validation gate.
 /// </summary>
 public class SeedRecipeNormaliser(
-    ILlmStructuredClient llm,
+    [FromKeyedServices(LlmProvider.ModelServer)] ILlmStructuredClient llm,
     IOptions<RecipeSeedingOptions> options,
     ILogger<SeedRecipeNormaliser> logger)
 {
@@ -175,7 +175,7 @@ public class SeedRecipeNormaliser(
             // The run itself was cancelled — Ctrl+C, not a bad recipe. Let it unwind.
             throw;
         }
-        catch (ModelServerUnavailableException)
+        catch (LlmUnavailableException)
         {
             // Every remaining recipe would fail the same way, so the run stops here rather than spending retries.
             throw;

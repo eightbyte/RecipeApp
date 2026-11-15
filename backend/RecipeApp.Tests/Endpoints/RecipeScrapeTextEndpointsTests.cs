@@ -66,7 +66,7 @@ public class RecipeScrapeTextEndpointsTests(DatabaseFixture db) : IAsyncLifetime
     };
 
     private HttpClient CreateClient(
-        StubLlmStructuredClient llm, ModelServerState state = ModelServerState.Ready, string page = "")
+        StubLlmStructuredClient llm, LlmState state = LlmState.Ready, string page = "")
     {
         var factory = db.Factory.WithWebHostBuilder(builder => builder.ConfigureServices(services =>
         {
@@ -74,8 +74,8 @@ public class RecipeScrapeTextEndpointsTests(DatabaseFixture db) : IAsyncLifetime
             services.AddSingleton<IHttpClientFactory>(StubHttpClientFactory.Returning(page));
             services.RemoveAll<IHeadlessRenderer>();
             services.AddSingleton<IHeadlessRenderer>(new FakeHeadlessRenderer());
-            services.RemoveAll<IModelServerStatusProbe>();
-            services.AddSingleton<IModelServerStatusProbe>(new StubModelServerStatusProbe(state, "model.gguf"));
+            services.RemoveAll<ILlmStatusProbe>();
+            services.AddSingleton<ILlmStatusProbe>(new StubLlmStatusProbe(state, "model.gguf"));
             services.RemoveAll<ILlmStructuredClient>();
             services.AddSingleton<ILlmStructuredClient>(llm);
         }));
@@ -102,10 +102,10 @@ public class RecipeScrapeTextEndpointsTests(DatabaseFixture db) : IAsyncLifetime
     }
 
     [Theory]
-    [InlineData(ModelServerState.Offline)]
-    [InlineData(ModelServerState.Loading)]
-    [InlineData(ModelServerState.Unauthorized)]
-    public async Task ScrapeText_ModelServerNotReady_Returns503WithoutAskingTheModel(ModelServerState state)
+    [InlineData(LlmState.Offline)]
+    [InlineData(LlmState.Loading)]
+    [InlineData(LlmState.Unauthorized)]
+    public async Task ScrapeText_ModelServerNotReady_Returns503WithoutAskingTheModel(LlmState state)
     {
         var llm = new StubLlmStructuredClient(Extraction());
 

@@ -1,8 +1,12 @@
 ---
-status: accepted
+status: accepted, partly superseded by 0004
 date: 2026-11-05
 issue: "#46"
 ---
+
+> **Partly superseded by [ADR 0004](0004-llm-provider-is-chosen-per-deployment.md):** Scraping's
+> provider is now chosen per deployment and may be the Claude API, so `Llm:Provider` is back. The
+> Model Server, and everything below about it and the seed pipeline, still holds.
 
 # Model inference runs in a separate Model Server, started on demand
 

@@ -16,6 +16,9 @@ public class AnthropicStructuredClientTests
         }
         """)!;
 
+    private static readonly LlmCallContext Context =
+        new(LlmOperation.ScrapeUrl, LlmStep.Extraction, "https://example.test/soup", Guid.NewGuid());
+
     private static LlmOptions Options(string apiKey = "sk-ant-test") => new()
     {
         Provider  = LlmProvider.Anthropic,
@@ -25,7 +28,7 @@ public class AnthropicStructuredClientTests
     private static AnthropicStructuredClient Client(StubHttpClientFactory http, LlmOptions? options = null) =>
         new(http, Microsoft.Extensions.Options.Options.Create(options ?? Options()));
 
-    private static async Task<(HttpRequestMessage Request, JsonNode Body, JsonNode Answer)> CaptureAsync(int maxTokens = 4096)
+    private static async Task<(HttpRequestMessage Request, JsonNode Body, LlmCompletion Answer)> CaptureAsync(int maxTokens = 4096)
     {
         HttpRequestMessage? captured = null;
         string? body = null;
@@ -36,7 +39,7 @@ public class AnthropicStructuredClientTests
             return AnthropicSse.Message("""{"name":"Soup","note":null}""");
         });
 
-        var answer = await Client(http).CompleteStructuredAsync("SYSTEM", "USER", Schema, maxTokens);
+        var answer = await Client(http).CompleteStructuredAsync("SYSTEM", "USER", Schema, maxTokens, Context);
 
         return (captured!, JsonNode.Parse(body!)!, answer);
     }
@@ -48,7 +51,59 @@ public class AnthropicStructuredClientTests
     {
         var (_, _, answer) = await CaptureAsync();
 
-        answer["name"]!.GetValue<string>().Should().Be("Soup");
+        answer.Json["name"]!.GetValue<string>().Should().Be("Soup");
+    }
+
+    /// <summary>Claude's input_tokens already excludes the cached tokens, so the three input counts are kept apart and price separately.</summary>
+    [Fact]
+    public async Task Completion_ReportsTheAnsweringModelsTokens_WithTheCacheCountsApart()
+    {
+        var http = new StubHttpClientFactory(_ => AnthropicSse.Message(
+            """{"name":"Soup","note":null}""", model: "claude-fallback-model",
+            inputTokens: 1200, cacheReadTokens: 300, cacheWriteTokens: 40, outputTokens: 950));
+
+        var answer = await Client(http).CompleteStructuredAsync("SYSTEM", "USER", Schema, 512, Context);
+
+        answer.Usage.Should().Be(new LlmUsage(
+            LlmProvider.Anthropic, "claude-fallback-model",
+            InputTokens: 1200, CacheReadTokens: 300, CacheWriteTokens: 40, OutputTokens: 950, StopReason: "end_turn"));
+    }
+
+    /// <summary>A cut-off or refused answer is still billed, so the failure carries what it cost.</summary>
+    [Fact]
+    public async Task AStopBeforeTheAnswerIsFinished_CarriesItsUsage()
+    {
+        var http = new StubHttpClientFactory(_ => AnthropicSse.Message(
+            """{"name":""", "max_tokens", inputTokens: 500, outputTokens: 12512));
+
+        var thrown = await Calling(http).Should().ThrowAsync<LlmAnswerFailedException>();
+
+        thrown.Which.Usage.Should().BeEquivalentTo(new
+        {
+            Provider = LlmProvider.Anthropic, Model = "claude-opus-5-5",
+            InputTokens = 500, OutputTokens = 12512, StopReason = "max_tokens",
+        });
+    }
+
+    [Fact]
+    public async Task InvalidJson_IsAFailedExtraction_CarryingItsUsage()
+    {
+        var http = new StubHttpClientFactory(_ => AnthropicSse.Message("not json", outputTokens: 7));
+
+        var thrown = await Calling(http).Should().ThrowAsync<LlmAnswerFailedException>();
+
+        thrown.Which.Usage.OutputTokens.Should().Be(7);
+    }
+
+    /// <summary>A status Claude answered with is a call it received, which is recorded, unlike a request that never left the app.</summary>
+    [Fact]
+    public async Task AnUnavailableAnswer_SaysClaudeAnswered()
+    {
+        var http = new StubHttpClientFactory(_ => AnthropicSse.Error(HttpStatusCode.TooManyRequests));
+
+        var thrown = await Calling(http).Should().ThrowAsync<LlmUnavailableException>();
+
+        thrown.Which.ProviderAnswered.Should().BeTrue();
     }
 
     [Fact]
@@ -99,8 +154,8 @@ public class AnthropicStructuredClientTests
 
     // ── Failures: the error-mapping table ────────────────────────────────────
 
-    private static Func<Task<JsonNode>> Calling(StubHttpClientFactory http, LlmOptions? options = null) =>
-        () => Client(http, options).CompleteStructuredAsync("SYSTEM", "USER", Schema, 512);
+    private static Func<Task<LlmCompletion>> Calling(StubHttpClientFactory http, LlmOptions? options = null) =>
+        () => Client(http, options).CompleteStructuredAsync("SYSTEM", "USER", Schema, 512, Context);
 
     [Fact]
     public async Task NoApiKey_IsNotConfigured_WithoutSendingAnything()
@@ -111,6 +166,7 @@ public class AnthropicStructuredClientTests
 
         thrown.Which.Provider.Should().Be(LlmProvider.Anthropic);
         thrown.Which.State.Should().Be(LlmState.NotConfigured);
+        thrown.Which.ProviderAnswered.Should().BeFalse();
         http.RequestedUrls.Should().BeEmpty();
     }
 
@@ -134,11 +190,26 @@ public class AnthropicStructuredClientTests
     [Fact]
     public async Task NoConnection_IsOffline()
     {
-        var http = new StubHttpClientFactory(_ => throw new HttpRequestException("connection refused"));
+        var http = new StubHttpClientFactory(_ =>
+            throw new HttpRequestException(HttpRequestError.ConnectionError, "connection refused"));
 
         var thrown = await Calling(http).Should().ThrowAsync<LlmUnavailableException>();
 
         thrown.Which.State.Should().Be(LlmState.Offline);
+        thrown.Which.ProviderAnswered.Should().BeFalse();
+    }
+
+    /// <summary>A stream that breaks once Claude has started may already be billed, so it counts as having reached Claude.</summary>
+    [Fact]
+    public async Task AConnectionDroppedMidRequest_IsOffline_ButReachedClaude()
+    {
+        var http = new StubHttpClientFactory(_ =>
+            throw new HttpRequestException(HttpRequestError.ResponseEnded, "response ended prematurely", new IOException()));
+
+        var thrown = await Calling(http).Should().ThrowAsync<LlmUnavailableException>();
+
+        thrown.Which.State.Should().Be(LlmState.Offline);
+        thrown.Which.ProviderAnswered.Should().BeTrue();
     }
 
     /// <summary>A 400 means the app sent something Claude cannot accept, which no retry or other source fixes.</summary>
@@ -189,7 +260,7 @@ public class AnthropicStructuredClientTests
         });
         using var cancel = new CancellationTokenSource(TimeSpan.FromMilliseconds(100));
 
-        var act = () => Client(http).CompleteStructuredAsync("SYSTEM", "USER", Schema, 512, cancel.Token);
+        var act = () => Client(http).CompleteStructuredAsync("SYSTEM", "USER", Schema, 512, Context, cancel.Token);
 
         await act.Should().ThrowAsync<OperationCanceledException>();
     }

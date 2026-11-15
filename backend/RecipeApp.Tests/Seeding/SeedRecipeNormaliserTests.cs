@@ -723,6 +723,27 @@ public class SeedRecipeNormaliserTests
         llm.CallCount.Should().Be(3, "the first attempt plus MaxLlmRetries");
     }
 
+    /// <summary>One id per recipe, so its retries read together as the cost of that one recipe.</summary>
+    [Fact]
+    public async Task NormaliseAsync_RecordsEveryAttemptForOneRecipeUnderOneCorrelationId()
+    {
+        _options = new RecipeSeedingOptions { MaxLlmRetries = 2 };
+        var llm = new StubLlmStructuredClient(Answer([], []));
+        var normaliser = BuildNormaliser(llm);
+
+        await FluentActions.Awaiting(() => normaliser.NormaliseAsync(ParsedRecipe(), Fingerprint))
+            .Should().ThrowAsync<SeedNormaliseException>();
+        await FluentActions.Awaiting(() => normaliser.NormaliseAsync(ParsedRecipe(), Fingerprint))
+            .Should().ThrowAsync<SeedNormaliseException>();
+
+        llm.Calls.Should().HaveCount(6).And.AllSatisfy(call => call.Context.Should().BeEquivalentTo(new
+        {
+            Operation = API.Services.Llm.LlmOperation.SeedNormalise, Step = (API.Services.Llm.LlmStep?)null, SourceUrl = (string?)null,
+        }));
+        llm.Calls.Select(c => c.Context.CorrelationId).Distinct().Should().HaveCount(2, "one per recipe normalised");
+        llm.Calls.Take(3).Select(c => c.Context.CorrelationId).Distinct().Should().ContainSingle();
+    }
+
     [Fact]
     public async Task NormaliseAsync_MakesExactlyOneAttemptWhenRetriesAreTurnedOff()
     {

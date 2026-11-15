@@ -160,6 +160,12 @@ pipeline and, when it is the LLM Provider, by Scraping. It runs only while someo
 it. The app works without it, except for those two.
 _Avoid_: LLM service, companion app, Ollama, recipe reader
 
+**LLM Call**:
+One request to an LLM Provider, recorded with how long it took, the tokens it used and its
+estimated cost, whether it succeeded or failed. A Scrape makes one or two. A request that never
+reached the provider is not an LLM Call.
+_Avoid_: Request log, usage event, inference
+
 ### Seeding and distribution
 
 **Ingredient Catalogue**:

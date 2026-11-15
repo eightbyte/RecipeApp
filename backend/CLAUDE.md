@@ -132,6 +132,10 @@ collide afterwards: the samples have no `SourceUrl`, so `--persist --force` neve
 `RecipeScraping`, `RecipeSeeding` (seed pipeline), `RecipePacks` (sample pack path) and `Llm`
 defaults live in the committed `appsettings.json`. Nothing secret goes there.
 
+`Llm:Pricing` in the committed `appsettings.json` is the hand-kept Claude price table (USD per
+million tokens) that prices each recorded LLM Call. Update it when Anthropic's prices or
+`Llm:Anthropic:Model` change (`Services/Llm/CLAUDE.md`, Price table).
+
 ## Running against a real database
 
 - **Starting the web host migrates and seeds** a fresh database (see First-run seeding).

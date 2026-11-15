@@ -28,7 +28,12 @@ against it. `LlmServiceCollectionExtensions.AddLlm` holds every registration.
 | `LlmState` | `offline`, `loading`, `ready`, `unauthorized`, `busy`, `notConfigured`. `UnavailableReason(provider)` holds the wording the frontend repeats in `src/constants/llm.js` |
 | `LlmUnavailableException` | The provider can't take the request at all (see the state mapping below) |
 | `LlmRequestRejectedException` | Claude refused the request itself (400): a bug in what the app sent |
-| `LlmOptions` | Bound to `Llm:*`: `Provider`, `ModelServer` (with `Sampling`), `Anthropic` |
+| `LlmAnswerFailedException` | The provider answered unusably (a stop other than `end_turn`, invalid JSON). Carries the answer's `LlmUsage` |
+| `LlmOptions` | Bound to `Llm:*`: `Provider`, `ModelServer` (with `Sampling`), `Anthropic`, `Pricing` |
+| `LlmCompletion` / `LlmUsage` / `LlmCallContext` | What a call returns (the JSON and its usage) and what every caller passes in (Operation, Step, Source URL, correlation id) |
+| `UsageRecordingLlmClient` | Wraps every client and records each LLM Call (see below) |
+| `ILlmCallRecorder` / `LlmCallRecorder` | Writes an `LlmCall` row through its own `DbContext` |
+| `LlmUsageService` | `GET /api/v1/llm/usage`: LLM Calls in a range, paged, with totals per provider, model and Operation |
 
 ## Configuration
 
@@ -82,6 +87,64 @@ against it. `LlmServiceCollectionExtensions.AddLlm` holds every registration.
   `ANTHROPIC_API_KEY` or a profile from the environment.
 - **CI never calls the API.** Tests script answers through `StubHttpClientFactory`
   (`AnthropicSse` builds the SSE and error bodies).
+
+## Recording LLM Calls
+
+Every call through `ILlmStructuredClient` is recorded as one `LlmCall` row (table `LlmCalls`, kept
+forever), from both providers and all four callers: Scraping's extraction and ingredient matching,
+`SeedRecipeNormaliser` and `IngredientCatalogueBuilder`.
+
+- **`UsageRecordingLlmClient` wraps every keyed registration in `AddLlm`.** The unkeyed client
+  resolves through a keyed one, so each call is recorded exactly once. The clients never touch the
+  database.
+- **Every caller passes an explicit `LlmCallContext`.** Its `CorrelationId` is one per Scrape, per
+  MyPlate recipe (`SeedNormalise`) or per catalogue batch (`CatalogueBuild`), shared by that item's
+  retries. `SourceUrl` is the Scrape's URL, never pasted text, and null for the seed calls.
+- **Recording never fails a call.** The recorder writes through its own context
+  (`IDbContextFactory<AppDbContext>`), so a caller's rollback never removes a row and the caller's
+  change tracker is never saved by accident. It writes with no cancellation token, so a timed-out
+  call is still recorded. A failed write is logged, and the call returns or throws as it would
+  have.
+- **A request that never reached the provider records nothing**: no key, no base URL, a refused
+  connection or a failed name lookup (`LlmUnavailableException.ProviderAnswered` is false). A
+  status the provider answered with (401, 503 loading, 429, 529, other 5xx) and a connection
+  dropped mid-generation, which may already be billed, record `Unavailable`.
+
+| Outcome | From | Tokens |
+|---|---|---|
+| `Succeeded` | A usable answer | The answer's |
+| `FailedExtraction` | `LlmAnswerFailedException` (cut off, refused, invalid JSON) | The answer's, because it was billed |
+| `FailedExtraction` | Any other failure after the request was sent (a Model Server 500) | Null |
+| `Timeout` | `TimeoutException`, or a cancellation (a caller's budget or the caller giving up) | Null, because a cancelled stream reports no usage |
+| `Unavailable` | `LlmUnavailableException` after the request reached the provider | Null |
+| `Rejected` | `LlmRequestRejectedException` (400) | Null |
+
+### Token semantics
+
+The columns use Claude's meanings for both providers, so the whole prompt is
+`InputTokens + CacheReadTokens + CacheWriteTokens` and cost is a straight sum per column.
+
+- Claude: `input_tokens` (which already excludes cached tokens), `cache_read_input_tokens`,
+  `cache_creation_input_tokens` and `output_tokens` (thinking included). `Model` is
+  `message.model`, the model that answered, which the refusal fallback can make differ from the
+  configured one.
+- Model Server (measured on b12110): `usage.prompt_tokens` is the **whole** prompt, cached tokens
+  included, and `timings.cache_n` is the cached part. So `InputTokens = prompt_tokens − cache_n` and
+  `CacheReadTokens = cache_n`. `CacheWriteTokens` is null. `Model` is the answer's `model`, the
+  `--alias` (the GGUF file name).
+- A row nothing answered (timeout, error status) has null tokens. Claude's names the configured
+  `Llm:Anthropic:Model`. The Model Server's names no model.
+
+### Price table (`Llm:Pricing`)
+
+- `Llm:Pricing:<model id>` in the committed `appsettings.json` gives USD per million tokens:
+  `Input`, `Output`, `CacheRead`, `CacheWrite` (the 5-minute write rate), bound as `decimal`.
+  `EstimatedCostUsd` is computed when the row is recorded and never recomputed.
+- **Update it by hand** when Anthropic's prices change, and whenever `Llm:Anthropic:Model` changes.
+  `LlmPricingOptionsTests` fails when the configured model has no entry.
+- A Model Server call costs 0. A Claude call whose model has no entry, such as one answered under
+  the refusal fallback, records a **null** cost, never a guess. `GET /llm/usage` sums only the
+  priced calls and counts the rest as `unpricedCalls`.
 
 ## Unavailable versus failed
 

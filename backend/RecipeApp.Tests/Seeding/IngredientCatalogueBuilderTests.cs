@@ -871,6 +871,37 @@ public class IngredientCatalogueBuilderTests : IDisposable
         BuildCatalogueStore().Exists().Should().BeFalse("a preview never writes the artefact");
     }
 
+    /// <summary>One id per batch, so a batch's retries read together as the cost of that one batch.</summary>
+    [Fact]
+    public async Task Pass2_RecordsEachBatchsAttemptsUnderOneCorrelationIdOfItsOwn()
+    {
+        _options = new RecipeSeedingOptions
+        {
+            CacheDirectory          = _options.CacheDirectory,
+            CatalogueFilePath       = _options.CatalogueFilePath,
+            CatalogueBuildFilePath  = _options.CatalogueBuildFilePath,
+            CatalogueMinimumEntries = 1,
+            CatalogueBatchSize      = 1,
+            MaxLlmRetries           = 1,
+        };
+        var manifest = await SeedCorpusAsync(
+            ("a", [("apple", 1m, "pcs", "1 apple"), ("onion", 1m, "pcs", "1 onion")]));
+
+        // An answer naming nothing is retried, so each batch is asked twice.
+        var llm = new StubLlmStructuredClient(GroupingAnswer());
+
+        await BuildBuilder(llm).PreviewAsync(manifest, [1, 2]);
+
+        llm.Calls.Should().HaveCount(4).And.AllSatisfy(call => call.Context.Should().BeEquivalentTo(new
+        {
+            Operation = API.Services.Llm.LlmOperation.CatalogueBuild, Step = (API.Services.Llm.LlmStep?)null, SourceUrl = (string?)null,
+        }));
+        var ids = llm.Calls.Select(c => c.Context.CorrelationId).ToList();
+        ids[0].Should().Be(ids[1]);
+        ids[2].Should().Be(ids[3]);
+        ids[0].Should().NotBe(ids[2]);
+    }
+
     // ── Pass 3: derived names, units and display names ───────────────────────
 
     [Fact]

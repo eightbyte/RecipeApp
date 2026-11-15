@@ -215,6 +215,79 @@ public class RecipeScrapeTextEndpointsTests(DatabaseFixture db) : IAsyncLifetime
             .Should().Be("https://example.com/honey-chicken");
     }
 
+    // ── The LLM Calls a Scrape makes ──────────────────────────────────────────
+
+    /// <summary>A catalogue entry neither ingredient names, so the Scrape makes its second, matching call.</summary>
+    private async Task SeedAnUnmatchedIngredientAsync()
+    {
+        await using var ctx = db.CreateDbContext();
+        ctx.Ingredients.Add(Helpers.TestDataBuilder.Ingredient("onion", "Onion"));
+        await ctx.SaveChangesAsync();
+    }
+
+    private static StubLlmStructuredClient ExtractionThenMatching() =>
+        new(call => call == 1 ? Extraction() : new JsonObject { ["results"] = new JsonArray() });
+
+    [Fact]
+    public async Task UrlScrape_ExtractionAndMatching_ShareOneCorrelationId_AndCarryTheUrl()
+    {
+        await SeedAnUnmatchedIngredientAsync();
+        var llm    = ExtractionThenMatching();
+        var client = CreateClient(llm, page: "<html><body><main>" + new string('x', 500) + "</main></body></html>");
+
+        await client.PostAsJsonAsync("/api/v1/recipes/scrape", new ScrapeRecipeRequest("https://example.com/honey-chicken"));
+
+        llm.Calls.Select(c => c.Context).Should().SatisfyRespectively(
+            extraction => extraction.Should().BeEquivalentTo(new
+            {
+                Operation = LlmOperation.ScrapeUrl, Step = LlmStep.Extraction, SourceUrl = "https://example.com/honey-chicken",
+            }),
+            matching => matching.Should().BeEquivalentTo(new
+            {
+                Operation = LlmOperation.ScrapeUrl, Step = LlmStep.IngredientMatching, SourceUrl = "https://example.com/honey-chicken",
+            }));
+        llm.Calls.Select(c => c.Context.CorrelationId).Distinct().Should().ContainSingle().Which.Should().NotBeEmpty();
+    }
+
+    /// <summary>Pasted text may be private, so the only thing of it an LLM Call keeps is the one URL it names.</summary>
+    [Fact]
+    public async Task TextScrape_RecordsOnlyTheOneUrlTheTextNames()
+    {
+        await SeedAnUnmatchedIngredientAsync();
+        var llm = ExtractionThenMatching();
+
+        await PostText(CreateClient(llm), PastedRecipe + "\nhttps://www.mealime.com/recipes/honey-chicken/26620\n");
+
+        llm.Calls.Should().HaveCount(2);
+        llm.Calls.Should().AllSatisfy(call => call.Context.Should().BeEquivalentTo(new
+        {
+            Operation = LlmOperation.ScrapeText, SourceUrl = "https://www.mealime.com/recipes/honey-chicken/26620",
+        }));
+        llm.Calls.Select(c => c.Context.CorrelationId).Distinct().Should().ContainSingle();
+    }
+
+    [Fact]
+    public async Task TextScrape_NamingNoUrl_RecordsNoSourceUrl()
+    {
+        var llm = new StubLlmStructuredClient(Extraction());
+
+        await PostText(CreateClient(llm), PastedRecipe);
+
+        llm.Calls.Single().Context.SourceUrl.Should().BeNull();
+    }
+
+    [Fact]
+    public async Task TwoScrapes_HaveDifferentCorrelationIds()
+    {
+        var llm    = new StubLlmStructuredClient(Extraction());
+        var client = CreateClient(llm);
+
+        await PostText(client, PastedRecipe);
+        await PostText(client, PastedRecipe);
+
+        llm.Calls.Select(c => c.Context.CorrelationId).Should().OnlyHaveUniqueItems().And.HaveCount(2);
+    }
+
     // ── Validation ────────────────────────────────────────────────────────────
 
     [Theory]

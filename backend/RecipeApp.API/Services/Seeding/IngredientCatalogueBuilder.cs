@@ -433,6 +433,7 @@ public class IngredientCatalogueBuilder(
             // Keep the best answer seen rather than the last, because a later attempt can throw or come back worse.
             BatchReading? best = null;
             var attemptsUsed = 0;
+            var context      = new LlmCallContext(LlmOperation.CatalogueBuild, Step: null, SourceUrl: null, Guid.NewGuid());
 
             for (var attempt = 1; attempt <= attemptCap; attempt++)
             {
@@ -442,7 +443,7 @@ public class IngredientCatalogueBuilder(
 
                 try
                 {
-                    var answer  = await CompleteAsync(schema, BuildUserContent(batch), ct);
+                    var answer  = await CompleteAsync(schema, BuildUserContent(batch), context, ct);
                     var reading = ReadAnswer(answer, batch, familyKeys);
 
                     if (best is null || reading.Defects < best.Defects) best = reading;
@@ -629,15 +630,16 @@ public class IngredientCatalogueBuilder(
             content.Append("      e.g. ").Append(line).Append('\n');
     }
 
-    private async Task<JsonNode> CompleteAsync(JsonNode schema, string userContent, CancellationToken ct)
+    private async Task<JsonNode> CompleteAsync(
+        JsonNode schema, string userContent, LlmCallContext context, CancellationToken ct)
     {
         using var budget = new CancellationTokenSource(TimeSpan.FromSeconds(_options.LlmTimeoutSeconds));
         using var linked = CancellationTokenSource.CreateLinkedTokenSource(ct, budget.Token);
 
         try
         {
-            return await llm.CompleteStructuredAsync(
-                GroupingSystemPrompt, userContent, schema, _options.MaxLlmOutputTokens, linked.Token);
+            return (await llm.CompleteStructuredAsync(
+                GroupingSystemPrompt, userContent, schema, _options.MaxLlmOutputTokens, context, linked.Token)).Json;
         }
         catch (OperationCanceledException) when (budget.IsCancellationRequested && !ct.IsCancellationRequested)
         {

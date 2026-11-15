@@ -1,4 +1,6 @@
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
+using RecipeApp.API.Data;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging.Abstractions;
 using RecipeApp.API.Services;
@@ -16,20 +18,26 @@ public class LlmServiceRegistrationTests
         var settings = new Dictionary<string, string?>();
         if (provider is not null) settings["Llm:Provider"] = provider;
 
+        // A connection string that is never opened, because the recorder needs a context factory only to be built.
         var services = new ServiceCollection()
             .AddSingleton(typeof(Microsoft.Extensions.Logging.ILogger<>), typeof(NullLogger<>))
+            .AddDbContextFactory<AppDbContext>(options => options.UseNpgsql("Host=unused.test"))
             .AddLlm(new ConfigurationBuilder().AddInMemoryCollection(settings).Build());
 
         configure?.Invoke(services);
         return services.BuildServiceProvider(new ServiceProviderOptions { ValidateOnBuild = true });
     }
 
+    /// <summary>The client every consumer gets is the recording decorator, so this unwraps it to see which provider answers.</summary>
+    private static ILlmStructuredClient Recorded(ILlmStructuredClient client) =>
+        client.Should().BeOfType<UsageRecordingLlmClient>().Which.Inner;
+
     [Fact]
     public void WithNoProviderSet_ScrapingUsesTheModelServer()
     {
         using var services = Build(provider: null);
 
-        services.GetRequiredService<ILlmStructuredClient>().Should().BeOfType<ModelServerClient>();
+        Recorded(services.GetRequiredService<ILlmStructuredClient>()).Should().BeOfType<ModelServerClient>();
         services.GetRequiredService<ILlmStatusProbe>().Should().BeOfType<ModelServerStatusProbe>();
     }
 
@@ -39,8 +47,19 @@ public class LlmServiceRegistrationTests
     {
         using var services = Build("Anthropic");
 
-        services.GetRequiredService<ILlmStructuredClient>().Should().BeOfType<AnthropicStructuredClient>();
+        Recorded(services.GetRequiredService<ILlmStructuredClient>()).Should().BeOfType<AnthropicStructuredClient>();
         services.GetRequiredService<ILlmStatusProbe>().Should().BeOfType<AnthropicStatusProbe>();
+    }
+
+    /// <summary>The seed pipeline asks by key, so the keyed clients must record too, not only the one Scraping takes.</summary>
+    [Theory]
+    [InlineData(LlmProvider.ModelServer, typeof(ModelServerClient))]
+    [InlineData(LlmProvider.Anthropic,   typeof(AnthropicStructuredClient))]
+    public void EveryKeyedClient_IsRecorded(LlmProvider provider, Type client)
+    {
+        using var services = Build(provider: null);
+
+        Recorded(services.GetRequiredKeyedService<ILlmStructuredClient>(provider)).Should().BeOfType(client);
     }
 
     [Fact]

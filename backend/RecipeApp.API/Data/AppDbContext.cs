@@ -1,6 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using RecipeApp.API.Enums;
 using RecipeApp.API.Models;
+using RecipeApp.API.Services.Llm;
 
 namespace RecipeApp.API.Data;
 
@@ -17,6 +18,7 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
     public DbSet<ShoppingListItem> ShoppingListItems => Set<ShoppingListItem>();
     public DbSet<ShoppingListItemSource> ShoppingListItemSources => Set<ShoppingListItemSource>();
     public DbSet<SeedLedgerEntry> SeedLedger => Set<SeedLedgerEntry>();
+    public DbSet<LlmCall> LlmCalls => Set<LlmCall>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -169,6 +171,25 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
             e.HasKey(l => l.Key);
             e.Property(l => l.Key).ValueGeneratedNever();
             e.Property(l => l.AppliedAt).HasDefaultValueSql("NOW()");
+        });
+
+        // ── LlmCall ───────────────────────────────────────────────────────────
+        modelBuilder.Entity<LlmCall>(e =>
+        {
+            // Stored under the names the API reports, so a row reads the same in SQL as in GET /llm/usage.
+            e.Property(c => c.Provider)
+                .HasConversion(p => LlmProviderNames.NameOf(p), s => LlmProviderNames.Parse(s))
+                .HasMaxLength(32);
+            e.Property(c => c.Operation).HasConversion<string>().HasMaxLength(32);
+            e.Property(c => c.Step).HasConversion<string>().HasMaxLength(32);
+            e.Property(c => c.Outcome).HasConversion<string>().HasMaxLength(32);
+            e.Property(c => c.Model).HasMaxLength(200);
+
+            // A single token at a cache-read price is a few ten-millionths of a dollar.
+            e.Property(c => c.EstimatedCostUsd).HasPrecision(18, 8);
+
+            e.HasIndex(c => c.CreatedAt);
+            e.HasIndex(c => c.CorrelationId);
         });
     }
 }

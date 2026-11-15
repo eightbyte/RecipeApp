@@ -14,7 +14,7 @@ namespace RecipeApp.API.Services.Seeding;
 /// to ingredients, then holds the result to the validation gate.
 /// </summary>
 public class SeedRecipeNormaliser(
-    ILlmStructuredClient llm,
+    [FromKeyedServices(LlmProvider.ModelServer)] ILlmStructuredClient llm,
     IOptions<RecipeSeedingOptions> options,
     ILogger<SeedRecipeNormaliser> logger)
 {
@@ -121,6 +121,7 @@ public class SeedRecipeNormaliser(
         var schema      = JsonNode.Parse(RecipeScrapeService.RecipeSchemaJson)!;
         var userContent = BuildUserContent(parsed);
         var attemptCap  = 1 + Math.Max(0, _options.MaxLlmRetries);
+        var context     = new LlmCallContext(LlmOperation.SeedNormalise, Step: null, SourceUrl: null, Guid.NewGuid());
 
         SeedNormaliseException? lastFailure = null;
         var attemptsUsed = 0;
@@ -132,7 +133,7 @@ public class SeedRecipeNormaliser(
             JsonNode? answer = null;
             try
             {
-                answer = await CompleteAsync(schema, userContent, ct);
+                answer = await CompleteAsync(schema, userContent, context, ct);
                 return Accept(parsed, parsedFingerprint, Read(answer), attempt);
             }
             catch (SeedNormaliseException ex)
@@ -154,7 +155,7 @@ public class SeedRecipeNormaliser(
     // ── The model call ────────────────────────────────────────────────────────
 
     private async Task<JsonNode> CompleteAsync(
-        JsonNode schema, string userContent, CancellationToken ct)
+        JsonNode schema, string userContent, LlmCallContext context, CancellationToken ct)
     {
         using var budget = new CancellationTokenSource(TimeSpan.FromSeconds(_options.LlmTimeoutSeconds));
         using var linked = CancellationTokenSource.CreateLinkedTokenSource(ct, budget.Token);
@@ -162,8 +163,8 @@ public class SeedRecipeNormaliser(
         JsonNode json;
         try
         {
-            json = await llm.CompleteStructuredAsync(
-                NormaliseSystemPrompt, userContent, schema, _options.MaxLlmOutputTokens, linked.Token);
+            json = (await llm.CompleteStructuredAsync(
+                NormaliseSystemPrompt, userContent, schema, _options.MaxLlmOutputTokens, context, linked.Token)).Json;
         }
         catch (OperationCanceledException) when (budget.IsCancellationRequested && !ct.IsCancellationRequested)
         {
@@ -175,7 +176,7 @@ public class SeedRecipeNormaliser(
             // The run itself was cancelled — Ctrl+C, not a bad recipe. Let it unwind.
             throw;
         }
-        catch (ModelServerUnavailableException)
+        catch (LlmUnavailableException)
         {
             // Every remaining recipe would fail the same way, so the run stops here rather than spending retries.
             throw;

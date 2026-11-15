@@ -532,12 +532,12 @@ public class RecipeLibrarySeederTests : IDisposable
         var cache = await GivenParsedRecipesAsync("one", "two", "three");
         var llm   = new StubLlmStructuredClient(call => call == 1
             ? RiceAnswer()
-            : throw new ModelServerUnavailableException(ModelServerState.Offline));
+            : throw new LlmUnavailableException(LlmProvider.ModelServer, LlmState.Offline));
 
         var act = () => BuildSeeder(cache, llm).NormaliseAsync(ManifestOf("one", "two", "three"));
 
-        (await act.Should().ThrowAsync<ModelServerUnavailableException>())
-            .Which.State.Should().Be(ModelServerState.Offline);
+        (await act.Should().ThrowAsync<LlmUnavailableException>())
+            .Which.State.Should().Be(LlmState.Offline);
         llm.CallCount.Should().Be(2, "an unavailable server is not retried");
 
         var state = await BuildCache().LoadStateAsync();

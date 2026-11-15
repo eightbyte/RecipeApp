@@ -31,7 +31,7 @@ public class RecipeScrapeServiceStepAmountTests(DatabaseFixture db) : IAsyncLife
             httpClientFactory:    StubHttpClientFactory.Returning(MealimePageFixture.Html),
             options:              Options.Create(new RecipeScrapingOptions()),
             llm:                  _llm,
-            modelServer:          new StubModelServerStatusProbe(ModelServerState.Ready, "model.gguf"),
+            llmStatus:            new StubLlmStatusProbe(LlmState.Ready, "model.gguf"),
             db:                   db.CreateDbContext(),
             headlessRenderer:     new FakeHeadlessRenderer(),
             measurementConverter: new MeasurementConverter(Options.Create(new MeasurementOptions())),

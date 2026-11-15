@@ -19,18 +19,19 @@ public sealed class ModelServerClient(IHttpClientFactory httpClientFactory, IOpt
 
     private readonly LlmOptions _options = options.Value;
 
-    public async Task<JsonNode> CompleteStructuredAsync(
+    public async Task<LlmCompletion> CompleteStructuredAsync(
         string systemPrompt,
         string userContent,
         JsonNode jsonSchema,
         int maxTokens,
+        LlmCallContext context,
         CancellationToken ct = default)
     {
         var server = _options.ModelServer;
         if (string.IsNullOrWhiteSpace(server.BaseUrl))
-            throw new ModelServerUnavailableException(ModelServerState.Offline);
+            throw new LlmUnavailableException(LlmProvider.ModelServer, LlmState.Offline);
 
-        var sampling = _options.Sampling;
+        var sampling = server.Sampling;
 
         // grammar is llama.cpp's own field, not response_format, because the server's schema converter would let the model emit optional properties.
         var body = new JsonObject
@@ -60,32 +61,55 @@ public sealed class ModelServerClient(IHttpClientFactory httpClientFactory, IOpt
         {
             response = await http.SendAsync(request, ct);
         }
-        catch (HttpRequestException)
+        catch (HttpRequestException ex)
         {
             // No HTTP answer at all: refused, or dropped mid-generation when the server is stopped (ResponseEnded or a reset).
-            throw new ModelServerUnavailableException(ModelServerState.Offline);
+            throw new LlmUnavailableException(LlmProvider.ModelServer, LlmState.Offline,
+                providerAnswered: LlmUnavailableException.ReachedProvider(ex));
         }
 
         using (response)
         {
             if (UnavailableStateOf(response.StatusCode) is { } unavailable)
-                throw new ModelServerUnavailableException(unavailable);
+                throw new LlmUnavailableException(LlmProvider.ModelServer, unavailable, providerAnswered: true);
 
             response.EnsureSuccessStatusCode();
 
             var answer  = await response.Content.ReadFromJsonAsync<JsonNode>(ct);
+            var usage   = UsageOf(answer);
             var content = answer?["choices"]?[0]?["message"]?["content"]?.GetValue<string>()
-                ?? throw new InvalidOperationException("The Model Server's answer had no message content.");
+                ?? throw new LlmAnswerFailedException("The Model Server's answer had no message content.", usage);
 
-            return ParseAnswer(content.Trim());
+            return new LlmCompletion(ParseAnswer(content.Trim(), usage), usage);
         }
     }
 
-    /// <summary>The state a running Model Server's answer proves it cannot serve in (401 rejects the key, 503 is still loading), or null for any other status.</summary>
-    internal static ModelServerState? UnavailableStateOf(HttpStatusCode status) => status switch
+    /// <summary>
+    /// The answer's usage in Claude's meaning: llama-server's <c>prompt_tokens</c> counts the whole prompt, so the tokens it
+    /// served from its prompt cache (<c>timings.cache_n</c>) are taken out of the input count and reported apart.
+    /// </summary>
+    private static LlmUsage UsageOf(JsonNode? answer)
     {
-        HttpStatusCode.Unauthorized       => ModelServerState.Unauthorized,
-        HttpStatusCode.ServiceUnavailable => ModelServerState.Loading,
+        var prompt = IntAt(answer?["usage"]?["prompt_tokens"]);
+        var cached = IntAt(answer?["timings"]?["cache_n"]);
+
+        return new LlmUsage(
+            LlmProvider.ModelServer,
+            answer?["model"]?.GetValue<string>(),
+            InputTokens:      prompt is { } whole ? Math.Max(0, whole - (cached ?? 0)) : null,
+            CacheReadTokens:  cached,
+            CacheWriteTokens: null,
+            OutputTokens:     IntAt(answer?["usage"]?["completion_tokens"]),
+            StopReason:       answer?["choices"]?[0]?["finish_reason"]?.GetValue<string>());
+    }
+
+    private static int? IntAt(JsonNode? node) => node?.GetValue<int>();
+
+    /// <summary>The state a running Model Server's answer proves it cannot serve in (401 rejects the key, 503 is still loading), or null for any other status.</summary>
+    internal static LlmState? UnavailableStateOf(HttpStatusCode status) => status switch
+    {
+        HttpStatusCode.Unauthorized       => LlmState.Unauthorized,
+        HttpStatusCode.ServiceUnavailable => LlmState.Loading,
         _                                 => null,
     };
 
@@ -101,18 +125,18 @@ public sealed class ModelServerClient(IHttpClientFactory httpClientFactory, IOpt
         return request;
     }
 
-    private static JsonNode ParseAnswer(string json)
+    private static JsonNode ParseAnswer(string json, LlmUsage usage)
     {
         try
         {
             return JsonNode.Parse(json)
-                ?? throw new InvalidOperationException("Model returned empty/invalid JSON.");
+                ?? throw new LlmAnswerFailedException("Model returned empty/invalid JSON.", usage);
         }
         catch (JsonException ex)
         {
             // Constrained decoding should make this unreachable, so a failure means the grammar has a hole and the text that got through is the only way to find it.
-            throw new InvalidOperationException(
-                $"Model returned invalid JSON: {ex.Message} Around it: {Excerpt(json, ex)}", ex);
+            throw new LlmAnswerFailedException(
+                $"Model returned invalid JSON: {ex.Message} Around it: {Excerpt(json, ex)}", usage, ex);
         }
     }
 

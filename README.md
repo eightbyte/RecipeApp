@@ -1,13 +1,13 @@
 # RecipeApp
 
-A mobile-first web app for storing recipes, building meal plans, and generating shopping lists. It emphasises three things: a clean step-by-step cooking view, meal planning that turns straight into a grouped shopping list, and importing recipes from a URL using a locally run LLM (no cloud AI calls, no per-request cost).
+A mobile-first web app for storing recipes, building meal plans, and generating shopping lists. It emphasises three things: a clean step-by-step cooking view, meal planning that turns straight into a grouped shopping list, and importing recipes from a URL or pasted text using an LLM: a locally run one by default (no cloud AI calls, no per-request cost), or the Claude API if a deployment chooses it.
 
 **Status:** v1 is feature-complete and self-hosted. A push to `master` runs the tests, publishes Docker images, and updates the host PC within about five minutes. The app is reached from phones over [Tailscale](https://tailscale.com/), with nothing exposed to the public internet. A fresh install starts with a curated ingredient catalogue and 12 sample recipes.
 
 ## Features
 
 - **Recipe management** — create, edit, and browse recipes with ingredient lists and numbered steps. Scale a recipe to any number of servings, with ½× / 1× / 2× shortcuts, at display time only.
-- **Recipe scraping** — paste a URL and a local LLM, running in the Model Server, extracts the name, ingredients, and steps into a preview you can edit before saving. Ingredients are matched against your catalogue automatically.
+- **Recipe scraping** — paste a URL or a recipe's text and an LLM (a local one in the Model Server, or the [Claude API](#claude-api)) extracts the name, ingredients, and steps into a preview you can edit before saving. Ingredients are matched against your catalogue automatically.
 - **Meal planning** — build a plan from your recipe collection, assign each Planned Meal a date and a number of servings, and see waste-reduction suggestions (recipes that use up a leftover partial ingredient).
 - **Shopping lists** — generated from the active meal plan, grouped by category in aisle order, with unit consolidation and support for custom (non-recipe) items.
 - **Cooking mode** — full-screen, large-type, step-by-step view with a screen wake-lock so your phone doesn't sleep mid-recipe.
@@ -22,7 +22,7 @@ Food waste *tracking* (as opposed to the reduction suggestions above) is not bui
 | Frontend | Vue 3 (Composition API, `<script setup>`) + Vite + Pinia + Vue Router + Vuetify 3 |
 | Backend | .NET 10 Minimal API |
 | ORM / database | EF Core 10 + Npgsql, PostgreSQL 16 |
-| Recipe scraping | AngleSharp (HTML parsing), Playwright Chromium (render fallback), llama.cpp `llama-server` (local GGUF model, called over HTTP) |
+| Recipe scraping | AngleSharp (HTML parsing), Playwright Chromium (render fallback), llama.cpp `llama-server` (local GGUF model, called over HTTP) or the Claude API (official `Anthropic` NuGet package) |
 | Validation | FluentValidation |
 | Hosting | Docker Compose on a Windows PC, images from GitHub Container Registry, access over Tailscale |
 
@@ -31,7 +31,7 @@ Food waste *tracking* (as opposed to the reduction suggestions above) is not bui
 - [.NET 10 SDK](https://dotnet.microsoft.com/download). `global.json` pins the version.
 - [Node.js](https://nodejs.org/) 24. `frontend/.nvmrc` holds the version, which must match `frontend/Dockerfile`.
 - [Docker Desktop](https://www.docker.com/products/docker-desktop/), for PostgreSQL, the backend tests, and the optional full-container run.
-- Optional, for URL scraping only: a GGUF instruction-tuned chat model and an NVIDIA GPU with CUDA 12 drivers, to run the [Model Server](#model-server). The app runs without either. Only "Import from URL" is unavailable.
+- Optional, for scraping only: a GGUF instruction-tuned chat model and an NVIDIA GPU with CUDA 12 drivers, to run the [Model Server](#model-server), or a [Claude API](#claude-api) key instead. The app runs without either. Only Import Recipe is unavailable.
 
 ## Running locally (development)
 
@@ -100,6 +100,18 @@ Recipe scraping runs on the **Model Server**: llama.cpp's `llama-server`, a sepa
 4. Run `powershell -File tools\llm-server\stop.ps1` when you're done, to free the GPU.
 
 The URL sheet shows whether the Model Server is ready. Without it every feature except "Import from URL" works. [tools/llm-server/README.md](tools/llm-server/README.md) covers the settings, running it on another machine and running it by hand on another OS.
+
+## Claude API
+
+Scraping can use the Claude API instead of the Model Server, with no GPU. The page or pasted text is then sent to Anthropic, and the Import Recipe sheet says so. The MyPlate seed pipeline always uses the Model Server.
+
+```bash
+cd backend/RecipeApp.API
+dotnet user-secrets set "Llm:Anthropic:ApiKey" "<your key>"
+dotnet user-secrets set "Llm:Provider" "Anthropic"
+```
+
+For production, set `LLM_PROVIDER=Anthropic` and `ANTHROPIC_API_KEY` in `.env` ([docs/deployment.md](docs/deployment.md#claude-api)). [ADR 0004](docs/adr/0004-llm-provider-is-chosen-per-deployment.md) records the decision.
 
 ## Starter data
 

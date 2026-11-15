@@ -27,25 +27,25 @@ public class LlmSamplingOptionsTests
 
     /// <summary>Binding through a real <see cref="ConfigurationBuilder"/>, because the thing that can silently break is a key path.</summary>
     [Fact]
-    public void Configuration_BindsEveryDecoderSettingFromTheLlmSection()
+    public void Configuration_BindsEveryDecoderSettingFromTheModelServerSection()
     {
         var configuration = new ConfigurationBuilder()
             .AddInMemoryCollection(new Dictionary<string, string?>
             {
-                ["Llm:Sampling:Temperature"] = "0.05",
-                ["Llm:Sampling:TopK"]        = "12",
-                ["Llm:Sampling:TopP"]        = "0.8",
-                ["Llm:Sampling:MinP"]        = "0.15",
+                ["Llm:ModelServer:Sampling:Temperature"] = "0.05",
+                ["Llm:ModelServer:Sampling:TopK"]        = "12",
+                ["Llm:ModelServer:Sampling:TopP"]        = "0.8",
+                ["Llm:ModelServer:Sampling:MinP"]        = "0.15",
             })
             .Build();
 
         var options = new LlmOptions();
         configuration.GetSection(LlmOptions.SectionName).Bind(options);
 
-        options.Sampling.Temperature.Should().Be(0.05f);
-        options.Sampling.TopK.Should().Be(12);
-        options.Sampling.TopP.Should().Be(0.8f);
-        options.Sampling.MinP.Should().Be(0.15f);
+        options.ModelServer.Sampling.Temperature.Should().Be(0.05f);
+        options.ModelServer.Sampling.TopK.Should().Be(12);
+        options.ModelServer.Sampling.TopP.Should().Be(0.8f);
+        options.ModelServer.Sampling.MinP.Should().Be(0.15f);
     }
 
     [Fact]

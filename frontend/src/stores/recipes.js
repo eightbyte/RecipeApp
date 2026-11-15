@@ -114,9 +114,9 @@ export const useRecipeStore = defineStore('recipes', () => {
     }
   }
 
-  /** The Model Server's `{ state, model }`, read fresh each time because it can start or stop at any moment; throws if the API is unreachable. */
-  async function fetchModelServerStatus() {
-    const { data } = await api.get('/model-server/status')
+  /** Scraping's LLM provider as `{ provider, state, model }`, read fresh each time because it can start or stop at any moment; throws if the API is unreachable. */
+  async function fetchLlmStatus() {
+    const { data } = await api.get('/llm/status')
     return data
   }
 
@@ -139,6 +139,6 @@ export const useRecipeStore = defineStore('recipes', () => {
     createRecipe, updateRecipe, deleteRecipe,
     uploadImage, markCooked, isRecentlyCooked,
     scrapePreview, scrapeError, scrapeLoading, confirmLoading,
-    scrapeRecipe, scrapeRecipeText, confirmScrape, clearScrapePreview, fetchModelServerStatus,
+    scrapeRecipe, scrapeRecipeText, confirmScrape, clearScrapePreview, fetchLlmStatus,
   }
 })

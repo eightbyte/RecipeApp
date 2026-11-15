@@ -47,7 +47,7 @@ public class SeedRecipesCommandModelServerTests : IDisposable
             throw new InvalidOperationException("The seeder must not be reached.");
     }
 
-    private (IServiceProvider Services, RecordingHarvester Harvester, SeedCacheStore Cache) Build(ModelServerState state)
+    private (IServiceProvider Services, RecordingHarvester Harvester, SeedCacheStore Cache) Build(LlmState state)
     {
         var harvester = new RecordingHarvester();
         var services  = new ServiceCollection()
@@ -57,7 +57,9 @@ public class SeedRecipesCommandModelServerTests : IDisposable
             .AddSingleton<SeedCacheStore>()
             .AddSingleton<IWaybackHarvester>(harvester)
             .AddSingleton<IRecipeLibrarySeeder, UnreachedSeeder>()
-            .AddSingleton<IModelServerStatusProbe>(new StubModelServerStatusProbe(state))
+            .AddKeyedSingleton<ILlmStatusProbe>(LlmProvider.ModelServer, new StubLlmStatusProbe(state))
+            // Scraping's provider, which the seed command must never consult.
+            .AddSingleton<ILlmStatusProbe>(new StubLlmStatusProbe(LlmState.Ready, "claude-opus-5-5", LlmProvider.Anthropic))
             .BuildServiceProvider();
 
         return (services, harvester, services.GetRequiredService<SeedCacheStore>());
@@ -68,7 +70,7 @@ public class SeedRecipesCommandModelServerTests : IDisposable
     [InlineData("--build-catalogue")]
     public async Task ModelStage_ModelServerNotReady_ExitsOneBeforeReadingTheManifest(string stage)
     {
-        var (services, harvester, _) = Build(ModelServerState.Offline);
+        var (services, harvester, _) = Build(LlmState.Offline);
 
         var exitCode = await SeedRecipesCommand.RunAsync(services, NullLogger.Instance, [stage]);
 
@@ -80,7 +82,7 @@ public class SeedRecipesCommandModelServerTests : IDisposable
     [Fact]
     public async Task FullPipeline_ModelServerNotReady_ExitsOneBeforeReadingTheManifest()
     {
-        var (services, harvester, _) = Build(ModelServerState.Offline);
+        var (services, harvester, _) = Build(LlmState.Offline);
 
         var exitCode = await SeedRecipesCommand.RunAsync(services, NullLogger.Instance, []);
 
@@ -92,7 +94,7 @@ public class SeedRecipesCommandModelServerTests : IDisposable
     [Fact]
     public async Task NormaliseForce_ModelServerNotReady_KeepsTheCachedNormalisedOutput()
     {
-        var (services, _, cache) = Build(ModelServerState.Loading);
+        var (services, _, cache) = Build(LlmState.Loading);
         cache.EnsureDirectories();
         var cached = Path.Combine(cache.NormalisedDirectory, "kept.json");
         await File.WriteAllTextAsync(cached, "{}");
@@ -106,7 +108,7 @@ public class SeedRecipesCommandModelServerTests : IDisposable
     [Fact]
     public async Task Normalise_ModelServerReady_GoesOnToTheManifest()
     {
-        var (services, harvester, _) = Build(ModelServerState.Ready);
+        var (services, harvester, _) = Build(LlmState.Ready);
 
         await SeedRecipesCommand.RunAsync(services, NullLogger.Instance, ["--normalise"]);
 
@@ -117,7 +119,7 @@ public class SeedRecipesCommandModelServerTests : IDisposable
     [Fact]
     public async Task Persist_ModelServerNotReady_IsNotChecked()
     {
-        var (services, harvester, _) = Build(ModelServerState.Offline);
+        var (services, harvester, _) = Build(LlmState.Offline);
 
         await SeedRecipesCommand.RunAsync(services, NullLogger.Instance, ["--persist"]);
 

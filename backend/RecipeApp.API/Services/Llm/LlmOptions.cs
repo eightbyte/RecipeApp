@@ -4,8 +4,23 @@ public class LlmOptions
 {
     public const string SectionName = "Llm";
 
+    /// <summary>Which provider Scraping uses; the seed pipeline always uses the Model Server.</summary>
+    public LlmProvider Provider { get; init; } = LlmProvider.ModelServer;
+
     public ModelServerOptions ModelServer { get; init; } = new();
-    public LlmSamplingOptions Sampling { get; init; } = new();
+    public AnthropicOptions Anthropic { get; init; } = new();
+
+    /// <summary>List prices keyed by the model id that answers, kept by hand; a model missing here records a null cost, never a guess.</summary>
+    public Dictionary<string, LlmModelPrice> Pricing { get; init; } = [];
+}
+
+/// <summary>USD per million tokens, <see cref="CacheWrite"/> at the 5-minute write rate.</summary>
+public class LlmModelPrice
+{
+    public decimal Input { get; init; }
+    public decimal Output { get; init; }
+    public decimal CacheRead { get; init; }
+    public decimal CacheWrite { get; init; }
 }
 
 /// <summary>Where the Model Server (llama.cpp's <c>llama-server</c>) listens, an empty <see cref="BaseUrl"/> meaning there is none and Scraping is unavailable.</summary>
@@ -18,6 +33,8 @@ public class ModelServerOptions
 
     /// <summary>How long a status check waits before reporting the Model Server offline.</summary>
     public int StatusTimeoutSeconds { get; init; } = 3;
+
+    public LlmSamplingOptions Sampling { get; init; } = new();
 }
 
 /// <summary>
@@ -37,4 +54,27 @@ public class LlmSamplingOptions
 
     /// <summary>Discard tokens below this fraction of the most likely token's probability.</summary>
     public float MinP { get; init; } = 0.1f;
+}
+
+/// <summary>The Claude API, used by Scraping when <see cref="LlmOptions.Provider"/> is <see cref="LlmProvider.Anthropic"/>; an empty <see cref="ApiKey"/> means it is not configured.</summary>
+public class AnthropicOptions
+{
+    public string ApiKey { get; init; } = string.Empty;
+
+    public string Model { get; init; } = "claude-opus-5-5";
+
+    /// <summary><c>output_config.effort</c>, the only control over thinking depth, since thinking cannot be turned off on the default model.</summary>
+    public string Effort { get; init; } = "low";
+
+    /// <summary>The whole budget for one completion, the SDK's retries included.</summary>
+    public int TimeoutSeconds { get; init; } = 60;
+
+    /// <summary>How often the SDK retries a connection failure, 429 or 5xx before the provider counts as busy or offline.</summary>
+    public int MaxRetries { get; init; } = 2;
+
+    /// <summary>Added to the caller's token limit, because thinking tokens count against <c>max_tokens</c>.</summary>
+    public int ThinkingHeadroomTokens { get; init; } = 8000;
+
+    /// <summary>How long a status check waits before reporting Claude unreachable.</summary>
+    public int StatusTimeoutSeconds { get; init; } = 3;
 }

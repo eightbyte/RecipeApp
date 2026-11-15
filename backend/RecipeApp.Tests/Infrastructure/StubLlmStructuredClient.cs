@@ -14,7 +14,12 @@ public class StubLlmStructuredClient : ILlmStructuredClient
     /// <summary>Returns the same answer to every call.</summary>
     public StubLlmStructuredClient(JsonNode answer) : this(_ => answer) { }
 
-    public record Call(string SystemPrompt, string UserContent, JsonNode Schema, int MaxTokens);
+    /// <summary>What every stubbed answer reports it cost, shaped as a Model Server answer.</summary>
+    public static readonly LlmUsage Usage = new(
+        LlmProvider.ModelServer, "stub-model.gguf",
+        InputTokens: 100, CacheReadTokens: 20, CacheWriteTokens: null, OutputTokens: 50, StopReason: "stop");
+
+    public record Call(string SystemPrompt, string UserContent, JsonNode Schema, int MaxTokens, LlmCallContext Context);
 
     /// <summary>Every completion asked for, in order.</summary>
     public List<Call> Calls { get; } = [];
@@ -25,16 +30,17 @@ public class StubLlmStructuredClient : ILlmStructuredClient
     public static StubLlmStructuredClient AlwaysFailing(string message = "model is not loaded") =>
         new(_ => throw new InvalidOperationException(message));
 
-    public Task<JsonNode> CompleteStructuredAsync(
+    public Task<LlmCompletion> CompleteStructuredAsync(
         string systemPrompt,
         string userContent,
         JsonNode jsonSchema,
         int maxTokens,
+        LlmCallContext context,
         CancellationToken ct = default)
     {
-        Calls.Add(new Call(systemPrompt, userContent, jsonSchema, maxTokens));
+        Calls.Add(new Call(systemPrompt, userContent, jsonSchema, maxTokens, context));
         ct.ThrowIfCancellationRequested();
 
-        return Task.FromResult(_respond(Calls.Count));
+        return Task.FromResult(new LlmCompletion(_respond(Calls.Count), Usage));
     }
 }

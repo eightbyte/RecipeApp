@@ -15,7 +15,7 @@ Read `CODING_STANDARDS.md` (repo root) before writing or reviewing code: comment
 | `Validators/` | One FluentValidation validator per request DTO. `RecipeLimits.cs` holds the shared length and range limits; `ScrapeLimits.cs` bounds a Scrape's pasted text |
 | `Models/` | EF entities, one per file |
 | `Enums/` | `MeasurementUnit`, `SizelessUnit`, `CountWords`, `IngredientCategory`, `RecipeSort`, `SortDirection` (the single source of truth for each) |
-| `Services/` | Business logic; Site Readers (`ISiteReader`, one class per site such as `MealimeSiteReader`, registered in `Program.cs`) beside `RecipeJsonLdExtractor`; `Llm/` Model Server client, `Seeding/` MyPlate import pipeline, `RecipePacks/` recipe-pack import |
+| `Services/` | Business logic; Site Readers (`ISiteReader`, one class per site such as `MealimeSiteReader`, registered in `Program.cs`) beside `RecipeJsonLdExtractor`; `Llm/` LLM providers (Model Server, Claude API), `Seeding/` MyPlate import pipeline, `RecipePacks/` recipe-pack import |
 | `Data/` | `AppDbContext`, migrations, `FirstRunSeeder` and its ledger keys, catalogue/density seeders |
 | `seed-data/` | `ingredient-catalogue.json` and `sample-recipes.json` (committed, shipped artefacts) and the `myplate/` cache (personal use; only `manifest.json` committed) |
 
@@ -37,7 +37,7 @@ Read `CODING_STANDARDS.md` (repo root) before writing or reviewing code: comment
   text names no single URL.
 - **Scraping has two routes.** `POST /recipes/scrape` fetches a page. `POST /recipes/scrape/text`
   (`ScrapeTextAsync`) takes pasted text, bounded by `Validators/ScrapeLimits.cs`, and skips the
-  fetch, JSON-LD, the Site Readers and the photo. Both share the Model Server check,
+  fetch, JSON-LD, the Site Readers and the photo. Both share the LLM status check,
   `ExtractRecipeAsync`, `NormaliseAsync` and `ConfirmAsync`. The text route keeps the text's line
   breaks and takes `SourceUrl` from the one URL the text names, never from the model.
 - **Migrations:** `dotnet ef migrations add <Name> --output-dir Data/Migrations`.
@@ -51,7 +51,7 @@ Read `CODING_STANDARDS.md` (repo root) before writing or reviewing code: comment
   MTP-only. **Do not re-add `Microsoft.NET.Test.Sdk` or `xunit.runner.visualstudio`.**
 - Integration tests use Testcontainers (Docker must be running) through `Infrastructure/RecipeAppFactory`
   and `DatabaseFixture`. The suite needs no GPU, no Model Server and no network. Use
-  `StubLlmStructuredClient`, `StubModelServerStatusProbe`, `StubHttpClientFactory` and
+  `StubLlmStructuredClient`, `StubLlmStatusProbe`, `StubHttpClientFactory` and
   `TestHostEnvironment` instead of the real ones.
 - One class or method: `dotnet test --project RecipeApp.Tests/RecipeApp.Tests.csproj -- --filter-class "*RecipesEndpointTests"`
   (or `--filter-method "*List_Sort*"`). A filter that matches nothing exits 9 (`--minimum-expected-tests 1`
@@ -125,17 +125,24 @@ collide afterwards: the samples have no `SourceUrl`, so `--persist --force` neve
 | `ImageStorage:BasePath` | Local path for recipe images |
 | `Llm:ModelServer:BaseUrl` | The Model Server, `http://localhost:9931` with the start script's defaults. Empty disables Scraping. See `Services/Llm/CLAUDE.md` |
 | `Llm:ModelServer:ApiKey` | Bearer key, matching the server's `ApiKey` setting. Empty for a loopback server with no key |
+| `Llm:Provider` | `ModelServer` (default) or `Anthropic`, for Scraping only. See `Services/Llm/CLAUDE.md` |
+| `Llm:Anthropic:ApiKey` | The Claude API key, needed only with `Llm:Provider = Anthropic`. Keep it here or in `dotnet user-secrets` |
 | `Measurement:ResolveCupsOnImport` | Resolve `cup` to grams on import where a density exists (default `true`) |
 
 `RecipeScraping`, `RecipeSeeding` (seed pipeline), `RecipePacks` (sample pack path) and `Llm`
 defaults live in the committed `appsettings.json`. Nothing secret goes there.
 
+`Llm:Pricing` in the committed `appsettings.json` is the hand-kept Claude price table (USD per
+million tokens) that prices each recorded LLM Call. Update it when Anthropic's prices or
+`Llm:Anthropic:Model` change (`Services/Llm/CLAUDE.md`, Price table).
+
 ## Running against a real database
 
 - **Starting the web host migrates and seeds** a fresh database (see First-run seeding).
 - **To see a change in the running app, use the `run-dev` skill.** It starts the API on a clone of
-  the dev database. Scraping and the seed pipeline's model stages also need the Model Server
-  (`tools/llm-server/start.ps1`); everything else runs without it.
+  the dev database. The seed pipeline's model stages need the Model Server
+  (`tools/llm-server/start.ps1`), and so does Scraping unless `Llm:Provider` is `Anthropic`;
+  everything else runs without it.
 - **Databases that predate the curated catalogue hold legacy ingredient rows.** Examples are
   `onions`, `tomato` and `plain flour`. A name outranks an alias, so these rows capture names the
   catalogue meant as aliases, which splits shopping-list lines and hides densities. A non-force

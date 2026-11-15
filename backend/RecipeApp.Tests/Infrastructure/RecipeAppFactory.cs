@@ -31,7 +31,7 @@ public class RecipeAppFactory(string connectionString) : WebApplicationFactory<P
             if (descriptor is not null)
                 services.Remove(descriptor);
 
-            services.AddDbContext<AppDbContext>(options =>
+            services.AddDbContextFactory<AppDbContext>(options =>
                 options.UseNpgsql(connectionString, o => o.MigrationsAssembly("RecipeApp.API")));
         });
     }

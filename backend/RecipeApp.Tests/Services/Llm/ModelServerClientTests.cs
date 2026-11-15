@@ -20,24 +20,70 @@ public class ModelServerClientTests
         }
         """)!;
 
+    private static readonly LlmCallContext Context =
+        new(LlmOperation.SeedNormalise, Step: null, SourceUrl: null, Guid.NewGuid());
+
     private static LlmOptions Options(string apiKey = "") => new()
     {
-        ModelServer = new ModelServerOptions { BaseUrl = BaseUrl, ApiKey = apiKey },
-        Sampling    = new LlmSamplingOptions { Temperature = 0.33f, TopK = 17, TopP = 0.44f, MinP = 0.05f },
+        ModelServer = new ModelServerOptions
+        {
+            BaseUrl  = BaseUrl,
+            ApiKey   = apiKey,
+            Sampling = new LlmSamplingOptions { Temperature = 0.33f, TopK = 17, TopP = 0.44f, MinP = 0.05f },
+        },
     };
 
     private static ModelServerClient Client(StubHttpClientFactory http, LlmOptions? options = null) =>
         new(http, Microsoft.Extensions.Options.Options.Create(options ?? Options()));
 
-    /// <summary>A chat completion whose message content is <paramref name="content"/>, shaped as llama-server answers.</summary>
-    private static HttpResponseMessage Completion(string content) =>
+    /// <summary>
+    /// A chat completion whose message content is <paramref name="content"/>, shaped as llama-server b12110 answers, where
+    /// <c>prompt_tokens</c> counts the whole prompt and <c>timings.cache_n</c> the part of it served from the prompt cache.
+    /// </summary>
+    private static HttpResponseMessage Completion(
+        string content, int promptTokens = 36, int cachedTokens = 0, int completionTokens = 12, string finishReason = "stop") =>
         new(HttpStatusCode.OK)
         {
             Content = JsonContent.Create(new
             {
-                choices = new[] { new { message = new { role = "assistant", content }, finish_reason = "stop" } },
+                model   = "Qwen3.5-9B-Q6_K.gguf",
+                choices = new[] { new { message = new { role = "assistant", content }, finish_reason = finishReason } },
+                usage   = new
+                {
+                    completion_tokens     = completionTokens,
+                    prompt_tokens         = promptTokens,
+                    total_tokens          = promptTokens + completionTokens,
+                    prompt_tokens_details = new { cached_tokens = cachedTokens },
+                },
+                timings = new { cache_n = cachedTokens, prompt_n = promptTokens - cachedTokens, predicted_n = completionTokens },
             }),
         };
+
+    // ── The answer's usage ───────────────────────────────────────────────────
+
+    /// <summary>Recorded in Claude's meaning, so the input column holds only the prompt tokens the server had to process.</summary>
+    [Fact]
+    public async Task Complete_ReportsTheServedModelsTokens_WithTheCachedPromptApart()
+    {
+        var http = new StubHttpClientFactory(_ => Completion(
+            """{"name":"Soup"}""", promptTokens: 36, cachedTokens: 32, completionTokens: 12));
+
+        var answer = await Client(http).CompleteStructuredAsync("SYSTEM", "USER", Schema, 512, Context);
+
+        answer.Usage.Should().Be(new LlmUsage(
+            LlmProvider.ModelServer, "Qwen3.5-9B-Q6_K.gguf",
+            InputTokens: 4, CacheReadTokens: 32, CacheWriteTokens: null, OutputTokens: 12, StopReason: "stop"));
+    }
+
+    [Fact]
+    public async Task Complete_InvalidJson_IsAFailedExtraction_CarryingItsUsage()
+    {
+        var http = new StubHttpClientFactory(_ => Completion("{\"name\":", completionTokens: 512, finishReason: "length"));
+
+        var thrown = await CompleteAgainst(http).Should().ThrowAsync<LlmAnswerFailedException>();
+
+        thrown.Which.Usage.Should().BeEquivalentTo(new { InputTokens = 36, OutputTokens = 512, StopReason = "length" });
+    }
 
     private static async Task<(HttpRequestMessage Request, JsonNode Body)> CaptureRequestAsync(
         LlmOptions options, string systemPrompt = "SYSTEM", string userContent = "USER", int maxTokens = 512)
@@ -51,7 +97,7 @@ public class ModelServerClientTests
             return Completion("""{"name":"Soup"}""");
         });
 
-        await Client(http, options).CompleteStructuredAsync(systemPrompt, userContent, Schema, maxTokens);
+        await Client(http, options).CompleteStructuredAsync(systemPrompt, userContent, Schema, maxTokens, Context);
 
         return (captured!, JsonNode.Parse(body!)!);
     }
@@ -140,8 +186,10 @@ public class ModelServerClientTests
     // ── An unavailable Model Server ──────────────────────────────────────────
 
     private static Func<Task> CompleteAgainst(Func<HttpRequestMessage, HttpResponseMessage> respond, LlmOptions? options = null) =>
-        () => Client(new StubHttpClientFactory(respond), options)
-            .CompleteStructuredAsync("SYSTEM", "USER", Schema, 512);
+        CompleteAgainst(new StubHttpClientFactory(respond), options);
+
+    private static Func<Task> CompleteAgainst(StubHttpClientFactory http, LlmOptions? options = null) =>
+        () => Client(http, options).CompleteStructuredAsync("SYSTEM", "USER", Schema, 512, Context);
 
     [Fact]
     public async Task Complete_ConnectionRefused_ThrowsUnavailableWithStateOffline()
@@ -149,8 +197,9 @@ public class ModelServerClientTests
         var act = CompleteAgainst(_ => throw new HttpRequestException(
             HttpRequestError.ConnectionError, "No connection could be made because the target machine actively refused it."));
 
-        (await act.Should().ThrowAsync<ModelServerUnavailableException>())
-            .Which.State.Should().Be(ModelServerState.Offline);
+        var thrown = await act.Should().ThrowAsync<LlmUnavailableException>();
+        thrown.Which.State.Should().Be(LlmState.Offline);
+        thrown.Which.ProviderAnswered.Should().BeFalse();
     }
 
     /// <summary>
@@ -165,8 +214,9 @@ public class ModelServerClientTests
         var act = CompleteAgainst(_ => throw new HttpRequestException(
             error, "An existing connection was forcibly closed by the remote host.", new IOException()));
 
-        (await act.Should().ThrowAsync<ModelServerUnavailableException>())
-            .Which.State.Should().Be(ModelServerState.Offline);
+        var thrown = await act.Should().ThrowAsync<LlmUnavailableException>();
+        thrown.Which.State.Should().Be(LlmState.Offline);
+        thrown.Which.ProviderAnswered.Should().BeTrue("the request reached the server, which spent time on it");
     }
 
     [Fact]
@@ -174,8 +224,8 @@ public class ModelServerClientTests
     {
         var act = CompleteAgainst(_ => StubHttpClientFactory.Status(HttpStatusCode.Unauthorized));
 
-        (await act.Should().ThrowAsync<ModelServerUnavailableException>())
-            .Which.State.Should().Be(ModelServerState.Unauthorized);
+        (await act.Should().ThrowAsync<LlmUnavailableException>())
+            .Which.State.Should().Be(LlmState.Unauthorized);
     }
 
     /// <summary>llama-server answers 503 while it is still loading the model.</summary>
@@ -184,8 +234,9 @@ public class ModelServerClientTests
     {
         var act = CompleteAgainst(_ => StubHttpClientFactory.Status(HttpStatusCode.ServiceUnavailable));
 
-        (await act.Should().ThrowAsync<ModelServerUnavailableException>())
-            .Which.State.Should().Be(ModelServerState.Loading);
+        var thrown = await act.Should().ThrowAsync<LlmUnavailableException>();
+        thrown.Which.State.Should().Be(LlmState.Loading);
+        thrown.Which.ProviderAnswered.Should().BeTrue();
     }
 
     [Fact]
@@ -194,10 +245,10 @@ public class ModelServerClientTests
         var http    = new StubHttpClientFactory(_ => Completion("""{"name":"Soup"}"""));
         var options = new LlmOptions { ModelServer = new ModelServerOptions { BaseUrl = "" } };
 
-        var act = () => Client(http, options).CompleteStructuredAsync("SYSTEM", "USER", Schema, 512);
+        var act = () => Client(http, options).CompleteStructuredAsync("SYSTEM", "USER", Schema, 512, Context);
 
-        (await act.Should().ThrowAsync<ModelServerUnavailableException>())
-            .Which.State.Should().Be(ModelServerState.Offline);
+        (await act.Should().ThrowAsync<LlmUnavailableException>())
+            .Which.State.Should().Be(LlmState.Offline);
         http.RequestedUrls.Should().BeEmpty();
     }
 
@@ -208,6 +259,6 @@ public class ModelServerClientTests
         var act = CompleteAgainst(_ => StubHttpClientFactory.Status(HttpStatusCode.InternalServerError));
 
         var thrown = await act.Should().ThrowAsync<Exception>();
-        thrown.Which.Should().NotBeOfType<ModelServerUnavailableException>();
+        thrown.Which.Should().NotBeOfType<LlmUnavailableException>();
     }
 }

@@ -40,9 +40,9 @@
     <template v-else-if="usage">
       <div data-test="grand-total" class="mb-1">
         <div class="text-h5 font-weight-bold">{{ formatTotalCost(grandTotalUsd) }}</div>
-        <div class="text-body-2 text-medium-emphasis">{{ callCount(usage.totalCount) }}</div>
+        <div class="text-body-2 text-medium-emphasis">{{ formatCallCount(usage.totalCount) }}</div>
         <div v-if="unpricedCalls > 0" class="text-body-2 text-warning">
-          Excludes {{ callCount(unpricedCalls, 'unpriced') }}
+          Excludes {{ formatCallCount(unpricedCalls, 'unpriced') }}
         </div>
       </div>
       <p class="text-caption text-medium-emphasis mb-4">
@@ -60,7 +60,7 @@
           <div class="d-flex align-center ga-2">
             <span class="text-body-2 text-truncate">
               {{ LLM_PROVIDER_LABELS[group.provider] }} ·
-              {{ group.model ?? LLM_UNKNOWN_MODEL_LABEL }} ·
+              {{ modelLabel(group) }} ·
               {{ LLM_OPERATION_LABELS[group.operation] }}
             </span>
             <v-spacer />
@@ -70,14 +70,18 @@
               icon="mdi-alert-outline"
               color="warning"
               size="small"
-              :aria-label="callCount(group.unpricedCalls, 'unpriced')"
+              :aria-label="formatCallCount(group.unpricedCalls, 'unpriced')"
             />
-            <span class="text-body-2 font-weight-medium text-no-wrap">
+            <!-- A group with no priced call sums to 0, which would read as a confirmed zero cost. -->
+            <span v-if="group.unpricedCalls === group.calls" class="text-body-2 text-warning text-no-wrap">
+              Unpriced
+            </span>
+            <span v-else class="text-body-2 font-weight-medium text-no-wrap">
               {{ formatCost(group.estimatedCostUsd) }}
             </span>
           </div>
           <div class="text-caption text-medium-emphasis">
-            {{ callCount(group.calls) }} · {{ formatTokens(groupTokensIn(group), group.outputTokens) }}
+            {{ formatCallCount(group.calls) }} · {{ formatTokens(group) }}
           </div>
         </v-list-item>
       </v-list>
@@ -99,10 +103,10 @@
             </span>
           </div>
           <div class="text-caption text-medium-emphasis">
-            {{ call.model ?? LLM_UNKNOWN_MODEL_LABEL }} ·
+            {{ modelLabel(call) }} ·
             <span :class="{ 'text-error': call.outcome !== LLM_OUTCOME_SUCCEEDED }">
               {{ LLM_OUTCOME_LABELS[call.outcome] }}</span> ·
-            {{ formatTokens(callTokensIn(call), call.outputTokens) }} ·
+            {{ formatTokens(call) }} ·
             {{ formatDuration(call.durationMs) }}
           </div>
           <a
@@ -182,6 +186,7 @@ async function load() {
     if (signal.aborted) return
     error.value = e.message
   }
+  // Not in `finally`, because a superseded load must leave `loading` to the load that replaced it.
   loading.value = false
 }
 
@@ -207,17 +212,12 @@ function operationLabel(call) {
   return call.step ? `${operation} / ${LLM_STEP_LABELS[call.step]}` : operation
 }
 
-// The cache split is left out, so cached input still counts as input.
-function callTokensIn(call) {
-  return (call.inputTokens ?? 0) + (call.cacheReadTokens ?? 0) + (call.cacheWriteTokens ?? 0)
-}
+const modelLabel = (usage) => usage.model ?? LLM_UNKNOWN_MODEL_LABEL
 
-function groupTokensIn(group) {
-  return group.inputTokens + group.cacheReadTokens + group.cacheWriteTokens
-}
-
-function formatTokens(tokensIn, tokensOut) {
-  return `in ${tokenCount.format(tokensIn)} · out ${tokenCount.format(tokensOut ?? 0)}`
+// Shared by a call, whose counts can be null, and a group; the cache split is left out, so cached input counts as input.
+function formatTokens(usage) {
+  const tokensIn = (usage.inputTokens ?? 0) + (usage.cacheReadTokens ?? 0) + (usage.cacheWriteTokens ?? 0)
+  return `in ${tokenCount.format(tokensIn)} · out ${tokenCount.format(usage.outputTokens ?? 0)}`
 }
 
 // The Model Server's calls cost nothing, which reads better as $0.00 than $0.0000.
@@ -225,7 +225,7 @@ const formatCost      = (usd) => (usd === 0 ? wholeCost : fineCost).format(usd)
 const formatTotalCost = (usd) => (usd > 0 && usd < CENT_USD ? fineCost : wholeCost).format(usd)
 const formatWhen      = (createdAt) => new Date(createdAt).toLocaleString(DISPLAY_LOCALE, WHEN_FORMAT)
 const formatDuration  = (ms) => `${(ms / 1000).toFixed(1)} s`
-const callCount       = (n, kind = '') => `${n} ${kind ? `${kind} ` : ''}${n === 1 ? 'call' : 'calls'}`
+const formatCallCount = (n, kind = '') => `${n} ${kind ? `${kind} ` : ''}${n === 1 ? 'call' : 'calls'}`
 
 function shortUrl(url) {
   try {

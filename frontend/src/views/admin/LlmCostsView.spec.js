@@ -133,6 +133,17 @@ describe('LlmCostsView', () => {
       expect(wrapper.find('[data-test="grand-total"]').text()).toContain('Excludes 3 unpriced calls')
     })
 
+    it('shows a group whose calls are all unpriced as Unpriced, not as costing nothing', async () => {
+      api.get.mockResolvedValue({ data: makeLlmUsage({
+        totals: [makeLlmUsageTotal({ calls: 2, unpricedCalls: 2, estimatedCostUsd: 0 })],
+      }) })
+      const wrapper = await mountView()
+
+      const group = wrapper.find('[data-test="usage-group"]')
+      expect(group.text()).toContain('Unpriced')
+      expect(group.text()).not.toContain('$0.00')
+    })
+
     it('leaves out the unpriced note when every call is priced', async () => {
       const wrapper = await mountView()
 

@@ -154,3 +154,43 @@ export const makeRecipeDetail = (overrides = {}) => ({
   ],
   ...overrides,
 })
+
+export const makeLlmUsageTotal = (overrides = {}) => ({
+  provider: 'anthropic',
+  model: 'claude-sonnet-5-5',
+  operation: 'ScrapeUrl',
+  calls: 1,
+  inputTokens: 1000,
+  cacheReadTokens: 0,
+  cacheWriteTokens: 0,
+  outputTokens: 200,
+  estimatedCostUsd: 0.0042,
+  unpricedCalls: 0,
+  ...overrides,
+})
+
+export const makeLlmCall = (overrides = {}) => ({
+  id: 'test-llm-call-1',
+  createdAt: '2026-11-15T09:56:00Z',
+  provider: 'anthropic',
+  model: 'claude-sonnet-5-5',
+  operation: 'ScrapeUrl',
+  step: 'Extraction',
+  correlationId: 'test-correlation-1',
+  sourceUrl: null,
+  outcome: 'Succeeded',
+  durationMs: 3200,
+  inputTokens: 1000,
+  cacheReadTokens: 0,
+  cacheWriteTokens: 0,
+  outputTokens: 200,
+  estimatedCostUsd: 0.0042,
+  ...overrides,
+})
+
+export const makeLlmUsage = (overrides = {}) => ({
+  totals: [makeLlmUsageTotal()],
+  items: [makeLlmCall()],
+  totalCount: 1,
+  ...overrides,
+})

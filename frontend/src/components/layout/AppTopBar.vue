@@ -17,6 +17,12 @@
 
     <template #append>
       <slot name="actions" />
+      <v-btn
+        v-if="!route.meta.admin"
+        icon="mdi-cog-outline"
+        aria-label="Admin"
+        :to="{ name: 'admin' }"
+      />
     </template>
   </v-app-bar>
 </template>

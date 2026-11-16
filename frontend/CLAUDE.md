@@ -19,6 +19,7 @@ Read `CODING_STANDARDS.md` (repo root) before writing or reviewing code: comment
 | `styles/` | `settings.scss` — Vuetify Sass settings |
 | `router/index.js` | All routes |
 | `router/navigation.js` | `viewKey` (the key App.vue mounts a view under) and `scrollPosition` (the router's scroll behaviour), pure so they test without mounting `App` |
+| `router/adminTools.js` | The Admin Tool routes (children of `/admin`) and `ADMIN_SECTIONS`, the order of the Admin landing list's sections |
 | `router/recipeRoutes.js` | Builds and reads the recipe view and Cooking Mode links with their scale, kept apart so importing it doesn't load the router |
 | `test/` | Vitest `setup.js`, `factories.js`, `timeZone.js` (run a describe block in a given timezone) and `infiniteScrollStub.js` (stands in for `VInfiniteScroll`, which never loads under jsdom) |
 
@@ -51,6 +52,13 @@ each test or in `beforeEach`; a wrapper mounted in `beforeAll` is gone after the
   view only) stays mounted and keeps its scroll position while only its query changes, so it must
   read the query reactively. Both rules live in `router/navigation.js`. Link to a scaled recipe
   view or Cooking Mode, and read their scale, only through `router/recipeRoutes.js`.
+- **Admin Tools:** add one by adding a route to `adminToolRoutes` in `router/adminTools.js`
+  (path `<tool>`, so it lands at `/admin/<tool>`) and its view. Its `meta` carries `title`, `icon`,
+  `description` (one line) and `section` (one of `ADMIN_SECTIONS`); `AdminView` builds the landing
+  list from the `/admin` route's children, in declaration order within each section, so nothing
+  else needs updating. Every `/admin`
+  route inherits `meta.admin`, which hides the top bar's gear. Admin is a frontend grouping: its
+  tools call the ordinary resource endpoints, with no `/admin` prefix on the API.
 - **Leaving a finished page:** a page whose work is saved or cancelled (the Scrape preview, the
   recipe form) leaves by `router.replace` or the `v-btn` `replace` prop, so back never reopens it.
   The edit form goes `router.back()` instead when the page before it is its own recipe, so history

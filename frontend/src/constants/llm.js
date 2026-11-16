@@ -32,3 +32,51 @@ export const LLM_CLOUD_CAPTIONS = Object.freeze({
 
 /** How often the Import Recipe sheet asks again while the model is loading. */
 export const LLM_LOADING_RECHECK_MS = 3000
+
+/** The LLM costs report's range chips, each a rolling window back from now; `days: null` reaches back to the first LLM Call. */
+export const LLM_USAGE_RANGES = Object.freeze([
+  Object.freeze({ key: '7d',  label: '7 days',   days: 7 }),
+  Object.freeze({ key: '30d', label: '30 days',  days: 30 }),
+  Object.freeze({ key: '90d', label: '90 days',  days: 90 }),
+  Object.freeze({ key: 'all', label: 'All time', days: null }),
+])
+
+/** Mirrors `LlmUsagePaging.DefaultDays`, so the report opens on the range the API defaults to. */
+export const LLM_USAGE_DEFAULT_RANGE = '30d'
+
+/** Sent as `from` for All time, because an omitted `from` means the API's 30-day default. */
+export const LLM_USAGE_ALL_TIME_FROM = '1970-01-01T00:00:00.000Z'
+
+/** Mirrors `LlmUsagePaging.DefaultPageSize`. */
+export const LLM_USAGE_PAGE_SIZE = 20
+
+/** Labels for the wire values of `LlmProvider`, `LlmOperation`, `LlmStep` and `LlmCallOutcome`. */
+export const LLM_PROVIDER_LABELS = Object.freeze({
+  [LLM_PROVIDER_MODEL_SERVER]: 'Model Server',
+  [LLM_PROVIDER_ANTHROPIC]:    'Claude (Anthropic)',
+})
+
+export const LLM_OPERATION_LABELS = Object.freeze({
+  ScrapeUrl:      'Scrape (URL)',
+  ScrapeText:     'Scrape (text)',
+  SeedNormalise:  'Seed normalise',
+  CatalogueBuild: 'Catalogue build',
+})
+
+export const LLM_STEP_LABELS = Object.freeze({
+  Extraction:         'Extraction',
+  IngredientMatching: 'Ingredient matching',
+})
+
+export const LLM_OUTCOME_SUCCEEDED = 'Succeeded'
+
+export const LLM_OUTCOME_LABELS = Object.freeze({
+  [LLM_OUTCOME_SUCCEEDED]: 'Succeeded',
+  FailedExtraction:        'Failed extraction',
+  Timeout:                 'Timeout',
+  Unavailable:             'Unavailable',
+  Rejected:                'Rejected',
+})
+
+/** Shown for an LLM Call or group whose model the provider never named. */
+export const LLM_UNKNOWN_MODEL_LABEL = 'Unknown model'

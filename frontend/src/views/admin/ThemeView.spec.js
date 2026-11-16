@@ -3,21 +3,10 @@ import { createVuetify } from 'vuetify'
 import * as components from 'vuetify/components'
 import * as directives from 'vuetify/directives'
 import ThemeView from './ThemeView.vue'
-import { BUILT_IN_THEMES, THEME_STORAGE_KEY } from '@/constants/themes'
-
-function makeVuetify(defaultTheme) {
-  return createVuetify({
-    components,
-    directives,
-    theme: {
-      defaultTheme,
-      themes: Object.fromEntries(BUILT_IN_THEMES.map(({ id, dark, colors }) => [id, { dark, colors }])),
-    },
-  })
-}
+import { BUILT_IN_THEMES, THEME_STORAGE_KEY, THEME_TOKENS, VUETIFY_THEMES } from '@/constants/themes'
 
 function mountView(defaultTheme = 'recipeLight') {
-  const vuetify = makeVuetify(defaultTheme)
+  const vuetify = createVuetify({ components, directives, theme: { defaultTheme, themes: VUETIFY_THEMES } })
   const wrapper = mount(ThemeView, { global: { plugins: [vuetify] } })
   return { wrapper, vuetify }
 }
@@ -42,7 +31,7 @@ describe('ThemeView', () => {
   it('shows a swatch for each of a Theme’s colours', () => {
     const { wrapper } = mountView()
     const swatches = wrapper.findAll('[data-test="swatch"]')
-    expect(swatches).toHaveLength(BUILT_IN_THEMES.length * 12)
+    expect(swatches).toHaveLength(BUILT_IN_THEMES.length * THEME_TOKENS.length)
   })
 
   it('applies a chosen Theme at once and stores it for this device', async () => {

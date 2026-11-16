@@ -22,7 +22,7 @@
         </div>
       </template>
 
-      <!-- Edit button overlay. The one hard-coded colour: it sits on the photo, not a theme surface, so white reads in every Theme. -->
+      <!-- White, not a Theme token, because the button sits on the photo rather than a theme surface. -->
       <div class="position-absolute" style="top: 8px; right: 8px">
         <v-btn
           icon="mdi-pencil"

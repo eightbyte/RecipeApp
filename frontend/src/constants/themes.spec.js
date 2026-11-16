@@ -1,4 +1,5 @@
-import { BUILT_IN_THEMES, DEFAULT_THEME_ID, THEME_TOKENS } from './themes'
+import { createVuetify } from 'vuetify'
+import { BUILT_IN_THEMES, DEFAULT_THEME_ID, THEME_TOKENS, VUETIFY_THEMES } from './themes'
 
 // WCAG 2 relative luminance and contrast ratio, worked independently of the theme module.
 function luminance(hex) {
@@ -31,7 +32,7 @@ describe('built-in Themes', () => {
     for (const value of Object.values(theme.colors)) expect(value).toMatch(/^#[0-9A-F]{6}$/)
   })
 
-  it('keeps Light as it was, with the four new tokens', () => {
+  it("sets Light's colours", () => {
     const light = BUILT_IN_THEMES.find((t) => t.name === 'Light')
     expect(light.colors).toEqual({
       primary: '#2E7D32', secondary: '#F57C00', surface: '#FFFFFF', background: '#F5F5F5',
@@ -48,4 +49,11 @@ describe('built-in Themes', () => {
       expect(contrast(colors[token], colors.background)).toBeGreaterThanOrEqual(4.5)
     },
   )
+
+  it("Dark's primary fill gets text from Vuetify that meets WCAG AA (top bar, buttons)", () => {
+    const vuetify = createVuetify({ theme: { defaultTheme: 'recipeDark', themes: VUETIFY_THEMES } })
+    const colors = vuetify.theme.computedThemes.value.recipeDark.colors
+    const onPrimary = colors['on-primary'].replace(/^#(.)(.)(.)$/, '#$1$1$2$2$3$3')
+    expect(contrast(colors.primary, onPrimary.toUpperCase())).toBeGreaterThanOrEqual(4.5)
+  })
 })

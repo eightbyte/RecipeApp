@@ -36,7 +36,6 @@ import { writeThemeChoice } from '@/utils/themeChoice'
 
 const theme = useTheme()
 
-// Choosing a Theme applies it to the whole app at once and remembers it on this device.
 const themeId = computed({
   get: () => theme.global.name.value,
   set: (id) => {

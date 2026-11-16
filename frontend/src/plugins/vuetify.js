@@ -3,7 +3,7 @@ import { createVuetify } from 'vuetify'
 import { aliases, mdi } from 'vuetify/iconsets/mdi'
 import 'vuetify/styles'
 import '@mdi/font/css/materialdesignicons.css'
-import { BUILT_IN_THEMES } from '@/constants/themes'
+import { VUETIFY_THEMES } from '@/constants/themes'
 import { readThemeChoice } from '@/utils/themeChoice'
 
 export default createVuetify({
@@ -16,7 +16,7 @@ export default createVuetify({
   theme: {
     // Read synchronously, so the first paint is already in this device's Theme.
     defaultTheme: readThemeChoice(),
-    themes: Object.fromEntries(BUILT_IN_THEMES.map(({ id, dark, colors }) => [id, { dark, colors }])),
+    themes: VUETIFY_THEMES,
   },
 
   defaults: {

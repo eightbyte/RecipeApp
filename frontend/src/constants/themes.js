@@ -1,5 +1,4 @@
-// The built-in Themes, defined as data: `plugins/vuetify.js` registers them and the Theme Admin Tool lists them.
-// A Theme sets the 12 tokens below; Vuetify derives each `on-<token>` text colour for contrast itself.
+// Themes are data, so Custom Themes can sit beside the built-ins; no `on-<token>` is set, because Vuetify picks each for contrast.
 
 /** The colour tokens every Theme sets. CSS reads one as `rgb(var(--v-theme-<token>))`. */
 export const THEME_TOKENS = [
@@ -36,7 +35,7 @@ export const BUILT_IN_THEMES = [
     dark: true,
     // Every text token meets WCAG AA (4.5:1) on surface and background.
     colors: {
-      primary:     '#66BB6A',
+      primary:     '#76C47A',   // light enough that Vuetify puts black text on it
       secondary:   '#FFB74D',
       surface:     '#1E1E1E',
       background:  '#121212',
@@ -51,6 +50,9 @@ export const BUILT_IN_THEMES = [
     },
   },
 ]
+
+/** The built-in Themes in the shape Vuetify's `theme.themes` option takes, keyed by id. */
+export const VUETIFY_THEMES = Object.fromEntries(BUILT_IN_THEMES.map(({ id, dark, colors }) => [id, { dark, colors }]))
 
 /** The Theme a device uses until it chooses one, and when its stored choice no longer exists. */
 export const DEFAULT_THEME_ID = 'recipeLight'

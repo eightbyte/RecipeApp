@@ -55,7 +55,8 @@ each test or in `beforeEach`; a wrapper mounted in `beforeAll` is gone after the
 - **Admin Tools:** add one by adding a route to `adminToolRoutes` in `router/adminTools.js`
   (path `<tool>`, so it lands at `/admin/<tool>`) and its view. Its `meta` carries `title`, `icon`,
   `description` (one line) and `section` (one of `ADMIN_SECTIONS`); `AdminView` builds the landing
-  list from every route with a `meta.section`, so nothing else needs updating. Every `/admin`
+  list from the `/admin` route's children, in declaration order within each section, so nothing
+  else needs updating. Every `/admin`
   route inherits `meta.admin`, which hides the top bar's gear. Admin is a frontend grouping: its
   tools call the ordinary resource endpoints, with no `/admin` prefix on the API.
 - **Leaving a finished page:** a page whose work is saved or cancelled (the Scrape preview, the

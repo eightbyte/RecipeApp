@@ -30,8 +30,10 @@ import EmptyState from '@/components/EmptyState.vue'
 
 const router = useRouter()
 
+// Read the tools from the `/admin` record, in declaration order; `getRoutes()` omits it because it has no component.
 const sections = computed(() => {
-  const tools = router.getRoutes().filter((r) => r.meta.section)
+  const adminRoute = router.resolve({ name: 'admin' }).matched.find((r) => r.meta.admin)
+  const tools = (adminRoute?.children ?? []).filter((r) => r.meta?.section)
   return ADMIN_SECTIONS
     .map((name) => ({ name, tools: tools.filter((t) => t.meta.section === name) }))
     .filter((section) => section.tools.length > 0)

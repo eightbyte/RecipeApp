@@ -18,11 +18,12 @@ function tool(path, title, section) {
   }
 }
 
-async function mountAdmin(toolRoutes) {
+async function mountAdmin(toolRoutes, otherRoutes = []) {
   const router = createRouter({
     history: createWebHashHistory(),
     routes: [
       { path: '/', name: 'home', component: Blank, meta: { title: 'Home' } },
+      ...otherRoutes,
       {
         path: '/admin',
         meta: { admin: true },
@@ -54,6 +55,12 @@ describe('AdminView', () => {
     expect(item.text()).toContain('LLM costs description')
     expect(item.props('to')).toEqual({ name: 'admin-costs' })
     expect(wrapper.text()).not.toContain('No admin tools yet')
+  })
+
+  it('ignores a route outside Admin that happens to carry a section', async () => {
+    const stray = { ...tool('stray', 'Stray', 'Data'), path: '/stray' }
+    const wrapper = await mountAdmin([], [stray])
+    expect(wrapper.text()).toContain('No admin tools yet')
   })
 
   it('orders sections Data, Appearance, Reports whatever the route order', async () => {

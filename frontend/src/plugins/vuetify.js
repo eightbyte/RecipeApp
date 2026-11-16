@@ -3,6 +3,8 @@ import { createVuetify } from 'vuetify'
 import { aliases, mdi } from 'vuetify/iconsets/mdi'
 import 'vuetify/styles'
 import '@mdi/font/css/materialdesignicons.css'
+import { BUILT_IN_THEMES } from '@/constants/themes'
+import { readThemeChoice } from '@/utils/themeChoice'
 
 export default createVuetify({
   icons: {
@@ -12,22 +14,9 @@ export default createVuetify({
   },
 
   theme: {
-    defaultTheme: 'recipeLight',
-    themes: {
-      recipeLight: {
-        dark: false,
-        colors: {
-          primary:    '#2E7D32',   // Fresh green — primary actions
-          secondary:  '#F57C00',   // Warm orange — accents / meal plan
-          surface:    '#FFFFFF',
-          background: '#F5F5F5',
-          error:      '#D32F2F',
-          success:    '#388E3C',
-          warning:    '#F57C00',
-          info:       '#1976D2',
-        },
-      },
-    },
+    // Read synchronously, so the first paint is already in this device's Theme.
+    defaultTheme: readThemeChoice(),
+    themes: Object.fromEntries(BUILT_IN_THEMES.map(({ id, dark, colors }) => [id, { dark, colors }])),
   },
 
   defaults: {

@@ -14,14 +14,14 @@
       @click="openRecipe(suggestion)"
     >
       <div class="d-flex align-center pa-3 ga-4">
-        <v-avatar size="48" rounded="lg" color="grey-lighten-3">
+        <v-avatar size="48" rounded="lg" color="placeholder">
           <v-img
             v-if="suggestion.recipeImageUrl"
             :src="suggestion.recipeImageUrl"
             cover
             :class="{ grayscale: isRecentlyCooked(suggestion) }"
           />
-          <v-icon v-else color="grey">mdi-food</v-icon>
+          <v-icon v-else color="muted">mdi-food</v-icon>
         </v-avatar>
 
         <div class="flex-grow-1">

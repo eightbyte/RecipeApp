@@ -68,9 +68,9 @@
         >
           <div class="pa-3">
             <div class="d-flex align-center ga-2 mb-2">
-              <v-avatar size="36" rounded="lg" color="grey-lighten-3">
+              <v-avatar size="36" rounded="lg" color="placeholder">
                 <v-img v-if="meal.recipeImageUrl" :src="meal.recipeImageUrl" cover />
-                <v-icon v-else color="grey" size="16">mdi-food</v-icon>
+                <v-icon v-else color="muted" size="16">mdi-food</v-icon>
               </v-avatar>
               <div class="flex-grow-1 text-body-2 font-weight-medium">{{ meal.recipeName }}</div>
               <v-btn icon="mdi-delete" variant="text" size="x-small" color="error" @click.stop="removePlannedMeal(meal.id)" />

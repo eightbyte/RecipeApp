@@ -212,3 +212,8 @@ _Avoid_: Settings, back office, control panel
 One screen inside Admin, such as the LLM cost report or ingredient editing, filed under a section
 (Data, Appearance or Reports).
 _Avoid_: Admin page, admin module
+
+**Theme**:
+A named set of the 12 colour tokens with a light or dark base. Light and Dark are built in; others
+are custom. Each device uses one.
+_Avoid_: skin, palette, colour scheme

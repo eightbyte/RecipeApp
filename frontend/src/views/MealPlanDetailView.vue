@@ -44,14 +44,14 @@
               <div class="text-caption font-weight-bold">{{ formatDay(meal.scheduledDate) }}</div>
               <div class="text-caption text-medium-emphasis">{{ formatMonth(meal.scheduledDate) }}</div>
             </template>
-            <v-icon v-else color="grey" size="18">mdi-calendar-question</v-icon>
+            <v-icon v-else color="muted" size="18">mdi-calendar-question</v-icon>
           </div>
 
           <v-divider vertical class="mx-1" />
 
-          <v-avatar size="40" rounded="lg" color="grey-lighten-3">
+          <v-avatar size="40" rounded="lg" color="placeholder">
             <v-img v-if="meal.recipeImageUrl" :src="meal.recipeImageUrl" :alt="meal.recipeName" cover />
-            <v-icon v-else color="grey" size="16">mdi-food</v-icon>
+            <v-icon v-else color="muted" size="16">mdi-food</v-icon>
           </v-avatar>
 
           <div class="flex-grow-1 ml-1">

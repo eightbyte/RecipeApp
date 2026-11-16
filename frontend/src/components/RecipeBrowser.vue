@@ -51,14 +51,14 @@
           @click="openRecipe(recipe)"
         >
           <template #prepend>
-            <v-avatar size="48" rounded="lg" color="grey-lighten-3" class="mr-3">
+            <v-avatar size="48" rounded="lg" color="placeholder" class="mr-3">
               <v-img
                 v-if="recipe.imageUrl"
                 :src="recipe.imageUrl"
                 cover
                 :class="{ grayscale: recipesStore.isRecentlyCooked(recipe) }"
               />
-              <v-icon v-else color="grey">mdi-food</v-icon>
+              <v-icon v-else color="muted">mdi-food</v-icon>
             </v-avatar>
           </template>
 

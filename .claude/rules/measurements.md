@@ -72,7 +72,10 @@ paths:
   A cup of such an ingredient is stored as `cup`. Liquids and packing-dominated ingredients are
   null on purpose.
 - Curated densities come from `Data/IngredientDensitySeeder.cs`. They are human-reviewed, matched
-  by catalogue name or alias, idempotent, and never overwrite a hand-corrected value.
+  by catalogue name or alias, idempotent, and never overwrite a hand-corrected value. The seed runs at
+  every startup and fills nulls, so a null saved by editing an Ingredient in the Admin Tool is a Hand-set
+  Density (`HasHandSetDensity`), which it skips.
+- A density edit never recomputes stored Measurements. It applies to later Scrapes and Imports only.
 
 ## Unquantified ingredients
 

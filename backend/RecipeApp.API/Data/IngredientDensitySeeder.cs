@@ -5,7 +5,7 @@ namespace RecipeApp.API.Data;
 
 /// <summary>
 /// Assigns curated, human-reviewed bulk densities to catalogue ingredients bought by weight, leaving liquids and packing-dominated
-/// ingredients null because no single figure is true for them; it is idempotent and only ever fills a null.
+/// ingredients null because no single figure is true for them; it is idempotent and only ever fills a null that was not set by hand.
 /// </summary>
 public static class IngredientDensitySeeder
 {
@@ -112,7 +112,7 @@ public static class IngredientDensitySeeder
         AppDbContext db, ILogger? logger = null, CancellationToken ct = default)
     {
         var candidates = await db.Ingredients
-            .Where(i => i.GramsPerMillilitre == null)
+            .Where(i => i.GramsPerMillilitre == null && !i.HasHandSetDensity)
             .ToListAsync(ct);
 
         var updated = 0;

@@ -16,47 +16,15 @@ public class IngredientValidatorTests
     public void Create_Valid_HasNoErrors()
     {
         var result = _createValidator.TestValidate(
-            new CreateIngredientRequest("flour", "Plain Flour", IngredientCategory.DryGoods, null));
+            new CreateIngredientRequest("Plain Flour", IngredientCategory.DryGoods, null));
         result.ShouldNotHaveAnyValidationErrors();
-    }
-
-    [Fact]
-    public void Create_EmptyName_HasErrorOnName()
-    {
-        var result = _createValidator.TestValidate(
-            new CreateIngredientRequest("", "Plain Flour", IngredientCategory.DryGoods, null));
-        result.ShouldHaveValidationErrorFor(x => x.Name);
-    }
-
-    [Fact]
-    public void Create_UppercaseName_HasErrorOnName()
-    {
-        var result = _createValidator.TestValidate(
-            new CreateIngredientRequest("Flour", "Plain Flour", IngredientCategory.DryGoods, null));
-        result.ShouldHaveValidationErrorFor(x => x.Name);
-    }
-
-    [Fact]
-    public void Create_LeadingWhitespaceName_HasErrorOnName()
-    {
-        var result = _createValidator.TestValidate(
-            new CreateIngredientRequest(" flour", "Plain Flour", IngredientCategory.DryGoods, null));
-        result.ShouldHaveValidationErrorFor(x => x.Name);
-    }
-
-    [Fact]
-    public void Create_NameExceeds200Chars_HasErrorOnName()
-    {
-        var result = _createValidator.TestValidate(
-            new CreateIngredientRequest(new string('a', 201), "Plain Flour", IngredientCategory.DryGoods, null));
-        result.ShouldHaveValidationErrorFor(x => x.Name);
     }
 
     [Fact]
     public void Create_EmptyDisplayName_HasErrorOnDisplayName()
     {
         var result = _createValidator.TestValidate(
-            new CreateIngredientRequest("flour", "", IngredientCategory.DryGoods, null));
+            new CreateIngredientRequest("", IngredientCategory.DryGoods, null));
         result.ShouldHaveValidationErrorFor(x => x.DisplayName);
     }
 
@@ -64,15 +32,40 @@ public class IngredientValidatorTests
     public void Create_DisplayNameExceeds200Chars_HasErrorOnDisplayName()
     {
         var result = _createValidator.TestValidate(
-            new CreateIngredientRequest("flour", new string('A', 201), IngredientCategory.DryGoods, null));
+            new CreateIngredientRequest(new string('A', 201), IngredientCategory.DryGoods, null));
         result.ShouldHaveValidationErrorFor(x => x.DisplayName);
+    }
+
+    [Fact]
+    public void Create_WhitespaceDisplayName_HasErrorOnDisplayName()
+    {
+        // The Name is the display name normalised, so a blank one would leave the Ingredient unmatchable.
+        var result = _createValidator.TestValidate(
+            new CreateIngredientRequest("   ", IngredientCategory.DryGoods, null));
+        result.ShouldHaveValidationErrorFor(x => x.DisplayName);
+    }
+
+    [Fact]
+    public void Create_AliasExceeds200Chars_HasErrorOnAliases()
+    {
+        var result = _createValidator.TestValidate(
+            new CreateIngredientRequest("Flour", IngredientCategory.DryGoods, null, Aliases: [new string('a', 201)]));
+        result.Errors.Should().Contain(error => error.PropertyName.StartsWith(nameof(CreateIngredientRequest.Aliases)));
+    }
+
+    [Fact]
+    public void Update_AliasExceeds200Chars_HasErrorOnAliases()
+    {
+        var result = _updateValidator.TestValidate(
+            new UpdateIngredientRequest("Flour", IngredientCategory.DryGoods, null, Aliases: [new string('a', 201)]));
+        result.Errors.Should().Contain(error => error.PropertyName.StartsWith(nameof(UpdateIngredientRequest.Aliases)));
     }
 
     [Fact]
     public void Create_InvalidCategory_HasErrorOnCategory()
     {
         var result = _createValidator.TestValidate(
-            new CreateIngredientRequest("flour", "Plain Flour", "JUNK", null));
+            new CreateIngredientRequest("Plain Flour", "JUNK", null));
         result.ShouldHaveValidationErrorFor(x => x.Category);
     }
 
@@ -81,7 +74,7 @@ public class IngredientValidatorTests
     public void Create_EachValidCategory_HasNoError(string category)
     {
         var result = _createValidator.TestValidate(
-            new CreateIngredientRequest("flour", "Plain Flour", category, null));
+            new CreateIngredientRequest("Plain Flour", category, null));
         result.ShouldNotHaveValidationErrorFor(x => x.Category);
     }
 
@@ -95,7 +88,7 @@ public class IngredientValidatorTests
     public void Create_NonCanonicalDefaultUnit_HasErrorOnDefaultUnit(string unit)
     {
         var result = _createValidator.TestValidate(
-            new CreateIngredientRequest("flour", "Plain Flour", IngredientCategory.DryGoods, unit));
+            new CreateIngredientRequest("Plain Flour", IngredientCategory.DryGoods, unit));
         result.ShouldHaveValidationErrorFor(x => x.DefaultUnit);
     }
 
@@ -104,7 +97,7 @@ public class IngredientValidatorTests
     public void Create_EachStorableDefaultUnit_HasNoError(string unit)
     {
         var result = _createValidator.TestValidate(
-            new CreateIngredientRequest("flour", "Plain Flour", IngredientCategory.DryGoods, unit));
+            new CreateIngredientRequest("Plain Flour", IngredientCategory.DryGoods, unit));
         result.ShouldNotHaveValidationErrorFor(x => x.DefaultUnit);
     }
 
@@ -118,7 +111,7 @@ public class IngredientValidatorTests
     {
         // Null is load-bearing: "no reliable density known", not "not filled in yet".
         var result = _createValidator.TestValidate(
-            new CreateIngredientRequest("spinach", "Spinach", IngredientCategory.Produce, "g"));
+            new CreateIngredientRequest("Spinach", IngredientCategory.Produce, "g"));
         result.ShouldNotHaveValidationErrorFor(x => x.GramsPerMillilitre);
     }
 
@@ -130,7 +123,7 @@ public class IngredientValidatorTests
     public void Create_PlausibleDensity_HasNoError(decimal density)
     {
         var result = _createValidator.TestValidate(
-            new CreateIngredientRequest("flour", "Plain Flour", IngredientCategory.DryGoods, "g", density));
+            new CreateIngredientRequest("Plain Flour", IngredientCategory.DryGoods, "g", density));
         result.ShouldNotHaveValidationErrorFor(x => x.GramsPerMillilitre);
     }
 
@@ -143,7 +136,7 @@ public class IngredientValidatorTests
     public void Create_ImplausibleDensity_HasErrorOnDensity(decimal density)
     {
         var result = _createValidator.TestValidate(
-            new CreateIngredientRequest("flour", "Plain Flour", IngredientCategory.DryGoods, "g", density));
+            new CreateIngredientRequest("Plain Flour", IngredientCategory.DryGoods, "g", density));
         result.ShouldHaveValidationErrorFor(x => x.GramsPerMillilitre);
     }
 
@@ -151,7 +144,7 @@ public class IngredientValidatorTests
     public void Create_NullDefaultUnit_HasNoError()
     {
         var result = _createValidator.TestValidate(
-            new CreateIngredientRequest("flour", "Plain Flour", IngredientCategory.DryGoods, null));
+            new CreateIngredientRequest("Plain Flour", IngredientCategory.DryGoods, null));
         result.ShouldNotHaveValidationErrorFor(x => x.DefaultUnit);
     }
 

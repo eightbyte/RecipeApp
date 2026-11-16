@@ -132,6 +132,46 @@ public class RecipeScrapeServiceMatchingTests(DatabaseFixture db) : IAsyncLifeti
     }
 
     [Fact]
+    public async Task NormaliseAsync_ARemovedIngredient_IsNotMatchedByNameOrAlias()
+    {
+        await using var ctx = db.CreateDbContext();
+        var chickpeas = TestDataBuilder.Ingredient("chickpeas", "Chickpeas", IngredientCategory.Canned);
+        chickpeas.Aliases   = ["garbanzo beans"];
+        chickpeas.RemovedAt = DateTime.UtcNow;
+        ctx.Ingredients.Add(chickpeas);
+        await ctx.SaveChangesAsync();
+
+        // No LLM response is queued, so offering the Removed Ingredient to the semantic match would fail too.
+        var svc     = BuildService();
+        var preview = await svc.NormaliseAsync(
+            MakeRecipe(("chickpeas", "Chickpeas"), ("garbanzo beans", "Garbanzo Beans")), UrlScrape, default);
+
+        preview.Ingredients.Should().HaveCount(2).And.OnlyContain(ing => ing.IsNew && ing.IngredientId == null);
+    }
+
+    [Fact]
+    public async Task ResolveOrCreateIngredientAsync_TheNameOfARemovedIngredient_CreatesAnActiveOne()
+    {
+        await using var ctx = db.CreateDbContext();
+        var removed = TestDataBuilder.Ingredient("chickpeas", "Chickpeas", IngredientCategory.Canned);
+        removed.RemovedAt = DateTime.UtcNow;
+        var aliasOwner = TestDataBuilder.Ingredient("lentils", "Lentils", IngredientCategory.DryGoods);
+        aliasOwner.Aliases   = ["red lentils"];
+        aliasOwner.RemovedAt = DateTime.UtcNow;
+        ctx.Ingredients.AddRange(removed, aliasOwner);
+        await ctx.SaveChangesAsync();
+
+        var svc = BuildService();
+        var byName  = await svc.ResolveOrCreateIngredientAsync("chickpeas", "Chickpeas", IngredientCategory.Canned, default);
+        var byAlias = await svc.ResolveOrCreateIngredientAsync("red lentils", "Red Lentils", IngredientCategory.DryGoods, default);
+
+        byName.Should().NotBe(removed.Id);
+        byAlias.Should().NotBe(aliasOwner.Id);
+        await using var check = db.CreateDbContext();
+        (await check.Ingredients.SingleAsync(i => i.Id == byName)).RemovedAt.Should().BeNull();
+    }
+
+    [Fact]
     public async Task NormaliseAsync_ANameOutranksAnotherEntrysAlias()
     {
         // The artefact's validation forbids this collision, and this is what makes the outcome defined anyway if a hand-edited row introduces one.

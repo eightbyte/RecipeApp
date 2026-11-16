@@ -30,7 +30,9 @@ public static class Mappings
         i.Aliases,
         i.DefaultUnit,
         i.GramsPerMillilitre,
+        i.HasHandSetDensity,
         i.IsStaple,
+        i.RemovedAt,
         i.CreatedAt
     );
 

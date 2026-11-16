@@ -19,11 +19,12 @@ public class SeedCatalogueResolver(
         public int Count => IdByName.Count;
     }
 
-    /// <summary>Builds the lookup from the catalogue rows currently in the database, loading names before aliases so a name always outranks an alias.</summary>
+    /// <summary>Builds the lookup from the active catalogue rows, since a Removed Ingredient is never matched, loading names before aliases so a name always outranks an alias.</summary>
     public async Task<CatalogueLookup> LoadAsync(CancellationToken ct = default)
     {
         var rows = await db.Ingredients
             .AsNoTracking()
+            .Where(i => i.RemovedAt == null)
             .Select(i => new { i.Id, i.Name, i.Aliases, i.GramsPerMillilitre })
             .ToListAsync(ct);
 

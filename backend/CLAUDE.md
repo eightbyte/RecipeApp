@@ -42,7 +42,19 @@ Read `CODING_STANDARDS.md` (repo root) before writing or reviewing code: comment
   breaks and takes `SourceUrl` from the one URL the text names, never from the model.
 - **Migrations:** `dotnet ef migrations add <Name> --output-dir Data/Migrations`.
 - **Timestamps:** `DateTime.UtcNow` and `TIMESTAMPTZ` only. Never local time.
-- Hard deletes. No soft deletes in v1.
+- Hard deletes, except Ingredients. `DELETE /ingredients/{id}` makes a Removed Ingredient
+  (`RemovedAt`), because recipes and shopping lists still reference it. Every catalogue lookup that
+  matches names (Scraping's `NormaliseAsync` and `ResolveOrCreateIngredientAsync`,
+  `SeedCatalogueResolver.LoadAsync` for Recipe Packs and MyPlate) and `GET /ingredients` filter
+  `RemovedAt == null`. `Name` is unique among active rows only (a filtered index), so a removed row
+  releases its name. A new lookup must filter the same way.
+- **Hand edits of the catalogue go through `IngredientService`.** It sets `Name` from the display
+  name, normalises aliases, and refuses (409, naming the other Ingredient) a name or alias that an
+  active Ingredient already has as a name or alias. An edit checks only the values it adds, so a
+  clash a legacy database already holds never blocks an unrelated edit. Every edit (`PUT`), and a
+  create that states a density, marks it a Hand-set Density (`HasHandSetDensity`), which
+  `IngredientDensitySeeder` skips. A create with no density, such as the recipe form's quick add,
+  leaves the curated seed free to fill it.
 - `uploads/images/` is served at `/uploads/images/`. It is gitignored; mount it as a volume in production.
 
 ## Tests (`RecipeApp.Tests/`)

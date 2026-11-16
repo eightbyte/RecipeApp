@@ -26,6 +26,12 @@ public class Ingredient
     /// <summary>Whether this is a Staple, an ingredient the user always has on hand, such as salt or water.</summary>
     public bool IsStaple { get; set; }
 
+    /// <summary>Whether <see cref="GramsPerMillilitre"/>, null included, was set by hand, which the curated density seed never overwrites.</summary>
+    public bool HasHandSetDensity { get; set; }
+
+    /// <summary>When this became a Removed Ingredient, which no matching or picker sees and whose name and aliases are free to take; null while active.</summary>
+    public DateTime? RemovedAt { get; set; }
+
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 
     // Navigation

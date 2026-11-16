@@ -52,6 +52,7 @@ builder.Services.AddValidatorsFromAssemblyContaining<Program>();
 
 // ── Application services ──────────────────────────────────────────────────────
 builder.Services.AddScoped<RecipeService>();
+builder.Services.AddScoped<IngredientService>();
 builder.Services.AddScoped<ImageService>();
 builder.Services.AddScoped<IRecipeScrapeService, RecipeScrapeService>();
 builder.Services.AddScoped<MealPlanService>();

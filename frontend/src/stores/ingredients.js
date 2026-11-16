@@ -12,6 +12,9 @@ export const useIngredientStore = defineStore('ingredients', () => {
   const catalogue        = ref([])
   let   catalogueRequest = null
 
+  // Admin's list, the only one holding Removed Ingredients, which pickers never offer.
+  const allIngredients = ref([])
+
   async function fetchIngredients(search = '') {
     loading.value = true
     error.value   = null
@@ -34,16 +37,32 @@ export const useIngredientStore = defineStore('ingredients', () => {
     return catalogueRequest
   }
 
+  async function fetchAllIngredients() {
+    const { data } = await api.get('/ingredients', { params: { includeRemoved: true } })
+    allIngredients.value = data
+  }
+
+  async function fetchIngredient(id) {
+    const { data } = await api.get(`/ingredients/${id}`)
+    return data
+  }
+
   async function fetchCategories() {
     if (categories.value.length) return
     const { data } = await api.get('/ingredients/categories')
     categories.value = data
   }
 
+  async function fetchUsage(id) {
+    const { data } = await api.get(`/ingredients/${id}/usage`)
+    return data.recipeCount
+  }
+
   async function createIngredient(payload) {
     const { data } = await api.post('/ingredients', payload)
     ingredients.value.push(data)
     catalogue.value.push(data)
+    allIngredients.value.push(data)
     return data
   }
 
@@ -51,6 +70,22 @@ export const useIngredientStore = defineStore('ingredients', () => {
     const { data } = await api.put(`/ingredients/${id}`, payload)
     replaceById(ingredients.value, data)
     replaceById(catalogue.value, data)
+    replaceById(allIngredients.value, data)
+    return data
+  }
+
+  async function removeIngredient(id) {
+    await api.delete(`/ingredients/${id}`)
+    ingredients.value = ingredients.value.filter(i => i.id !== id)
+    catalogue.value   = catalogue.value.filter(i => i.id !== id)
+    const removed = allIngredients.value.find(i => i.id === id)
+    if (removed) replaceById(allIngredients.value, { ...removed, removedAt: new Date().toISOString() })
+  }
+
+  async function restoreIngredient(id) {
+    const { data } = await api.post(`/ingredients/${id}/restore`)
+    replaceById(allIngredients.value, data)
+    if (catalogueRequest) catalogue.value.push(data)
     return data
   }
 
@@ -59,6 +94,7 @@ export const useIngredientStore = defineStore('ingredients', () => {
     if (idx !== -1) list[idx] = ingredient
   }
 
-  return { ingredients, catalogue, categories, loading, error,
-           fetchIngredients, fetchCatalogue, fetchCategories, createIngredient, updateIngredient }
+  return { ingredients, catalogue, allIngredients, categories, loading, error,
+           fetchIngredients, fetchCatalogue, fetchAllIngredients, fetchIngredient, fetchCategories, fetchUsage,
+           createIngredient, updateIngredient, removeIngredient, restoreIngredient }
 })

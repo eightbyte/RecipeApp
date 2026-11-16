@@ -48,6 +48,45 @@ public class IngredientCatalogueFileSeederTests(DatabaseFixture db) : IAsyncLife
         return await context.Ingredients.AsNoTracking().SingleAsync(i => i.Name == name);
     }
 
+    // ── Removed Ingredients ───────────────────────────────────────────────────
+
+    private static Ingredient Row(string name, DateTime? removedAt = null) => new()
+    {
+        Id          = Guid.NewGuid(),
+        Name        = name,
+        DisplayName = name,
+        Category    = IngredientCategory.Produce,
+        RemovedAt   = removedAt,
+    };
+
+    [Fact]
+    public async Task ARemovedIngredientStaysRemovedAndIsNotAddedAgain()
+    {
+        await SeedRowAsync(Row("onion", removedAt: DateTime.UtcNow));
+        await using var context = db.CreateDbContext();
+
+        var outcome = await IngredientCatalogueFileSeeder.SeedAsync(context, Catalogue(Entry("onion", "Onion")));
+
+        outcome.Inserted.Should().Be(0);
+        await using var check = db.CreateDbContext();
+        (await check.Ingredients.AsNoTracking().SingleAsync()).RemovedAt.Should().NotBeNull();
+    }
+
+    [Fact]
+    public async Task AnActiveIngredientOutranksARemovedOneOfTheSameName()
+    {
+        var removed = await SeedRowAsync(Row("onion", removedAt: DateTime.UtcNow));
+        var active  = await SeedRowAsync(Row("onion"));
+        await using var context = db.CreateDbContext();
+
+        var outcome = await IngredientCatalogueFileSeeder.SeedAsync(context, Catalogue(Entry("onion", aliases: ["onions"])));
+
+        outcome.Inserted.Should().Be(0);
+        await using var check = db.CreateDbContext();
+        (await check.Ingredients.AsNoTracking().SingleAsync(i => i.Id == active.Id)).Aliases.Should().Equal("onions");
+        (await check.Ingredients.AsNoTracking().SingleAsync(i => i.Id == removed.Id)).Aliases.Should().BeEmpty();
+    }
+
     // ── Insert ────────────────────────────────────────────────────────────────
 
     [Fact]

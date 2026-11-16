@@ -173,6 +173,18 @@ Every Ingredient the app knows, however it arrived. The First-Run Seed supplies 
 and Scraping adds new ones.
 _Avoid_: Ingredient database, master list
 
+**Removed Ingredient**:
+An Ingredient taken out of the Ingredient Catalogue but kept, because recipes and shopping lists
+still refer to it. They keep showing it, while ingredient pickers, Scraping and Imports no longer
+see it. Its name and aliases are free for another Ingredient, and it can be restored while no
+active Ingredient has taken them.
+_Avoid_: Deleted ingredient, archived ingredient
+
+**Hand-set Density**:
+An Ingredient's density, or its deliberate absence, as last saved by hand. The curated density
+seed never replaces it.
+_Avoid_: Custom density, override
+
 **Recipe Pack**:
 A file holding a set of recipes in the app's importable format.
 _Avoid_: Sample pack, recipe bundle

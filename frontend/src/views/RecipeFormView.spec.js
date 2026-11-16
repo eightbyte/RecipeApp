@@ -96,6 +96,21 @@ describe('RecipeFormView — create mode', () => {
     expect(wrapper.vm.form.ingredients).toHaveLength(0)
   })
 
+  it('creates a new Ingredient by its display name alone, which the API normalises into its name', async () => {
+    const wrapper = mountForm()
+    const ingStore = useIngredientStore()
+    vi.spyOn(ingStore, 'createIngredient').mockResolvedValue(makeIngredient({ id: 'new', defaultUnit: 'g' }))
+    wrapper.vm.addIngredient()
+    wrapper.vm.openCreateIngredient(0)
+    wrapper.vm.newIng.displayName = ' Yuzu '
+
+    await wrapper.vm.confirmCreateIngredient()
+
+    expect(ingStore.createIngredient).toHaveBeenCalledWith({
+      displayName: 'Yuzu', category: 'OTHER', defaultUnit: 'g', gramsPerMillilitre: null,
+    })
+  })
+
   it('addStep adds a step row', () => {
     const wrapper = mountForm()
     const before = wrapper.vm.form.steps.length
@@ -344,6 +359,23 @@ describe('RecipeFormView — edit mode', () => {
     expect(wrapper.vm.form.name).toBe('Existing Recipe')
     expect(wrapper.vm.form.servings).toBe(6)
     expect(wrapper.vm.form.ingredients).toHaveLength(detail.ingredients.length)
+  })
+
+  it('keeps showing a line whose Ingredient the picker does not offer, such as a Removed Ingredient, and saves it', async () => {
+    const wrapper = mountForm({ id: 'r1' })
+    const recipeStore = useRecipeStore()
+    useIngredientStore().ingredients = [makeIngredient({ id: 'other', displayName: 'Salt' })]
+    wrapper.vm.populateForm(makeRecipeDetail({ id: 'r1' }))
+    await wrapper.vm.$nextTick()
+
+    const picker = wrapper.findAllComponents({ name: 'VAutocomplete' })[0]
+    expect(picker.props('items')).toContainEqual(expect.objectContaining({ id: 'test-ingredient-1', displayName: 'Flour' }))
+    expect(wrapper.vm.ingredientLabel(wrapper.vm.form.ingredients[0])).toBe('Flour')
+
+    vi.spyOn(recipeStore, 'updateRecipe').mockResolvedValue(makeRecipeDetail({ id: 'r1' }))
+    await wrapper.vm.submit()
+
+    expect(recipeStore.updateRecipe.mock.calls[0][1].ingredients[0].ingredientId).toBe('test-ingredient-1')
   })
 
   it('calls updateRecipe in edit mode on submit', async () => {

@@ -56,6 +56,9 @@ namespace RecipeApp.API.Data.Migrations
                         .HasPrecision(8, 4)
                         .HasColumnType("numeric(8,4)");
 
+                    b.Property<bool>("HasHandSetDensity")
+                        .HasColumnType("boolean");
+
                     b.Property<bool>("IsStaple")
                         .HasColumnType("boolean");
 
@@ -63,10 +66,14 @@ namespace RecipeApp.API.Data.Migrations
                         .IsRequired()
                         .HasColumnType("text");
 
+                    b.Property<DateTime?>("RemovedAt")
+                        .HasColumnType("timestamp with time zone");
+
                     b.HasKey("Id");
 
                     b.HasIndex("Name")
-                        .IsUnique();
+                        .IsUnique()
+                        .HasFilter("\"RemovedAt\" IS NULL");
 
                     b.ToTable("Ingredients");
                 });

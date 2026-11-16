@@ -188,3 +188,15 @@ _Avoid_: Seed recipes, seed library
 **First-Run Seed**:
 What a fresh install receives exactly once: the Ingredient Catalogue and the Sample Recipes.
 _Avoid_: Default data, bootstrap
+
+### Administration
+
+**Admin**:
+The part of the app for controlling its data and appearance, reached from the gear in the top bar.
+Anyone using the app can use it; it has no separate access. It is a list of Admin Tools.
+_Avoid_: Settings, back office, control panel
+
+**Admin Tool**:
+One screen inside Admin, such as the LLM cost report or ingredient editing, filed under a section
+(Data, Appearance or Reports).
+_Avoid_: Admin page, admin module

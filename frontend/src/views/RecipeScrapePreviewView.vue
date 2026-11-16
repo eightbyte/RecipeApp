@@ -225,7 +225,7 @@
           class="mb-6"
         >
           <div class="d-flex align-start ga-2">
-            <v-avatar color="primary" size="28" class="text-white text-caption font-weight-bold mt-4">
+            <v-avatar color="primary" size="28" class="text-caption font-weight-bold mt-4">
               {{ sIdx + 1 }}
             </v-avatar>
 

@@ -1,6 +1,6 @@
 <template>
   <div class="text-center py-12">
-    <v-icon :icon="icon" size="64" color="grey-lighten-2" />
+    <v-icon :icon="icon" size="64" color="muted" />
     <div v-if="title" class="text-h6 mt-4 mb-1">{{ title }}</div>
     <div v-if="text" class="text-body-2 text-medium-emphasis mb-6">{{ text }}</div>
 

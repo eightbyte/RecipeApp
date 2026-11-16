@@ -29,6 +29,17 @@ export const adminToolRoutes = [
     meta: { title: 'Edit ingredient' },
   },
   {
+    path: 'theme',
+    name: 'admin-theme',
+    component: () => import('@/views/admin/ThemeView.vue'),
+    meta: {
+      title: 'Theme',
+      icon: 'mdi-palette-outline',
+      description: 'Choose this device\'s colours',
+      section: 'Appearance',
+    },
+  },
+  {
     path: 'llm-costs',
     name: 'admin-llm-costs',
     component: () => import('@/views/admin/LlmCostsView.vue'),

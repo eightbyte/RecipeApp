@@ -1,6 +1,6 @@
 <template>
   <div class="text-center py-12">
-    <v-icon icon="mdi-alert-circle-outline" size="64" color="grey-lighten-2" />
+    <v-icon icon="mdi-alert-circle-outline" size="64" color="muted" />
     <div class="text-body-1 mt-4 mb-6">{{ message }}</div>
     <v-btn
       color="primary"

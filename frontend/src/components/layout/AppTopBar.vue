@@ -11,7 +11,7 @@
       @click="router.back()"
     />
 
-    <v-app-bar-title class="font-weight-bold text-white">
+    <v-app-bar-title class="font-weight-bold">
       {{ pageTitle }}
     </v-app-bar-title>
 

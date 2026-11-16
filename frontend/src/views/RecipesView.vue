@@ -117,8 +117,8 @@
             style="flex-shrink: 0; border-radius: 12px 0 0 12px"
           >
             <template #placeholder>
-              <div class="d-flex align-center justify-center fill-height bg-grey-lighten-3">
-                <v-icon color="grey-lighten-1">mdi-food</v-icon>
+              <div class="d-flex align-center justify-center fill-height bg-placeholder">
+                <v-icon color="muted">mdi-food</v-icon>
               </div>
             </template>
           </v-img>

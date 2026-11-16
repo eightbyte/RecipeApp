@@ -173,6 +173,18 @@ Every Ingredient the app knows, however it arrived. The First-Run Seed supplies 
 and Scraping adds new ones.
 _Avoid_: Ingredient database, master list
 
+**Removed Ingredient**:
+An Ingredient taken out of the Ingredient Catalogue but kept, because recipes and shopping lists
+still refer to it. They keep showing it, while ingredient pickers, Scraping and Imports no longer
+see it. Its name and aliases are free for another Ingredient, and it can be restored while no
+active Ingredient has taken them.
+_Avoid_: Deleted ingredient, archived ingredient
+
+**Hand-set Density**:
+An Ingredient's density, or its deliberate absence, as last saved by hand. The curated density
+seed never replaces it.
+_Avoid_: Custom density, override
+
 **Recipe Pack**:
 A file holding a set of recipes in the app's importable format.
 _Avoid_: Sample pack, recipe bundle
@@ -188,3 +200,20 @@ _Avoid_: Seed recipes, seed library
 **First-Run Seed**:
 What a fresh install receives exactly once: the Ingredient Catalogue and the Sample Recipes.
 _Avoid_: Default data, bootstrap
+
+### Administration
+
+**Admin**:
+The part of the app for controlling its data and appearance, reached from the gear in the top bar.
+Anyone using the app can use it; it has no separate access. It is a list of Admin Tools.
+_Avoid_: Settings, back office, control panel
+
+**Admin Tool**:
+One screen inside Admin, such as the LLM cost report or ingredient editing, filed under a section
+(Data, Appearance or Reports).
+_Avoid_: Admin page, admin module
+
+**Theme**:
+A named set of the 12 colour tokens with a light or dark base. Light and Dark are built in; others
+are custom. Each device uses one.
+_Avoid_: skin, palette, colour scheme

@@ -27,7 +27,8 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
         // ── Ingredient ────────────────────────────────────────────────────────
         modelBuilder.Entity<Ingredient>(e =>
         {
-            e.HasIndex(i => i.Name).IsUnique();
+            // Unique among active Ingredients only, because a Removed Ingredient releases its name.
+            e.HasIndex(i => i.Name).IsUnique().HasFilter("\"RemovedAt\" IS NULL");
             e.Property(i => i.Category).HasDefaultValue("OTHER");
             e.Property(i => i.GramsPerMillilitre).HasPrecision(8, 4);
             e.Property(i => i.CreatedAt).HasDefaultValueSql("NOW()");

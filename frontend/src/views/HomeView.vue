@@ -43,7 +43,7 @@
 
     <!-- ── No active plan ──────────────────────────────────────────────── -->
     <v-card v-else class="text-center pa-8" variant="outlined">
-      <v-icon size="64" color="grey-lighten-2" class="mb-4">
+      <v-icon size="64" color="muted" class="mb-4">
         mdi-calendar-plus-outline
       </v-icon>
       <div class="text-h6 mb-1">No active meal plan</div>

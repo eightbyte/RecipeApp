@@ -6,12 +6,12 @@
           <div class="text-caption font-weight-bold">{{ formatDateOnly(plannedMeal.scheduledDate, { day: 'numeric' }) }}</div>
           <div class="text-caption text-medium-emphasis">{{ formatDateOnly(plannedMeal.scheduledDate, { month: 'short' }) }}</div>
         </template>
-        <v-icon v-else color="grey" size="16">mdi-calendar-question</v-icon>
+        <v-icon v-else color="muted" size="16">mdi-calendar-question</v-icon>
       </div>
 
       <v-divider vertical class="mx-1" />
 
-      <v-avatar size="40" rounded="lg" color="grey-lighten-3">
+      <v-avatar size="40" rounded="lg" color="placeholder">
         <v-img
           v-if="plannedMeal.recipeImageUrl"
           :src="plannedMeal.recipeImageUrl"
@@ -19,7 +19,7 @@
           cover
           :class="{ grayscale: isRecentlyCooked }"
         />
-        <v-icon v-else color="grey" size="18">mdi-food</v-icon>
+        <v-icon v-else color="muted" size="18">mdi-food</v-icon>
       </v-avatar>
 
       <div class="flex-grow-1">

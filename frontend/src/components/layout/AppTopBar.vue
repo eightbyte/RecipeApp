@@ -11,12 +11,18 @@
       @click="router.back()"
     />
 
-    <v-app-bar-title class="font-weight-bold text-white">
+    <v-app-bar-title class="font-weight-bold">
       {{ pageTitle }}
     </v-app-bar-title>
 
     <template #append>
       <slot name="actions" />
+      <v-btn
+        v-if="!route.meta.admin"
+        icon="mdi-cog-outline"
+        aria-label="Admin"
+        :to="{ name: 'admin' }"
+      />
     </template>
   </v-app-bar>
 </template>

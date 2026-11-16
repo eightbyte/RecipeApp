@@ -658,6 +658,7 @@ public class RecipeScrapeService(
 
         var dbIngredients = await db.Ingredients
             .AsNoTracking()
+            .Where(i => i.RemovedAt == null)
             .Select(i => new { i.Id, i.Name, i.DisplayName, i.Category, i.GramsPerMillilitre, i.Aliases })
             .ToListAsync(ct);
 
@@ -1053,13 +1054,14 @@ public class RecipeScrapeService(
     public async Task<Guid> ResolveOrCreateIngredientAsync(
         string normalised, string displayName, string category, CancellationToken ct)
     {
-        var existing = await db.Ingredients
-            .FirstOrDefaultAsync(i => i.Name == normalised, ct);
+        // A Removed Ingredient is never matched, so its name and aliases are free for the new row.
+        var active = db.Ingredients.Where(i => i.RemovedAt == null);
+
+        var existing = await active.FirstOrDefaultAsync(i => i.Name == normalised, ct);
         if (existing != null) return existing.Id;
 
         // An alias hit resolves to the entry that owns it, because inserting a row named like an existing alias would permanently shadow that alias.
-        var byAlias = await db.Ingredients
-            .FirstOrDefaultAsync(i => i.Aliases.Contains(normalised), ct);
+        var byAlias = await active.FirstOrDefaultAsync(i => i.Aliases.Contains(normalised), ct);
         if (byAlias != null) return byAlias.Id;
 
         var newIng = new Ingredient
@@ -1080,7 +1082,7 @@ public class RecipeScrapeService(
         catch (DbUpdateException)
         {
             db.Entry(newIng).State = EntityState.Detached;
-            var raceExisting = await db.Ingredients.FirstAsync(i => i.Name == normalised, ct);
+            var raceExisting = await active.FirstAsync(i => i.Name == normalised, ct);
             return raceExisting.Id;
         }
     }

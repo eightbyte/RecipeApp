@@ -285,7 +285,7 @@ onMounted(load)
 .cooking-header {
   flex: 0 0 auto;
   background: rgb(var(--v-theme-surface));
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+  box-shadow: 0 1px 3px rgb(var(--v-theme-border));
 }
 
 .cooking-steps {
@@ -298,7 +298,7 @@ onMounted(load)
   flex: 0 0 auto;
   padding: 12px 16px;
   background: rgb(var(--v-theme-surface));
-  box-shadow: 0 -1px 4px rgba(0, 0, 0, 0.08);
+  box-shadow: 0 -1px 4px rgb(var(--v-theme-border));
 }
 
 /* States (loading / error / not-found) fill the overlay and centre content. */
@@ -315,7 +315,7 @@ onMounted(load)
 }
 
 .cooking-step {
-  border: 1px solid rgba(0, 0, 0, 0.08);
+  border: 1px solid rgb(var(--v-theme-border));
   border-left: 4px solid transparent;
   border-radius: 12px;
   cursor: pointer;
@@ -323,7 +323,7 @@ onMounted(load)
 }
 .cooking-step--current {
   border-left-color: rgb(var(--v-theme-primary));
-  background: rgba(46, 125, 50, 0.04);
+  background: rgb(var(--v-theme-highlight));
 }
 .cooking-step--done {
   opacity: 0.5;

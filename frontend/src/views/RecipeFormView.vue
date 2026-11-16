@@ -104,7 +104,7 @@
             <!-- Ingredient search -->
             <v-autocomplete
               v-model="ing.ingredientId"
-              :items="ingredientStore.ingredients"
+              :items="itemsFor(ing)"
               item-title="displayName"
               item-value="id"
               label="Ingredient"
@@ -198,7 +198,7 @@
           class="mb-6"
         >
           <div class="d-flex align-start ga-2">
-            <v-avatar color="primary" size="28" class="text-white text-caption font-weight-bold mt-4">
+            <v-avatar color="primary" size="28" class="text-caption font-weight-bold mt-4">
               {{ sIdx + 1 }}
             </v-avatar>
 
@@ -402,6 +402,8 @@ function populateForm(recipe) {
 
   form.ingredients = ingredients.map(i => ({
     ingredientId: i.ingredientId,
+    // Kept so the line still shows when the picker does not offer its Ingredient, as for a Removed Ingredient.
+    displayName:  i.ingredientDisplayName,
     ...toFormMeasurement(i),
     notes:        i.notes ?? '',
     // Provenance is carried through untouched, because UpdateAsync recreates every ingredient row and dropping it would destroy an import's history.
@@ -443,13 +445,23 @@ function onIngredientSearch(val) {
 
 function onIngredientSelected(idx, ingredientId) {
   const found = ingredientStore.ingredients.find(i => i.id === ingredientId)
+  if (found) form.ingredients[idx].displayName = found.displayName
   if (found?.defaultUnit && !form.ingredients[idx].unit)
     form.ingredients[idx].unit = found.defaultUnit
 }
 
+/** A row's picker entries: the search results, led by the row's own Ingredient when they lack it. */
+function itemsFor(ing) {
+  const listed = ingredientStore.ingredients.some(i => i.id === ing.ingredientId)
+  const own = ing.ingredientId && !listed && ing.displayName
+    ? [{ id: ing.ingredientId, displayName: ing.displayName }]
+    : []
+  return [...own, ...ingredientStore.ingredients]
+}
+
 function ingredientLabel(ing) {
   const found = ingredientStore.ingredients.find(i => i.id === ing.ingredientId)
-  return found?.displayName ?? ''
+  return found?.displayName ?? ing.displayName ?? ''
 }
 
 function openCreateIngredient(idx) {
@@ -463,9 +475,7 @@ function openCreateIngredient(idx) {
 
 async function confirmCreateIngredient() {
   creatingIng.value = true
-  const name = newIng.displayName.trim().toLowerCase()
   const created = await ingredientStore.createIngredient({
-    name,
     displayName:        newIng.displayName.trim(),
     category:           newIng.category,
     defaultUnit:        newIng.defaultUnit,
@@ -473,6 +483,7 @@ async function confirmCreateIngredient() {
   })
   if (pendingIngIdx.value !== null) {
     form.ingredients[pendingIngIdx.value].ingredientId = created.id
+    form.ingredients[pendingIngIdx.value].displayName  = created.displayName
     form.ingredients[pendingIngIdx.value].unit = created.defaultUnit ?? DEFAULT_UNIT
   }
   creatingIng.value     = false

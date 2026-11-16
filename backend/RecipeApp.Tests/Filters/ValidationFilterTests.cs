@@ -28,18 +28,18 @@ public class ValidationFilterTests(DatabaseFixture db) : IAsyncLifetime
 
     private HttpClient Client => db.CreateClient();
 
-    private static CreateIngredientRequest ValidCreate(string name = "flour") =>
-        new(name, "Plain Flour", IngredientCategory.DryGoods, MeasurementUnit.Gram);
+    private static CreateIngredientRequest ValidCreate() =>
+        new("Plain Flour", IngredientCategory.DryGoods, MeasurementUnit.Gram);
 
     // ── Rejection: the filter short-circuits with RFC 7807 ────────────────────
 
     [Fact]
     public async Task Post_InvalidBody_Returns400ProblemDetailsKeyedByProperty()
     {
-        // Empty Name violates CreateIngredientValidator's NotEmpty rule.
+        // Empty DisplayName violates CreateIngredientValidator's NotEmpty rule.
         var response = await Client.PostAsJsonAsync(
             "/api/v1/ingredients",
-            ValidCreate() with { Name = "" },
+            ValidCreate() with { DisplayName = "" },
             TestContext.Current.CancellationToken);
 
         response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
@@ -50,7 +50,7 @@ public class ValidationFilterTests(DatabaseFixture db) : IAsyncLifetime
 
         // ValidationResult.ToDictionary() keys by property name, the half of the response contract FluentValidation owns.
         problem!.Status.Should().Be(StatusCodes.Status400BadRequest);
-        problem.Errors.Should().ContainKey(nameof(CreateIngredientRequest.Name));
+        problem.Errors.Should().ContainKey(nameof(CreateIngredientRequest.DisplayName));
     }
 
     [Fact]
@@ -77,7 +77,7 @@ public class ValidationFilterTests(DatabaseFixture db) : IAsyncLifetime
         // A filter that ran the handler anyway would still 400 on the way out, so the absence of the side effect proves the short-circuit.
         await Client.PostAsJsonAsync(
             "/api/v1/ingredients",
-            ValidCreate() with { Name = "" },
+            ValidCreate() with { DisplayName = "" },
             TestContext.Current.CancellationToken);
 
         await using var ctx = db.CreateDbContext();
@@ -96,7 +96,7 @@ public class ValidationFilterTests(DatabaseFixture db) : IAsyncLifetime
 
         var created = await response.Content.ReadFromJsonAsync<IngredientResponse>(
             TestContext.Current.CancellationToken);
-        created!.Name.Should().Be("flour");
+        created!.Name.Should().Be("plain flour");
     }
 
     [Fact]
@@ -124,7 +124,7 @@ public class ValidationFilterTests(DatabaseFixture db) : IAsyncLifetime
         {
             var response = await Client.PostAsJsonAsync(
                 "/api/v1/ingredients",
-                ValidCreate() with { Name = "" },
+                ValidCreate() with { DisplayName = "" },
                 TestContext.Current.CancellationToken);
 
             response.StatusCode.Should().Be(HttpStatusCode.BadRequest);

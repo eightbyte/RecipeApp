@@ -1,5 +1,6 @@
 import { createRouter, createWebHistory } from 'vue-router'
 import { scrollPosition } from './navigation'
+import { adminToolRoutes } from './adminTools'
 
 const routes = [
   {
@@ -79,6 +80,20 @@ const routes = [
     name: 'shopping',
     component: () => import('@/views/ShoppingView.vue'),
     meta: { title: 'Shopping List' },
+  },
+  {
+    // `meta.admin` reaches every Admin route, so the top bar hides its gear throughout.
+    path: '/admin',
+    meta: { admin: true },
+    children: [
+      {
+        path: '',
+        name: 'admin',
+        component: () => import('@/views/AdminView.vue'),
+        meta: { title: 'Admin' },
+      },
+      ...adminToolRoutes,
+    ],
   },
 ]
 

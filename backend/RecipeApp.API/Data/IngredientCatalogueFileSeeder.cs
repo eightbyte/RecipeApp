@@ -25,7 +25,11 @@ public static class IngredientCatalogueFileSeeder
         if (errors.Count > 0) throw new CatalogueValidationException(errors);
 
         var existing = await db.Ingredients.ToListAsync(ct);
-        var byName   = existing.ToDictionary(row => row.Name, StringComparer.OrdinalIgnoreCase);
+
+        // Active rows win a shared name, because a Removed Ingredient's name may be taken again by an active one.
+        var byName = new Dictionary<string, Ingredient>(StringComparer.OrdinalIgnoreCase);
+        foreach (var row in existing.OrderBy(row => row.RemovedAt is not null))
+            byName.TryAdd(row.Name, row);
 
         var inserted  = 0;
         var updated   = 0;

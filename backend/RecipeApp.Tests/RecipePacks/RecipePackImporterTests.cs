@@ -283,6 +283,41 @@ public class RecipePackImporterTests(DatabaseFixture db) : IAsyncLifetime
             .Which.RecipeIngredientId.Should().Be(smoothie.Ingredients.Single(row => row.IngredientId == created.Id).Id);
     }
 
+    // ── Removed Ingredients ───────────────────────────────────────────────────
+
+    private async Task RemoveAsync(string name)
+    {
+        await using var context = db.CreateDbContext();
+        var ingredient = await context.Ingredients.SingleAsync(row => row.Name == name);
+        ingredient.RemovedAt = DateTime.UtcNow;
+        await context.SaveChangesAsync();
+    }
+
+    [Fact]
+    public async Task ARemovedIngredientIsNotMatchedByNameOrAlias()
+    {
+        await RemoveAsync("olive oil");
+
+        var result = await ImportAsync(Pack(Recipe("Dressing", [Row("olive oil"), Row("evoo")])));
+
+        result.Succeeded.Should().BeFalse();
+        result.Errors.Should().HaveCount(2).And.OnlyContain(error => error.Contains("unknown ingredient"));
+    }
+
+    [Fact]
+    public async Task CreateMissingTakesTheNameOfARemovedIngredient()
+    {
+        await RemoveAsync("onion");
+
+        var result = await ImportAsync(Pack(Simple("Soup")), new RecipePackImportSettings(CreateMissingIngredients: true));
+
+        result.Succeeded.Should().BeTrue();
+        result.CreatedIngredients.Should().Equal("onion");
+
+        var soup = (await LoadRecipesAsync()).Single();
+        soup.Ingredients.Single().Ingredient.RemovedAt.Should().BeNull();
+    }
+
     // ── Duplicates ────────────────────────────────────────────────────────────
 
     [Fact]

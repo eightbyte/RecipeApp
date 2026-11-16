@@ -34,7 +34,7 @@ A **recipe pack** is a JSON file of recipes in one fixed format that any source 
 - `name`, `servings`, `ingredients` and `steps` are required. `description`, `sourceUrl` and `image`
   may be left out. Every ingredient row must state `amount` and `unit`, even when they are null, so a
   forgotten amount is an error and an unquantified row says so.
-- **Ingredients are referenced by catalogue name.** A name resolves by ingredient name, then by alias.
+- **Ingredients are referenced by catalogue name.** A name resolves by ingredient name, then by alias, among active Ingredients only: a Removed Ingredient is never matched.
   The catalogue must already be in the database.
 - **Steps reference ingredients by name, not by position.** A step name resolves the same way, then
   links every row in that recipe that resolved to the same ingredient. A step that names an

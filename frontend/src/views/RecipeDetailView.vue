@@ -17,12 +17,12 @@
       cover
     >
       <template #placeholder>
-        <div class="d-flex align-center justify-center fill-height bg-grey-lighten-3">
-          <v-icon size="64" color="grey-lighten-2">mdi-food</v-icon>
+        <div class="d-flex align-center justify-center fill-height bg-placeholder">
+          <v-icon size="64" color="muted">mdi-food</v-icon>
         </div>
       </template>
 
-      <!-- Edit button overlay -->
+      <!-- White, not a Theme token, because the button sits on the photo rather than a theme surface. -->
       <div class="position-absolute" style="top: 8px; right: 8px">
         <v-btn
           icon="mdi-pencil"
@@ -105,11 +105,11 @@
           <template v-for="(ing, idx) in recipe.ingredients" :key="ing.id">
             <v-list-item
               :id="`ingredient-${ing.id}`"
-              :class="{ 'bg-primary-lighten-5': highlightedIngredientId === ing.id }"
+              :class="{ 'bg-highlight': highlightedIngredientId === ing.id }"
               style="transition: background-color 0.3s"
             >
               <template #prepend>
-                <v-icon size="8" color="grey" class="mr-2">mdi-circle</v-icon>
+                <v-icon size="8" color="muted" class="mr-2">mdi-circle</v-icon>
               </template>
               <v-list-item-title>
                 <!-- Absent for an ingredient whose source stated no quantity -->
@@ -135,7 +135,7 @@
         <v-card>
           <v-card-item>
             <template #prepend>
-              <v-avatar color="primary" size="32" class="text-white font-weight-bold">
+              <v-avatar color="primary" size="32" class="font-weight-bold">
                 {{ step.stepNumber }}
               </v-avatar>
             </template>
@@ -278,5 +278,4 @@ async function markCooked() {
 
 <style scoped>
 .grayscale { filter: grayscale(100%); }
-.bg-primary-lighten-5 { background-color: rgba(46, 125, 50, 0.08) !important; }
 </style>

@@ -9,16 +9,17 @@ Read `CODING_STANDARDS.md` (repo root) before writing or reviewing code: comment
 
 | Folder | Holds |
 |---|---|
-| `views/` | Route-level pages (lazy-loaded) |
+| `views/` | Route-level pages (lazy-loaded); `admin/` holds the Admin Tools' views (`IngredientsView` and its `IngredientFormView`, `ThemeView`, the Theme picker, `LlmCostsView`, the LLM costs report) |
 | `components/` | Shared components; `layout/` has `AppTopBar`, `AppBottomNav` |
-| `stores/` | Pinia, one file per domain (`recipes`, `ingredients`, `mealPlans`, `shoppingList`, `ui`) |
+| `stores/` | Pinia, one file per domain (`recipes`, `ingredients`, `mealPlans`, `shoppingList`, `ui`, `llmUsage`); `llmUsage` is stateless, so the LLM costs report holds its own range, page and response; `ingredients.allIngredients` is the Ingredients Admin Tool's list, the only one holding Removed Ingredients |
 | `services/api.js` | The pre-configured Axios instance |
-| `constants/` | `units.js`, `categories.js`, `recipeSorts.js` — mirrors of the backend enums; `batchSizes.js` holds the recipe view's ½×/1×/2× shortcuts onto Servings, which exist only in the frontend; `recipeLimits.js` mirrors `RecipeLimits` (lengths and the Servings range); `scrapeLimits.js` mirrors `ScrapeLimits` (the longest pasted text); `scrapeSources.js` names the Import Recipe sheet's URL and Text modes; `servings.js` formats a servings count; `llm.js` mirrors `LlmProvider`, `LlmState` and its `UnavailableReason()` wording per provider, plus the caption the Import Recipe sheet shows for a cloud provider |
+| `constants/` | `units.js`, `categories.js`, `recipeSorts.js` — mirrors of the backend enums; `batchSizes.js` holds the recipe view's ½×/1×/2× shortcuts onto Servings, which exist only in the frontend; `recipeLimits.js` mirrors `RecipeLimits` (lengths and the Servings range); `ingredientLimits.js` mirrors `IngredientValidationRules` (name length, density range); `scrapeLimits.js` mirrors `ScrapeLimits` (the longest pasted text); `scrapeSources.js` names the Import Recipe sheet's URL and Text modes; `servings.js` formats a servings count; `llm.js` mirrors `LlmProvider`, `LlmState` and its `UnavailableReason()` wording per provider, plus the caption the Import Recipe sheet shows for a cloud provider, the LLM costs report's range chips and page size (mirroring `LlmUsagePaging`), and the labels for provider, Operation, step and outcome; `themes.js` defines the built-in Themes (Light, Dark) as data, their 12 `THEME_TOKENS` and the `recipeapp.theme` storage key |
 | `composables/` | `useWakeLock.js`; `useRecipePages.js` pages a recipe list and holds the shared `SEARCH_DEBOUNCE_MS`; `useHold.js` is the 1-second press-and-hold on pointer events (editing a Custom Item); `useDelayedHide.js` keeps each just-ticked Purchased item shown for 3 seconds on its own timer; `useIngredientRowLayout.js` lays out a recipe form's Amount, Unit and Notes, splitting them onto two lines on a phone; `useRecipeValidation.js` decides which recipe-form problems are showing (on load, on leaving a field, after Save); `useRemovalUndo.js` removes a recipe form's ingredient rows and steps with Undo in the snackbar |
-| `utils/` | `dateOnly.js` formats date-only values; `storage.js` wraps `localStorage` for device-local preferences; `recipeValidation.js` is the one rule set that blocks a recipe save, shared by the recipe form and the Scrape preview; `recipeRows.js` removes and restores those pages' ingredient rows and steps, keeping step selections in step |
+| `utils/` | `dateOnly.js` formats date-only values; `storage.js` wraps `localStorage` for device-local preferences; `themeChoice.js` reads and writes this device's Theme, falling back to Light; `recipeValidation.js` is the one rule set that blocks a recipe save, shared by the recipe form and the Scrape preview; `recipeRows.js` removes and restores those pages' ingredient rows and steps, keeping step selections in step |
 | `styles/` | `settings.scss` — Vuetify Sass settings |
 | `router/index.js` | All routes |
 | `router/navigation.js` | `viewKey` (the key App.vue mounts a view under) and `scrollPosition` (the router's scroll behaviour), pure so they test without mounting `App` |
+| `router/adminTools.js` | The Admin Tool routes (children of `/admin`) and `ADMIN_SECTIONS`, the order of the Admin landing list's sections |
 | `router/recipeRoutes.js` | Builds and reads the recipe view and Cooking Mode links with their scale, kept apart so importing it doesn't load the router |
 | `test/` | Vitest `setup.js`, `factories.js`, `timeZone.js` (run a describe block in a given timezone) and `infiniteScrollStub.js` (stands in for `VInfiniteScroll`, which never loads under jsdom) |
 
@@ -37,6 +38,13 @@ each test or in `beforeEach`; a wrapper mounted in `beforeAll` is gone after the
   `constants/categories.js`, `constants/batchSizes.js` / `constants/recipeSorts.js`.
 - **Device-local preferences** (such as the Recipes tab sort) go through `utils/storage.js`, never
   `localStorage` directly, because storage can throw. Each key is named once beside its constants.
+- **Colours come only from the Theme.** Use a token (`primary`, `muted`, `placeholder`, `border`,
+  `highlight`, … from `THEME_TOKENS` in `constants/themes.js`) in `color=`/`bg-` props and classes, and
+  `rgb(var(--v-theme-<token>))` in CSS. No hex, `rgb()`/`rgba()` literals or Vuetify palette names
+  (`grey`, `orange`, …), and no `text-white`: Vuetify sets each `on-<token>` text colour itself. The one
+  exception is the white edit button over the recipe photo (`RecipeDetailView.vue`). A device's Theme is
+  read synchronously when Vuetify is created (`plugins/vuetify.js`), and never follows the system
+  light/dark setting.
 - **Grayscale rule:** add class `grayscale` to a recipe image when `lastCookedAt` is within 7 days.
 - **Planned Meals** on Home and Meal Plan render through `components/PlannedMealCard.vue`. Every
   count of Servings is stepped with `components/ServingsStepper.vue` and shown on a Planned Meal or
@@ -51,6 +59,18 @@ each test or in `beforeEach`; a wrapper mounted in `beforeAll` is gone after the
   view only) stays mounted and keeps its scroll position while only its query changes, so it must
   read the query reactively. Both rules live in `router/navigation.js`. Link to a scaled recipe
   view or Cooking Mode, and read their scale, only through `router/recipeRoutes.js`.
+- **Admin Tools:** add one by adding a route to `adminToolRoutes` in `router/adminTools.js`
+  (path `<tool>`, so it lands at `/admin/<tool>`) and its view. Its `meta` carries `title`, `icon`,
+  `description` (one line) and `section` (one of `ADMIN_SECTIONS`); `AdminView` builds the landing
+  list from the `/admin` route's children, in declaration order within each section, so nothing
+  else needs updating. A route there with no `section` is a tool's own sub-page (the Ingredients
+  tool's `admin-ingredient-new` and `admin-ingredient-edit` forms), which the list leaves out. Every
+  `/admin` route inherits `meta.admin`, which hides the top bar's gear. Admin is a frontend
+  grouping: its tools call the ordinary resource endpoints, with no `/admin` prefix on the API.
+- **Removed Ingredients** never appear in a picker, because `GET /ingredients` leaves them out
+  unless asked (`includeRemoved`). A recipe line can still name one, so the recipe form keeps each
+  row's own `displayName` and offers the row's Ingredient when the search results lack it, as the
+  Scrape preview does.
 - **Leaving a finished page:** a page whose work is saved or cancelled (the Scrape preview, the
   recipe form) leaves by `router.replace` or the `v-btn` `replace` prop, so back never reopens it.
   The edit form goes `router.back()` instead when the page before it is its own recipe, so history

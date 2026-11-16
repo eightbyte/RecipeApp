@@ -121,6 +121,21 @@ public class IngredientDensitySeederTests(DatabaseFixture db) : IAsyncLifetime
     }
 
     [Fact]
+    public async Task SeedAsync_LeavesAHandSetNullDensityNull()
+    {
+        await using var ctx = db.CreateDbContext();
+        var flour = TestDataBuilder.Ingredient("plain flour", "Plain Flour", IngredientCategory.DryGoods);
+        flour.HasHandSetDensity = true;
+        ctx.Ingredients.Add(flour);
+        await ctx.SaveChangesAsync();
+
+        var updated = await IngredientDensitySeeder.SeedAsync(ctx);
+
+        updated.Should().Be(0);
+        ctx.Ingredients.Single(i => i.Name == "plain flour").GramsPerMillilitre.Should().BeNull();
+    }
+
+    [Fact]
     public async Task SeedAsync_LeavesUncoveredIngredientsNull()
     {
         await using var ctx = db.CreateDbContext();

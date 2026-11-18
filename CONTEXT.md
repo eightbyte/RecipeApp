@@ -60,6 +60,12 @@ The recipe view's ½×, 1× and 2× shortcut onto Servings: a multiple of the wh
 one serving. It is never stored.
 _Avoid_: Portion, portion size
 
+**Unit System**:
+The units a single recipe's Measurements are read in: Metric (as stored) or US (`oz`/`lb`, and
+`tsp`/`tbsp`/`cup`, as fractions). Each device chooses one on the recipe view, and Cooking Mode
+follows it. It only changes the display; nothing is stored in US units.
+_Avoid_: Imperial, measurement system
+
 **Photo**:
 The image of a recipe's prepared dish, stored with the recipe and shown with it. A Photo is one
 kind of image; an image that does not show the finished dish is not a Photo.

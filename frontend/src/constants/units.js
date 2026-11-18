@@ -78,6 +78,45 @@ export function formatIngredientMeasurement(ing, multiplier = 1) {
   return { amount: formatMeasurement(ing.amount * multiplier, ing.unit), source }
 }
 
+/** The fractions a US amount rounds to, each as the part of one it stands for and the glyph that writes it. */
+const KITCHEN_FRACTIONS = [
+  { value: 0,   glyph: '' },
+  { value: 1 / 8, glyph: '⅛' },
+  { value: 1 / 4, glyph: '¼' },
+  { value: 1 / 3, glyph: '⅓' },
+  { value: 1 / 2, glyph: '½' },
+  { value: 2 / 3, glyph: '⅔' },
+  { value: 3 / 4, glyph: '¾' },
+  { value: 1,   glyph: '' },
+]
+
+const SMALLEST_KITCHEN_FRACTION = KITCHEN_FRACTIONS[1]
+
+/** A US amount as a whole number and the nearest kitchen fraction ("1 ½", "⅓"), never rounding a real amount down to nothing. */
+export function formatUsAmount(amount) {
+  const whole = Math.floor(amount)
+  const part  = amount - whole
+  const nearest = KITCHEN_FRACTIONS.reduce((best, fraction) =>
+    Math.abs(part - fraction.value) < Math.abs(part - best.value) ? fraction : best)
+  const wholeCount = nearest.value === 1 ? whole + 1 : whole
+
+  if (wholeCount === 0 && !nearest.glyph) return SMALLEST_KITCHEN_FRACTION.glyph
+  return [wholeCount ? String(wholeCount) : '', nearest.glyph].filter(Boolean).join(' ')
+}
+
+/**
+ * The display parts of one recipe ingredient row in the US Unit System, given its US Measurement already at the chosen
+ * servings, where a row with none reads as Metric does and a US Source Measurement the main line was read from is hidden.
+ */
+export function formatUsIngredientMeasurement(ing, usMeasurement, multiplier = 1) {
+  if (!usMeasurement) return formatIngredientMeasurement(ing, multiplier)
+  const amount = `${formatUsAmount(usMeasurement.amount)} ${usMeasurement.unit}`
+  const source = usMeasurement.fromSource
+    ? null
+    : formatSourceMeasurement(ing.sourceAmount, ing.sourceUnit, ing.unit, multiplier)
+  return { amount, source }
+}
+
 /** True when a form's amount field holds a number, so an empty, blank or unreadable field counts as no amount, because `Number('  ')` is `0`. */
 export function hasAmount(amount) {
   return amount != null && String(amount).trim() !== '' && !Number.isNaN(Number(amount))

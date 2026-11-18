@@ -363,6 +363,110 @@ public class RecipesEndpointTests(DatabaseFixture db) : IAsyncLifetime
         response.StatusCode.Should().Be(HttpStatusCode.NotFound);
     }
 
+    // ── US Unit System ────────────────────────────────────────────────────────
+
+    /// <summary>A 4-serving recipe with a row typed as 4 oz (stored 113.398 g) and a count of 2.</summary>
+    private async Task<RecipeDetailResponse> CreateOunceAndCountRecipeAsync()
+    {
+        var ingId = await SeedIngredientAsync("feta cheese");
+        var request = new CreateRecipeRequest(
+            "Feta Salad", null, null, 4,
+            [
+                new RecipeIngredientRequest(ingId, 4m, MeasurementUnit.Ounce, null, 0),
+                new RecipeIngredientRequest(ingId, 2m, MeasurementUnit.Piece, null, 1),
+            ],
+            [new RecipeStepRequest(1, "Toss.", [0, 1])]);
+        var response = await Client.PostAsJsonAsync("/api/v1/recipes", request);
+        response.EnsureSuccessStatusCode();
+        return (await response.Content.ReadFromJsonAsync<RecipeDetailResponse>())!;
+    }
+
+    [Fact]
+    public async Task GetById_UsSystemAndServings_IncludesEachRowsUsMeasurementAtThoseServings()
+    {
+        var created = await CreateOunceAndCountRecipeAsync();
+
+        var fetched = (await Client.GetFromJsonAsync<RecipeDetailResponse>(
+            $"/api/v1/recipes/{created.Id}?servings=8&system={UnitSystem.Us}"))!;
+
+        fetched.Ingredients.Select(row => row.UsMeasurement).Should().Equal(
+            new UsMeasurementResponse(8m, MeasurementUnit.Ounce, FromSource: true),
+            null);
+        fetched.Ingredients[0].Amount.Should().Be(113.398m, "the stored Measurement is never scaled");
+    }
+
+    [Fact]
+    public async Task GetById_UsSystemWithoutServings_UsesTheRecipesServings()
+    {
+        var created = await CreateOunceAndCountRecipeAsync();
+
+        var fetched = (await Client.GetFromJsonAsync<RecipeDetailResponse>(
+            $"/api/v1/recipes/{created.Id}?system={UnitSystem.Us}"))!;
+
+        fetched.Ingredients[0].UsMeasurement.Should().Be(new UsMeasurementResponse(4m, MeasurementUnit.Ounce, FromSource: true));
+    }
+
+    [Theory]
+    [InlineData("")]
+    [InlineData("?servings=8")]
+    [InlineData("?servings=8&system=metric")]
+    public async Task GetById_MetricSystem_HasNoUsMeasurements(string queryString)
+    {
+        var created = await CreateOunceAndCountRecipeAsync();
+
+        var fetched = (await Client.GetFromJsonAsync<RecipeDetailResponse>($"/api/v1/recipes/{created.Id}{queryString}"))!;
+
+        fetched.Ingredients.Should().OnlyContain(row => row.UsMeasurement == null);
+    }
+
+    [Fact]
+    public async Task GetMeasurements_Us_ReturnsOnlyTheRowsWithAUsMeasurement()
+    {
+        var created = await CreateOunceAndCountRecipeAsync();
+
+        var measurements = await Client.GetFromJsonAsync<List<RecipeIngredientMeasurementResponse>>(
+            $"/api/v1/recipes/{created.Id}/measurements?servings=18&system={UnitSystem.Us}");
+
+        measurements.Should().Equal(
+            new RecipeIngredientMeasurementResponse(created.Ingredients[0].Id, 1.125m, MeasurementUnit.Pound, FromSource: true));
+    }
+
+    [Fact]
+    public async Task GetMeasurements_NotFound_Returns404()
+    {
+        var response = await Client.GetAsync($"/api/v1/recipes/{Guid.NewGuid()}/measurements?servings=2&system=us");
+        response.StatusCode.Should().Be(HttpStatusCode.NotFound);
+    }
+
+    [Theory]
+    [InlineData("?system=imperial",        nameof(RecipeDetailQuery.System))]
+    [InlineData("?system=US",              nameof(RecipeDetailQuery.System))]
+    [InlineData("?servings=0&system=us",   nameof(RecipeDetailQuery.Servings))]
+    [InlineData("?servings=-1",            nameof(RecipeDetailQuery.Servings))]
+    [InlineData("?servings=10001",         nameof(RecipeDetailQuery.Servings))]
+    public async Task GetById_InvalidQueryParam_Returns400Problem(string queryString, string invalidField)
+    {
+        var response = await Client.GetAsync($"/api/v1/recipes/{Guid.NewGuid()}{queryString}");
+
+        response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+        var problem = await response.Content.ReadFromJsonAsync<ValidationProblemDetails>();
+        problem!.Errors.Should().ContainKey(invalidField);
+    }
+
+    [Theory]
+    [InlineData("?servings=2",                 nameof(RecipeMeasurementsQuery.System))]
+    [InlineData("?servings=2&system=metric",   nameof(RecipeMeasurementsQuery.System))]
+    [InlineData("?servings=0&system=us",       nameof(RecipeMeasurementsQuery.Servings))]
+    [InlineData("?system=us",                  nameof(RecipeMeasurementsQuery.Servings))]
+    public async Task GetMeasurements_InvalidQueryParam_Returns400Problem(string queryString, string invalidField)
+    {
+        var response = await Client.GetAsync($"/api/v1/recipes/{Guid.NewGuid()}/measurements{queryString}");
+
+        response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+        var problem = await response.Content.ReadFromJsonAsync<ValidationProblemDetails>();
+        problem!.Errors.Should().ContainKey(invalidField);
+    }
+
     // ── Create ────────────────────────────────────────────────────────────────
 
     [Fact]

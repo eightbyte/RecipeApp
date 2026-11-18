@@ -112,3 +112,35 @@ public class RecipeListQueryValidator : AbstractValidator<RecipeListQuery>
         RuleFor(x => x.PageSize).InclusiveBetween(1, RecipeListPaging.MaxPageSize);
     }
 }
+
+public class RecipeDetailQueryValidator : AbstractValidator<RecipeDetailQuery>
+{
+    public RecipeDetailQueryValidator()
+    {
+        RuleFor(x => x.System)
+            .Must(system => system != null && UnitSystem.IsValid(system))
+            .WithMessage($"System must be one of: {string.Join(", ", UnitSystem.All)}")
+            .When(x => x.System is not null);
+
+        RuleFor(x => x.Servings).ScaledServings();
+    }
+}
+
+public class RecipeMeasurementsQueryValidator : AbstractValidator<RecipeMeasurementsQuery>
+{
+    public RecipeMeasurementsQueryValidator()
+    {
+        RuleFor(x => x.System)
+            .Equal(UnitSystem.Us)
+            .WithMessage($"System must be {UnitSystem.Us}, the only Unit System with computed Measurements");
+
+        RuleFor(x => x.Servings).NotNull().ScaledServings();
+    }
+}
+
+internal static class ScaledServingsRule
+{
+    /// <summary>A servings count a recipe can be read at: above zero, possibly fractional, and at most <see cref="RecipeLimits.MaxScaledServings"/>.</summary>
+    public static IRuleBuilderOptions<T, decimal?> ScaledServings<T>(this IRuleBuilder<T, decimal?> rule) =>
+        rule.GreaterThan(0m).LessThanOrEqualTo(RecipeLimits.MaxScaledServings);
+}

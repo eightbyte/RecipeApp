@@ -95,6 +95,12 @@
             button-size="small"
             density="compact"
           />
+          <UnitSystemToggle
+            :model-value="ui.unitSystem"
+            button-size="small"
+            density="compact"
+            @update:model-value="ui.chooseUnitSystem"
+          />
         </div>
       </v-card>
 
@@ -113,13 +119,13 @@
               </template>
               <v-list-item-title>
                 <!-- Absent for an ingredient whose source stated no quantity -->
-                <span v-if="formatAmount(ing)" class="font-weight-medium">
-                  {{ formatAmount(ing) }}
+                <span v-if="measurementOf(ing).amount" class="font-weight-medium">
+                  {{ measurementOf(ing).amount }}
                 </span>
                 <span
-                  v-if="formatSource(ing)"
+                  v-if="measurementOf(ing).source"
                   class="text-caption text-medium-emphasis mr-1"
-                >{{ formatSource(ing) }}</span>
+                >{{ measurementOf(ing).source }}</span>
                 {{ ing.ingredientDisplayName }}
               </v-list-item-title>
               <v-list-item-subtitle v-if="ing.notes">{{ ing.notes }}</v-list-item-subtitle>
@@ -153,7 +159,7 @@
               v-for="ing in stepIngredients(step)"
               :key="ing.id"
               :recipe-ingredient="ing"
-              :servings-multiplier="servingsMultiplier"
+              :measurement="measurementOf(ing)"
               size="small"
               color="secondary"
               variant="tonal"
@@ -193,16 +199,17 @@
 import { ref, computed, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useRecipeStore } from '@/stores/recipes'
-import { formatIngredientMeasurement } from '@/constants/units'
 import { BATCH_SIZES, batchSizeMultiplier } from '@/constants/batchSizes'
 import { formatServings } from '@/constants/servings'
 import { cookingRoute, recipeRoute, servingsFromQuery } from '@/router/recipeRoutes'
 import { useUiStore } from '@/stores/ui'
+import { useRecipeMeasurements } from '@/composables/useRecipeMeasurements'
 import BatchSizeToggle from '@/components/BatchSizeToggle.vue'
 import EmptyState from '@/components/EmptyState.vue'
 import ErrorState from '@/components/ErrorState.vue'
 import ServingsStepper from '@/components/ServingsStepper.vue'
 import StepIngredientChip from '@/components/StepIngredientChip.vue'
+import UnitSystemToggle from '@/components/UnitSystemToggle.vue'
 
 const props = defineProps({ id: { type: String, required: true } })
 const route  = useRoute()
@@ -233,21 +240,16 @@ const matchingBatchSize = computed({
   },
 })
 
+const { measurementOf } = useRecipeMeasurements(recipe, servings)
+
 function reload() {
-  store.fetchRecipe(props.id ?? route.params.id)
+  store.fetchRecipe(props.id ?? route.params.id, {
+    servings: servingsFromQuery(route.query, null),
+    unitSystem: ui.unitSystem,
+  })
 }
 
 onMounted(reload)
-
-/** The row's stored amount at the chosen servings, or null when it states no quantity or its source says the same count. */
-function formatAmount(ing) {
-  return formatIngredientMeasurement(ing, servingsMultiplier.value).amount
-}
-
-/** The measurement as the source recipe stated it, or null when the row was hand-entered or nothing was converted. */
-function formatSource(ing) {
-  return formatIngredientMeasurement(ing, servingsMultiplier.value).source
-}
 
 function stepIngredients(step) {
   if (!recipe.value) return []

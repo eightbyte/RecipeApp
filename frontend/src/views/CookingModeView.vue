@@ -110,7 +110,7 @@
                   v-for="ing in stepIngredients(step)"
                   :key="ing.id"
                   :recipe-ingredient="ing"
-                  :servings-multiplier="servingsMultiplier"
+                  :measurement="measurementOf(ing)"
                   size="small"
                   :color="isCurrent(index) ? 'primary' : undefined"
                   :variant="isCurrent(index) ? 'flat' : 'tonal'"
@@ -162,6 +162,7 @@ import { formatServings } from '@/constants/servings'
 import { recipeRoute, servingsFromQuery } from '@/router/recipeRoutes'
 import { useUiStore } from '@/stores/ui'
 import { useWakeLock } from '@/composables/useWakeLock'
+import { useRecipeMeasurements } from '@/composables/useRecipeMeasurements'
 import EmptyState from '@/components/EmptyState.vue'
 import ErrorState from '@/components/ErrorState.vue'
 import StepIngredientChip from '@/components/StepIngredientChip.vue'
@@ -183,7 +184,9 @@ const finishing = ref(false)
 
 // Carried in the query from a Planned Meal or the recipe detail view, so a reload keeps it.
 const servings = computed(() => servingsFromQuery(route.query, recipe.value.servings))
-const servingsMultiplier = computed(() => servings.value / recipe.value.servings)
+
+// Follows the Unit System chosen on the recipe view, which has the only control.
+const { measurementOf } = useRecipeMeasurements(recipe, servings)
 
 // Ephemeral, component-local "done" state that is not persisted.
 const doneStepIds = ref(new Set())
@@ -244,7 +247,7 @@ function scrollToStep(stepId) {
 
 async function load() {
   if (store.currentRecipe?.id !== recipeId) {
-    await store.fetchRecipe(recipeId)
+    await store.fetchRecipe(recipeId, { servings: servingsFromQuery(route.query, null), unitSystem: ui.unitSystem })
   }
   await nextTick()
   headerEl.value?.focus()

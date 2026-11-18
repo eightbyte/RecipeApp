@@ -3,6 +3,7 @@ paths:
   - "backend/RecipeApp.API/Enums/MeasurementUnit.cs"
   - "backend/RecipeApp.API/Enums/SizelessUnit.cs"
   - "backend/RecipeApp.API/Enums/CountWords.cs"
+  - "backend/RecipeApp.API/Enums/UnitSystem.cs"
   - "backend/RecipeApp.API/Services/MeasurementConverter.cs"
   - "backend/RecipeApp.API/Services/MeasurementOptions.cs"
   - "backend/RecipeApp.API/Services/MealPlanService.cs"
@@ -19,6 +20,10 @@ paths:
   - "frontend/src/constants/units.js"
   - "frontend/src/constants/batchSizes.js"
   - "frontend/src/constants/servings.js"
+  - "frontend/src/constants/unitSystems.js"
+  - "frontend/src/composables/useRecipeMeasurements.js"
+  - "frontend/src/components/UnitSystemToggle.vue"
+  - "frontend/src/components/StepIngredientChip.vue"
   - "frontend/src/router/recipeRoutes.js"
   - "frontend/src/components/BatchSizeToggle.vue"
   - "frontend/src/components/MeasurementUnitSelect.vue"
@@ -142,3 +147,28 @@ paths:
   single-unit group in that unit (`2 cup + 1 cup = 3 cup`).
 - Item Sources record each contribution in the recipe's unit plus its share in the row's unit (the
   base unit when the row is promoted to `kg`/`L`). They are never summed back into totals.
+
+## Unit System (recipe view, Cooking Mode, step chips)
+
+- The recipe view's Metric | US toggle (`UnitSystemToggle`) sets this device's Unit System, kept in
+  the `ui` store and remembered through `utils/unitSystemChoice.js`. It defaults to Metric. The values
+  mirror `Enums/UnitSystem.cs` in `constants/unitSystems.js`. The Shopping List always reads Metric.
+- **Metric is unchanged:** on-device scaling, decimals, the Source Measurement in parentheses, and no
+  server call.
+- **US conversion lives only in `MeasurementConverter.ToUs`.** Mass is `oz` below 16 oz and `lb` from
+  there. Volume climbs the kitchen ladder: `tsp` below 1 tbsp, `tbsp` below ¼ cup, `cup` from there,
+  and stored `tsp`/`tbsp`/`cup` climb it too. There is never a `fl oz`, `pint` or `quart`. A row with
+  no amount, or a `pcs` row, has no US Measurement and reads as Metric.
+- **A US Source Measurement is preferred only while it still converts to the stored Measurement**:
+  by Stage A in any spelling (`4 ounces` → `113.398 g`), or, for a cup stored as grams, through the
+  Ingredient's current density. It goes up the same ladder (`4 oz` at 8× is `2 lb`), and `fromSource`
+  hides its parenthetical. A stale source (a row edited by hand, or a density edited since) is not
+  preferred, and its parenthetical stays.
+- **US amounts are kitchen fractions**, rounded to the nearest ⅛, ¼, ⅓, ½, ⅔ or ¾, and never below ⅛
+  (`formatUsAmount`). The API returns numbers only.
+- **Hybrid display** (`composables/useRecipeMeasurements.js`, [ADR 0005](../../docs/adr/0005-us-measurements-scale-on-device-then-correct-from-the-api.md)):
+  `GET /recipes/{id}?servings=&system=us` paints US with no Metric flash. When servings change, the
+  device scales the known US Measurements at once in their existing units. After
+  `US_MEASUREMENT_DEBOUNCE_MS` it fetches `GET /recipes/{id}/measurements` and swaps them in. Only the
+  latest request applies, superseded ones are aborted, and a failure keeps the on-device value
+  silently. A step chip takes its display parts from the view and never computes its own.

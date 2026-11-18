@@ -4,6 +4,8 @@ import * as components from 'vuetify/components'
 import * as directives from 'vuetify/directives'
 import { createPinia, setActivePinia } from 'pinia'
 import { useRecipeStore } from '@/stores/recipes'
+import { useUiStore } from '@/stores/ui'
+import { UNIT_SYSTEM_STORAGE_KEY } from '@/constants/unitSystems'
 import RecipeDetailView from './RecipeDetailView.vue'
 import { makeRecipeDetail } from '@/test/factories'
 import { reactive } from 'vue'
@@ -516,7 +518,7 @@ describe('RecipeDetailView — cooking, loading and error states', () => {
     store.fetchRecipe.mockClear()
     const retry = wrapper.findAll('button').find(b => b.text().includes('Try again'))
     await retry.trigger('click')
-    expect(store.fetchRecipe).toHaveBeenCalledWith('r1')
+    expect(store.fetchRecipe).toHaveBeenCalledWith('r1', expect.anything())
   })
 
   it('notifies on successful mark-as-cooked', async () => {
@@ -528,5 +530,55 @@ describe('RecipeDetailView — cooking, loading and error states', () => {
     await wrapper.vm.markCooked()
     expect(ui.snackbar.show).toBe(true)
     expect(ui.snackbar.color).toBe('success')
+  })
+})
+
+describe('RecipeDetailView — Unit System', () => {
+  beforeEach(() => {
+    window.localStorage.clear()
+  })
+
+  function unitSystemButtons(wrapper) {
+    return wrapper.get('[aria-label="Unit System"]').findAll('button')
+  }
+
+  it('offers Metric | US, with Metric chosen when this device has not chosen', async () => {
+    const wrapper = await mountView()
+    expect(unitSystemButtons(wrapper).map(button => button.text())).toEqual(['Metric', 'US'])
+    expect(wrapper.get('[aria-label="Unit System"]').get('button.v-btn--active').text()).toBe('Metric')
+  })
+
+  it('remembers US on this device once chosen', async () => {
+    const wrapper = await mountView()
+    await unitSystemButtons(wrapper)[1].trigger('click')
+    await flushPromises()
+
+    expect(useUiStore().unitSystem).toBe('us')
+    expect(JSON.parse(window.localStorage.getItem(UNIT_SYSTEM_STORAGE_KEY))).toBe('us')
+  })
+
+  it('fetches the recipe in Metric with no US Measurements asked for', async () => {
+    await mountView()
+    expect(store.fetchRecipe).toHaveBeenCalledWith('r1', expect.objectContaining({ unitSystem: 'metric' }))
+  })
+
+  it('opens in US at the servings the URL carries, so it paints with no Metric flash', async () => {
+    useUiStore().unitSystem = 'us'
+    route.query = recipeRoute('r1', 8).query
+    await mountView()
+    expect(store.fetchRecipe).toHaveBeenCalledWith('r1', { servings: 8, unitSystem: 'us' })
+  })
+
+  it('reads the ingredient list and the step chips in US once known', async () => {
+    useUiStore().unitSystem = 'us'
+    store.setUsMeasurements('test-recipe-1', 4, [
+      { recipeIngredientId: 'ri-1', amount: 7.055, unit: 'oz', fromSource: false },
+    ])
+    const wrapper = await mountView({
+      steps: [{ id: 's1', stepNumber: 1, instruction: 'Mix.', recipeIngredientIds: ['ri-1'] }],
+    })
+
+    expect(wrapper.get('#ingredient-ri-1').text()).toContain('7 oz')
+    expect(wrapper.get('.step-ingredients .v-chip').text().replace(/\s+/g, ' ').trim()).toBe('7 oz Flour')
   })
 })

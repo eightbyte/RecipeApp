@@ -3,6 +3,8 @@ import {
   MEASUREMENT_UNITS,
   DEFAULT_UNIT,
   formatIngredientMeasurement,
+  formatUsAmount,
+  formatUsIngredientMeasurement,
   formatMeasurement,
   formatSourceMeasurement,
   hasAmount,
@@ -221,6 +223,55 @@ describe('formatIngredientMeasurement', () => {
   it('shows nothing for an unquantified row, never 0', () => {
     expect(formatIngredientMeasurement(row({ amount: null, unit: null }), 2))
       .toEqual({ amount: null, source: null })
+  })
+})
+
+describe('formatUsAmount', () => {
+  it.each([
+    [2, '2'],
+    [1.5, '1 ½'],
+    [0.333, '⅓'],
+    [0.667, '⅔'],
+    [0.25, '¼'],
+    [0.75, '¾'],
+    [0.125, '⅛'],
+    [1.25, '1 ¼'],
+    [4.233, '4 ¼'],
+    [7.055, '7'],
+    [1.972, '2'],
+    [2.9, '3'],
+  ])('rounds %s to the nearest kitchen fraction, %s', (amount, expected) => {
+    expect(formatUsAmount(amount)).toBe(expected)
+  })
+
+  it('never rounds a real amount down to nothing', () => {
+    expect(formatUsAmount(0.02)).toBe('⅛')
+  })
+})
+
+describe('formatUsIngredientMeasurement', () => {
+  const row = overrides => ({ amount: 120, unit: 'g', sourceAmount: null, sourceUnit: null, ...overrides })
+
+  it('shows the US Measurement as a kitchen fraction', () => {
+    expect(formatUsIngredientMeasurement(row(), { amount: 4.233, unit: 'oz', fromSource: false }))
+      .toEqual({ amount: '4 ¼ oz', source: null })
+  })
+
+  it('hides a US Source Measurement the main line was read from', () => {
+    const flour = row({ sourceAmount: 1, sourceUnit: 'cups' })
+    expect(formatUsIngredientMeasurement(flour, { amount: 0.5, unit: 'cup', fromSource: true }, 0.5))
+      .toEqual({ amount: '½ cup', source: null })
+  })
+
+  it('keeps any other source beside it, scaled', () => {
+    const feta = row({ amount: 500, sourceAmount: 500, sourceUnit: 'grams' })
+    expect(formatUsIngredientMeasurement(feta, { amount: 2.205, unit: 'lb', fromSource: false }, 2))
+      .toEqual({ amount: '2 ¼ lb', source: '(1000 grams)' })
+  })
+
+  it('shows a row with no US Measurement exactly as Metric does', () => {
+    const cloves = row({ amount: 2, unit: 'pcs', sourceAmount: 2, sourceUnit: 'cloves' })
+    expect(formatUsIngredientMeasurement(cloves, null, 2)).toEqual(formatIngredientMeasurement(cloves, 2))
   })
 })
 

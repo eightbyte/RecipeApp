@@ -8,13 +8,9 @@
 </template>
 
 <script setup>
-import { computed } from 'vue'
-import { formatIngredientMeasurement } from '@/constants/units'
-
-const props = defineProps({
+defineProps({
   recipeIngredient: { type: Object, required: true },
-  servingsMultiplier: { type: Number, required: true },
+  // The row's `{ amount, source }` display parts at the chosen servings and Unit System, from `useRecipeMeasurements`.
+  measurement: { type: Object, required: true },
 })
-
-const measurement = computed(() => formatIngredientMeasurement(props.recipeIngredient, props.servingsMultiplier))
 </script>

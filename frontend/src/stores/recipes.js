@@ -1,6 +1,7 @@
 import { defineStore } from 'pinia'
 import { ref } from 'vue'
 import api, { assetUrl } from '@/services/api'
+import { METRIC_UNIT_SYSTEM, US_UNIT_SYSTEM } from '@/constants/unitSystems'
 
 function normalizeImageUrl(recipe) {
   if (!recipe) return recipe
@@ -9,6 +10,8 @@ function normalizeImageUrl(recipe) {
 
 export const useRecipeStore = defineStore('recipes', () => {
   const currentRecipe = ref(null) // RecipeDetailResponse | null
+  // The current recipe's US Measurements at one servings count: { recipeId, servings, byIngredientId } | null
+  const usMeasurements = ref(null)
   const loading       = ref(false)
   const error         = ref(null)
 
@@ -26,13 +29,23 @@ export const useRecipeStore = defineStore('recipes', () => {
     return { items: data.items.map(normalizeImageUrl), totalCount: data.totalCount }
   }
 
-  async function fetchRecipe(id) {
+  /** Fetches a recipe, and in the US Unit System its US Measurements at `servings` (the recipe's own when omitted), so it paints with no Metric flash. */
+  async function fetchRecipe(id, { servings = null, unitSystem = METRIC_UNIT_SYSTEM } = {}) {
     loading.value   = true
     error.value     = null
     currentRecipe.value = null
+    usMeasurements.value = null
+    const inUs = unitSystem === US_UNIT_SYSTEM
     try {
-      const { data } = await api.get(`/recipes/${id}`)
+      const params = inUs ? { system: US_UNIT_SYSTEM, ...(servings == null ? {} : { servings }) } : undefined
+      const { data } = await api.get(`/recipes/${id}`, { params })
       currentRecipe.value = normalizeImageUrl(data)
+      if (inUs) {
+        const rows = data.ingredients
+          .filter(ing => ing.usMeasurement)
+          .map(ing => ({ recipeIngredientId: ing.id, ...ing.usMeasurement }))
+        setUsMeasurements(id, servings ?? data.servings, rows)
+      }
       return currentRecipe.value
     } catch (e) {
       // 404 → genuine "not found" (empty state); other failures → error state.
@@ -40,6 +53,24 @@ export const useRecipeStore = defineStore('recipes', () => {
       return null
     } finally {
       loading.value = false
+    }
+  }
+
+  /** Each row's US Measurement at `servings`, as `[{ recipeIngredientId, amount, unit, fromSource }]`, leaving the store untouched so the caller applies only the latest. */
+  async function fetchUsMeasurements(id, servings, { signal } = {}) {
+    const { data } = await api.get(`/recipes/${id}/measurements`, {
+      params: { servings, system: US_UNIT_SYSTEM },
+      signal,
+    })
+    return data
+  }
+
+  /** Records the US Measurements the current recipe reads in at `servings`; rows that read the same in every Unit System are absent. */
+  function setUsMeasurements(recipeId, servings, rows) {
+    usMeasurements.value = {
+      recipeId,
+      servings,
+      byIngredientId: Object.fromEntries(rows.map(({ recipeIngredientId, ...us }) => [recipeIngredientId, us])),
     }
   }
 
@@ -53,6 +84,8 @@ export const useRecipeStore = defineStore('recipes', () => {
   async function updateRecipe(id, payload) {
     const { data } = await api.put(`/recipes/${id}`, payload)
     const normalized = normalizeImageUrl(data)
+    // The edited amounts make any US Measurements stale, so the recipe view fetches them again.
+    if (usMeasurements.value?.recipeId === id) usMeasurements.value = null
     if (currentRecipe.value?.id === id) currentRecipe.value = normalized
     return normalized
   }
@@ -134,8 +167,8 @@ export const useRecipeStore = defineStore('recipes', () => {
   }
 
   return {
-    currentRecipe, loading, error,
-    fetchRecipePage, fetchRecipe,
+    currentRecipe, loading, error, usMeasurements,
+    fetchRecipePage, fetchRecipe, fetchUsMeasurements, setUsMeasurements,
     createRecipe, updateRecipe, deleteRecipe,
     uploadImage, markCooked, isRecentlyCooked,
     scrapePreview, scrapeError, scrapeLoading, confirmLoading,

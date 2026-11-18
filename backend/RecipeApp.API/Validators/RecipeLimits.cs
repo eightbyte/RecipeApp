@@ -10,6 +10,8 @@ public static class RecipeLimits
     public const int DescriptionMaxLength = 2000;
     public const int MinServings          = 1;
     public const int MaxServings          = 100;
+    /// <summary>The most servings a recipe may be read at, far past any link the app makes, so that scaling cannot overflow.</summary>
+    public const int MaxScaledServings    = 10_000;
     public const int IngredientNotesMaxLength = 500;
     public const int StepInstructionMaxLength = 2000;
     /// <summary>Caps the remote photo URL a scrape confirm downloads, not the stored path, which the server names itself.</summary>

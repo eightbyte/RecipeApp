@@ -49,7 +49,8 @@ public static class Mappings
         r.CreatedAt
     );
 
-    public static RecipeDetailResponse ToDetail(this Recipe r) => new(
+    /// <param name="usMultiplier">Servings wanted ÷ the recipe's Servings when the US Unit System is asked for; null for Metric.</param>
+    public static RecipeDetailResponse ToDetail(this Recipe r, decimal? usMultiplier = null) => new(
         r.Id,
         r.Name,
         r.Description,
@@ -61,7 +62,7 @@ public static class Mappings
         r.UpdatedAt,
         r.Ingredients
             .OrderBy(i => i.DisplayOrder)
-            .Select(ToResponse)
+            .Select(ri => ri.ToResponse(usMultiplier))
             .ToList(),
         r.Steps
             .OrderBy(s => s.StepNumber)
@@ -69,7 +70,12 @@ public static class Mappings
             .ToList()
     );
 
-    public static RecipeIngredientResponse ToResponse(this RecipeIngredient ri) => new(
+    /// <summary>The row's US Measurement at <paramref name="multiplier"/> times its amount, or null when it reads the same in every Unit System.</summary>
+    public static UsMeasurement? ToUsMeasurement(this RecipeIngredient ri, decimal multiplier) =>
+        MeasurementConverter.ToUs(
+            new StoredMeasurement(ri.Amount, ri.Unit, ri.SourceAmount, ri.SourceUnit), ri.Ingredient.GramsPerMillilitre, multiplier);
+
+    public static RecipeIngredientResponse ToResponse(this RecipeIngredient ri, decimal? usMultiplier = null) => new(
         ri.Id,
         ri.IngredientId,
         ri.Ingredient.Name,
@@ -81,7 +87,10 @@ public static class Mappings
         ri.SourceUnit,
         MeasurementConverter.EntryUnitOf(ri.Amount, ri.Unit, ri.SourceAmount, ri.SourceUnit),
         ri.Notes,
-        ri.DisplayOrder
+        ri.DisplayOrder,
+        usMultiplier is { } multiplier && ri.ToUsMeasurement(multiplier) is { } us
+            ? new UsMeasurementResponse(us.Amount, us.Unit, us.FromSource)
+            : null
     );
 
     public static RecipeStepResponse ToResponse(this RecipeStep rs) => new(

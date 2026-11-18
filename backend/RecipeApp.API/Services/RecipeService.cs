@@ -75,11 +75,35 @@ public class RecipeService(AppDbContext db)
     private static IOrderedQueryable<Recipe> ThenByNameThenId(IOrderedQueryable<Recipe> orderedRecipes) =>
         orderedRecipes.ThenBy(r => r.Name.ToLower()).ThenBy(r => r.Id);
 
-    public async Task<RecipeDetailResponse?> GetByIdAsync(Guid id)
+    public async Task<RecipeDetailResponse?> GetByIdAsync(Guid id, RecipeDetailQuery? query = null)
     {
         var recipe = await LoadFullRecipeAsync(id);
-        return recipe?.ToDetail();
+        if (recipe is null) return null;
+
+        var usMultiplier = query?.System == UnitSystem.Us ? ServingsMultiplier(recipe, query.Servings) : (decimal?)null;
+        return recipe.ToDetail(usMultiplier);
     }
+
+    /// <summary>Each row's US Measurement at the given servings, leaving out rows that read the same in every Unit System; null when the recipe does not exist.</summary>
+    public async Task<List<RecipeIngredientMeasurementResponse>?> GetUsMeasurementsAsync(Guid id, decimal servings)
+    {
+        var recipe = await db.Recipes
+            .Include(r => r.Ingredients).ThenInclude(ri => ri.Ingredient)
+            .AsNoTracking()
+            .FirstOrDefaultAsync(r => r.Id == id);
+        if (recipe is null) return null;
+
+        var multiplier = ServingsMultiplier(recipe, servings);
+        return recipe.Ingredients
+            .OrderBy(ri => ri.DisplayOrder)
+            .Select(ri => (ri.Id, Us: ri.ToUsMeasurement(multiplier)))
+            .Where(row => row.Us is not null)
+            .Select(row => new RecipeIngredientMeasurementResponse(row.Id, row.Us!.Value.Amount, row.Us.Value.Unit, row.Us.Value.FromSource))
+            .ToList();
+    }
+
+    private static decimal ServingsMultiplier(Recipe recipe, decimal? servings) =>
+        (servings ?? recipe.Servings) / recipe.Servings;
 
     // ── Mutations ─────────────────────────────────────────────────────────────
 

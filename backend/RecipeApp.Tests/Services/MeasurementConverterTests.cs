@@ -323,7 +323,97 @@ public class MeasurementConverterTests
         MeasurementConverter.ReadSizedPackage(1.0, unit).Should().BeNull();
     }
 
-    // ── Shared helper ─────────────────────────────────────────────────────────
+    // ── US Unit System ────────────────────────────────────────────────────────
+
+    private static UsMeasurement? ToUs(
+        decimal? amount, string? unit, decimal multiplier = 1m,
+        decimal? sourceAmount = null, string? sourceUnit = null, decimal? gramsPerMillilitre = null) =>
+        MeasurementConverter.ToUs(new StoredMeasurement(amount, unit, sourceAmount, sourceUnit), gramsPerMillilitre, multiplier);
+
+    [Theory]
+    [InlineData(113.398, "g",   4.0,   "oz")]
+    [InlineData(200.0,   "g",   7.055, "oz")]
+    [InlineData(453.592, "g",   1.0,   "lb")]
+    [InlineData(680.388, "g",   1.5,   "lb")]
+    [InlineData(1.0,     "kg",  2.205, "lb")]
+    public void ToUs_Mass_ReadsOuncesBelowAPoundAndPoundsFromThere(
+        double amount, string unit, double expected, string expectedUnit)
+    {
+        ToUs((decimal)amount, unit).Should().Be(new UsMeasurement((decimal)expected, expectedUnit));
+    }
+
+    [Theory]
+    [InlineData(5.0,   "ml",   1.0,   "tsp")]
+    [InlineData(7.5,   "ml",   1.5,   "tsp")]
+    [InlineData(15.0,  "ml",   1.0,   "tbsp")]
+    [InlineData(45.0,  "ml",   3.0,   "tbsp")]
+    [InlineData(60.0,  "ml",   0.25,  "cup")]
+    [InlineData(1.0,   "L",    4.167, "cup")]
+    [InlineData(3.0,   "tsp",  1.0,   "tbsp")]
+    [InlineData(4.0,   "tbsp", 0.25,  "cup")]
+    [InlineData(0.125, "cup",  2.0,   "tbsp")]
+    [InlineData(2.0,   "cup",  2.0,   "cup")]
+    public void ToUs_Volume_ClimbsTheKitchenLadder(double amount, string unit, double expected, string expectedUnit)
+    {
+        ToUs((decimal)amount, unit).Should().Be(new UsMeasurement((decimal)expected, expectedUnit));
+    }
+
+    [Fact]
+    public void ToUs_ScalesBeforeChoosingTheUnit()
+    {
+        ToUs(1m, MeasurementUnit.Teaspoon, multiplier: 3m).Should().Be(new UsMeasurement(1m, MeasurementUnit.Tablespoon));
+        ToUs(340.194m, MeasurementUnit.Gram, multiplier: 2m).Should().Be(new UsMeasurement(1.5m, MeasurementUnit.Pound));
+    }
+
+    [Theory]
+    [InlineData("cup",  1.0, 1.0)]
+    [InlineData("cups", 1.0, 1.0)]
+    [InlineData("cup",  0.5, 0.5)]
+    public void ToUs_CupSourceStoredAsGramsByDensity_ReadsTheSourceVolume(string sourceUnit, double multiplier, double cups)
+    {
+        ToUs(120m, MeasurementUnit.Gram, (decimal)multiplier, sourceAmount: 1m, sourceUnit: sourceUnit, gramsPerMillilitre: 0.5m)
+            .Should().Be(new UsMeasurement((decimal)cups, MeasurementUnit.Cup, FromSource: true));
+    }
+
+    [Theory]
+    [InlineData(200.0, 0.5,  7.055)]   // edited by hand after import
+    [InlineData(120.0, 0.6,  4.233)]   // density edited since import
+    [InlineData(120.0, null, 4.233)]
+    public void ToUs_CupSourceNoLongerMatchingTheStoredGrams_ConvertsTheStoredMass(
+        double grams, double? density, double ounces)
+    {
+        ToUs((decimal)grams, MeasurementUnit.Gram, sourceAmount: 1m, sourceUnit: MeasurementUnit.Cup,
+                gramsPerMillilitre: (decimal?)density)
+            .Should().Be(new UsMeasurement((decimal)ounces, MeasurementUnit.Ounce));
+    }
+
+    [Fact]
+    public void ToUs_OunceSource_ClimbsTheLadderWhenScaled()
+    {
+        ToUs(113.398m, MeasurementUnit.Gram, multiplier: 8m, sourceAmount: 4m, sourceUnit: "oz")
+            .Should().Be(new UsMeasurement(2m, MeasurementUnit.Pound, FromSource: true));
+    }
+
+    [Theory]
+    [InlineData(113.398, "g",   4.0, "ounces",    true)]
+    [InlineData(473.176, "ml",  1.0, "pint",      true)]
+    [InlineData(3.0,     "tsp", 3.0, "teaspoons", true)]
+    [InlineData(200.0,   "g",   4.0, "oz",        false)]   // edited by hand after import
+    [InlineData(500.0,   "g",   500, "grams",     false)]   // a metric source is not a US one
+    public void ToUs_FromSource_OnlyForAUsSourceStillConvertingToTheStoredMeasurement(
+        double amount, string unit, double sourceAmount, string sourceUnit, bool fromSource)
+    {
+        ToUs((decimal)amount, unit, sourceAmount: (decimal)sourceAmount, sourceUnit: sourceUnit)!.Value
+            .FromSource.Should().Be(fromSource);
+    }
+
+    [Theory]
+    [InlineData(null, null)]
+    [InlineData(2.0,  "pcs")]
+    public void ToUs_UnquantifiedOrCountRow_IsNull(double? amount, string? unit)
+    {
+        ToUs((decimal?)amount, unit, sourceAmount: 2m, sourceUnit: "cloves").Should().BeNull();
+    }
 
     [Fact]
     public void MillilitresToGrams_MultipliesByDensity()

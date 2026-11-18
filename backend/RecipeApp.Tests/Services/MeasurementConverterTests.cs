@@ -358,6 +358,15 @@ public class MeasurementConverterTests
         ToUs((decimal)amount, unit).Should().Be(new UsMeasurement((decimal)expected, expectedUnit));
     }
 
+    [Theory]
+    [InlineData(59.147, "ml", 0.246, "cup")]    // 2 fl oz reads ¼ cup, not 4 tbsp
+    [InlineData(14.8,   "ml", 0.987, "tbsp")]   // reads 1 tbsp, not 3 tsp
+    [InlineData(452.0,  "g",  0.996, "lb")]     // reads 1 lb, not 16 oz
+    public void ToUs_ChoosesTheUnitByTheAmountAsItWillRead(double amount, string unit, double expected, string expectedUnit)
+    {
+        ToUs((decimal)amount, unit).Should().Be(new UsMeasurement((decimal)expected, expectedUnit));
+    }
+
     [Fact]
     public void ToUs_ScalesBeforeChoosingTheUnit()
     {

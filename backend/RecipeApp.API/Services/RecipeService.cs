@@ -96,9 +96,8 @@ public class RecipeService(AppDbContext db)
         var multiplier = ServingsMultiplier(recipe, servings);
         return recipe.Ingredients
             .OrderBy(ri => ri.DisplayOrder)
-            .Select(ri => (ri.Id, Us: ri.ToUsMeasurement(multiplier)))
-            .Where(row => row.Us is not null)
-            .Select(row => new RecipeIngredientMeasurementResponse(row.Id, row.Us!.Value.Amount, row.Us.Value.Unit, row.Us.Value.FromSource))
+            .Select(ri => ri.ToMeasurementResponse(multiplier))
+            .OfType<RecipeIngredientMeasurementResponse>()
             .ToList();
     }
 

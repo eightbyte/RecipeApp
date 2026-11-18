@@ -175,8 +175,8 @@ public class MeasurementConverter(IOptions<MeasurementOptions> options)
     /// row that reads the same in every Unit System (unquantified or a count).
     /// </summary>
     /// <remarks>
-    /// A US Source Measurement is preferred while it still converts to the stored Measurement. One that converts by Stage A
-    /// (<c>4 oz</c>) reads the same through the stored amount, so only a cup Stage B stored as grams needs reading from its source.
+    /// A US Source Measurement is preferred while it still converts to the stored Measurement, and only a cup Stage B stored as
+    /// grams needs reading from its source, because one that converts by Stage A (<c>4 oz</c>) reads the same through the stored amount.
     /// </remarks>
     /// <param name="gramsPerMillilitre">The row's Ingredient's current density, or null when unknown.</param>
     public static UsMeasurement? ToUs(StoredMeasurement row, decimal? gramsPerMillilitre, decimal multiplier)
@@ -225,26 +225,37 @@ public class MeasurementConverter(IOptions<MeasurementOptions> options)
     /// <summary>The fewest cups the US volume display shows in cups rather than tablespoons.</summary>
     private const decimal FewestCups = 0.25m;
 
-    /// <summary>The kitchen ladder: <c>tsp</c> below a tablespoon, <c>tbsp</c> below a quarter cup, <c>cup</c> from there.</summary>
+    /// <summary>How far below a whole number the US display's kitchen fractions already read it as whole, since none lies between ¾ and 1.</summary>
+    private const decimal ReadsAsWholeMargin = 0.125m;
+
+    private static decimal VolumeFactorOf(string unit) => MeasurementUnit.Table[unit].BaseFactor;
+
+    /// <summary>The kitchen ladder: <c>tsp</c> below a tablespoon, <c>tbsp</c> below a quarter cup, <c>cup</c> from there, judged by how the smaller unit's amount will read.</summary>
     private static UsMeasurement UsVolume(decimal millilitres)
     {
-        var cups = Round(millilitres / MeasurementUnit.Table[MeasurementUnit.Cup].BaseFactor);
-        if (cups >= FewestCups) return new UsMeasurement(cups, MeasurementUnit.Cup);
+        var teaspoonsPerTablespoon = VolumeFactorOf(MeasurementUnit.Tablespoon) / VolumeFactorOf(MeasurementUnit.Teaspoon);
+        var teaspoons = millilitres / VolumeFactorOf(MeasurementUnit.Teaspoon);
+        if (!ReadsAtLeast(teaspoons, teaspoonsPerTablespoon))
+            return new UsMeasurement(Round(teaspoons), MeasurementUnit.Teaspoon);
 
-        var tablespoons = Round(millilitres / MeasurementUnit.Table[MeasurementUnit.Tablespoon].BaseFactor);
-        if (tablespoons >= 1m) return new UsMeasurement(tablespoons, MeasurementUnit.Tablespoon);
+        var tablespoonsInFewestCups = FewestCups * VolumeFactorOf(MeasurementUnit.Cup) / VolumeFactorOf(MeasurementUnit.Tablespoon);
+        var tablespoons = millilitres / VolumeFactorOf(MeasurementUnit.Tablespoon);
+        if (!ReadsAtLeast(tablespoons, tablespoonsInFewestCups))
+            return new UsMeasurement(Round(tablespoons), MeasurementUnit.Tablespoon);
 
-        return new UsMeasurement(
-            Round(millilitres / MeasurementUnit.Table[MeasurementUnit.Teaspoon].BaseFactor), MeasurementUnit.Teaspoon);
+        return new UsMeasurement(Round(millilitres / VolumeFactorOf(MeasurementUnit.Cup)), MeasurementUnit.Cup);
     }
 
     private static UsMeasurement UsMass(decimal grams)
     {
-        var ounces = Round(grams / FactorOf(MeasurementUnit.Ounce));
-        return ounces < OuncesPerPound
-            ? new UsMeasurement(ounces, MeasurementUnit.Ounce)
-            : new UsMeasurement(Round(grams / FactorOf(MeasurementUnit.Pound)), MeasurementUnit.Pound);
+        var ounces = grams / FactorOf(MeasurementUnit.Ounce);
+        return ReadsAtLeast(ounces, OuncesPerPound)
+            ? new UsMeasurement(Round(grams / FactorOf(MeasurementUnit.Pound)), MeasurementUnit.Pound)
+            : new UsMeasurement(Round(ounces), MeasurementUnit.Ounce);
     }
+
+    /// <summary>True when <paramref name="amount"/> will read as at least the whole number <paramref name="threshold"/>, so "2.96 tsp" moves up rather than showing "3 tsp".</summary>
+    private static bool ReadsAtLeast(decimal amount, decimal threshold) => amount > threshold - ReadsAsWholeMargin;
 
     private static decimal FactorOf(string customaryUnit) => (decimal)UnitConversions[customaryUnit].Factor;
 

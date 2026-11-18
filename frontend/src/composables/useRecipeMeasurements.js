@@ -5,8 +5,8 @@ import { useRecipeStore } from '@/stores/recipes'
 import { useUiStore } from '@/stores/ui'
 
 /**
- * How a single recipe's rows read at `servings` in this device's Unit System. In US, a servings change scales the known US
- * Measurements on the device at once, in their existing units, and about a second later the server's units replace them.
+ * How a single recipe's rows read at `servings` in this device's Unit System, where in US a servings change scales the known US
+ * Measurements on the device at once, in their existing units, until the server's units replace them about a second later.
  */
 export function useRecipeMeasurements(recipe, servings) {
   const ui    = useUiStore()

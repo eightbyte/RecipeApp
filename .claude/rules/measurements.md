@@ -157,7 +157,8 @@ paths:
   server call.
 - **US conversion lives only in `MeasurementConverter.ToUs`.** Mass is `oz` below 16 oz and `lb` from
   there. Volume climbs the kitchen ladder: `tsp` below 1 tbsp, `tbsp` below ¼ cup, `cup` from there,
-  and stored `tsp`/`tbsp`/`cup` climb it too. There is never a `fl oz`, `pint` or `quart`. A row with
+  and stored `tsp`/`tbsp`/`cup` climb it too. Each step is judged by how the smaller unit will read as
+  a fraction, so 2.96 tsp is `1 tbsp` and "2 fl oz" (59.147 ml) is `¼ cup`, never "3 tsp" or "4 tbsp". There is never a `fl oz`, `pint` or `quart`. A row with
   no amount, or a `pcs` row, has no US Measurement and reads as Metric.
 - **A US Source Measurement is preferred only while it still converts to the stored Measurement**:
   by Stage A in any spelling (`4 ounces` → `113.398 g`), or, for a cup stored as grams, through the

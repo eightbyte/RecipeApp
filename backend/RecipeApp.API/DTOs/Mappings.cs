@@ -71,9 +71,15 @@ public static class Mappings
     );
 
     /// <summary>The row's US Measurement at <paramref name="multiplier"/> times its amount, or null when it reads the same in every Unit System.</summary>
-    public static UsMeasurement? ToUsMeasurement(this RecipeIngredient ri, decimal multiplier) =>
+    private static UsMeasurement? ToUsMeasurement(this RecipeIngredient ri, decimal multiplier) =>
         MeasurementConverter.ToUs(
             new StoredMeasurement(ri.Amount, ri.Unit, ri.SourceAmount, ri.SourceUnit), ri.Ingredient.GramsPerMillilitre, multiplier);
+
+    /// <summary>The row's US Measurement at <paramref name="multiplier"/> times its amount for the measurements endpoint, or null when it reads the same in every Unit System.</summary>
+    public static RecipeIngredientMeasurementResponse? ToMeasurementResponse(this RecipeIngredient ri, decimal multiplier) =>
+        ri.ToUsMeasurement(multiplier) is { } us
+            ? new RecipeIngredientMeasurementResponse(ri.Id, us.Amount, us.Unit, us.FromSource)
+            : null;
 
     public static RecipeIngredientResponse ToResponse(this RecipeIngredient ri, decimal? usMultiplier = null) => new(
         ri.Id,

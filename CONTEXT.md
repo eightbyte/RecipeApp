@@ -140,6 +140,11 @@ _Avoid_: Conflict, error
 A shopping list item the user has checked off.
 _Avoid_: Bought, done
 
+**List Refresh**:
+Loading the shopping list again so one phone shows changes made on another, applied only while
+the user isn't touching the screen.
+_Avoid_: Sync, poll
+
 ### Getting recipes in
 
 **Scrape**:

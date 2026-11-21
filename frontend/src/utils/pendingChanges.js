@@ -1,10 +1,6 @@
-/**
- * The Pending Change queue's pure rules: how a new change merges into the waiting ones, and how the
- * waiting ones show on top of a list. A change is { id, kind, listId, itemId, ... } with kind one of
- * `tick` ({ isChecked }), `add` ({ payload }), `edit` ({ payload }) or `delete`. A change marked
- * `sending` is on its way to the server and is never merged into.
- */
+/** The Pending Change queue's pure rules: how a new change merges into the waiting ones, and how they show on top of a list. */
 
+/** A change is { id, kind, listId, itemId } plus `isChecked` for a tick or `payload` for an add or edit. */
 export const PendingChangeKind = Object.freeze({
   TICK:   'tick',
   ADD:    'add',
@@ -12,6 +8,7 @@ export const PendingChangeKind = Object.freeze({
   DELETE: 'delete',
 })
 
+// A change marked `sending` is on its way to the server, so a reply to it must not swallow a later change.
 const waitingFor = (itemId, kinds) => c => !c.sending && c.itemId === itemId && kinds.includes(c.kind)
 
 /** The queue with `change` merged in, so the server only ever receives each item's net change. */

@@ -200,8 +200,10 @@ export const useShoppingListStore = defineStore('shoppingList', () => {
         return api.post(`${base}/items`, change.payload, config)
       case PendingChangeKind.EDIT:
         return api.put(`${base}/custom-items/${change.itemId}`, change.payload, config)
-      default:
+      case PendingChangeKind.DELETE:
         return api.delete(`${base}/items/${change.itemId}`, config)
+      default:
+        throw new Error(`Unknown Pending Change kind: ${change.kind}`)
     }
   }
 
@@ -213,13 +215,20 @@ export const useShoppingListStore = defineStore('shoppingList', () => {
   const without = changeId => q => q.filter(c => c.id !== changeId)
   const marked = (changeId, fields) => q => q.map(c => c.id === changeId ? { ...c, ...fields } : c)
 
+  const isShowing = listId => list.value?.id === listId
+
+  /** Gives an added item the server's id on screen, or drops this phone's copy when a List Refresh already brought the server's. */
+  function showServerId(change, serverId) {
+    if (!isShowing(change.listId)) return
+    const items = list.value.items
+    list.value.items = items.some(i => i.id === serverId)
+      ? items.filter(i => i.id !== change.itemId)
+      : items.map(i => i.id === change.itemId ? { ...i, id: serverId } : i)
+  }
+
   /** Shows the server's copy of a confirmed item, unless a later Pending Change for it is still waiting. */
   function showConfirmed(change, data) {
-    if (!list.value || list.value.id !== change.listId) return
-    if (change.kind === PendingChangeKind.ADD) {
-      list.value.items = list.value.items.map(i => i.id === change.itemId ? { ...i, id: data.id } : i)
-    }
-    if (change.kind === PendingChangeKind.DELETE) return
+    if (!isShowing(change.listId) || change.kind === PendingChangeKind.DELETE) return
     if (pendingChanges.value.some(c => c.itemId === data.id)) return
     list.value.items = editedItems(list.value.items, data.id, data)
   }
@@ -229,7 +238,10 @@ export const useShoppingListStore = defineStore('shoppingList', () => {
       if (snapshot.id !== change.listId) return snapshot
       switch (change.kind) {
         case PendingChangeKind.ADD:
-          return { ...snapshot, items: [...snapshot.items, data] }
+          // A List Refresh saved since the add may already hold it.
+          return snapshot.items.some(i => i.id === data.id)
+            ? { ...snapshot, items: editedItems(snapshot.items, data.id, data) }
+            : { ...snapshot, items: [...snapshot.items, data] }
         case PendingChangeKind.DELETE:
           return { ...snapshot, items: snapshot.items.filter(i => i.id !== change.itemId) }
         default:
@@ -239,11 +251,15 @@ export const useShoppingListStore = defineStore('shoppingList', () => {
   }
 
   async function confirm(change, data) {
-    let remaining = await storeQueue(without(change.id))
-    if (change.kind === PendingChangeKind.ADD) remaining = await storeQueue(q => replaceItemId(q, change.itemId, data.id))
+    let settle = without(change.id)
+    if (change.kind === PendingChangeKind.ADD) {
+      // Renamed on screen before the queue is, so every change made from here on already carries the server's id.
+      showServerId(change, data.id)
+      settle = q => replaceItemId(without(change.id)(q), change.itemId, data.id)
+    }
+    await storeQueue(settle)
     await snapshotConfirmed(change, data)
     showConfirmed(change, data)
-    return remaining
   }
 
   /** A tick whose Generated Item a regeneration replaced moves onto the one new Generated Item for the same Ingredient, if there is exactly one. */
@@ -290,9 +306,14 @@ export const useShoppingListStore = defineStore('shoppingList', () => {
         await confirm(change, data)
       } catch (e) {
         noteFailure(e)
-        if (isResponse(e)) {
-          await resolveRejected(change, e, outcome)
-          continue
+        try {
+          if (isResponse(e)) {
+            await resolveRejected(change, e, outcome)
+            continue
+          }
+        } catch (retargetFailure) {
+          // Moving a tick needs the new list, and without it the tick waits like any unanswered change.
+          noteFailure(retargetFailure)
         }
         await storeQueue(marked(change.id, { sending: false }))
         return false

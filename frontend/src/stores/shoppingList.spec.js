@@ -135,6 +135,48 @@ describe('Pending Changes', () => {
     expect(shown(store)).toEqual([['bread-1', 'Bread', true]])
   })
 
+  it('sends every tick made while the add’s answer is still being stored under the server’s id', async () => {
+    const store = storeWith([])
+    const answered = eggs({ id: 'bread-1', displayName: 'Bread', category: 'BAKERY' })
+    const ticks = []
+    // A tick on every macrotask after the answer sweeps the whole time the store spends writing it to IndexedDB.
+    api.post.mockImplementation(() => new Promise(resolve => setImmediate(() => {
+      resolve({ data: answered })
+      const tickAgain = n => setImmediate(() => {
+        const [item] = store.list.items
+        ticks.push(store.toggleItem(item.id, !item.isChecked))
+        if (n > 1) tickAgain(n - 1)
+      })
+      tickAgain(30)
+    })))
+    api.put.mockImplementation((_url, body) => Promise.resolve({ data: { ...answered, isChecked: body.isChecked } }))
+
+    await store.addCustomItem(bread)
+    await vi.waitUntil(() => ticks.length === 30, { interval: 1 })
+    await Promise.all(ticks)
+    await store.sendPending()
+
+    expect(api.put.mock.calls.map(([url]) => url).filter(url => !url.endsWith('/items/bread-1'))).toEqual([])
+    expect(useUiStore().snackbar.show).toBe(false)
+  })
+
+  it('shows an added item once when a List Refresh brings it back before the add’s answer', async () => {
+    const store = storeWith([])
+    const answered = eggs({ id: 'bread-1', displayName: 'Bread', category: 'BAKERY' })
+    let answerAdd
+    api.post.mockReturnValue(new Promise(resolve => { answerAdd = resolve }))
+
+    await store.addCustomItem(bread)
+    store.applyRefresh(makeShoppingList({ id: 'list-1', items: [answered] }))
+    answerAdd({ data: answered })
+    await store.sendPending()
+
+    expect(store.list.items.map(i => i.id)).toEqual(['bread-1'])
+    const reopened = reopen()
+    await reopened.restore()
+    expect(reopened.list.items.map(i => i.id)).toEqual(['bread-1'])
+  })
+
   it('edits a Custom Item at once, moving it last when its Category changes, and sends the edit', async () => {
     const edit = { name: 'Duck eggs', amount: 12, unit: 'pcs', category: 'DAIRY' }
     const store = storeWith([eggs(), milk()])
@@ -310,6 +352,20 @@ describe('conflicts', () => {
       show: true,
       message: '2 ticked items left the list when it was regenerated, so their ticks weren’t saved',
     })
+  })
+
+  it('keeps such a tick waiting, and still merging, when the new list can’t be loaded', async () => {
+    const store = storeWith([milk()])
+    api.put.mockRejectedValue(notFound)
+    api.get.mockRejectedValue(noResponse)
+
+    await store.toggleItem('milk', true)
+    await store.sendPending()
+    expect(store.pendingCount).toBe(1)
+    expect(store.offline).toBe(true)
+
+    await store.toggleItem('milk', false)
+    expect(store.pendingChanges.map(c => c.isChecked)).toEqual([false])
   })
 
   it('drops an edit of a Custom Item the other phone deleted, naming it', async () => {

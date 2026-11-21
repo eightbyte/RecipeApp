@@ -42,7 +42,7 @@ public static class ShoppingListEndpoints
             AddCustomItemRequest request,
             ShoppingListService svc) =>
         {
-            if (await svc.IsClosedAsync(id)) return ListClosed();
+            if (await svc.BelongsToPastMealPlanAsync(id)) return PastMealPlanListGone();
             var item = await svc.AddCustomItemAsync(id, request);
             return item is null
                 ? Results.NotFound()
@@ -60,7 +60,7 @@ public static class ShoppingListEndpoints
             UpdateItemRequest request,
             ShoppingListService svc) =>
         {
-            if (await svc.IsClosedAsync(id)) return ListClosed();
+            if (await svc.BelongsToPastMealPlanAsync(id)) return PastMealPlanListGone();
             var item = await svc.UpdateItemAsync(id, itemId, request);
             return item is null ? Results.NotFound() : Results.Ok(item);
         })
@@ -76,7 +76,7 @@ public static class ShoppingListEndpoints
             UpdateCustomItemRequest request,
             ShoppingListService svc) =>
         {
-            if (await svc.IsClosedAsync(id)) return ListClosed();
+            if (await svc.BelongsToPastMealPlanAsync(id)) return PastMealPlanListGone();
             var (result, item) = await svc.UpdateCustomItemAsync(id, itemId, request);
             return result switch
             {
@@ -101,7 +101,7 @@ public static class ShoppingListEndpoints
             Guid itemId,
             ShoppingListService svc) =>
         {
-            if (await svc.IsClosedAsync(id)) return ListClosed();
+            if (await svc.BelongsToPastMealPlanAsync(id)) return PastMealPlanListGone();
             var result = await svc.DeleteItemAsync(id, itemId);
             return result switch
             {
@@ -123,7 +123,7 @@ public static class ShoppingListEndpoints
     }
 
     // A phone that edited offline can send writes for a list a newer Meal Plan has since replaced, and they must not land there.
-    private static IResult ListClosed() => Results.Problem(
+    private static IResult PastMealPlanListGone() => Results.Problem(
         statusCode: StatusCodes.Status410Gone,
         title:      "This shopping list belongs to a Past Meal Plan.",
         detail:     "Only the Active Meal Plan's shopping list can be changed.");

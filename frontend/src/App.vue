@@ -26,11 +26,15 @@
 <script setup>
 import { useRoute } from 'vue-router'
 import { viewKey } from '@/router/navigation'
+import { usePendingChangeSending } from '@/composables/usePendingChangeSending'
 import AppTopBar    from '@/components/layout/AppTopBar.vue'
 import AppBottomNav from '@/components/layout/AppBottomNav.vue'
 import AppSnackbar  from '@/components/AppSnackbar.vue'
 
 const route = useRoute()
+
+// Shopping List writes made offline are sent from whichever page is open.
+usePendingChangeSending()
 </script>
 
 <style>

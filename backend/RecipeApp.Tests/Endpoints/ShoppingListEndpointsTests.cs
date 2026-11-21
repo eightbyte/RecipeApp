@@ -479,4 +479,60 @@ public class ShoppingListEndpointsTests(DatabaseFixture db) : IAsyncLifetime
         var response = await Client.DeleteAsync($"/api/v1/shopping-lists/{Guid.NewGuid()}/items/{customItem!.Id}");
         response.StatusCode.Should().Be(HttpStatusCode.NotFound);
     }
+
+    // ── Writes to a Past Meal Plan's list ─────────────────────────────────────
+
+    /// <summary>A list whose Meal Plan a newer one has closed, holding one Generated and one Custom Item.</summary>
+    private async Task<(ShoppingListResponse List, ShoppingListItemResponse Custom)> SeedPastListAsync()
+    {
+        var (list, custom) = await SeedListWithCustomItemAsync();
+        await CreatePlanViaApi("Next week");
+        return (list, custom);
+    }
+
+    [Fact]
+    public async Task AddCustomItem_PastPlansList_Returns410()
+    {
+        var (list, _) = await SeedPastListAsync();
+
+        var response = await Client.PostAsJsonAsync($"/api/v1/shopping-lists/{list.Id}/items",
+            new { name = "Bread", amount = (decimal?)null, unit = (string?)null, category = "OTHER" });
+
+        response.StatusCode.Should().Be(HttpStatusCode.Gone);
+    }
+
+    [Fact]
+    public async Task UpdateItem_PastPlansList_Returns410AndLeavesTheItem()
+    {
+        var (list, _) = await SeedPastListAsync();
+        var generated = list.Items.First(i => !i.IsCustom);
+
+        var response = await Client.PutAsJsonAsync($"/api/v1/shopping-lists/{list.Id}/items/{generated.Id}",
+            new { isChecked = true });
+
+        response.StatusCode.Should().Be(HttpStatusCode.Gone);
+        var past = await Client.GetFromJsonAsync<ShoppingListResponse>($"/api/v1/shopping-lists/{list.Id}");
+        past!.Items.Single(i => i.Id == generated.Id).IsChecked.Should().BeFalse();
+    }
+
+    [Fact]
+    public async Task EditCustomItem_PastPlansList_Returns410()
+    {
+        var (list, custom) = await SeedPastListAsync();
+
+        var response = await EditCustomItemAsync(list.Id, custom.Id,
+            new { name = "Duck eggs", amount = 12m, unit = "pcs", category = "DAIRY" });
+
+        response.StatusCode.Should().Be(HttpStatusCode.Gone);
+    }
+
+    [Fact]
+    public async Task DeleteItem_PastPlansList_Returns410()
+    {
+        var (list, custom) = await SeedPastListAsync();
+
+        var response = await Client.DeleteAsync($"/api/v1/shopping-lists/{list.Id}/items/{custom.Id}");
+
+        response.StatusCode.Should().Be(HttpStatusCode.Gone);
+    }
 }

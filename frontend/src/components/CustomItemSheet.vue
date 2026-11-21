@@ -1,5 +1,5 @@
 <template>
-  <v-bottom-sheet v-model="model" max-width="600" :persistent="saving">
+  <v-bottom-sheet v-model="model" max-width="600">
     <v-card>
       <v-card-title class="pt-6 px-6">{{ isEditing ? 'Edit item' : 'Add item' }}</v-card-title>
 
@@ -51,12 +51,11 @@
 
       <v-card-actions class="px-6 pb-6">
         <v-spacer />
-        <v-btn variant="text" :disabled="saving" @click="cancel">Cancel</v-btn>
+        <v-btn variant="text" @click="cancel">Cancel</v-btn>
         <v-btn
           color="primary"
           variant="flat"
           :disabled="!form.name.trim()"
-          :loading="saving"
           @click="confirm"
         >
           {{ isEditing ? 'Save' : 'Add' }}
@@ -76,8 +75,7 @@ const MIN_SEARCH_LENGTH = 2
 const model = defineModel({ type: Boolean, default: false })
 
 const props = defineProps({
-  item:   { type: Object, default: null },
-  saving: { type: Boolean, default: false },
+  item: { type: Object, default: null },
 })
 
 const isEditing = computed(() => props.item !== null)
@@ -141,7 +139,6 @@ function updateName(value) {
 
 const emit = defineEmits(['confirm', 'save'])
 
-// An edit waits for the parent to close the sheet once the server accepts it, so a failed save keeps the edits.
 function confirm() {
   if (!form.name.trim()) return
   const payload = {
@@ -150,11 +147,7 @@ function confirm() {
     unit:     form.unit.trim() || null,
     category: form.category,
   }
-  if (isEditing.value) {
-    emit('save', payload)
-    return
-  }
-  emit('confirm', payload)
+  emit(isEditing.value ? 'save' : 'confirm', payload)
   model.value = false
 }
 

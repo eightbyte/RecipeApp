@@ -9,10 +9,25 @@ import { makeItemSource, makeShoppingList, makeShoppingListItem } from '@/test/f
 import { servingsFromQuery } from '@/router/recipeRoutes'
 import { useUiStore } from '@/stores/ui'
 import api from '@/services/api'
+import { clearForTest } from '@/utils/shoppingListCache'
 
 vi.mock('@/services/api', () => ({
   default: { get: vi.fn(), post: vi.fn(), put: vi.fn(), delete: vi.fn() },
 }))
+
+// IndexedDB answers over several macrotasks, more than flushPromises waits for, so the view sees an in-memory copy.
+vi.mock('@/utils/shoppingListCache', () => {
+  const stored = new Map()
+  const copy = value => value === undefined ? undefined : JSON.parse(JSON.stringify(value))
+  return {
+    readPendingChanges:   async () => copy(stored.get('queue')) ?? [],
+    updatePendingChanges: async change => { stored.set('queue', copy(change(stored.get('queue') ?? []))); return copy(stored.get('queue')) },
+    readSnapshot:         async () => copy(stored.get('snapshot')),
+    writeSnapshot:        async list => { stored.set('snapshot', copy(list)) },
+    updateSnapshot:       async change => { if (stored.get('snapshot')) stored.set('snapshot', copy(change(stored.get('snapshot')))) },
+    clearForTest:         () => stored.clear(),
+  }
+})
 
 const vuetify = createVuetify({ components, directives })
 
@@ -23,11 +38,12 @@ beforeEach(() => {
   setActivePinia(pinia)
   // Reset, not just cleared, so a List Refresh never answers with another test's list.
   vi.resetAllMocks()
+  clearForTest()
 })
 
 const SheetStub = {
   name: 'CustomItemSheet',
-  props: { modelValue: Boolean, item: { type: Object, default: null }, saving: Boolean },
+  props: { modelValue: Boolean, item: { type: Object, default: null } },
   emits: ['update:modelValue', 'confirm', 'save'],
   template: '<div />',
 }
@@ -509,7 +525,7 @@ describe('ShoppingView', () => {
       setVisibility('visible')
       await flushPromises()
 
-      expect(api.get).toHaveBeenCalledWith('/shopping-lists/active')
+      expect(api.get).toHaveBeenCalledWith('/shopping-lists/active', expect.anything())
       expect(names(wrapper)).toEqual(['Carrot', 'Bread'])
     })
 
@@ -571,7 +587,7 @@ describe('ShoppingView', () => {
         return { promise, resolve, reject }
       }
 
-      it('refreshes once a Purchased tick has saved, not alongside it', async () => {
+      it('refreshes once the Pending Changes have all been sent, not alongside them', async () => {
         const { wrapper } = await mountWith([carrot()])
         const save = deferred()
         api.put.mockReturnValue(save.promise)
@@ -586,7 +602,7 @@ describe('ShoppingView', () => {
         expect(api.get).toHaveBeenCalledOnce()
       })
 
-      it('does not refresh after a failed tick', async () => {
+      it('does not refresh while a change is still waiting', async () => {
         const { wrapper } = await mountWith([carrot()])
         api.put.mockRejectedValue({ status: 500, message: 'Server error' })
 
@@ -736,11 +752,12 @@ describe('ShoppingView', () => {
         api.put.mockRejectedValue({ status: 404, message: 'Not Found' })
         serverHas([carrot()])
 
+        // The real sheet closes itself as it emits the save.
         sheet(wrapper).vm.$emit('save', { name: 'Rye bread', amount: null, unit: null, category: 'OTHER' })
+        sheet(wrapper).vm.$emit('update:modelValue', false)
         await flushPromises()
 
         expect(useUiStore().snackbar).toMatchObject({ message: '“Bread” was removed from the list', color: 'error' })
-        expect(sheet(wrapper).props('modelValue')).toBe(false)
         expect(names(wrapper)).toEqual(['Carrot'])
       })
     })
@@ -828,6 +845,102 @@ describe('ShoppingView', () => {
       await flushPromises()
 
       expect(api.get).not.toHaveBeenCalled()
+    })
+  })
+
+  describe('offline', () => {
+    const milk = (overrides = {}) => makeShoppingListItem({ id: 'milk', displayName: 'Milk', category: 'DAIRY', ...overrides })
+    const eggs = () => makeShoppingListItem({ id: 'eggs', displayName: 'Eggs', category: 'DAIRY' })
+    const noResponse = { status: undefined, message: 'Network Error' }
+    const banner = wrapper => wrapper.find('[data-test="pending-banner"]')
+    const regenerateButton = wrapper => wrapper.findAll('button').find(b => b.text().includes('Regenerate'))
+
+    async function mountWith(items, overrides = {}) {
+      const mounted = await mountView()
+      mounted.store.list = makeShoppingList({ items, ...overrides })
+      await flushPromises()
+      return mounted
+    }
+
+    async function tick(wrapper, name) {
+      await wrapper.find(`input[aria-label="Mark ${name} purchased"]`).trigger('click')
+      await flushPromises()
+    }
+
+    it('shows no banner while online with nothing waiting', async () => {
+      const { wrapper } = await mountWith([milk()])
+      expect(banner(wrapper).exists()).toBe(false)
+    })
+
+    it('counts the changes waiting while offline', async () => {
+      const { wrapper } = await mountWith([milk(), eggs()])
+      api.put.mockRejectedValue(noResponse)
+
+      await tick(wrapper, 'Milk')
+      expect(banner(wrapper).text()).toBe('Offline · 1 change waiting')
+      await tick(wrapper, 'Eggs')
+      expect(banner(wrapper).text()).toBe('Offline · 2 changes waiting')
+    })
+
+    it('says it is saving while online and sending, and clears once the queue is empty', async () => {
+      const { wrapper } = await mountWith([milk(), eggs()])
+      let answer
+      api.put.mockReturnValue(new Promise(resolve => { answer = resolve }))
+      api.get.mockResolvedValue({ data: makeShoppingList({ items: [milk(), eggs()] }) })
+
+      await tick(wrapper, 'Milk')
+      expect(banner(wrapper).text()).toBe('Saving 1 change…')
+
+      answer({ data: milk({ isChecked: true }) })
+      await flushPromises()
+      expect(banner(wrapper).exists()).toBe(false)
+    })
+
+    it('says offline on the browser’s offline event even with nothing waiting', async () => {
+      const { wrapper, store } = await mountWith([milk()])
+      store.markOffline()
+      await flushPromises()
+      expect(banner(wrapper).text()).toBe('Offline')
+    })
+
+    it('disables Regenerate while offline, and while changes are waiting', async () => {
+      const { wrapper, store } = await mountWith([milk()], { isStale: true })
+      expect(regenerateButton(wrapper).attributes('disabled')).toBeUndefined()
+
+      store.markOffline()
+      await flushPromises()
+      expect(regenerateButton(wrapper).attributes('disabled')).toBeDefined()
+
+      store.offline = false
+      api.put.mockRejectedValue({ status: 500, message: 'Server error' })
+      await tick(wrapper, 'Milk')
+      expect(store.offline).toBe(false)
+      expect(regenerateButton(wrapper).attributes('disabled')).toBeDefined()
+    })
+
+    it('says so when offline and this phone has never saved the list', async () => {
+      const { useShoppingListStore } = await import('@/stores/shoppingList')
+      const store = useShoppingListStore()
+      vi.spyOn(store, 'fetchActive').mockImplementation(async () => { store.markOffline() })
+      const wrapper = mount(ShoppingView, {
+        global: { plugins: [vuetify, pinia], stubs: { teleport: true, CustomItemSheet: SheetStub } },
+      })
+      await flushPromises()
+
+      expect(wrapper.text()).toContain('You’re offline, and this list hasn’t been saved on this phone yet.')
+      expect(wrapper.text()).not.toContain('Create a meal plan')
+    })
+
+    it('shows the snapshot saved on this phone at once, then refreshes it', async () => {
+      const { writeSnapshot } = await import('@/utils/shoppingListCache')
+      await writeSnapshot(makeShoppingList({ items: [milk()] }))
+      api.get.mockResolvedValue({ data: makeShoppingList({ items: [milk(), eggs()] }) })
+
+      const { wrapper, store } = await mountView()
+
+      expect(store.fetchActive).not.toHaveBeenCalled()
+      expect(api.get).toHaveBeenCalledOnce()
+      expect(wrapper.text()).toContain('Eggs')
     })
   })
 
@@ -1077,7 +1190,7 @@ describe('ShoppingView', () => {
         return mounted
       }
 
-      it('saves, closes the sheet, and shows the row in its new Category\'s aisle position', async () => {
+      it('saves and shows the row in its new Category\'s aisle position', async () => {
         const { wrapper } = await openEditor()
         api.put.mockResolvedValue({ data: { ...eggs(), displayName: 'Duck eggs', category: 'PRODUCE', amount: 12, unit: 'each' } })
 
@@ -1085,51 +1198,31 @@ describe('ShoppingView', () => {
         await flushPromises()
 
         expect(api.put).toHaveBeenCalledWith('/shopping-lists/list-1/custom-items/eggs', edit, expect.anything())
-        expect(sheet(wrapper).props('modelValue')).toBe(false)
         expect(useUiStore().snackbar).toMatchObject({ message: 'Saved “Duck eggs”', color: 'success' })
         const groups = wrapper.findAll('.v-card').map(card => card.findAll('.v-list-item-title').map(t => t.text()))
         expect(groups).toEqual([['Carrot', 'Duck eggs'], ['Milk']])
       })
 
-      it('shows the sheet as saving until the server answers', async () => {
+      it('shows the edit at once, before the server answers', async () => {
         const { wrapper } = await openEditor()
-        let answer
-        api.put.mockReturnValue(new Promise(resolve => { answer = resolve }))
+        api.put.mockReturnValue(new Promise(() => {}))
 
         sheet(wrapper).vm.$emit('save', edit)
         await flushPromises()
-        expect(sheet(wrapper).props('saving')).toBe(true)
-        expect(sheet(wrapper).props('modelValue')).toBe(true)
 
-        answer({ data: { ...eggs(), displayName: 'Duck eggs' } })
-        await flushPromises()
-        expect(sheet(wrapper).props('saving')).toBe(false)
+        expect(wrapper.text()).toContain('Duck eggs')
+        expect(useUiStore().snackbar).toMatchObject({ message: 'Saved “Duck eggs”', color: 'success' })
       })
 
-      it('keeps the sheet open and the item unchanged when the save fails', async () => {
+      it('keeps the edit on screen, waiting, when it gets no response', async () => {
         const { wrapper, store } = await openEditor()
-        api.put.mockRejectedValue({ status: 500, message: 'Server error', timedOut: false })
+        api.put.mockRejectedValue({ status: undefined, message: 'Network Error' })
 
         sheet(wrapper).vm.$emit('save', edit)
         await flushPromises()
 
-        expect(sheet(wrapper).props('modelValue')).toBe(true)
-        expect(sheet(wrapper).props('saving')).toBe(false)
-        expect(useUiStore().snackbar).toMatchObject({ message: 'Server error', color: 'error' })
-        expect(store.list.items.find(i => i.id === 'eggs')).toEqual(eggs())
-      })
-
-      it('says the save timed out, keeps the sheet open, and does not refetch', async () => {
-        const { wrapper, store } = await openEditor()
-        api.put.mockRejectedValue({ message: 'timeout of 10000ms exceeded', timedOut: true })
-
-        sheet(wrapper).vm.$emit('save', edit)
-        await flushPromises()
-
-        expect(sheet(wrapper).props('modelValue')).toBe(true)
-        expect(useUiStore().snackbar).toMatchObject({ message: 'Saving “Eggs” timed out. Try again.', color: 'error' })
-        expect(store.list.items.find(i => i.id === 'eggs')).toEqual(eggs())
-        expect(store.fetchActive).toHaveBeenCalledOnce()
+        expect(store.list.items.find(i => i.id === 'eggs')).toMatchObject({ displayName: 'Duck eggs' })
+        expect(wrapper.text()).toContain('Offline · 1 change waiting')
       })
     })
   })

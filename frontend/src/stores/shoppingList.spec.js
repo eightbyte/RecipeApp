@@ -193,6 +193,98 @@ describe('deleteItem', () => {
   })
 })
 
+// ── List Refresh ──────────────────────────────────────────────────────────────
+
+describe('List Refresh', () => {
+  const carrot = (overrides = {}) => makeShoppingListItem({ id: 'carrot', displayName: 'Carrot', ...overrides })
+  const milk   = (overrides = {}) => makeShoppingListItem({ id: 'milk', displayName: 'Milk', category: 'DAIRY', ...overrides })
+
+  function storeWith(items) {
+    const store = useShoppingListStore()
+    store.list = makeShoppingList({ id: 'list-1', items })
+    return store
+  }
+
+  it('fetches the active list without changing what is on screen', async () => {
+    const store = storeWith([carrot()])
+    api.get.mockResolvedValue({ data: makeShoppingList({ items: [milk()] }) })
+
+    const latest = await store.fetchRefresh()
+
+    expect(api.get).toHaveBeenCalledWith('/shopping-lists/active')
+    expect(latest.items.map(i => i.id)).toEqual(['milk'])
+    expect(store.list.items.map(i => i.id)).toEqual(['carrot'])
+    expect(store.loading).toBe(false)
+  })
+
+  it('resolves to no list when the server has no active list, and rejects on any other failure', async () => {
+    const store = storeWith([carrot()])
+    api.get.mockRejectedValueOnce({ status: 404, message: 'Not Found' })
+    expect(await store.fetchRefresh()).toBeNull()
+
+    api.get.mockRejectedValueOnce({ status: 500, message: 'Server error' })
+    await expect(store.fetchRefresh()).rejects.toMatchObject({ message: 'Server error' })
+    expect(store.error).toBeNull()
+    expect(store.list.items.map(i => i.id)).toEqual(['carrot'])
+  })
+
+  it('takes the server’s copy of every item, including added, removed and Purchased ones', () => {
+    const store = storeWith([carrot(), milk()])
+
+    store.applyRefresh(makeShoppingList({
+      isStale: true,
+      items: [carrot({ isChecked: true }), makeShoppingListItem({ id: 'bread', displayName: 'Bread', isCustom: true })],
+    }))
+
+    expect(store.list.items).toEqual([
+      carrot({ isChecked: true }),
+      makeShoppingListItem({ id: 'bread', displayName: 'Bread', isCustom: true }),
+    ])
+    expect(store.isStale).toBe(true)
+  })
+
+  it('keeps an item whose save is in flight as it is on screen', async () => {
+    const store = storeWith([carrot(), milk()])
+    let answer
+    api.put.mockReturnValue(new Promise(resolve => { answer = resolve }))
+
+    const saving = store.toggleItem('carrot', true)
+    store.applyRefresh(makeShoppingList({ items: [carrot({ isChecked: false }), milk({ isChecked: true })] }))
+
+    expect(store.list.items.map(i => [i.id, i.isChecked])).toEqual([['carrot', true], ['milk', true]])
+
+    answer({ data: carrot({ isChecked: true }) })
+    expect(await saving).toBe(true)
+    store.applyRefresh(makeShoppingList({ items: [carrot({ isChecked: false })] }))
+    expect(store.list.items[0].isChecked).toBe(false)
+  })
+
+  it('keeps an item the caller asks to keep, such as one inside its Purchased window', () => {
+    const store = storeWith([carrot({ isChecked: true }), milk()])
+
+    store.applyRefresh(
+      makeShoppingList({ items: [carrot({ isChecked: false }), milk({ isChecked: true })] }),
+      { keep: id => id === 'carrot' },
+    )
+
+    expect(store.list.items.map(i => [i.id, i.isChecked])).toEqual([['carrot', true], ['milk', true]])
+  })
+
+  it('drops a kept item the server no longer has, as after a regeneration', () => {
+    const store = storeWith([carrot({ isChecked: true })])
+
+    store.applyRefresh(makeShoppingList({ items: [carrot({ id: 'carrot-regenerated' })] }), { keep: () => true })
+
+    expect(store.list.items.map(i => i.id)).toEqual(['carrot-regenerated'])
+  })
+
+  it('shows no list once the server has none', () => {
+    const store = storeWith([carrot()])
+    store.applyRefresh(null)
+    expect(store.list).toBeNull()
+  })
+})
+
 // ── isStale computed ──────────────────────────────────────────────────────────
 
 describe('isStale', () => {

@@ -21,7 +21,8 @@ let pinia
 beforeEach(() => {
   pinia = createPinia()
   setActivePinia(pinia)
-  vi.clearAllMocks()
+  // Reset, not just cleared, so a List Refresh never answers with another test's list.
+  vi.resetAllMocks()
 })
 
 const SheetStub = {
@@ -446,6 +447,353 @@ describe('ShoppingView', () => {
       const { wrapper } = await mountWith([makeShoppingListItem({ id: 'old', displayName: 'Rice', sources: [] })])
       expect(row(wrapper, 'Rice').html()).not.toContain('mdi-chevron')
       expect(row(wrapper, 'Rice').attributes('aria-expanded')).toBeUndefined()
+    })
+  })
+
+  describe('List Refresh', () => {
+    const carrot = (overrides = {}) => makeShoppingListItem({ id: 'carrot', displayName: 'Carrot', ...overrides })
+    const bread  = (overrides = {}) => makeShoppingListItem({ id: 'bread', displayName: 'Bread', isCustom: true, ...overrides })
+    const names  = wrapper => wrapper.findAll('.v-list-item-title').map(t => t.text())
+
+    function setVisibility(state) {
+      Object.defineProperty(document, 'visibilityState', { value: state, configurable: true })
+      document.dispatchEvent(new Event('visibilitychange'))
+    }
+
+    async function mountWith(items) {
+      const mounted = await mountView()
+      mounted.store.list = makeShoppingList({ items })
+      await mounted.wrapper.vm.$nextTick()
+      return mounted
+    }
+
+    function serverHas(items) {
+      api.get.mockResolvedValue({ data: makeShoppingList({ items }) })
+    }
+
+    async function wait(ms) {
+      vi.advanceTimersByTime(ms)
+      await flushPromises()
+    }
+
+    beforeEach(() => {
+      vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'] })
+    })
+
+    afterEach(() => {
+      vi.useRealTimers()
+      delete document.visibilityState
+    })
+
+    it('shows the other phone’s changes when the page becomes visible again', async () => {
+      const { wrapper } = await mountWith([carrot()])
+      serverHas([carrot(), bread()])
+
+      setVisibility('visible')
+      await flushPromises()
+
+      expect(api.get).toHaveBeenCalledWith('/shopping-lists/active')
+      expect(names(wrapper)).toEqual(['Carrot', 'Bread'])
+    })
+
+    it('refreshes when the window gains focus', async () => {
+      const { wrapper } = await mountWith([carrot()])
+      serverHas([carrot(), bread()])
+
+      window.dispatchEvent(new Event('focus'))
+      await flushPromises()
+
+      expect(names(wrapper)).toEqual(['Carrot', 'Bread'])
+    })
+
+    it('does not refresh on a timer, on scroll, or when the page is hidden', async () => {
+      await mountWith([carrot()])
+      serverHas([carrot()])
+
+      await wait(10 * 60_000)
+      window.dispatchEvent(new Event('scroll'))
+      document.dispatchEvent(new Event('scroll'))
+      setVisibility('hidden')
+      await flushPromises()
+
+      expect(api.get).not.toHaveBeenCalled()
+    })
+
+    it('fails silently in the background and keeps the current list', async () => {
+      const { wrapper } = await mountWith([carrot()])
+      api.get.mockRejectedValue({ status: 500, message: 'Server error' })
+
+      window.dispatchEvent(new Event('focus'))
+      await flushPromises()
+
+      expect(names(wrapper)).toEqual(['Carrot'])
+      expect(useUiStore().snackbar.show).toBe(false)
+      expect(wrapper.text()).not.toContain('Server error')
+    })
+
+    it('applies only the newest refresh when an older one answers later', async () => {
+      const { wrapper } = await mountWith([carrot()])
+      let answerOlder
+      api.get
+        .mockReturnValueOnce(new Promise(resolve => { answerOlder = resolve }))
+        .mockResolvedValueOnce({ data: makeShoppingList({ items: [carrot(), bread()] }) })
+
+      window.dispatchEvent(new Event('focus'))
+      setVisibility('visible')
+      await flushPromises()
+      answerOlder({ data: makeShoppingList({ items: [carrot()] }) })
+      await flushPromises()
+
+      expect(names(wrapper)).toEqual(['Carrot', 'Bread'])
+    })
+
+    describe('after the user’s own writes', () => {
+      const sheet = wrapper => wrapper.findComponent(SheetStub)
+
+      function deferred() {
+        let resolve, reject
+        const promise = new Promise((res, rej) => { resolve = res; reject = rej })
+        return { promise, resolve, reject }
+      }
+
+      it('refreshes once a Purchased tick has saved, not alongside it', async () => {
+        const { wrapper } = await mountWith([carrot()])
+        const save = deferred()
+        api.put.mockReturnValue(save.promise)
+        serverHas([carrot({ isChecked: true }), bread()])
+
+        await wrapper.find('input[aria-label="Mark Carrot purchased"]').trigger('click')
+        await flushPromises()
+        expect(api.get).not.toHaveBeenCalled()
+
+        save.resolve({ data: carrot({ isChecked: true }) })
+        await flushPromises()
+        expect(api.get).toHaveBeenCalledOnce()
+      })
+
+      it('does not refresh after a failed tick', async () => {
+        const { wrapper } = await mountWith([carrot()])
+        api.put.mockRejectedValue({ status: 500, message: 'Server error' })
+
+        await wrapper.find('input[aria-label="Mark Carrot purchased"]').trigger('click')
+        await flushPromises()
+
+        expect(api.get).not.toHaveBeenCalled()
+      })
+
+      it('refreshes after adding a Custom Item', async () => {
+        const { wrapper } = await mountWith([carrot()])
+        api.post.mockResolvedValue({ data: bread() })
+        serverHas([carrot(), bread()])
+
+        sheet(wrapper).vm.$emit('confirm', { name: 'Bread', amount: null, unit: null, category: 'OTHER' })
+        await flushPromises()
+
+        expect(api.get).toHaveBeenCalledOnce()
+      })
+
+      it('refreshes after removing a Custom Item', async () => {
+        const { wrapper } = await mountWith([carrot(), bread()])
+        api.delete.mockResolvedValue({})
+        serverHas([carrot()])
+
+        await wrapper.find('button[aria-label="Remove Bread"]').trigger('click')
+        await flushPromises()
+
+        expect(api.get).toHaveBeenCalledOnce()
+      })
+
+      it('refreshes after editing a Custom Item', async () => {
+        const { wrapper } = await mountWith([bread()])
+        api.put.mockResolvedValue({ data: bread({ displayName: 'Rye bread' }) })
+        serverHas([bread({ displayName: 'Rye bread' })])
+        await wrapper.findAll('.shopping-row').find(r => r.text().includes('Bread')).trigger('pointerdown',
+          { pointerType: 'touch', isPrimary: true, button: 0, clientX: 0, clientY: 0 })
+        await wait(1000)
+
+        sheet(wrapper).vm.$emit('save', { name: 'Rye bread', amount: null, unit: null, category: 'OTHER' })
+        await flushPromises()
+
+        expect(api.get).toHaveBeenCalledOnce()
+      })
+
+      it('keeps a just-ticked item ticked through a refresh during its 3 seconds', async () => {
+        const { wrapper, store } = await mountWith([carrot()])
+        api.put.mockResolvedValue({ data: carrot({ isChecked: true }) })
+        serverHas([carrot({ isChecked: false })])
+
+        await wrapper.find('input[aria-label="Mark Carrot purchased"]').trigger('click')
+        await flushPromises()
+
+        expect(api.get).toHaveBeenCalledOnce()
+        expect(store.list.items[0].isChecked).toBe(true)
+        expect(wrapper.find('.v-list-item-title').classes()).toContain('text-decoration-line-through')
+      })
+    })
+
+    describe('pull to refresh', () => {
+      async function pull(wrapper) {
+        const done = vi.fn()
+        wrapper.findComponent({ name: 'VPullToRefresh' }).vm.$emit('load', { done })
+        await flushPromises()
+        return done
+      }
+
+      it('applies at once, even straight after a touch, and then stops its spinner', async () => {
+        const { wrapper } = await mountWith([carrot()])
+        serverHas([carrot(), bread()])
+        const finger = new Event('pointerdown', { bubbles: true })
+        Object.defineProperty(finger, 'pointerId', { value: 1 })
+        document.body.dispatchEvent(finger)
+
+        const done = await pull(wrapper)
+
+        expect(names(wrapper)).toEqual(['Carrot', 'Bread'])
+        expect(done).toHaveBeenCalledOnce()
+      })
+
+      it('shows the error snackbar and keeps the current list when it fails', async () => {
+        const { wrapper } = await mountWith([carrot()])
+        api.get.mockRejectedValue({ status: 500, message: 'Server error' })
+
+        const done = await pull(wrapper)
+
+        expect(names(wrapper)).toEqual(['Carrot'])
+        expect(useUiStore().snackbar).toMatchObject({ show: true, message: 'Server error', color: 'error' })
+        expect(done).toHaveBeenCalledOnce()
+      })
+    })
+
+    describe('while the edit sheet is open', () => {
+      const sheet = wrapper => wrapper.findComponent(SheetStub)
+
+      async function openEditor(items) {
+        const mounted = await mountWith(items)
+        const row = mounted.wrapper.findAll('.shopping-row').find(r => r.text().includes('Bread'))
+        await row.trigger('pointerdown', { pointerType: 'touch', isPrimary: true, button: 0, clientX: 0, clientY: 0, pointerId: 1 })
+        await wait(1000)
+        await row.trigger('pointerup', { pointerId: 1 })
+        await wait(1000)
+        return mounted
+      }
+
+      it('waits, then applies when the sheet closes', async () => {
+        const { wrapper } = await openEditor([carrot(), bread()])
+        expect(sheet(wrapper).props('modelValue')).toBe(true)
+        serverHas([carrot()])
+
+        window.dispatchEvent(new Event('focus'))
+        await wait(5000)
+        expect(names(wrapper)).toEqual(['Carrot', 'Bread'])
+
+        sheet(wrapper).vm.$emit('update:modelValue', false)
+        await flushPromises()
+        expect(names(wrapper)).toEqual(['Carrot'])
+      })
+
+      it('says the item was removed when the other phone removed it before the save', async () => {
+        const { wrapper } = await openEditor([carrot(), bread()])
+        api.put.mockRejectedValue({ status: 404, message: 'Not Found' })
+        serverHas([carrot()])
+
+        sheet(wrapper).vm.$emit('save', { name: 'Rye bread', amount: null, unit: null, category: 'OTHER' })
+        await flushPromises()
+
+        expect(useUiStore().snackbar).toMatchObject({ message: '“Bread” was removed from the list', color: 'error' })
+        expect(sheet(wrapper).props('modelValue')).toBe(false)
+        expect(names(wrapper)).toEqual(['Carrot'])
+      })
+    })
+
+    describe('while the user touches the screen', () => {
+      function pointer(type, pointerId = 1) {
+        const event = new Event(type, { bubbles: true })
+        Object.defineProperty(event, 'pointerId', { value: pointerId })
+        document.body.dispatchEvent(event)
+      }
+
+      it('waits while a pointer is down, then applies 1 second after it lifts', async () => {
+        const { wrapper } = await mountWith([carrot()])
+        serverHas([carrot(), bread()])
+
+        pointer('pointerdown')
+        window.dispatchEvent(new Event('focus'))
+        await wait(5000)
+        expect(names(wrapper)).toEqual(['Carrot'])
+
+        pointer('pointerup')
+        await wait(999)
+        expect(names(wrapper)).toEqual(['Carrot'])
+
+        await wait(1)
+        expect(names(wrapper)).toEqual(['Carrot', 'Bread'])
+      })
+
+      it('waits when the refresh arrives within 1 second of the last touch', async () => {
+        const { wrapper } = await mountWith([carrot()])
+        serverHas([carrot(), bread()])
+
+        pointer('pointerdown')
+        pointer('pointerup')
+        await wait(500)
+        window.dispatchEvent(new Event('focus'))
+        await flushPromises()
+        expect(names(wrapper)).toEqual(['Carrot'])
+
+        await wait(500)
+        expect(names(wrapper)).toEqual(['Carrot', 'Bread'])
+      })
+
+      it('treats a cancelled pointer, as when a scroll takes over, like a lifted one', async () => {
+        const { wrapper } = await mountWith([carrot()])
+        serverHas([carrot(), bread()])
+
+        pointer('pointerdown')
+        window.dispatchEvent(new Event('focus'))
+        pointer('pointercancel')
+        await wait(1000)
+
+        expect(names(wrapper)).toEqual(['Carrot', 'Bread'])
+      })
+
+      it('forgets a pointer whose pointerup never came once the page is shown again', async () => {
+        const { wrapper } = await mountWith([carrot()])
+        serverHas([carrot(), bread()])
+
+        pointer('pointerdown')
+        setVisibility('hidden')
+        setVisibility('visible')
+        await flushPromises()
+
+        expect(names(wrapper)).toEqual(['Carrot', 'Bread'])
+      })
+
+      it('waits until every pointer is up', async () => {
+        const { wrapper } = await mountWith([carrot()])
+        serverHas([carrot(), bread()])
+
+        pointer('pointerdown', 1)
+        pointer('pointerdown', 2)
+        window.dispatchEvent(new Event('focus'))
+        pointer('pointerup', 1)
+        await wait(2000)
+        expect(names(wrapper)).toEqual(['Carrot'])
+
+        pointer('pointerup', 2)
+        await wait(1000)
+        expect(names(wrapper)).toEqual(['Carrot', 'Bread'])
+      })
+    })
+
+    it('stops refreshing once the Shopping List is left', async () => {
+      const { wrapper } = await mountWith([carrot()])
+      wrapper.unmount()
+
+      window.dispatchEvent(new Event('focus'))
+      setVisibility('visible')
+      await flushPromises()
+
+      expect(api.get).not.toHaveBeenCalled()
     })
   })
 

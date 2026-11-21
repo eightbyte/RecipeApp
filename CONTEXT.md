@@ -60,6 +60,12 @@ The recipe view's ½×, 1× and 2× shortcut onto Servings: a multiple of the wh
 one serving. It is never stored.
 _Avoid_: Portion, portion size
 
+**Unit System**:
+The units a single recipe's Measurements are read in: Metric (as stored) or US (`oz`/`lb`, and
+`tsp`/`tbsp`/`cup`, as fractions). Each device chooses one on the recipe view, and Cooking Mode
+follows it. It only changes the display; nothing is stored in US units.
+_Avoid_: Imperial, measurement system
+
 **Photo**:
 The image of a recipe's prepared dish, stored with the recipe and shown with it. A Photo is one
 kind of image; an image that does not show the finished dish is not a Photo.
@@ -133,6 +139,17 @@ _Avoid_: Conflict, error
 **Purchased**:
 A shopping list item the user has checked off.
 _Avoid_: Bought, done
+
+**List Refresh**:
+Loading the shopping list again so one phone shows changes made on another, applied only while
+the user isn't touching the screen.
+_Avoid_: Sync, poll
+
+**Pending Change**:
+A shopping list write made on this phone that the server hasn't confirmed yet: a tick or untick, or
+adding, editing or deleting a Custom Item. Every shopping list write waits as one until it is sent,
+online or offline.
+_Avoid_: Sync queue, outbox, offline write
 
 ### Getting recipes in
 

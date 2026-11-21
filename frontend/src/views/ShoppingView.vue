@@ -3,188 +3,224 @@
 
     <h1 class="d-sr-only">Shopping list</h1>
 
-    <!-- ── Loading skeleton ───────────────────────────────────────────────── -->
-    <template v-if="store.loading && !store.list">
-      <v-skeleton-loader type="list-item-two-line" class="mb-2" />
-      <v-skeleton-loader type="list-item-two-line" class="mb-2" />
-      <v-skeleton-loader type="list-item-two-line" class="mb-2" />
-    </template>
+    <!-- ── Offline and Pending Changes banner ─────────────────────────────── -->
+    <v-alert
+      v-if="pendingBanner"
+      data-test="pending-banner"
+      :type="store.offline ? 'warning' : 'info'"
+      :icon="store.offline ? 'mdi-cloud-off-outline' : 'mdi-cloud-upload-outline'"
+      variant="tonal"
+      density="compact"
+      class="mb-4"
+    >
+      {{ pendingBanner }}
+    </v-alert>
 
-    <!-- ── Fetch error ──────────────────────────────────────────────────── -->
-    <ErrorState
-      v-else-if="store.error && !store.list"
-      :message="store.error"
-      @retry="store.fetchActive()"
-    />
+    <!-- The browser's own pull to refresh is off app-wide (main.css), so this one can't reload the page. -->
+    <v-pull-to-refresh @load="onPull">
 
-    <template v-else>
-      <!-- ── Stale banner ────────────────────────────────────────────────── -->
-      <v-alert
-        v-if="store.list?.isStale"
-        type="warning"
-        variant="tonal"
-        class="mb-6"
-        closable
-      >
-        <div class="d-flex align-center justify-space-between flex-wrap ga-2">
-          <span>Your meal plan has changed — tap to update your shopping list.</span>
+      <!-- ── Loading skeleton ───────────────────────────────────────────────── -->
+      <template v-if="store.loading && !store.list">
+        <v-skeleton-loader type="list-item-two-line" class="mb-2" />
+        <v-skeleton-loader type="list-item-two-line" class="mb-2" />
+        <v-skeleton-loader type="list-item-two-line" class="mb-2" />
+      </template>
+
+      <!-- ── Offline before this phone has ever saved the list ──────────────── -->
+      <EmptyState
+        v-else-if="store.offline && !store.list"
+        icon="mdi-cloud-off-outline"
+        title="Shopping list unavailable"
+        text="You’re offline, and this list hasn’t been saved on this phone yet."
+      />
+
+      <!-- ── Fetch error ──────────────────────────────────────────────────── -->
+      <ErrorState
+        v-else-if="store.error && !store.list"
+        :message="store.error"
+        @retry="store.fetchActive()"
+      />
+
+      <template v-else>
+        <!-- ── Stale banner ────────────────────────────────────────────────── -->
+        <v-alert
+          v-if="store.list?.isStale"
+          type="warning"
+          variant="tonal"
+          class="mb-6"
+          closable
+        >
+          <div class="d-flex align-center justify-space-between flex-wrap ga-2">
+            <span>Your meal plan has changed — tap to update your shopping list.</span>
+            <v-btn
+              size="small"
+              variant="flat"
+              color="warning"
+              :loading="store.loading"
+              :disabled="!canRegenerate"
+              @click="onRegenerate"
+            >
+              Regenerate
+            </v-btn>
+          </div>
+        </v-alert>
+
+        <!-- ── Toolbar ─────────────────────────────────────────────────────── -->
+        <div v-if="store.list" class="d-flex align-center justify-space-between mb-6">
+          <div class="text-body-2 text-medium-emphasis">
+            {{ uncheckedCount }} item{{ uncheckedCount !== 1 ? 's' : '' }} remaining
+          </div>
           <v-btn
+            variant="text"
             size="small"
-            variant="flat"
-            color="warning"
-            :loading="store.loading"
-            @click="onRegenerate"
+            :prepend-icon="showChecked ? 'mdi-eye-off-outline' : 'mdi-eye-outline'"
+            @click="onToggleShowPurchased"
           >
-            Regenerate
+            {{ showChecked ? 'Hide' : 'Show' }} purchased ({{ checkedCount }})
           </v-btn>
         </div>
-      </v-alert>
 
-      <!-- ── Toolbar ─────────────────────────────────────────────────────── -->
-      <div v-if="store.list" class="d-flex align-center justify-space-between mb-6">
-        <div class="text-body-2 text-medium-emphasis">
-          {{ uncheckedCount }} item{{ uncheckedCount !== 1 ? 's' : '' }} remaining
-        </div>
-        <v-btn
-          variant="text"
-          size="small"
-          :prepend-icon="showChecked ? 'mdi-eye-off-outline' : 'mdi-eye-outline'"
-          @click="onToggleShowPurchased"
-        >
-          {{ showChecked ? 'Hide' : 'Show' }} purchased ({{ checkedCount }})
-        </v-btn>
-      </div>
+        <!-- ── Grouped list ────────────────────────────────────────────────── -->
+        <!-- Rows and groups a List Refresh removes collapse rather than jump, so the rows below slide up. -->
+        <div v-if="visibleGroups.length">
+          <v-expand-transition group>
+            <!-- The spacing sits inside the collapsing element, because the transition animates height alone. -->
+            <div v-for="group in visibleGroups" :key="group.category">
+              <div class="pb-6">
+                <div class="text-overline text-medium-emphasis mb-2 px-1">
+                  {{ formatCategory(group.category) }}
+                </div>
 
-      <!-- ── Grouped list ────────────────────────────────────────────────── -->
-      <div v-if="visibleGroups.length">
-        <div v-for="group in visibleGroups" :key="group.category" class="mb-6">
-          <div class="text-overline text-medium-emphasis mb-2 px-1">
-            {{ formatCategory(group.category) }}
-          </div>
+                <v-card>
+                  <v-list density="compact">
+                    <v-expand-transition group>
+                      <div v-for="(item, idx) in group.items" :key="item.id">
+                        <!-- Above its own row, so a collapsing last row takes its divider with it. -->
+                        <v-divider v-if="idx > 0" />
+                        <v-list-item
+                          class="shopping-row"
+                          :class="{ 'opacity-50': item.isChecked }"
+                          :aria-expanded="hasSources(item) ? isExpanded(item) : undefined"
+                          v-on="rowListeners(item)"
+                        >
+                          <template #prepend>
+                            <v-checkbox-btn
+                              class="purchased-checkbox"
+                              :model-value="item.isChecked"
+                              color="primary"
+                              :aria-label="`Mark ${item.displayName} purchased`"
+                              @pointerdown.stop
+                              @click.stop="onTogglePurchased(item)"
+                            />
+                          </template>
 
-          <v-card>
-            <v-list density="compact">
-              <template v-for="(item, idx) in group.items" :key="item.id">
-                <v-list-item
-                  class="shopping-row"
-                  :class="{ 'opacity-50': item.isChecked }"
-                  :aria-expanded="hasSources(item) ? isExpanded(item) : undefined"
-                  v-on="rowListeners(item)"
-                >
-                  <template #prepend>
-                    <v-checkbox-btn
-                      class="purchased-checkbox"
-                      :model-value="item.isChecked"
-                      color="primary"
-                      :aria-label="`Mark ${item.displayName} purchased`"
-                      @pointerdown.stop
-                      @click.stop="onTogglePurchased(item)"
-                    />
-                  </template>
-
-                  <v-list-item-title
-                    :class="{ 'text-decoration-line-through': item.isChecked }"
-                  >
-                    {{ item.displayName }}
-                  </v-list-item-title>
-
-                  <v-list-item-subtitle v-if="item.amount">
-                    {{ formatMeasurement(item.amount, item.unit) }}
-                  </v-list-item-subtitle>
-
-                  <template #append>
-                    <div class="d-flex align-center ga-1">
-                      <!-- Review flag -->
-                      <v-tooltip
-                        v-if="item.needsReview"
-                        text="Units couldn't be combined — check this item"
-                      >
-                        <template #activator="{ props }">
-                          <v-icon
-                            v-bind="props"
-                            size="16"
-                            color="warning"
+                          <v-list-item-title
+                            :class="{ 'text-decoration-line-through': item.isChecked }"
                           >
-                            mdi-alert-outline
-                          </v-icon>
-                        </template>
-                      </v-tooltip>
+                            {{ item.displayName }}
+                          </v-list-item-title>
 
-                      <!-- Custom item badge -->
-                      <v-icon
-                        v-if="item.isCustom"
-                        size="14"
-                        color="secondary"
-                        title="Custom item"
-                      >
-                        mdi-account-outline
-                      </v-icon>
+                          <v-list-item-subtitle v-if="item.amount">
+                            {{ formatMeasurement(item.amount, item.unit) }}
+                          </v-list-item-subtitle>
 
-                      <!-- Delete custom item -->
-                      <v-btn
-                        v-if="item.isCustom"
-                        icon="mdi-close"
-                        size="x-small"
-                        variant="text"
-                        color="error"
-                        :aria-label="`Remove ${item.displayName}`"
-                        @pointerdown.stop
-                        @click.stop="onDeleteItem(item)"
-                      />
+                          <template #append>
+                            <div class="d-flex align-center ga-1">
+                              <!-- Review flag -->
+                              <v-tooltip
+                                v-if="item.needsReview"
+                                text="Units couldn't be combined — check this item"
+                              >
+                                <template #activator="{ props }">
+                                  <v-icon
+                                    v-bind="props"
+                                    size="16"
+                                    color="warning"
+                                  >
+                                    mdi-alert-outline
+                                  </v-icon>
+                                </template>
+                              </v-tooltip>
 
-                      <v-icon v-if="hasSources(item)" size="20">
-                        {{ isExpanded(item) ? 'mdi-chevron-up' : 'mdi-chevron-down' }}
-                      </v-icon>
-                    </div>
-                  </template>
-                </v-list-item>
+                              <!-- Custom item badge -->
+                              <v-icon
+                                v-if="item.isCustom"
+                                size="14"
+                                color="secondary"
+                                title="Custom item"
+                              >
+                                mdi-account-outline
+                              </v-icon>
 
-                <!-- ── Item Sources ──────────────────────────────────────── -->
-                <v-expand-transition>
-                  <div v-if="isExpanded(item)">
-                    <v-list density="compact" class="py-0 pl-12" :aria-label="`Recipes needing ${item.displayName}`">
-                      <v-list-item
-                        v-for="(source, sourceIdx) in item.sources"
-                        :key="sourceIdx"
-                        class="item-source"
-                        :to="source.recipeId ? recipeRoute(source.recipeId, source.servings) : undefined"
-                      >
-                        <v-list-item-title class="text-body-2">{{ formatSourceLine(source) }}</v-list-item-title>
-                        <v-list-item-subtitle v-if="source.scheduledDate">
-                          {{ formatDateOnly(source.scheduledDate, SOURCE_DATE_FORMAT) }}
-                        </v-list-item-subtitle>
-                        <template v-if="source.servings" #append>
-                          <ServingsChip :servings="source.servings" size="x-small" />
-                        </template>
-                      </v-list-item>
-                    </v-list>
-                  </div>
-                </v-expand-transition>
-                <v-divider v-if="idx < group.items.length - 1" />
-              </template>
-            </v-list>
-          </v-card>
+                              <!-- Delete custom item -->
+                              <v-btn
+                                v-if="item.isCustom"
+                                icon="mdi-close"
+                                size="x-small"
+                                variant="text"
+                                color="error"
+                                :aria-label="`Remove ${item.displayName}`"
+                                @pointerdown.stop
+                                @click.stop="onDeleteItem(item)"
+                              />
+
+                              <v-icon v-if="hasSources(item)" size="20">
+                                {{ isExpanded(item) ? 'mdi-chevron-up' : 'mdi-chevron-down' }}
+                              </v-icon>
+                            </div>
+                          </template>
+                        </v-list-item>
+
+                        <!-- ── Item Sources ──────────────────────────────────────── -->
+                        <v-expand-transition>
+                          <div v-if="isExpanded(item)">
+                            <v-list density="compact" class="py-0 pl-12" :aria-label="`Recipes needing ${item.displayName}`">
+                              <v-list-item
+                                v-for="(source, sourceIdx) in item.sources"
+                                :key="sourceIdx"
+                                class="item-source"
+                                :to="source.recipeId ? recipeRoute(source.recipeId, source.servings) : undefined"
+                              >
+                                <v-list-item-title class="text-body-2">{{ formatSourceLine(source) }}</v-list-item-title>
+                                <v-list-item-subtitle v-if="source.scheduledDate">
+                                  {{ formatDateOnly(source.scheduledDate, SOURCE_DATE_FORMAT) }}
+                                </v-list-item-subtitle>
+                                <template v-if="source.servings" #append>
+                                  <ServingsChip :servings="source.servings" size="x-small" />
+                                </template>
+                              </v-list-item>
+                            </v-list>
+                          </div>
+                        </v-expand-transition>
+                      </div>
+                    </v-expand-transition>
+                  </v-list>
+                </v-card>
+              </div>
+            </div>
+          </v-expand-transition>
         </div>
-      </div>
 
-      <!-- ── Empty state — has list but no items ────────────────────────── -->
-      <EmptyState
-        v-else-if="store.list"
-        icon="mdi-cart-outline"
-        title="Shopping list is empty"
-        text="Add recipes to your meal plan to populate the list."
-      />
+        <!-- ── Empty state — has list but no items ────────────────────────── -->
+        <EmptyState
+          v-else-if="store.list"
+          icon="mdi-cart-outline"
+          title="Shopping list is empty"
+          text="Add recipes to your meal plan to populate the list."
+        />
 
-      <!-- ── Empty state — no active plan ──────────────────────────────── -->
-      <EmptyState
-        v-else
-        icon="mdi-cart-outline"
-        title="Shopping list is empty"
-        text="Create a meal plan to generate your list"
-        action-label="Go to meal plan"
-        :action-to="{ name: 'meal-plan' }"
-      />
-    </template>
+        <!-- ── Empty state — no active plan ──────────────────────────────── -->
+        <EmptyState
+          v-else
+          icon="mdi-cart-outline"
+          title="Shopping list is empty"
+          text="Create a meal plan to generate your list"
+          action-label="Go to meal plan"
+          :action-to="{ name: 'meal-plan' }"
+        />
+      </template>
+
+    </v-pull-to-refresh>
 
     <!-- ── FAB — add custom item ────────────────────────────────────────── -->
     <v-btn
@@ -203,7 +239,6 @@
     <CustomItemSheet
       v-model="sheetOpen"
       :item="editingItem"
-      :saving="saving"
       @confirm="onAddCustomItem"
       @save="onSaveCustomItem"
     />
@@ -212,15 +247,17 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, watch } from 'vue'
 import { useShoppingListStore } from '@/stores/shoppingList'
 import { useUiStore } from '@/stores/ui'
 import { formatCategory, INGREDIENT_CATEGORY_VALUES } from '@/constants/categories'
 import { formatMeasurement } from '@/constants/units'
 import { useHold } from '@/composables/useHold'
 import { useDelayedHide } from '@/composables/useDelayedHide'
+import { useListRefresh } from '@/composables/useListRefresh'
 import { recipeRoute } from '@/router/recipeRoutes'
 import { formatDateOnly } from '@/utils/dateOnly'
+import { VPullToRefresh } from 'vuetify/labs/VPullToRefresh'
 import CustomItemSheet from '@/components/CustomItemSheet.vue'
 import EmptyState from '@/components/EmptyState.vue'
 import ErrorState from '@/components/ErrorState.vue'
@@ -231,7 +268,6 @@ const ui          = useUiStore()
 const showChecked = ref(false)
 const sheetOpen   = ref(false)
 const editingItem = ref(null)
-const saving      = ref(false)
 
 const SOURCE_DATE_FORMAT = { weekday: 'short', day: 'numeric', month: 'short' }
 
@@ -239,6 +275,28 @@ const hold = useHold(openSheet)
 
 // A mis-tapped checkbox would otherwise make the item vanish before the user sees what they ticked.
 const delayedHide = useDelayedHide()
+
+const listRefresh = useListRefresh({
+  fetch: store.fetchRefresh,
+  apply: latest => store.applyRefresh(latest, { keep: delayedHide.isDelayed }),
+  // The item being edited would otherwise change or vanish under the sheet.
+  isHeld: () => sheetOpen.value,
+})
+
+// The server's list is only worth loading once it holds every change made here.
+watch(() => store.pendingCount, (count, before) => {
+  if (count === 0 && before > 0) listRefresh.request()
+})
+
+const pendingBanner = computed(() => {
+  const count = store.pendingCount
+  const changes = `${count} change${count === 1 ? '' : 's'}`
+  if (store.offline) return count ? `Offline · ${changes} waiting` : 'Offline'
+  return count ? `Saving ${changes}…` : null
+})
+
+// Regenerating replaces every Generated Item, so it waits until the server has every change made here.
+const canRegenerate = computed(() => !store.offline && store.pendingCount === 0)
 
 // Several rows can be open at once, so each Generated Item's open state is kept by id.
 const expandedIds = ref(new Set())
@@ -261,11 +319,11 @@ function toggleSources(item) {
   else expandedIds.value.add(item.id)
 }
 
-function onTogglePurchased(item) {
+async function onTogglePurchased(item) {
   const isChecked = !item.isChecked
   if (!isChecked) delayedHide.cancel(item.id)
   else if (!showChecked.value) delayedHide.delay(item.id)
-  store.toggleItem(item.id, isChecked)
+  await store.toggleItem(item.id, isChecked)
 }
 
 function onToggleShowPurchased() {
@@ -296,7 +354,11 @@ function onCustomRowContextMenu(event, item) {
   if (event.pointerType === 'mouse') openSheet(item)
 }
 
-onMounted(() => store.fetchActive())
+// A list already on screen, or saved on this phone, shows at once, and the server's copy follows as a List Refresh.
+onMounted(async () => {
+  if (await store.restore()) listRefresh.request()
+  else await store.fetchActive()
+})
 
 const items = computed(() => store.list?.items ?? [])
 
@@ -324,37 +386,30 @@ function aisleIndex(category) {
   return index === -1 ? INGREDIENT_CATEGORY_VALUES.length : index
 }
 
-async function onAddCustomItem(payload) {
-  try {
-    await store.addCustomItem(payload)
-    ui.notify({ message: `Added “${payload.displayName ?? payload.name ?? 'item'}”`, color: 'success' })
-  } catch (e) {
-    ui.notify({ message: e?.message ?? 'Could not add item.', color: 'error' })
-  }
+// Each write shows at once and is sent through the Pending Changes, which report any conflict themselves.
+function onAddCustomItem(payload) {
+  store.addCustomItem(payload)
+  ui.notify({ message: `Added “${payload.name}”`, color: 'success' })
 }
 
-async function onSaveCustomItem(payload) {
-  saving.value = true
+function onSaveCustomItem(payload) {
+  store.updateCustomItem(editingItem.value.id, payload)
+  ui.notify({ message: `Saved “${payload.name}”`, color: 'success' })
+}
+
+function onDeleteItem(item) {
+  store.deleteItem(item.id)
+  ui.notify({ message: `Removed “${item.displayName}”`, color: 'success' })
+}
+
+async function onPull({ done }) {
+  store.sendPending()
   try {
-    await store.updateCustomItem(editingItem.value.id, payload)
-    sheetOpen.value = false
-    ui.notify({ message: `Saved “${payload.name}”`, color: 'success' })
+    await listRefresh.pull()
   } catch (e) {
-    const message = e?.timedOut
-      ? `Saving “${editingItem.value.displayName}” timed out. Try again.`
-      : e?.message ?? 'Could not save item.'
-    ui.notify({ message, color: 'error' })
+    ui.notify({ message: e?.message ?? 'Could not refresh the list.', color: 'error' })
   } finally {
-    saving.value = false
-  }
-}
-
-async function onDeleteItem(item) {
-  try {
-    await store.deleteItem(item.id)
-    ui.notify({ message: `Removed “${item.displayName}”`, color: 'success' })
-  } catch (e) {
-    ui.notify({ message: e?.message ?? 'Could not remove item.', color: 'error' })
+    done()
   }
 }
 

@@ -28,12 +28,30 @@ public static class RecipesEndpoints
             $"and is at most {RecipeListPaging.MaxPageSize}. totalCount counts every recipe that matches the filters.");
 
         // GET /recipes/{id}
-        group.MapGet("/{id:guid}", async (Guid id, RecipeService svc) =>
+        group.MapGet("/{id:guid}", async (Guid id, [AsParameters] RecipeDetailQuery detailQuery, RecipeService svc) =>
         {
-            var recipe = await svc.GetByIdAsync(id);
+            var recipe = await svc.GetByIdAsync(id, detailQuery);
             return recipe is null ? Results.NotFound() : Results.Ok(recipe);
         })
-        .WithSummary("Get a single recipe with full ingredient list and steps");
+        .WithValidation<RecipeDetailQuery>()
+        .WithSummary("Get a single recipe with full ingredient list and steps")
+        .WithDescription(
+            $"With system={UnitSystem.Us}, each ingredient also carries its US Measurement (usMeasurement) at servings " +
+            "(default the recipe's Servings), null for a row that reads the same in every Unit System. " +
+            $"servings may be fractional, above 0 and at most {RecipeLimits.MaxScaledServings}.");
+
+        // GET /recipes/{id}/measurements
+        group.MapGet("/{id:guid}/measurements", async (
+            Guid id, [AsParameters] RecipeMeasurementsQuery measurementsQuery, RecipeService svc) =>
+        {
+            var measurements = await svc.GetUsMeasurementsAsync(id, measurementsQuery.Servings!.Value);
+            return measurements is null ? Results.NotFound() : Results.Ok(measurements);
+        })
+        .WithValidation<RecipeMeasurementsQuery>()
+        .WithSummary("Get a recipe's US Measurements at a servings count")
+        .WithDescription(
+            $"system must be {UnitSystem.Us}. Returns each ingredient row's US Measurement at servings, leaving out rows that " +
+            "read the same in every Unit System.");
 
         // POST /recipes
         group.MapPost("/", async (

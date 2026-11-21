@@ -11,11 +11,11 @@ Read `CODING_STANDARDS.md` (repo root) before writing or reviewing code: comment
 |---|---|
 | `views/` | Route-level pages (lazy-loaded); `admin/` holds the Admin Tools' views (`IngredientsView` and its `IngredientFormView`, `ThemeView`, the Theme picker, `LlmCostsView`, the LLM costs report) |
 | `components/` | Shared components; `layout/` has `AppTopBar`, `AppBottomNav` |
-| `stores/` | Pinia, one file per domain (`recipes`, `ingredients`, `mealPlans`, `shoppingList`, `ui`, `llmUsage`); `llmUsage` is stateless, so the LLM costs report holds its own range, page and response; `ingredients.allIngredients` is the Ingredients Admin Tool's list, the only one holding Removed Ingredients |
+| `stores/` | Pinia, one file per domain (`recipes`, `ingredients`, `mealPlans`, `shoppingList`, `ui`, `llmUsage`); `ui` also holds this device's Unit System, so Cooking Mode follows the recipe view's toggle; `llmUsage` is stateless, so the LLM costs report holds its own range, page and response; `ingredients.allIngredients` is the Ingredients Admin Tool's list, the only one holding Removed Ingredients |
 | `services/api.js` | The pre-configured Axios instance |
-| `constants/` | `units.js`, `categories.js`, `recipeSorts.js` — mirrors of the backend enums; `batchSizes.js` holds the recipe view's ½×/1×/2× shortcuts onto Servings, which exist only in the frontend; `recipeLimits.js` mirrors `RecipeLimits` (lengths and the Servings range); `ingredientLimits.js` mirrors `IngredientValidationRules` (name length, density range); `scrapeLimits.js` mirrors `ScrapeLimits` (the longest pasted text); `scrapeSources.js` names the Import Recipe sheet's URL and Text modes; `servings.js` formats a servings count; `llm.js` mirrors `LlmProvider`, `LlmState` and its `UnavailableReason()` wording per provider, plus the caption the Import Recipe sheet shows for a cloud provider, the LLM costs report's range chips and page size (mirroring `LlmUsagePaging`), and the labels for provider, Operation, step and outcome; `themes.js` defines the built-in Themes (Light, Dark) as data, their 12 `THEME_TOKENS` and the `recipeapp.theme` storage key |
-| `composables/` | `useWakeLock.js`; `useRecipePages.js` pages a recipe list and holds the shared `SEARCH_DEBOUNCE_MS`; `useHold.js` is the 1-second press-and-hold on pointer events (editing a Custom Item); `useDelayedHide.js` keeps each just-ticked Purchased item shown for 3 seconds on its own timer; `useIngredientRowLayout.js` lays out a recipe form's Amount, Unit and Notes, splitting them onto two lines on a phone; `useRecipeValidation.js` decides which recipe-form problems are showing (on load, on leaving a field, after Save); `useRemovalUndo.js` removes a recipe form's ingredient rows and steps with Undo in the snackbar |
-| `utils/` | `dateOnly.js` formats date-only values; `storage.js` wraps `localStorage` for device-local preferences; `themeChoice.js` reads and writes this device's Theme, falling back to Light; `recipeValidation.js` is the one rule set that blocks a recipe save, shared by the recipe form and the Scrape preview; `recipeRows.js` removes and restores those pages' ingredient rows and steps, keeping step selections in step |
+| `constants/` | `units.js`, `categories.js`, `recipeSorts.js` — mirrors of the backend enums; `batchSizes.js` holds the recipe view's ½×/1×/2× shortcuts onto Servings, which exist only in the frontend; `recipeLimits.js` mirrors `RecipeLimits` (lengths and the Servings range); `ingredientLimits.js` mirrors `IngredientValidationRules` (name length, density range); `scrapeLimits.js` mirrors `ScrapeLimits` (the longest pasted text); `scrapeSources.js` names the Import Recipe sheet's URL and Text modes; `servings.js` formats a servings count; `llm.js` mirrors `LlmProvider`, `LlmState` and its `UnavailableReason()` wording per provider, plus the caption the Import Recipe sheet shows for a cloud provider, the LLM costs report's range chips and page size (mirroring `LlmUsagePaging`), and the labels for provider, Operation, step and outcome; `unitSystems.js` mirrors `UnitSystem` (Metric, US), with its storage key and the US correction's debounce; `themes.js` defines the built-in Themes (Light, Dark) as data, their 12 `THEME_TOKENS` and the `recipeapp.theme` storage key |
+| `composables/` | `useWakeLock.js`; `useRecipeMeasurements.js` is how a single recipe's rows read in this device's Unit System, scaling US on the device and correcting it from the API; `useRecipePages.js` pages a recipe list and holds the shared `SEARCH_DEBOUNCE_MS`; `useHold.js` is the 1-second press-and-hold on pointer events (editing a Custom Item); `useDelayedHide.js` keeps each just-ticked Purchased item shown for 3 seconds on its own timer; `useListRefresh.js` is the Shopping List's List Refresh: it loads on page visible, window focus and once the Pending Changes are all sent (never on a timer or scroll), and applies only when no pointer has been down for 1 second and the caller isn't holding it (the edit sheet), except a pull to refresh, which applies at once; `useIngredientRowLayout.js` lays out a recipe form's Amount, Unit and Notes, splitting them onto two lines on a phone; `useRecipeValidation.js` decides which recipe-form problems are showing (on load, on leaving a field, after Save); `useRemovalUndo.js` removes a recipe form's ingredient rows and steps with Undo in the snackbar; `usePendingChangeSending.js`, called once in App.vue, sends the Shopping List's Pending Changes from any page (app start, `online`, page visible, focus) and marks the app offline on `offline` |
+| `utils/` | `dateOnly.js` formats date-only values; `storage.js` wraps `localStorage` for device-local preferences; `themeChoice.js` reads and writes this device's Theme, falling back to Light; `unitSystemChoice.js` does the same for its Unit System, falling back to Metric; `recipeValidation.js` is the one rule set that blocks a recipe save, shared by the recipe form and the Scrape preview; `recipeRows.js` removes and restores those pages' ingredient rows and steps, keeping step selections in step; `pendingChanges.js` is the pure Pending Change rules (merging, applying onto a list); `shoppingListCache.js` stores the Pending Changes and the list snapshot in IndexedDB (`idb-keyval`, two keys) |
 | `styles/` | `settings.scss` — Vuetify Sass settings |
 | `router/index.js` | All routes |
 | `router/navigation.js` | `viewKey` (the key App.vue mounts a view under) and `scrollPosition` (the router's scroll behaviour), pure so they test without mounting `App` |
@@ -26,6 +26,10 @@ Read `CODING_STANDARDS.md` (repo root) before writing or reviewing code: comment
 Tests sit beside their subject as `*.spec.js` (Vitest + Vue Test Utils). Run with `npm test`.
 `src/test/setup.js` unmounts every wrapper after each test (`enableAutoUnmount`), so mount inside
 each test or in `beforeEach`; a wrapper mounted in `beforeAll` is gone after the first test.
+IndexedDB is `fake-indexeddb`, emptied after each test. It answers over several macrotasks, more than
+`flushPromises` waits for, so a component spec that writes to the Shopping List mocks
+`utils/shoppingListCache.js` with an in-memory copy (`ShoppingView.spec.js`), and a spec that fakes timers
+fakes only `setTimeout`/`clearTimeout`, because fake-indexeddb schedules with `setImmediate`.
 
 ## Conventions
 
@@ -80,8 +84,18 @@ each test or in `beforeEach`; a wrapper mounted in `beforeAll` is gone after the
   as an error.
 - **PWA:** `vite-plugin-pwa` runtime-caches the recipe list (`/api/v1/recipes`, NetworkFirst in
   `recipe-list`, so the pages joined on scroll come from one version of the list), single recipes
-  (`/api/v1/recipes/{id}`, StaleWhileRevalidate in `recipe-api`) and `/uploads/images/`. Change the
-  caching rules with that in mind.
+  (`/api/v1/recipes/{id}`, StaleWhileRevalidate in `recipe-api`), the bare `/api/v1/ingredients` (the
+  Ingredient Catalogue, StaleWhileRevalidate in `ingredient-catalogue`, so Add item suggestions work
+  offline) and `/uploads/images/`. Change the caching rules with that in mind.
+- **Shopping List writes** all go through the store's Pending Change queue, online or offline
+  ([ADR 0006](../docs/adr/0006-shopping-list-writes-go-through-the-pending-change-queue.md)): the
+  screen changes at once, the change is stored on the phone and sent in order, and a List Refresh
+  (`applyRefresh`) keeps every item with a Pending Change as it is on screen. A new kind of list
+  write gets a kind, merge rule, request and conflict rule there, never its own API call. The
+  conflict rules raise their own snackbars, and the view refreshes once the queue is empty.
+  Regenerate stays online-only and is disabled while offline or while changes wait.
+- **Vuetify labs components** (`VPullToRefresh`) are not auto-imported: import each explicitly from
+  `vuetify/labs/<Component>`.
 - **Recipe lists** (Recipes tab, `RecipeBrowser`) load a page at a time through
   `composables/useRecipePages.js`, one instance per list, and render through
   `components/RecipeInfiniteScroll.vue`. A recipe mutation does not patch any list, because each

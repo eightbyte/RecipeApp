@@ -160,7 +160,7 @@ describe('CookingModeView', () => {
     fetchSpy.mockClear()
     const retry = w.findAll('button').find(b => b.text().includes('Try again'))
     await retry.trigger('click')
-    expect(fetchSpy).toHaveBeenCalledWith('r1')
+    expect(fetchSpy).toHaveBeenCalledWith('r1', expect.anything())
   })
 
   it('shows the recipe’s own Servings and unscaled amounts without a scale in the query', async () => {
@@ -250,5 +250,26 @@ describe('CookingModeView', () => {
   it('shows a counted chip by its Count Word alone', async () => {
     expect(await mountWithChip({ ingredientDisplayName: 'Garlic', amount: 2, unit: 'pcs', sourceAmount: 2, sourceUnit: 'cloves' }))
       .toBe('(2 cloves) Garlic')
+  })
+})
+
+describe('CookingModeView — Unit System', () => {
+  it('follows the device’s Unit System in its step chips, with no control of its own', async () => {
+    useUiStore().unitSystem = 'us'
+    store.setUsMeasurements('r1', 4, [
+      { recipeIngredientId: 'ri-1', amount: 7.055, unit: 'oz', fromSource: false },
+      { recipeIngredientId: 'ri-2', amount: 1.25,  unit: 'cup', fromSource: false },
+    ])
+    const wrapper = await mountView()
+
+    const chips = wrapper.findAll('.v-chip').map(chip => chip.text().replace(/\s+/g, ' ').trim())
+    expect(chips).toEqual(expect.arrayContaining(['7 oz Flour', '1 ¼ cup Milk']))
+    expect(wrapper.find('[aria-label="Unit System"]').exists()).toBe(false)
+  })
+
+  it('reads Metric in its step chips by default', async () => {
+    const wrapper = await mountView()
+    const chips = wrapper.findAll('.v-chip').map(chip => chip.text().replace(/\s+/g, ' ').trim())
+    expect(chips).toEqual(expect.arrayContaining(['200 g Flour', '300 ml Milk']))
   })
 })

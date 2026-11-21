@@ -9,6 +9,10 @@ namespace RecipeApp.API.Services;
 public readonly record struct StoredMeasurement(
     decimal? Amount, string? Unit, decimal? SourceAmount, string? SourceUnit);
 
+/// <summary>A Measurement in US units, computed for display and never stored.</summary>
+/// <param name="FromSource">True when read from the row's US Source Measurement, so showing that source beside it would repeat it.</param>
+public readonly record struct UsMeasurement(decimal Amount, string Unit, bool FromSource = false);
+
 /// <summary>What a run of sized packages holds in all, in the unit the size was stated in, and the package word if one was given.</summary>
 public readonly record struct SizedPackage(decimal Total, string SizeUnit, string? Container);
 
@@ -160,6 +164,100 @@ public class MeasurementConverter(IOptions<MeasurementOptions> options)
 
         return (MillilitresToGrams(millilitres.Value, gramsPerMillilitre.Value), MeasurementUnit.Gram);
     }
+
+    // ── US Unit System ────────────────────────────────────────────────────────
+
+    /// <summary>Ounces in a pound, where the US mass display moves from <c>oz</c> to <c>lb</c>.</summary>
+    private const decimal OuncesPerPound = 16m;
+
+    /// <summary>
+    /// A stored row's Measurement in US units at <paramref name="multiplier"/> times its amount, for display only, or null for a
+    /// row that reads the same in every Unit System (unquantified or a count).
+    /// </summary>
+    /// <remarks>
+    /// A US Source Measurement is preferred while it still converts to the stored Measurement, and only a cup Stage B stored as
+    /// grams needs reading from its source, because one that converts by Stage A (<c>4 oz</c>) reads the same through the stored amount.
+    /// </remarks>
+    /// <param name="gramsPerMillilitre">The row's Ingredient's current density, or null when unknown.</param>
+    public static UsMeasurement? ToUs(StoredMeasurement row, decimal? gramsPerMillilitre, decimal multiplier)
+    {
+        if (CupSourceMillilitres(row, gramsPerMillilitre) is { } sourceMillilitres)
+            return UsVolume(sourceMillilitres * multiplier) with { FromSource = true };
+
+        if (row.Amount is not { } amount || MeasurementUnit.ToBase(amount, row.Unit) is not { } baseAmount) return null;
+
+        var scaled = baseAmount * multiplier;
+        UsMeasurement? us = MeasurementUnit.DimensionOf(row.Unit) switch
+        {
+            UnitDimension.Mass   => UsMass(scaled),
+            UnitDimension.Volume => UsVolume(scaled),
+            _ => null,
+        };
+        return us is { } measurement ? measurement with { FromSource = HasConvertingUsSource(row) } : null;
+    }
+
+    /// <summary>The storable units the US volume display climbs through.</summary>
+    private static readonly IReadOnlyList<string> UsVolumeUnits =
+        [MeasurementUnit.Teaspoon, MeasurementUnit.Tablespoon, MeasurementUnit.Cup];
+
+    /// <summary>True when the row's Source Measurement is in a US unit, in any spelling, and still converts by Stage A to the stored Measurement.</summary>
+    private static bool HasConvertingUsSource(StoredMeasurement row)
+    {
+        if (row.Amount is not { } amount || row.Unit is null) return false;
+        if (row.SourceAmount is not { } sourceAmount || row.SourceUnit is null) return false;
+
+        var isUsUnit = UnitConversions.ContainsKey(MeasurementUnit.WithoutTrailingPeriod(row.SourceUnit))
+            || (MeasurementUnit.TryCanonicalise(row.SourceUnit, out var canonical) && UsVolumeUnits.Contains(canonical));
+        return isUsUnit && ToCanonical((double)sourceAmount, row.SourceUnit) == (amount, row.Unit.Trim());
+    }
+
+    /// <summary>The volume of a cup Source Measurement that Stage B stored as grams, while the density still gives those grams; null otherwise.</summary>
+    private static decimal? CupSourceMillilitres(StoredMeasurement row, decimal? gramsPerMillilitre)
+    {
+        if (row.Amount is not { } grams || row.Unit?.Trim() != MeasurementUnit.Gram) return null;
+        if (row.SourceAmount is not { } sourceAmount || gramsPerMillilitre is not > 0m) return null;
+        if (!MeasurementUnit.TryCanonicalise(row.SourceUnit, out var sourceUnit) || sourceUnit != MeasurementUnit.Cup) return null;
+
+        var millilitres = MeasurementUnit.ToBase(sourceAmount, sourceUnit)!.Value;
+        return MillilitresToGrams(millilitres, gramsPerMillilitre.Value) == grams ? millilitres : null;
+    }
+
+    /// <summary>The fewest cups the US volume display shows in cups rather than tablespoons.</summary>
+    private const decimal FewestCups = 0.25m;
+
+    /// <summary>How far below a whole number the US display's kitchen fractions already read it as whole, since none lies between ¾ and 1.</summary>
+    private const decimal ReadsAsWholeMargin = 0.125m;
+
+    private static decimal VolumeFactorOf(string unit) => MeasurementUnit.Table[unit].BaseFactor;
+
+    /// <summary>The kitchen ladder: <c>tsp</c> below a tablespoon, <c>tbsp</c> below a quarter cup, <c>cup</c> from there, judged by how the smaller unit's amount will read.</summary>
+    private static UsMeasurement UsVolume(decimal millilitres)
+    {
+        var teaspoonsPerTablespoon = VolumeFactorOf(MeasurementUnit.Tablespoon) / VolumeFactorOf(MeasurementUnit.Teaspoon);
+        var teaspoons = millilitres / VolumeFactorOf(MeasurementUnit.Teaspoon);
+        if (!ReadsAtLeast(teaspoons, teaspoonsPerTablespoon))
+            return new UsMeasurement(Round(teaspoons), MeasurementUnit.Teaspoon);
+
+        var tablespoonsInFewestCups = FewestCups * VolumeFactorOf(MeasurementUnit.Cup) / VolumeFactorOf(MeasurementUnit.Tablespoon);
+        var tablespoons = millilitres / VolumeFactorOf(MeasurementUnit.Tablespoon);
+        if (!ReadsAtLeast(tablespoons, tablespoonsInFewestCups))
+            return new UsMeasurement(Round(tablespoons), MeasurementUnit.Tablespoon);
+
+        return new UsMeasurement(Round(millilitres / VolumeFactorOf(MeasurementUnit.Cup)), MeasurementUnit.Cup);
+    }
+
+    private static UsMeasurement UsMass(decimal grams)
+    {
+        var ounces = grams / FactorOf(MeasurementUnit.Ounce);
+        return ReadsAtLeast(ounces, OuncesPerPound)
+            ? new UsMeasurement(Round(grams / FactorOf(MeasurementUnit.Pound)), MeasurementUnit.Pound)
+            : new UsMeasurement(Round(ounces), MeasurementUnit.Ounce);
+    }
+
+    /// <summary>True when <paramref name="amount"/> will read as at least the whole number <paramref name="threshold"/>, so "2.96 tsp" moves up rather than showing "3 tsp".</summary>
+    private static bool ReadsAtLeast(decimal amount, decimal threshold) => amount > threshold - ReadsAsWholeMargin;
+
+    private static decimal FactorOf(string customaryUnit) => (decimal)UnitConversions[customaryUnit].Factor;
 
     // ── Shared helpers ────────────────────────────────────────────────────────
 

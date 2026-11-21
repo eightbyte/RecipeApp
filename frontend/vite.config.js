@@ -57,6 +57,16 @@ export default defineConfig({
               },
             },
             {
+              // The whole Ingredient Catalogue, so the Shopping List's Add item suggestions work offline; searches and the Admin list's Removed Ingredients stay network-only.
+              urlPattern: ({ url }) => url.pathname === '/api/v1/ingredients' && url.search === '',
+              handler: 'StaleWhileRevalidate',
+              options: {
+                cacheName: 'ingredient-catalogue',
+                expiration: { maxEntries: 1 },
+                cacheableResponse: { statuses: [0, 200] },
+              },
+            },
+            {
               // Recipe images served from the backend uploads path.
               urlPattern: ({ url }) => url.pathname.startsWith('/uploads/images/'),
               handler: 'CacheFirst',

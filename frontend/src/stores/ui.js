@@ -1,9 +1,19 @@
 import { defineStore } from 'pinia'
 import { ref } from 'vue'
+import { readUnitSystemChoice, writeUnitSystemChoice } from '@/utils/unitSystemChoice'
 
-/** Global UI store: a feedback channel whose notify() raises the single snackbar, kept out of the Axios interceptor to avoid a circular dependency. */
+/** Global UI store: a feedback channel whose notify() raises the single snackbar, kept out of the Axios interceptor to avoid a circular dependency, and this device's Unit System. */
 export const useUiStore = defineStore('ui', () => {
   const snackbar = ref({ id: 0, show: false, message: '', color: 'success', action: null })
+
+  // Shared so Cooking Mode and the step chips follow the recipe view's toggle.
+  const unitSystem = ref(readUnitSystemChoice())
+
+  /** Reads every recipe in `chosen` from now on, remembered on this device. */
+  function chooseUnitSystem(chosen) {
+    unitSystem.value = chosen
+    writeUnitSystemChoice(chosen)
+  }
 
   /** Raises the snackbar, replacing any showing; `action` ({ label, onClick }) adds a button such as Undo, which a replacement takes away. */
   function notify({ message, color = 'success', action = null }) {
@@ -22,5 +32,5 @@ export const useUiStore = defineStore('ui', () => {
     action.onClick()
   }
 
-  return { snackbar, notify, dismiss, runAction }
+  return { snackbar, notify, dismiss, runAction, unitSystem, chooseUnitSystem }
 })

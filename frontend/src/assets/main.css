@@ -8,7 +8,7 @@
 /* ── Mobile viewport ─────────────────────────────────────────────────────── */
 html, body {
   height: 100%;
-  /* Prevent address-bar resize bounce on mobile */
+  /* Prevents address-bar bounce and Chrome's own pull to refresh, which would reload the Shopping List under its VPullToRefresh. */
   overscroll-behavior-y: none;
 }
 

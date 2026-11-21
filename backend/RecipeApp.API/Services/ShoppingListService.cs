@@ -42,6 +42,10 @@ public class ShoppingListService(AppDbContext db)
         return list.ToResponse(IsStale(plan, list));
     }
 
+    /// <summary>Whether the list belongs to a Past Meal Plan; an unknown list is not closed, so its write still answers 404.</summary>
+    public Task<bool> IsClosedAsync(Guid listId) =>
+        db.ShoppingLists.AnyAsync(s => s.Id == listId && !s.MealPlan.IsActive);
+
     public async Task<ShoppingListResponse?> RegenerateActiveAsync()
     {
         var plan = await db.MealPlans.FirstOrDefaultAsync(p => p.IsActive);

@@ -1,5 +1,10 @@
+import 'fake-indexeddb/auto'
+import { clear } from 'idb-keyval'
 import { setupServer } from 'msw/node'
 import { enableAutoUnmount } from '@vue/test-utils'
+
+// jsdom has no IndexedDB, so the Shopping List's Pending Changes and snapshot live in fake-indexeddb, emptied between tests.
+afterEach(() => clear())
 
 // Unmount every wrapper after each test, because a mounted v-img polls window.setTimeout forever in jsdom and can fire after teardown (guarded by setup.spec.js).
 enableAutoUnmount(afterEach)

@@ -3,6 +3,19 @@
 
     <h1 class="d-sr-only">Shopping list</h1>
 
+    <!-- ── Offline and Pending Changes banner ─────────────────────────────── -->
+    <v-alert
+      v-if="pendingBanner"
+      data-test="pending-banner"
+      :type="store.offline ? 'warning' : 'info'"
+      :icon="store.offline ? 'mdi-cloud-off-outline' : 'mdi-cloud-upload-outline'"
+      variant="tonal"
+      density="compact"
+      class="mb-4"
+    >
+      {{ pendingBanner }}
+    </v-alert>
+
     <!-- The browser's own pull to refresh is off app-wide (main.css), so this one can't reload the page. -->
     <v-pull-to-refresh @load="onPull">
 
@@ -12,6 +25,14 @@
         <v-skeleton-loader type="list-item-two-line" class="mb-2" />
         <v-skeleton-loader type="list-item-two-line" class="mb-2" />
       </template>
+
+      <!-- ── Offline before this phone has ever saved the list ──────────────── -->
+      <EmptyState
+        v-else-if="store.offline && !store.list"
+        icon="mdi-cloud-off-outline"
+        title="Shopping list unavailable"
+        text="You’re offline, and this list hasn’t been saved on this phone yet."
+      />
 
       <!-- ── Fetch error ──────────────────────────────────────────────────── -->
       <ErrorState
@@ -36,6 +57,7 @@
               variant="flat"
               color="warning"
               :loading="store.loading"
+              :disabled="!canRegenerate"
               @click="onRegenerate"
             >
               Regenerate
@@ -217,7 +239,6 @@
     <CustomItemSheet
       v-model="sheetOpen"
       :item="editingItem"
-      :saving="saving"
       @confirm="onAddCustomItem"
       @save="onSaveCustomItem"
     />
@@ -226,7 +247,7 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, watch } from 'vue'
 import { useShoppingListStore } from '@/stores/shoppingList'
 import { useUiStore } from '@/stores/ui'
 import { formatCategory, INGREDIENT_CATEGORY_VALUES } from '@/constants/categories'
@@ -247,7 +268,6 @@ const ui          = useUiStore()
 const showChecked = ref(false)
 const sheetOpen   = ref(false)
 const editingItem = ref(null)
-const saving      = ref(false)
 
 const SOURCE_DATE_FORMAT = { weekday: 'short', day: 'numeric', month: 'short' }
 
@@ -262,6 +282,21 @@ const listRefresh = useListRefresh({
   // The item being edited would otherwise change or vanish under the sheet.
   isHeld: () => sheetOpen.value,
 })
+
+// The server's list is only worth loading once it holds every change made here.
+watch(() => store.pendingCount, (count, before) => {
+  if (count === 0 && before > 0) listRefresh.request()
+})
+
+const pendingBanner = computed(() => {
+  const count = store.pendingCount
+  const changes = `${count} change${count === 1 ? '' : 's'}`
+  if (store.offline) return count ? `Offline · ${changes} waiting` : 'Offline'
+  return count ? `Saving ${changes}…` : null
+})
+
+// Regenerating replaces every Generated Item, so it waits until the server has every change made here.
+const canRegenerate = computed(() => !store.offline && store.pendingCount === 0)
 
 // Several rows can be open at once, so each Generated Item's open state is kept by id.
 const expandedIds = ref(new Set())
@@ -288,7 +323,7 @@ async function onTogglePurchased(item) {
   const isChecked = !item.isChecked
   if (!isChecked) delayedHide.cancel(item.id)
   else if (!showChecked.value) delayedHide.delay(item.id)
-  if (await store.toggleItem(item.id, isChecked)) listRefresh.request()
+  await store.toggleItem(item.id, isChecked)
 }
 
 function onToggleShowPurchased() {
@@ -319,7 +354,11 @@ function onCustomRowContextMenu(event, item) {
   if (event.pointerType === 'mouse') openSheet(item)
 }
 
-onMounted(() => store.fetchActive())
+// A list already on screen, or saved on this phone, shows at once, and the server's copy follows as a List Refresh.
+onMounted(async () => {
+  if (await store.restore()) listRefresh.request()
+  else await store.fetchActive()
+})
 
 const items = computed(() => store.list?.items ?? [])
 
@@ -347,50 +386,24 @@ function aisleIndex(category) {
   return index === -1 ? INGREDIENT_CATEGORY_VALUES.length : index
 }
 
-async function onAddCustomItem(payload) {
-  try {
-    await store.addCustomItem(payload)
-    listRefresh.request()
-    ui.notify({ message: `Added “${payload.displayName ?? payload.name ?? 'item'}”`, color: 'success' })
-  } catch (e) {
-    ui.notify({ message: e?.message ?? 'Could not add item.', color: 'error' })
-  }
+// Each write shows at once and is sent through the Pending Changes, which report any conflict themselves.
+function onAddCustomItem(payload) {
+  store.addCustomItem(payload)
+  ui.notify({ message: `Added “${payload.name}”`, color: 'success' })
 }
 
-async function onSaveCustomItem(payload) {
-  saving.value = true
-  try {
-    await store.updateCustomItem(editingItem.value.id, payload)
-    listRefresh.request()
-    sheetOpen.value = false
-    ui.notify({ message: `Saved “${payload.name}”`, color: 'success' })
-  } catch (e) {
-    if (e?.status === 404) {
-      sheetOpen.value = false
-      listRefresh.request()
-      ui.notify({ message: `“${editingItem.value.displayName}” was removed from the list`, color: 'error' })
-      return
-    }
-    const message = e?.timedOut
-      ? `Saving “${editingItem.value.displayName}” timed out. Try again.`
-      : e?.message ?? 'Could not save item.'
-    ui.notify({ message, color: 'error' })
-  } finally {
-    saving.value = false
-  }
+function onSaveCustomItem(payload) {
+  store.updateCustomItem(editingItem.value.id, payload)
+  ui.notify({ message: `Saved “${payload.name}”`, color: 'success' })
 }
 
-async function onDeleteItem(item) {
-  try {
-    await store.deleteItem(item.id)
-    listRefresh.request()
-    ui.notify({ message: `Removed “${item.displayName}”`, color: 'success' })
-  } catch (e) {
-    ui.notify({ message: e?.message ?? 'Could not remove item.', color: 'error' })
-  }
+function onDeleteItem(item) {
+  store.deleteItem(item.id)
+  ui.notify({ message: `Removed “${item.displayName}”`, color: 'success' })
 }
 
 async function onPull({ done }) {
+  store.sendPending()
   try {
     await listRefresh.pull()
   } catch (e) {

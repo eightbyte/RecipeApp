@@ -145,6 +145,12 @@ Loading the shopping list again so one phone shows changes made on another, appl
 the user isn't touching the screen.
 _Avoid_: Sync, poll
 
+**Pending Change**:
+A shopping list write made on this phone that the server hasn't confirmed yet: a tick or untick, or
+adding, editing or deleting a Custom Item. Every shopping list write waits as one until it is sent,
+online or offline.
+_Avoid_: Sync queue, outbox, offline write
+
 ### Getting recipes in
 
 **Scrape**:

@@ -42,12 +42,14 @@ public static class ShoppingListEndpoints
             AddCustomItemRequest request,
             ShoppingListService svc) =>
         {
+            if (await svc.IsClosedAsync(id)) return ListClosed();
             var item = await svc.AddCustomItemAsync(id, request);
             return item is null
                 ? Results.NotFound()
                 : Results.Created($"/api/v1/shopping-lists/{id}", item);
         })
         .WithValidation<AddCustomItemRequest>()
+        .ProducesProblem(StatusCodes.Status410Gone)
         .WithSummary("Add a custom item to a shopping list")
         .WithDescription("Custom items are preserved when the list is regenerated from the meal plan.");
 
@@ -58,10 +60,12 @@ public static class ShoppingListEndpoints
             UpdateItemRequest request,
             ShoppingListService svc) =>
         {
+            if (await svc.IsClosedAsync(id)) return ListClosed();
             var item = await svc.UpdateItemAsync(id, itemId, request);
             return item is null ? Results.NotFound() : Results.Ok(item);
         })
         .WithValidation<UpdateItemRequest>()
+        .ProducesProblem(StatusCodes.Status410Gone)
         .WithSummary("Update a shopping list item")
         .WithDescription("Toggle the checked state or edit the quantity/unit of any item.");
 
@@ -72,6 +76,7 @@ public static class ShoppingListEndpoints
             UpdateCustomItemRequest request,
             ShoppingListService svc) =>
         {
+            if (await svc.IsClosedAsync(id)) return ListClosed();
             var (result, item) = await svc.UpdateCustomItemAsync(id, itemId, request);
             return result switch
             {
@@ -86,6 +91,7 @@ public static class ShoppingListEndpoints
             };
         })
         .WithValidation<UpdateCustomItemRequest>()
+        .ProducesProblem(StatusCodes.Status410Gone)
         .WithSummary("Edit a Custom Item")
         .WithDescription("Replaces the name, amount, unit and Category of a Custom Item, so a null amount or unit clears it. A Generated Item returns 409 Conflict.");
 
@@ -95,6 +101,7 @@ public static class ShoppingListEndpoints
             Guid itemId,
             ShoppingListService svc) =>
         {
+            if (await svc.IsClosedAsync(id)) return ListClosed();
             var result = await svc.DeleteItemAsync(id, itemId);
             return result switch
             {
@@ -108,9 +115,16 @@ public static class ShoppingListEndpoints
                 _ => Results.StatusCode(500),
             };
         })
+        .ProducesProblem(StatusCodes.Status410Gone)
         .WithSummary("Delete a custom shopping list item")
         .WithDescription("Only custom (user-added) items may be deleted. Recipe-derived items return 409 Conflict.");
 
         return routes;
     }
+
+    // A phone that edited offline can send writes for a list a newer Meal Plan has since replaced, and they must not land there.
+    private static IResult ListClosed() => Results.Problem(
+        statusCode: StatusCodes.Status410Gone,
+        title:      "This shopping list belongs to a Past Meal Plan.",
+        detail:     "Only the Active Meal Plan's shopping list can be changed.");
 }

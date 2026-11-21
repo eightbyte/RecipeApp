@@ -61,8 +61,8 @@ function suggestions() {
 
 // Stub VBottomSheet to avoid teleport DOM isolation issues
 const stubBottomSheet = {
-  props: ['modelValue', 'persistent'],
-  template: '<div v-if="modelValue" :data-persistent="String(!!persistent)"><slot /></div>',
+  props: ['modelValue'],
+  template: '<div v-if="modelValue"><slot /></div>',
   emits: ['update:modelValue'],
 }
 
@@ -251,7 +251,7 @@ describe('CustomItemSheet', () => {
       expect(fieldValues(wrapper)).toEqual({ name: 'Eggs', amount: '6', unit: 'pcs', category: 'DAIRY' })
     })
 
-    it('emits save with every field and stays open', async () => {
+    it('emits save with every field and closes, since the edit shows at once', async () => {
       const wrapper = await mountEditor()
 
       await typeName(wrapper, 'Duck eggs')
@@ -262,7 +262,7 @@ describe('CustomItemSheet', () => {
 
       expect(wrapper.emitted('save')[0][0]).toEqual({ name: 'Duck eggs', amount: 12, unit: 'each', category: 'PRODUCE' })
       expect(wrapper.emitted('confirm')).toBeUndefined()
-      expect(wrapper.emitted('update:modelValue')).toBeUndefined()
+      expect(wrapper.emitted('update:modelValue')).toEqual([[false]])
     })
 
     it('saves an emptied amount and unit as empty', async () => {
@@ -289,32 +289,6 @@ describe('CustomItemSheet', () => {
       await button(wrapper, 'Save').trigger('click')
 
       expect(wrapper.emitted('save')[0][0]).toMatchObject({ name: 'Bread Flour', category: 'DAIRY' })
-    })
-
-    it('locks the sheet while saving', async () => {
-      const wrapper = await mountEditor({ saving: true })
-
-      expect(button(wrapper, 'Save').classes()).toContain('v-btn--loading')
-      expect(button(wrapper, 'Cancel').attributes('disabled')).toBeDefined()
-      expect(wrapper.find('[data-persistent]').attributes('data-persistent')).toBe('true')
-    })
-
-    it('can be dismissed when not saving', async () => {
-      const wrapper = await mountEditor()
-
-      expect(button(wrapper, 'Cancel').attributes('disabled')).toBeUndefined()
-      expect(wrapper.find('[data-persistent]').attributes('data-persistent')).toBe('false')
-    })
-
-    it('keeps the edits when a save settles without closing the sheet', async () => {
-      const wrapper = await mountEditor()
-
-      await typeName(wrapper, 'Duck eggs')
-      await button(wrapper, 'Save').trigger('click')
-      await wrapper.setProps({ saving: true })
-      await wrapper.setProps({ saving: false })
-
-      expect(fieldValues(wrapper).name).toBe('Duck eggs')
     })
 
     it('discards the edits on Cancel', async () => {

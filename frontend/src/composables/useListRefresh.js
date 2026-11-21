@@ -7,31 +7,40 @@ const TOUCH_SETTLE_MS = 1000
 export function useListRefresh({ fetch, apply, isHeld = () => false }) {
   const pointersDown = new Set()
   let settleTimer = null
-  let pending = null  // { latest } waiting to apply
-  let newest = 0
+  let pending = null
+  let started = 0
+  let applied = 0
+
+  // Numbered in the order they start, so a load that answers late never replaces a newer list.
+  async function load() {
+    const sequence = ++started
+    return { sequence, latest: await fetch() }
+  }
+
+  function applyResult({ sequence, latest }) {
+    if (sequence <= applied) return
+    applied = sequence
+    apply(latest)
+  }
 
   /** Starts a background refresh, superseding any earlier one; it applies when the user is idle, and a failure keeps the current list without a word. */
   async function request() {
-    const sequence = ++newest
     // A result from before this request can be older than a save that prompted it.
     pending = null
-    let latest
+    let result
     try {
-      latest = await fetch()
+      result = await load()
     } catch {
       return
     }
-    if (sequence !== newest) return
-    pending = { latest }
+    if (result.sequence !== started) return
+    pending = result
     applyWhenIdle()
   }
 
-  /** A refresh the user asked for: applies the moment it arrives and rejects on failure, so the caller can say so. */
+  /** A refresh the user asked for: applies the moment it arrives, unless something newer already has, and rejects on failure so the caller can say so. */
   async function pull() {
-    const sequence = ++newest
-    pending = null
-    const latest = await fetch()
-    if (sequence === newest) apply(latest)
+    applyResult(await load())
   }
 
   function isTouching() {
@@ -40,9 +49,9 @@ export function useListRefresh({ fetch, apply, isHeld = () => false }) {
 
   function applyWhenIdle() {
     if (!pending || isTouching() || isHeld()) return
-    const { latest } = pending
+    const result = pending
     pending = null
-    apply(latest)
+    applyResult(result)
   }
 
   function onPointerDown(event) {

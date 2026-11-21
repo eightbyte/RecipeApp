@@ -85,7 +85,8 @@ each test or in `beforeEach`; a wrapper mounted in `beforeAll` is gone after the
 - **Shopping List writes** go through the store's own save actions, which mark the item as having
   unsaved changes while the save is in flight, so a List Refresh (`applyRefresh`) keeps it as it is on
   screen. A new write path must do the same, and the view requests a refresh once it succeeds.
-  `VPullToRefresh` is a Vuetify labs component, so import it explicitly from `vuetify/labs/VPullToRefresh`.
+- **Vuetify labs components** (`VPullToRefresh`) are not auto-imported: import each explicitly from
+  `vuetify/labs/<Component>`.
 - **Recipe lists** (Recipes tab, `RecipeBrowser`) load a page at a time through
   `composables/useRecipePages.js`, one instance per list, and render through
   `components/RecipeInfiniteScroll.vue`. A recipe mutation does not patch any list, because each

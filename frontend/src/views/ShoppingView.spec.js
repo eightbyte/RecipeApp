@@ -454,6 +454,23 @@ describe('ShoppingView', () => {
     const carrot = (overrides = {}) => makeShoppingListItem({ id: 'carrot', displayName: 'Carrot', ...overrides })
     const bread  = (overrides = {}) => makeShoppingListItem({ id: 'bread', displayName: 'Bread', isCustom: true, ...overrides })
     const names  = wrapper => wrapper.findAll('.v-list-item-title').map(t => t.text())
+    const sheet  = wrapper => wrapper.findComponent(SheetStub)
+
+    /** Dispatches a pointer event anywhere on the page, which is all the touch hold watches. */
+    function pointer(type, pointerId = 1) {
+      const event = new Event(type, { bubbles: true })
+      Object.defineProperty(event, 'pointerId', { value: pointerId })
+      document.body.dispatchEvent(event)
+    }
+
+    /** Opens the edit sheet with a 1-second hold, then lets the touch settle. */
+    async function holdToEdit(wrapper, name) {
+      const row = wrapper.findAll('.shopping-row').find(r => r.text().includes(name))
+      await row.trigger('pointerdown', { pointerType: 'touch', isPrimary: true, button: 0, clientX: 0, clientY: 0, pointerId: 1 })
+      await wait(1000)
+      await row.trigger('pointerup', { pointerId: 1 })
+      await wait(1000)
+    }
 
     function setVisibility(state) {
       Object.defineProperty(document, 'visibilityState', { value: state, configurable: true })
@@ -548,8 +565,6 @@ describe('ShoppingView', () => {
     })
 
     describe('after the user’s own writes', () => {
-      const sheet = wrapper => wrapper.findComponent(SheetStub)
-
       function deferred() {
         let resolve, reject
         const promise = new Promise((res, rej) => { resolve = res; reject = rej })
@@ -607,9 +622,7 @@ describe('ShoppingView', () => {
         const { wrapper } = await mountWith([bread()])
         api.put.mockResolvedValue({ data: bread({ displayName: 'Rye bread' }) })
         serverHas([bread({ displayName: 'Rye bread' })])
-        await wrapper.findAll('.shopping-row').find(r => r.text().includes('Bread')).trigger('pointerdown',
-          { pointerType: 'touch', isPrimary: true, button: 0, clientX: 0, clientY: 0 })
-        await wait(1000)
+        await holdToEdit(wrapper, 'Bread')
 
         sheet(wrapper).vm.$emit('save', { name: 'Rye bread', amount: null, unit: null, category: 'OTHER' })
         await flushPromises()
@@ -642,14 +655,47 @@ describe('ShoppingView', () => {
       it('applies at once, even straight after a touch, and then stops its spinner', async () => {
         const { wrapper } = await mountWith([carrot()])
         serverHas([carrot(), bread()])
-        const finger = new Event('pointerdown', { bubbles: true })
-        Object.defineProperty(finger, 'pointerId', { value: 1 })
-        document.body.dispatchEvent(finger)
+        pointer('pointerdown')
 
         const done = await pull(wrapper)
 
         expect(names(wrapper)).toEqual(['Carrot', 'Bread'])
         expect(done).toHaveBeenCalledOnce()
+      })
+
+      it('still applies at once when a background refresh starts while it loads', async () => {
+        const { wrapper } = await mountWith([carrot()])
+        let answerPull
+        api.get
+          .mockReturnValueOnce(new Promise(resolve => { answerPull = resolve }))
+          .mockReturnValueOnce(new Promise(() => {}))
+        const done = vi.fn()
+        wrapper.findComponent({ name: 'VPullToRefresh' }).vm.$emit('load', { done })
+        pointer('pointerdown')
+        pointer('pointerup')
+
+        window.dispatchEvent(new Event('focus'))
+        answerPull({ data: makeShoppingList({ items: [carrot(), bread()] }) })
+        await flushPromises()
+
+        expect(names(wrapper)).toEqual(['Carrot', 'Bread'])
+        expect(done).toHaveBeenCalledOnce()
+      })
+
+      it('never replaces a newer list with an older pull that answers late', async () => {
+        const { wrapper } = await mountWith([carrot()])
+        let answerPull
+        api.get
+          .mockReturnValueOnce(new Promise(resolve => { answerPull = resolve }))
+          .mockResolvedValueOnce({ data: makeShoppingList({ items: [carrot(), bread()] }) })
+        wrapper.findComponent({ name: 'VPullToRefresh' }).vm.$emit('load', { done: vi.fn() })
+
+        window.dispatchEvent(new Event('focus'))
+        await flushPromises()
+        answerPull({ data: makeShoppingList({ items: [carrot()] }) })
+        await flushPromises()
+
+        expect(names(wrapper)).toEqual(['Carrot', 'Bread'])
       })
 
       it('shows the error snackbar and keeps the current list when it fails', async () => {
@@ -665,15 +711,9 @@ describe('ShoppingView', () => {
     })
 
     describe('while the edit sheet is open', () => {
-      const sheet = wrapper => wrapper.findComponent(SheetStub)
-
       async function openEditor(items) {
         const mounted = await mountWith(items)
-        const row = mounted.wrapper.findAll('.shopping-row').find(r => r.text().includes('Bread'))
-        await row.trigger('pointerdown', { pointerType: 'touch', isPrimary: true, button: 0, clientX: 0, clientY: 0, pointerId: 1 })
-        await wait(1000)
-        await row.trigger('pointerup', { pointerId: 1 })
-        await wait(1000)
+        await holdToEdit(mounted.wrapper, 'Bread')
         return mounted
       }
 
@@ -706,12 +746,6 @@ describe('ShoppingView', () => {
     })
 
     describe('while the user touches the screen', () => {
-      function pointer(type, pointerId = 1) {
-        const event = new Event(type, { bubbles: true })
-        Object.defineProperty(event, 'pointerId', { value: pointerId })
-        document.body.dispatchEvent(event)
-      }
-
       it('waits while a pointer is down, then applies 1 second after it lifts', async () => {
         const { wrapper } = await mountWith([carrot()])
         serverHas([carrot(), bread()])

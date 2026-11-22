@@ -3,17 +3,18 @@
 
     <h1 class="d-sr-only">Shopping list</h1>
 
-    <!-- ── Offline and Pending Changes banner ─────────────────────────────── -->
+    <!-- ── Offline banner ─────────────────────────────────────────────────── -->
+    <!-- Only offline, which lasts: a banner for every quick online save would push the list down and back. -->
     <v-alert
-      v-if="pendingBanner"
+      v-if="offlineBanner"
       data-test="pending-banner"
-      :type="store.offline ? 'warning' : 'info'"
-      :icon="store.offline ? 'mdi-cloud-off-outline' : 'mdi-cloud-upload-outline'"
+      type="warning"
+      icon="mdi-cloud-off-outline"
       variant="tonal"
       density="compact"
       class="mb-4"
     >
-      {{ pendingBanner }}
+      {{ offlineBanner }}
     </v-alert>
 
     <!-- The browser's own pull to refresh is off app-wide (main.css), so this one can't reload the page. -->
@@ -67,8 +68,12 @@
 
         <!-- ── Toolbar ─────────────────────────────────────────────────────── -->
         <div v-if="store.list" class="d-flex align-center justify-space-between mb-6">
-          <div class="text-body-2 text-medium-emphasis">
-            {{ uncheckedCount }} item{{ uncheckedCount !== 1 ? 's' : '' }} remaining
+          <!-- The saving notice shares this line and never wraps, so the list below it stays put. -->
+          <div class="text-body-2 text-medium-emphasis text-no-wrap">
+            {{ uncheckedCount }} item{{ uncheckedCount !== 1 ? 's' : '' }} remaining<span
+              v-if="isSaving"
+              data-test="saving-status"
+            > · Saving…</span>
           </div>
           <v-btn
             variant="text"
@@ -288,12 +293,13 @@ watch(() => store.pendingCount, (count, before) => {
   if (count === 0 && before > 0) listRefresh.request()
 })
 
-const pendingBanner = computed(() => {
+const offlineBanner = computed(() => {
+  if (!store.offline) return null
   const count = store.pendingCount
-  const changes = `${count} change${count === 1 ? '' : 's'}`
-  if (store.offline) return count ? `Offline · ${changes} waiting` : 'Offline'
-  return count ? `Saving ${changes}…` : null
+  return count ? `Offline · ${count} change${count === 1 ? '' : 's'} waiting` : 'Offline'
 })
+
+const isSaving = computed(() => !store.offline && store.pendingCount > 0)
 
 // Regenerating replaces every Generated Item, so it waits until the server has every change made here.
 const canRegenerate = computed(() => !store.offline && store.pendingCount === 0)

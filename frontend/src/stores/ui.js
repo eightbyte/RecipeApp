@@ -32,5 +32,27 @@ export const useUiStore = defineStore('ui', () => {
     action.onClick()
   }
 
-  return { snackbar, notify, dismiss, runAction, unitSystem, chooseUnitSystem }
+  // Whether a downloaded new version is being offered; not part of `snackbar`, because each notify() replaces that.
+  const updateReady = ref(false)
+  let installUpdate = null
+
+  /** Offers the downloaded version; `install` swaps it in and reloads the page. */
+  function offerUpdate(install) {
+    installUpdate = install
+    updateReady.value = true
+  }
+
+  function dismissUpdate() {
+    updateReady.value = false
+  }
+
+  function applyUpdate() {
+    installUpdate?.()
+  }
+
+  return {
+    snackbar, notify, dismiss, runAction,
+    unitSystem, chooseUnitSystem,
+    updateReady, offerUpdate, dismissUpdate, applyUpdate,
+  }
 })

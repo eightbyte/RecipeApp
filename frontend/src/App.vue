@@ -20,6 +20,9 @@
     <!-- Global feedback snackbar — available to every view -->
     <AppSnackbar />
 
+    <!-- Beside the feedback snackbar rather than through it, so a notification can't hide the offer of a new version -->
+    <AppUpdateSnackbar />
+
   </v-app>
 </template>
 
@@ -30,6 +33,7 @@ import { usePendingChangeSending } from '@/composables/usePendingChangeSending'
 import AppTopBar    from '@/components/layout/AppTopBar.vue'
 import AppBottomNav from '@/components/layout/AppBottomNav.vue'
 import AppSnackbar  from '@/components/AppSnackbar.vue'
+import AppUpdateSnackbar from '@/components/AppUpdateSnackbar.vue'
 
 const route = useRoute()
 

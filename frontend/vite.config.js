@@ -16,7 +16,8 @@ export default defineConfig({
     vuetify({ autoImport: true, styles: { configFile: 'src/styles/settings.scss' } }),
     ...(isTest ? [] : [
       VitePWA({
-        registerType: 'autoUpdate',
+        // A new version waits for the user's Reload (AppUpdateSnackbar), so it never reloads over a half-filled form.
+        registerType: 'prompt',
         includeAssets: ['favicon.svg', 'icons.svg'],
         manifest: {
           name: 'RecipeApp',
@@ -34,6 +35,8 @@ export default defineConfig({
         },
         workbox: {
           navigateFallback: '/index.html',
+          // Lets a first visit's page start runtime caching at once; on an update it only takes effect after Reload.
+          clientsClaim: true,
           runtimeCaching: [
             {
               // Recipe list pages: network first so the pages joined on scroll come from one version of the list, cached for offline.

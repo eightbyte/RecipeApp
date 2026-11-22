@@ -882,18 +882,28 @@ describe('ShoppingView', () => {
       expect(banner(wrapper).text()).toBe('Offline · 2 changes waiting')
     })
 
-    it('says it is saving while online and sending, and clears once the queue is empty', async () => {
+    it('says it is saving in the toolbar, not a banner, while online and sending, and clears once the queue is empty', async () => {
       const { wrapper } = await mountWith([milk(), eggs()])
+      const savingStatus = () => wrapper.find('[data-test="saving-status"]')
       let answer
       api.put.mockReturnValue(new Promise(resolve => { answer = resolve }))
       api.get.mockResolvedValue({ data: makeShoppingList({ items: [milk(), eggs()] }) })
 
       await tick(wrapper, 'Milk')
-      expect(banner(wrapper).text()).toBe('Saving 1 change…')
+      expect(savingStatus().text()).toBe('· Saving…')
+      expect(banner(wrapper).exists()).toBe(false)
 
       answer({ data: milk({ isChecked: true }) })
       await flushPromises()
-      expect(banner(wrapper).exists()).toBe(false)
+      expect(savingStatus().exists()).toBe(false)
+    })
+
+    it('shows no saving notice in the toolbar while offline, where the banner says it instead', async () => {
+      const { wrapper } = await mountWith([milk(), eggs()])
+      api.put.mockRejectedValue(noResponse)
+
+      await tick(wrapper, 'Milk')
+      expect(wrapper.find('[data-test="saving-status"]').exists()).toBe(false)
     })
 
     it('says offline on the browser’s offline event even with nothing waiting', async () => {
